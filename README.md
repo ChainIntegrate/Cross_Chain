@@ -8,3 +8,4 @@ Cosa è presente nel repo
 3) Pagina locale per test operazione su account deployato su altre chain up-test.operazione.html
 4) Pagina locale per invio fondi con account deployato su altre chain up-invia-fondi.html
 5) Pagina pubblica per deploy in multichain - up-deploy-public.html
+6) Pagina di verifica di corretto deplly - up-verify-only.html
