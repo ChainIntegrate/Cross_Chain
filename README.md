@@ -9,5 +9,6 @@ Cosa è presente nel repo
 4) Pagina locale per invio fondi con account deployato su altre chain up-invia-fondi.html
 5) Pagina pubblica per deploy in multichain - up-deploy-public.html
 6) Pagina di verifica di corretto deplly - up-verify-only.html
+7) Pagina guida how to deply multichain - up-crosschain-guide.html
 
 Lo scopo del repo è di creare un ecosistema di facile utilizzo per le persone che hanno almeno una buona dimestichezza con l'ecosistema Lukso e voglio utilizzare il loro steso account in altre chain
