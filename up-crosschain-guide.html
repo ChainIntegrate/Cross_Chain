@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Replicating a Universal Profile Across Chains</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
+    --text: #e6e8ec; --text-dim: #9aa1ad;
+    --accent: #5b8cff; --ok: #3fbf6f; --warn: #e0a83c; --err: #e05a5a;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+         max-width: 780px; margin: 0 auto; padding: 32px 20px 100px; line-height: 1.6; }
+  h1 { font-size: 24px; margin-bottom: 6px; }
+  h2 { font-size: 17px; margin: 40px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 14px; color: var(--accent); margin: 24px 0 8px; }
+  .subtitle { color: var(--text-dim); font-size: 14px; margin-bottom: 24px; }
+  p { font-size: 14.5px; color: var(--text); }
+  code { background: #10131a; border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-size: 13px; }
+  pre { background: #10131a; border: 1px solid var(--border); border-radius: 8px; padding: 14px; font-size: 12.5px; overflow-x: auto; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px 22px; margin-bottom: 16px; }
+  .step { display: flex; gap: 14px; margin-bottom: 20px; }
+  .step-num { flex: 0 0 28px; height: 28px; border-radius: 50%; background: var(--accent); color: white;
+              display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
+  .step-body h3 { margin-top: 0; }
+  .note { background: rgba(224,168,60,0.1); border: 1px solid rgba(224,168,60,0.3); border-radius: 8px;
+          padding: 12px 14px; font-size: 13.5px; color: var(--text); margin: 14px 0; }
+  .note.danger { background: rgba(224,90,90,0.1); border-color: rgba(224,90,90,0.3); }
+  .note.ok { background: rgba(63,191,111,0.1); border-color: rgba(63,191,111,0.3); }
+  .langbar { position: sticky; top: 0; background: var(--bg); padding: 10px 0; margin-bottom: 10px; display: flex; gap: 8px; justify-content: flex-end; z-index: 10; }
+  .langbtn { background: #2a2f3a; color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 14px; font-size: 13px; cursor: pointer; }
+  .langbtn.active { background: var(--accent); border-color: var(--accent); }
+  a { color: var(--accent); }
+  ul { font-size: 14.5px; padding-left: 20px; }
+  li { margin-bottom: 6px; }
+  [data-lang] { display: none; }
+  [data-lang].active { display: block; }
+  .toc { font-size: 13.5px; color: var(--text-dim); }
+  .toc a { color: var(--text-dim); }
+  .shot { width: 100%; border-radius: 8px; border: 1px solid var(--border); margin-top: 10px; display: block; }
+  .shot-caption { font-size: 12px; color: var(--text-dim); margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<div class="langbar">
+  <button class="langbtn active" data-setlang="en">English</button>
+  <button class="langbtn" data-setlang="it">Italiano</button>
+</div>
+
+<!-- ================= ENGLISH ================= -->
+<div data-lang="en" class="active">
+
+<h1>Replicating a Universal Profile Across EVM Chains</h1>
+<div class="subtitle">How to deploy your existing LUKSO Universal Profile at the identical address on another EVM chain — and why it works.</div>
+
+<div class="panel">
+  <p><b>What this is.</b> Your Universal Profile (UP) was created on LUKSO through a deterministic factory contract. Because the factory is deployed at the same address on every EVM chain, replaying your exact original creation transaction on another chain produces a contract at the <i>same address</i> there too. This page explains the mechanism and walks through doing it safely, using the companion tools linked at the bottom.</p>
+  <div class="note">This is a technical procedure. It assumes you're comfortable with MetaMask, smart contracts, and reading a block explorer. It is not a "one click" consumer flow, and it shouldn't be treated as one.</div>
+</div>
+
+<h2>How the address is actually generated</h2>
+<p>It is <b>not</b> a simple function of "controller + salt". Your UP was created via LUKSO's <code>LSP23LinkedContractsFactory</code>, deployed at the same address (<code>0x2300000A84D25dF63081feAa37ba6b62C4c89a30</code>) on every chain where LUKSO has published it. The factory call includes:</p>
+<ul>
+  <li>an initial <b>salt</b>,</li>
+  <li>the implementation and initialization data of the <b>Key Manager</b> (the second linked contract),</li>
+  <li>the address of a <b>post-deployment module</b> and its calldata — this is where it is actually specified which address receives <code>ALL_PERMISSIONS</code> on the new profile.</li>
+</ul>
+<p>All of this is hashed together (<code>keccak256</code>) to form the real salt used in <code>CREATE2</code>, combined with the hash of the minimal-proxy bytecode pointing at the Universal Profile implementation. The resulting address depends on the <i>entire</i> original transaction — not on any single field in isolation.</p>
+<p>This is why only the exact original calldata reproduces the same address: the controller with full control isn't special on its own — it's simply the address that particular calldata already names. Change the calldata (even to name a different controller) and you get a different address entirely.</p>
+
+<h2>Step by step</h2>
+
+<div class="step">
+  <div class="step-num">1</div>
+  <div class="step-body">
+    <h3>Extract your private key</h3>
+    <p>You'll need this key later, in step 8, to operate your profile on the new chain — it's simplest to get it out of the way first. Unlock the Universal Profile browser extension, click the <b>gear icon</b> (Settings) top-right, scroll all the way down to the <b>Developer</b> section, and click <b>Reveal private key</b>. Enter your extension password when asked, and the key is shown as plain text.</p>
+    <img class="shot" src="guide-assets/step0-reveal-pk.png" alt="UP extension settings, Developer section, Reveal private key button">
+    <div class="shot-caption">Settings → scroll to "Developer" → "Reveal private key".</div>
+    <div class="note danger">This key gives full control of that account. Never share it, never paste it into any website, never send it in a chat or email. Copy it once, store it somewhere safe (a password manager), and close the panel. Anyone who obtains it can move every asset controlled by that account.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">2</div>
+  <div class="step-body">
+    <h3>Find your UP's original creation transaction</h3>
+    <p>Open your UP's address on the <a href="https://explorer.execution.mainnet.lukso.network" target="_blank">LUKSO mainnet explorer</a>, on its <b>Details</b> tab. Find the <b>Creator</b> row — it shows the creator's address <i>"at txn"</i> followed by a transaction hash. Click that transaction hash link: it takes you straight to the creation transaction.</p>
+    <img class="shot" src="guide-assets/step-genesis-link.png" alt="Contract details page with the Creator row showing 'at txn' followed by the creation transaction hash link">
+    <div class="shot-caption">On the Details tab, the "at txn" link next to Creator is the shortcut straight to the creation transaction — no need to scroll through the transaction list.</div>
+    <p>Once you're on that transaction's page, switch to its <b>Raw trace</b> tab.</p>
+    <img class="shot" src="guide-assets/step1-tx-details.png" alt="Transaction details page showing method deployERC1167Proxies and the Raw trace tab">
+    <div class="shot-caption">The creation transaction: method <code>deployERC1167Proxies</code>, sent to the factory address. Open "Raw trace" from here.</div>
+    <div class="note ok">This is public on-chain data. You don't need your wallet's backup file or any decryption to get it — anyone can look up any UP's creation transaction.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">3</div>
+  <div class="step-body">
+    <h3>Copy the transaction's input data</h3>
+    <p>In the raw trace, find the <b>call</b> field (the raw hex, starting with <code>0x6a66a753...</code>). Copy the whole string. This is your <b>deployment calldata</b>.</p>
+    <div class="note">Tip: double-click anywhere on the hex string to select it entirely, then copy — much faster than dragging to select such a long string.</div>
+    <img class="shot" src="guide-assets/step2-raw-trace.png" alt="Raw trace tab showing the call field with the deployment calldata">
+    <div class="shot-caption">The raw trace: the <code>call</code> field is the deployment calldata.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">4</div>
+  <div class="step-body">
+    <h3>Connect your UP to the Deploy tool</h3>
+    <p>Open the <a href="up-deploy-public.html">Deploy tool</a> and click <b>Connect your Universal Profile</b> in panel 1. Approve the connection in the extension popup — this only reads your address, it never asks for a private key. Once connected, the tool shows your address and pre-fills the "expected address" field with it.</p>
+    <img class="shot" src="guide-assets/step-connect-up.png" alt="Deploy tool showing the Universal Profile connected, with its address filled in automatically">
+    <div class="shot-caption">Once connected, your UP's address appears here — this is what the decoded calldata will be checked against.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">5</div>
+  <div class="step-body">
+    <h3>Decode it and identify the controller</h3>
+    <p>Paste the calldata you copied in step 3 into the same page. It will show you the address this calldata predicts for your UP on any chain, and — critically — it will decode and display <i>every controller</i> named in the calldata, including which one gets <code>ALL_PERMISSIONS</code>.</p>
+    <img class="shot" src="guide-assets/step3-controllers.png" alt="Deploy tool showing the decoded controllers, one flagged as system infrastructure and one with ALL_PERMISSIONS">
+    <div class="shot-caption">The tool separates known system infrastructure (green) from the actual controller with <code>ALL_PERMISSIONS</code> (red) — that second one is what you need to hold the key for.</div>
+    <div class="note">Compare the predicted address to your actual UP address on LUKSO. They must match exactly before you go any further. If they don't, something is wrong with the calldata you copied — stop and re-check step 3.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">6</div>
+  <div class="step-body">
+    <h3>Confirm it's the key you extracted in step 1</h3>
+    <p>The tool shows the address that receives <code>ALL_PERMISSIONS</code> — this is called the <b>controller address</b>, because it's the account that will control the profile after the deploy. Compare it, character for character, to the address of the key you extracted in step 1. If your Universal Profile has ever had more than one controller connected to it over time (for example, from reinstalling a wallet extension, or connecting a new device), make sure it's <i>this specific</i> controller address — not just "a" controller that currently has access. They can look functionally identical (same permissions) while only one of them reproduces the same address on another chain.</p>
+    <img class="shot" src="guide-assets/step4-controller-match.png" alt="The controller address shown by the deploy tool matches the address shown by the wallet extension">
+    <div class="shot-caption">Cross-check: the <code>ALL_PERMISSIONS</code> address the tool found matches the address your own wallet extension shows for that account — same string, character for character.</div>
+    <div class="note danger">If the address doesn't match the key you extracted, stop here. Proceeding without the right key means deploying a profile you won't be able to operate.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">7</div>
+  <div class="step-body">
+    <h3>Deploy on the destination chain</h3>
+    <p>Still on the <a href="up-deploy-public.html">Deploy tool</a>: connect any wallet to pay gas (it does not need to be the controller — it only pays the transaction fee), select the destination network, and run the built-in checks. The tool verifies the predicted address again, checks nothing already exists there, estimates gas, and — after the transaction confirms — verifies the deployed bytecode matches exactly before calling it a success.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">8</div>
+  <div class="step-body">
+    <h3>Operate your profile on the new chain</h3>
+    <p>Import the private key you extracted in step 1 into MetaMask (or your wallet of choice) — this is standard "import account" functionality in any wallet. From there, use the <a href="up-test-operazione.html">Test tool</a> to confirm the controller actually operates the profile — it writes a timestamp on-chain through the Key Manager and reads it back. Once that works, you can also use the <a href="up-invia-fondi.html">Send tool</a> to transfer native currency from the profile to another address, signed by that same controller.</p>
+  </div>
+</div>
+
+<h2>What these tools do — and don't do</h2>
+<ul>
+  <li>They never ask for a private key. The only thing you paste in is calldata — public on-chain data.</li>
+  <li>Signing always happens in your own wallet (MetaMask or similar). These pages only prepare the transaction and hand it to your wallet for approval.</li>
+  <li>They perform address and bytecode verification automatically, so a mistake in the calldata is caught before you sign, not after.</li>
+  <li>They don't manage your keys, your backups, or your security — that responsibility stays entirely with you. If you're not confident distinguishing your own controllers or reading a block explorer, get help from someone who is before proceeding.</li>
+</ul>
+
+<div class="note danger">
+  <b>This is irreversible, self-directed on-chain activity.</b> No one — including the tools linked here — can undo a deployment or a transfer once confirmed. Use a small amount of funds to test first, on a network where mistakes are cheap.
+</div>
+
+<h2>Tools</h2>
+<ul>
+  <li><a href="up-deploy-public.html">Deploy</a> — decode calldata, verify, and deploy a Universal Profile at its predicted address on another chain.</li>
+  <li><a href="up-verify-only.html">Verify only</a> — check whether a deploy already exists, with no wallet needed.</li>
+  <li><a href="up-test-operazione.html">Test</a> — confirm your controller can operate the deployed profile.</li>
+  <li><a href="up-invia-fondi.html">Send</a> — transfer native currency from the profile to another address.</li>
+</ul>
+
+</div>
+
+<!-- ================= ITALIANO ================= -->
+<div data-lang="it">
+
+<h1>Replicare una Universal Profile su altre chain EVM</h1>
+<div class="subtitle">Come deployare la tua Universal Profile LUKSO esistente allo stesso identico indirizzo su un'altra rete EVM — e perché funziona.</div>
+
+<div class="panel">
+  <p><b>Di cosa si tratta.</b> La tua Universal Profile (UP) è stata creata su LUKSO tramite un contratto factory deterministico. Poiché la factory è deployata allo stesso indirizzo su ogni rete EVM, ripetere esattamente la transazione di creazione originale su un'altra rete produce un contratto allo <i>stesso indirizzo</i> anche lì. Questa pagina spiega il meccanismo e guida attraverso il procedimento in sicurezza, usando gli strumenti collegati in fondo.</p>
+  <div class="note">È una procedura tecnica. Presuppone dimestichezza con MetaMask, gli smart contract e la lettura di un block explorer. Non è un flusso consumer "a un click" e non va trattata come tale.</div>
+</div>
+
+<h2>Come viene generato davvero l'indirizzo</h2>
+<p><b>Non</b> è una semplice funzione di "controller + salt". La tua UP è stata creata tramite <code>LSP23LinkedContractsFactory</code> di LUKSO, deployata allo stesso indirizzo (<code>0x2300000A84D25dF63081feAa37ba6b62C4c89a30</code>) su ogni rete dove LUKSO l'ha pubblicata. La chiamata alla factory include:</p>
+<ul>
+  <li>un <b>salt</b> iniziale,</li>
+  <li>l'implementazione e i dati di inizializzazione del <b>Key Manager</b> (il secondo contratto collegato),</li>
+  <li>l'indirizzo di un <b>post-deployment module</b> e la sua calldata — è qui che viene effettivamente specificato quale indirizzo riceve <code>ALL_PERMISSIONS</code> sul nuovo profilo.</li>
+</ul>
+<p>Tutto questo viene hashato insieme (<code>keccak256</code>) per formare il salt reale usato in <code>CREATE2</code>, combinato con l'hash del bytecode minimal-proxy che punta all'implementazione della Universal Profile. L'indirizzo risultante dipende dall'<i>intera</i> transazione originale — non da un singolo campo isolato.</p>
+<p>Per questo solo la calldata originale esatta riproduce lo stesso indirizzo: il controller con il controllo totale non ha nulla di speciale in sé — è semplicemente l'indirizzo che quella specifica calldata già nomina. Cambiare la calldata (anche solo per nominare un controller diverso) produce un indirizzo completamente diverso.</p>
+
+<h2>Passo per passo</h2>
+
+<div class="step">
+  <div class="step-num">1</div>
+  <div class="step-body">
+    <h3>Estrai la tua chiave privata</h3>
+    <p>Ti servirà più avanti, al passo 8, per operare il profilo sulla nuova rete — conviene toglierla di mezzo subito. Sblocca l'estensione Universal Profile, clicca sull'<b>icona a rotella</b> (Settings) in alto a destra, scorri fino in fondo alla sezione <b>Developer</b> e clicca <b>Reveal private key</b>. Inserisci la password dell'estensione quando richiesto: la chiave viene mostrata in chiaro.</p>
+    <img class="shot" src="guide-assets/step0-reveal-pk.png" alt="Impostazioni dell'estensione UP, sezione Developer, pulsante Reveal private key">
+    <div class="shot-caption">Settings → scorri fino a "Developer" → "Reveal private key".</div>
+    <div class="note danger">Questa chiave dà il controllo totale di quell'account. Non condividerla mai, non incollarla mai in nessun sito, non inviarla mai in chat o email. Copiala una volta, conservala in un posto sicuro (un password manager) e chiudi il pannello. Chiunque la ottenga può muovere ogni asset controllato da quell'account.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">2</div>
+  <div class="step-body">
+    <h3>Trova la transazione di creazione originale della tua UP</h3>
+    <p>Apri l'indirizzo della tua UP sull'<a href="https://explorer.execution.mainnet.lukso.network" target="_blank">explorer di LUKSO mainnet</a>, nella scheda <b>Details</b>. Trova la riga <b>Creator</b> — mostra l'indirizzo del creatore <i>"at txn"</i> seguito da un hash di transazione. Clicca su quel link dell'hash: ti porta direttamente alla transazione di creazione.</p>
+    <img class="shot" src="guide-assets/step-genesis-link.png" alt="Pagina dei dettagli del contratto con la riga Creator che mostra 'at txn' seguito dal link all'hash della transazione di creazione">
+    <div class="shot-caption">Nella scheda Details, il link "at txn" accanto a Creator è la scorciatoia diretta alla transazione di creazione — non serve scorrere l'elenco delle transazioni.</div>
+    <p>Una volta sulla pagina di quella transazione, passa alla scheda <b>Raw trace</b>.</p>
+    <img class="shot" src="guide-assets/step1-tx-details.png" alt="Pagina dei dettagli della transazione con il metodo deployERC1167Proxies e la scheda Raw trace">
+    <div class="shot-caption">La transazione di creazione: metodo <code>deployERC1167Proxies</code>, inviata all'indirizzo della factory. Da qui apri "Raw trace".</div>
+    <div class="note ok">È dato pubblico on-chain. Non serve il file di backup del wallet né alcuna decrittazione per ottenerlo — chiunque può consultare la transazione di creazione di qualunque UP.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">3</div>
+  <div class="step-body">
+    <h3>Copia l'input data della transazione</h3>
+    <p>Nel raw trace, trova il campo <b>call</b> (l'esadecimale grezzo, che inizia con <code>0x6a66a753...</code>). Copia l'intera stringa. Questa è la tua <b>calldata di deploy</b>.</p>
+    <div class="note">Consiglio: fai doppio click in un punto qualsiasi della stringa esadecimale per selezionarla tutta, poi copia — molto più rapido che trascinare per selezionare una stringa così lunga.</div>
+    <img class="shot" src="guide-assets/step2-raw-trace.png" alt="Scheda Raw trace con il campo call che contiene la calldata di deploy">
+    <div class="shot-caption">Il raw trace: il campo <code>call</code> è la calldata di deploy.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">4</div>
+  <div class="step-body">
+    <h3>Connetti la tua UP allo strumento di Deploy</h3>
+    <p>Apri la <a href="up-deploy-public.html">pagina di Deploy</a> e clicca <b>Connetti la tua Universal Profile</b> nel pannello 1. Approva la connessione nel popup dell'estensione — questo passaggio legge solo il tuo indirizzo, non chiede mai una chiave privata. Una volta connesso, lo strumento mostra il tuo indirizzo e precompila il campo "indirizzo atteso" con quello.</p>
+    <img class="shot" src="guide-assets/step-connect-up.png" alt="Strumento di Deploy con la Universal Profile connessa e l'indirizzo compilato automaticamente">
+    <div class="shot-caption">Una volta connesso, l'indirizzo della tua UP compare qui — è quello con cui verrà confrontata la calldata decodificata.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">5</div>
+  <div class="step-body">
+    <h3>Decodificala e identifica il controller</h3>
+    <p>Incolla la calldata copiata al passo 3 nella stessa pagina. Ti mostrerà l'indirizzo che questa calldata predice per la tua UP su qualsiasi rete e — punto cruciale — decodificherà e mostrerà <i>ogni controller</i> nominato nella calldata, incluso chi riceve <code>ALL_PERMISSIONS</code>.</p>
+    <img class="shot" src="guide-assets/step3-controllers.png" alt="Pagina di Deploy con i controller decodificati, uno segnato come infrastruttura di sistema e uno con ALL_PERMISSIONS">
+    <div class="shot-caption">Lo strumento separa l'infrastruttura di sistema nota (verde) dal vero controller con <code>ALL_PERMISSIONS</code> (rosso) — di quest'ultimo devi possedere la chiave.</div>
+    <div class="note">Confronta l'indirizzo predetto con l'indirizzo reale della tua UP su LUKSO. Devono coincidere esattamente prima di andare oltre. Se non coincidono, c'è qualcosa che non va nella calldata copiata — fermati e ricontrolla il passo 3.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">6</div>
+  <div class="step-body">
+    <h3>Conferma che sia la chiave estratta al passo 1</h3>
+    <p>Lo strumento mostra l'indirizzo che riceve <code>ALL_PERMISSIONS</code> — si chiama <b>indirizzo del controller</b>, perché è l'account che controllerà il profilo dopo il deploy. Confrontalo, carattere per carattere, con l'indirizzo della chiave estratta al passo 1. Se la tua Universal Profile ha mai avuto più di un controller collegato nel tempo (ad esempio dopo aver reinstallato un'estensione wallet, o collegato un nuovo dispositivo), assicurati che sia <i>proprio questo</i> indirizzo del controller, non semplicemente "un" controller che al momento ha accesso. Possono sembrare funzionalmente identici (stessi permessi) mentre solo uno dei due riproduce lo stesso indirizzo su un'altra rete.</p>
+    <img class="shot" src="guide-assets/step4-controller-match.png" alt="L'indirizzo del controller mostrato dallo strumento di deploy corrisponde a quello mostrato dall'estensione del wallet">
+    <div class="shot-caption">Riscontro incrociato: l'indirizzo con <code>ALL_PERMISSIONS</code> trovato dallo strumento corrisponde all'indirizzo che la tua estensione wallet mostra per quell'account — stessa stringa, carattere per carattere.</div>
+    <div class="note danger">Se l'indirizzo non corrisponde alla chiave estratta, fermati qui. Andare avanti senza la chiave giusta equivale a deployare un profilo che non potrai gestire.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">7</div>
+  <div class="step-body">
+    <h3>Deploya sulla rete di destinazione</h3>
+    <p>Sempre sulla <a href="up-deploy-public.html">pagina di Deploy</a>: collega un wallet qualsiasi per pagare il gas (non deve essere il controller — paga solo la commissione della transazione), scegli la rete di destinazione ed esegui i controlli integrati. Lo strumento riverifica l'indirizzo predetto, controlla che non esista già nulla lì, stima il gas e — dopo la conferma della transazione — verifica che il bytecode deployato corrisponda esattamente prima di dichiarare il successo.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">8</div>
+  <div class="step-body">
+    <h3>Opera il tuo profilo sulla nuova rete</h3>
+    <p>Importa in MetaMask (o nel wallet che preferisci) la chiave privata estratta al passo 1 — è la normale funzione "importa account" di qualsiasi wallet. Da lì usa la <a href="up-test-operazione.html">pagina di Test</a> per confermare che il controller operi davvero il profilo — scrive un timestamp on-chain tramite il Key Manager e lo rilegge. Una volta verificato, puoi anche usare la <a href="up-invia-fondi.html">pagina di Invio</a> per trasferire valuta nativa dal profilo a un altro indirizzo, firmato dallo stesso controller.</p>
+  </div>
+</div>
+
+<h2>Cosa fanno questi strumenti — e cosa non fanno</h2>
+<ul>
+  <li>Non chiedono mai una chiave privata. L'unica cosa che incolli è la calldata — dato pubblico on-chain.</li>
+  <li>La firma avviene sempre nel tuo wallet (MetaMask o simili). Queste pagine preparano solo la transazione e la passano al tuo wallet per l'approvazione.</li>
+  <li>Eseguono automaticamente la verifica di indirizzo e bytecode, così un errore nella calldata viene intercettato prima della firma, non dopo.</li>
+  <li>Non gestiscono le tue chiavi, i tuoi backup né la tua sicurezza — questa responsabilità resta interamente tua. Se non sei sicuro di distinguere i tuoi controller o di leggere un block explorer, fatti aiutare da chi lo sa fare prima di procedere.</li>
+</ul>
+
+<div class="note danger">
+  <b>Questa è un'attività on-chain irreversibile e autonoma.</b> Nessuno — inclusi gli strumenti qui collegati — può annullare un deploy o un trasferimento una volta confermato. Prova prima con un importo piccolo, su una rete dove gli errori costano poco.
+</div>
+
+<h2>Strumenti</h2>
+<ul>
+  <li><a href="up-deploy-public.html">Deploy</a> — decodifica la calldata, verifica e deploya una Universal Profile all'indirizzo predetto su un'altra rete.</li>
+  <li><a href="up-verify-only.html">Sola verifica</a> — controlla se un deploy esiste già, senza bisogno di alcun wallet.</li>
+  <li><a href="up-test-operazione.html">Test</a> — conferma che il tuo controller possa operare il profilo deployato.</li>
+  <li><a href="up-invia-fondi.html">Invio</a> — trasferisce valuta nativa dal profilo a un altro indirizzo.</li>
+</ul>
+
+</div>
+
+<script>
+document.querySelectorAll(".langbtn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const lang = btn.dataset.setlang;
+    document.querySelectorAll(".langbtn").forEach(b => b.classList.toggle("active", b === btn));
+    document.querySelectorAll("[data-lang]").forEach(el => el.classList.toggle("active", el.dataset.lang === lang));
+  });
+});
+</script>
+
+</body>
+</html>
