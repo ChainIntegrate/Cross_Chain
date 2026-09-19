@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>UP Multi-chain Deploy — ChainIntegrate</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
+    --text: #e6e8ec; --text-dim: #9aa1ad;
+    --accent: #5b8cff; --ok: #3fbf6f; --warn: #e0a83c; --err: #e05a5a;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+         max-width: 760px; margin: 0 auto; padding: 32px 20px 80px; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .subtitle { color: var(--text-dim); font-size: 13px; margin-bottom: 28px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+  .panel h2 { font-size: 14px; margin: 0 0 14px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.03em; }
+  label { display: block; font-size: 13px; color: var(--text-dim); margin: 14px 0 6px; }
+  label:first-child { margin-top: 0; }
+  select, input { width: 100%; background: #10131a; border: 1px solid var(--border); color: var(--text);
+                  border-radius: 6px; padding: 10px 12px; font-size: 14px; font-family: inherit; }
+  button { width: 100%; background: var(--accent); color: white; border: none; border-radius: 6px;
+           padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; }
+  button:disabled { background: #3a3f4b; cursor: not-allowed; }
+  .status-box { background: #10131a; border: 1px solid var(--border); border-radius: 6px; padding: 12px;
+                font-family: monospace; font-size: 12.5px; margin-top: 12px; }
+  .status-box .empty { color: var(--text-dim); }
+  #log { font-family: monospace; font-size: 12.5px; white-space: pre-wrap; word-break: break-all; line-height: 1.6; }
+  .line-ok { color: var(--ok); } .line-warn { color: var(--warn); } .line-err { color: var(--err); } .line-dim { color: var(--text-dim); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-family: monospace; }
+  .badge.ok { background: rgba(63,191,111,0.15); color: var(--ok); }
+  .badge.err { background: rgba(224,90,90,0.15); color: var(--err); }
+</style>
+</head>
+<body>
+
+<h1>UP Multi-chain Deploy</h1>
+<div class="subtitle">Collega il wallet UP (letto profilo + permessi live) e un wallet firmatario (paga e firma il deploy) — nessuna chiave privata digitata.</div>
+
+<div class="panel">
+  <h2>0 · Avvio in locale</h2>
+  <div style="font-size:13px; color:var(--text-dim); margin-bottom:10px;">
+    Le estensioni del browser (UP, MetaMask) spesso non si iniettano su una pagina aperta direttamente da disco (<code>file://</code>).
+    Serve un piccolo server locale — gira solo sulla tua macchina, nessun dato esce.
+  </div>
+  <div style="font-size:12px; color:var(--text-dim); margin-bottom:4px;">Apri un terminale nella cartella dove hai salvato questo file:</div>
+  <div class="status-box">python3 -m http.server 8000</div>
+  <div style="font-size:12px; color:var(--text-dim); margin:10px 0 4px;">Se <code>python3</code> non è installato (verifica con <code>python3 --version</code>), in alternativa, con Node.js già presente:</div>
+  <div class="status-box">npx serve .</div>
+  <div style="font-size:12px; color:var(--text-dim); margin-top:10px;">
+    Poi apri <code>http://localhost:8000/</code> (o l'URL che ti stampa <code>npx serve</code>, di solito <code>http://localhost:3000</code>) — non <code>file://</code>.
+  </div>
+</div>
+
+<div class="panel">
+  <h2>1 · Wallet UP (sola lettura)</h2>
+  <button id="connectUp">Connetti estensione UP</button>
+  <div class="status-box" id="upStatus"><span class="empty">Non connesso.</span></div>
+</div>
+
+<div class="panel">
+  <h2>2 · Wallet firmatario (paga il deploy)</h2>
+  <button id="connectSigner">Connetti MetaMask / wallet firmatario</button>
+  <div class="status-box" id="signerStatus"><span class="empty">Non connesso.</span></div>
+</div>
+
+<div class="panel">
+  <h2>3 · Rete di destinazione</h2>
+  <input type="text" id="networkFilter" placeholder="Filtra per nome... (es. base, polygon, arbitrum)">
+  <select id="network" style="margin-top:8px;"></select>
+  <div id="customRpcWrap" style="display:none;">
+    <label>RPC URL custom</label>
+    <input type="text" id="customRpc" placeholder="https://...">
+    <label>Explorer URL custom (opzionale, per il link alla tx)</label>
+    <input type="text" id="customExplorer" placeholder="https://.../tx/">
+  </div>
+</div>
+
+<div class="panel">
+  <h2>4 · Verifica e deploy</h2>
+  <button id="checkBtn">Verifica</button>
+  <button id="deployBtn" disabled>Esegui deploy</button>
+  <div id="log" class="line-dim">In attesa dei collegamenti sopra.</div>
+</div>
+
+<script>
+const FACTORY_ADDRESS = "0x2300000A84D25dF63081feAa37ba6b62C4c89a30";
+const LUKSO_RPC = "https://rpc.mainnet.lukso.network";
+
+// Ricalcola l'indirizzo REALE che una data deploymentCalldata produrrà,
+// replicando esattamente la logica di LSP23LinkedContractsFactory._generatePrimaryContractProxySalt
+// (verificata contro transazioni reali). Serve a non fidarsi mai ciecamente
+// che calldata e indirizzo dichiarato in KNOWN_DEPLOYMENTS siano coerenti.
+function predictAddressFromCalldata(calldataHex) {
+  const data = "0x" + calldataHex.slice(10); // rimuove "0x" + selettore (4 byte)
+  const coder = ethers.AbiCoder.defaultAbiCoder();
+  const [primary, secondary, postModule, postCalldata] = coder.decode(
+    ["tuple(bytes32,uint256,address,bytes)", "tuple(uint256,address,bytes,bool,bytes)", "address", "bytes"],
+    data
+  );
+  const [salt, , implA] = primary;
+  const [, implB, initCalldataB, addPrimary, extraInitB] = secondary;
+
+  const generatedSalt = ethers.keccak256(
+    coder.encode(
+      ["bytes32", "address", "bytes", "bool", "bytes", "address", "bytes"],
+      [salt, implB, initCalldataB, addPrimary, extraInitB, postModule, postCalldata]
+    )
+  );
+
+  const implNoPrefix = implA.slice(2).toLowerCase();
+  const initcode = "0x3d602d80600a3d3981f3363d3d373d3d3d363d73" + implNoPrefix + "5af43d82803e903d91602b57fd5bf3";
+  const initcodeHash = ethers.keccak256(initcode);
+
+  return ethers.getCreate2Address(FACTORY_ADDRESS, generatedSalt, initcodeHash);
+}
+
+const CHAINS = [
+  { key: "0g", name: "0G", chainId: 16661, rpc: "https://evmrpc.0g.ai", explorer: "https://chainscan.0g.ai/tx/", currency: "0G" },
+  { key: "apechain", name: "ApeChain", chainId: 33139, rpc: "https://rpc.apechain.com", explorer: "https://apescan.io/tx/", currency: "APE" },
+  { key: "arbitrum-one", name: "Arbitrum One", chainId: 42161, rpc: "https://arb1.arbitrum.io/rpc", explorer: "https://arbiscan.io/tx/", currency: "ETH" },
+  { key: "avalanche-c-chain", name: "Avalanche C-Chain", chainId: 43114, rpc: "https://api.avax.network/ext/bc/C/rpc", explorer: "https://snowscan.xyz/tx/", currency: "AVAX" },
+  { key: "base", name: "Base", chainId: 8453, rpc: "https://mainnet.base.org", explorer: "https://basescan.org/tx/", currency: "ETH" },
+  { key: "berachain", name: "Berachain", chainId: 80094, rpc: "https://rpc.berachain.com", explorer: "https://berascan.com/tx/", currency: "BERA" },
+  { key: "blast", name: "Blast", chainId: 81457, rpc: "https://rpc.blast.io", explorer: "https://blastscan.io/tx/", currency: "ETH" },
+  { key: "bnb-smart-chain", name: "BNB Smart Chain", chainId: 56, rpc: "https://bsc-dataseed1.bnbchain.org", explorer: "https://bscscan.com/tx/", currency: "BNB" },
+  { key: "celo", name: "Celo", chainId: 42220, rpc: "https://forno.celo.org", explorer: "https://celoscan.io/tx/", currency: "CELO" },
+  { key: "chiliz", name: "Chiliz", chainId: 88888, rpc: "https://rpc.chiliz.com", explorer: "https://chiliscan.com/tx/", currency: "CHZ" },
+  { key: "conflux-evm-espace", name: "Conflux EVM eSpace", chainId: 1030, rpc: "https://evm.confluxrpc.com", explorer: "https://evm.confluxscan.net/tx/", currency: "CFX" },
+  { key: "core-blockchain", name: "Core Blockchain", chainId: 1116, rpc: "https://rpc.coredao.org", explorer: "https://scan.coredao.org/tx/", currency: "CORE" },
+  { key: "coti", name: "COTI", chainId: 2632500, rpc: "https://mainnet.coti.io/rpc", explorer: "https://mainnet.cotiscan.io/tx/", currency: "COTI" },
+  { key: "cronos", name: "Cronos", chainId: 25, rpc: "https://evm.cronos.org", explorer: "https://explorer.cronos.org/tx/", currency: "CRO" },
+  { key: "degen-chain", name: "Degen Chain", chainId: 666666666, rpc: "https://rpc.degen.tips", explorer: null, currency: "DEGEN" },
+  { key: "ethereum", name: "Ethereum", chainId: 1, rpc: "https://ethereum-rpc.publicnode.com", explorer: "https://etherscan.io/tx/", currency: "ETH" },
+  { key: "ethereum-classic", name: "Ethereum Classic", chainId: 61, rpc: "https://etc.rivet.link", explorer: "https://etc.blockscout.com/tx/", currency: "ETC" },
+  { key: "etherlink", name: "Etherlink", chainId: 42793, rpc: "https://node.mainnet.etherlink.com", explorer: "https://explorer.etherlink.com/tx/", currency: "XTZ" },
+  { key: "flare", name: "Flare", chainId: 14, rpc: "https://flare-api.flare.network/ext/C/rpc", explorer: "https://flare-explorer.flare.network/tx/", currency: "FLR" },
+  { key: "gnosis", name: "Gnosis", chainId: 100, rpc: "https://rpc.gnosischain.com", explorer: "https://gnosisscan.io/tx/", currency: "XDAI" },
+  { key: "gravity-alpha", name: "Gravity Alpha", chainId: 1625, rpc: "https://rpc.gravity.xyz", explorer: "https://explorer.gravity.xyz/tx/", currency: "G" },
+  { key: "hashkey-chain", name: "HashKey Chain", chainId: 177, rpc: "https://mainnet.hsk.xyz", explorer: "https://hsk.blockscout.com/tx/", currency: "HSK" },
+  { key: "immutable-zkevm", name: "Immutable zkEVM", chainId: 13371, rpc: "https://rpc.immutable.com", explorer: "https://explorer.immutable.com/tx/", currency: "IMX" },
+  { key: "ink", name: "Ink", chainId: 57073, rpc: "https://rpc-gel.inkonchain.com", explorer: "https://explorer.inkonchain.com/tx/", currency: "ETH" },
+  { key: "katana", name: "Katana", chainId: 747474, rpc: "https://rpc.katana.network", explorer: "https://katanascan.com/tx/", currency: "ETH" },
+  { key: "kava-evm", name: "Kava EVM", chainId: 2222, rpc: "https://evm.kava.io", explorer: "https://kavascan.com/tx/", currency: "KAVA" },
+  { key: "lens", name: "Lens", chainId: 232, rpc: "https://rpc.lens.xyz", explorer: "https://explorer.lens.xyz/tx/", currency: "GHO" },
+  { key: "linea", name: "Linea", chainId: 59144, rpc: "https://rpc.linea.build", explorer: "https://lineascan.build/tx/", currency: "ETH" },
+  { key: "mantle", name: "Mantle", chainId: 5000, rpc: "https://rpc.mantle.xyz", explorer: "https://mantlescan.xyz/tx/", currency: "MNT" },
+  { key: "megaeth", name: "MegaETH", chainId: 4326, rpc: "https://mainnet.megaeth.com/rpc", explorer: "https://mega.etherscan.io/tx/", currency: "ETH" },
+  { key: "mode", name: "Mode", chainId: 34443, rpc: "https://mainnet.mode.network", explorer: "https://explorer.mode.network/tx/", currency: "ETH" },
+  { key: "monad", name: "Monad", chainId: 143, rpc: "https://rpc.monad.xyz", explorer: "https://monadvision.com/tx/", currency: "MON" },
+  { key: "moonbeam", name: "Moonbeam", chainId: 1284, rpc: "https://rpc.api.moonbeam.network", explorer: "https://moonbeam.moonscan.io/tx/", currency: "GLMR" },
+  { key: "moonriver", name: "Moonriver", chainId: 1285, rpc: "https://rpc.api.moonriver.moonbeam.network", explorer: "https://moonriver.moonscan.io/tx/", currency: "MOVR" },
+  { key: "optimism", name: "Optimism", chainId: 10, rpc: "https://mainnet.optimism.io", explorer: "https://optimistic.etherscan.io/tx/", currency: "ETH" },
+  { key: "plasma", name: "Plasma", chainId: 9745, rpc: "https://rpc.plasma.to", explorer: "https://plasmascan.to/tx/", currency: "XPL" },
+  { key: "plume", name: "Plume", chainId: 98866, rpc: "https://rpc.plume.org", explorer: "https://explorer.plume.org/tx/", currency: "PLUME" },
+  { key: "polygon", name: "Polygon", chainId: 137, rpc: "https://polygon.drpc.org", explorer: "https://polygonscan.com/tx/", currency: "POL" },
+  { key: "pulsechain", name: "Pulsechain", chainId: 369, rpc: "https://rpc.pulsechain.com", explorer: "https://ipfs.scan.pulsechain.com/tx/", currency: "PLS" },
+  { key: "ronin", name: "Ronin", chainId: 2020, rpc: "https://api.roninchain.com/rpc", explorer: "https://app.roninchain.com/tx/", currency: "RON" },
+  { key: "scroll", name: "Scroll", chainId: 534352, rpc: "https://rpc.scroll.io", explorer: "https://scrollscan.com/tx/", currency: "ETH" },
+  { key: "somnia", name: "Somnia", chainId: 5031, rpc: "https://api.infra.mainnet.somnia.network", explorer: "https://mainnet.somnia.w3us.site/tx/", currency: "SOMI" },
+  { key: "soneium", name: "Soneium", chainId: 1868, rpc: "https://rpc.soneium.org", explorer: "https://soneium.blockscout.com/tx/", currency: "ETH" },
+  { key: "sonic", name: "Sonic", chainId: 146, rpc: "https://rpc.soniclabs.com", explorer: "https://sonicscan.org/tx/", currency: "S" },
+  { key: "stable", name: "Stable", chainId: 988, rpc: "https://rpc.stable.xyz", explorer: "https://stablescan.xyz/tx/", currency: "USDT0" },
+  { key: "story", name: "Story", chainId: 1514, rpc: "https://mainnet.datarpc.io", explorer: "https://datanetscan.io/tx/", currency: "DATA" },
+  { key: "stratis-xertra", name: "Stratis Xertra", chainId: 105105, rpc: "https://rpc.xertra.com", explorer: "https://explorer.xertra.com/tx/", currency: "STRAX" },
+  { key: "taiko-alethia", name: "Taiko Alethia", chainId: 167000, rpc: "https://rpc.mainnet.taiko.xyz", explorer: "https://taikoscan.io/tx/", currency: "ETH" },
+  { key: "telos-evm", name: "Telos EVM", chainId: 40, rpc: "https://rpc.telos.net", explorer: "https://teloscan.io/tx/", currency: "TLOS" },
+  { key: "tempo", name: "Tempo", chainId: 4217, rpc: "https://rpc.mainnet.tempo.xyz", explorer: "https://explore.tempo.xyz/tx/", currency: "USD" },
+  { key: "unichain", name: "Unichain", chainId: 130, rpc: "https://mainnet.unichain.org", explorer: "https://uniscan.xyz/tx/", currency: "ETH" },
+  { key: "world-chain", name: "World Chain", chainId: 480, rpc: "https://worldchain-mainnet.g.alchemy.com/public", explorer: "https://worldscan.org/tx/", currency: "ETH" },
+  { key: "x-layer", name: "X Layer", chainId: 196, rpc: "https://rpc.xlayer.tech", explorer: "https://www.oklink.com/xlayer/tx/", currency: "OKB" },
+  { key: "xai", name: "Xai", chainId: 660279, rpc: "https://xai-chain.net/rpc", explorer: "https://explorer.xai-chain.net/tx/", currency: "XAI" },
+  { key: "xdc-network", name: "XDC Network", chainId: 50, rpc: "https://erpc.xinfin.network", explorer: "https://xdcscan.com/tx/", currency: "XDC" },
+  { key: "zetachain", name: "ZetaChain", chainId: 7000, rpc: "https://zetachain-evm.blockpi.network/v1/rpc/public", explorer: "https://zetascan.com/tx/", currency: "ZETA" },
+  { key: "zksync", name: "zkSync", chainId: 324, rpc: "https://mainnet.era.zksync.io", explorer: "https://explorer.zksync.io/tx/", currency: "ETH" },
+  { key: "zora", name: "Zora", chainId: 7777777, rpc: "https://rpc.zora.energy", explorer: "https://explorer.zora.energy/tx/", currency: "ETH" },
+  { key: "arbitrum-sepolia", name: "Arbitrum Sepolia (testnet)", chainId: 421614, rpc: "https://sepolia-rollup.arbitrum.io/rpc", explorer: "https://sepolia.arbiscan.io/tx/", currency: "ETH" },
+  { key: "base-sepolia", name: "Base Sepolia (testnet)", chainId: 84532, rpc: "https://sepolia.base.org", explorer: "https://sepolia.basescan.org/tx/", currency: "ETH" },
+  { key: "ethereum-hoodi", name: "Ethereum Hoodi (testnet)", chainId: 560048, rpc: "https://rpc.hoodi.ethpandaops.io", explorer: "https://light-hoodi.beaconcha.in/tx/", currency: "ETH" },
+  { key: "ethereum-sepolia", name: "Ethereum Sepolia (testnet)", chainId: 11155111, rpc: "https://rpc.sepolia.org", explorer: "https://sepolia.etherscan.io/tx/", currency: "ETH" },
+  { key: "polygon-amoy", name: "Polygon Amoy (testnet)", chainId: 80002, rpc: "https://rpc-amoy.polygon.technology", explorer: "https://amoy.polygonscan.com/tx/", currency: "POL" },
+  { key: "zksync-sepolia", name: "zkSync Sepolia (testnet)", chainId: 300, rpc: "https://sepolia.era.zksync.dev", explorer: "https://sepolia.explorer.zksync.io/tx/", currency: "ETH" },
+  { key: "custom", name: "Custom RPC...", chainId: null, rpc: null, explorer: null, currency: "?" },
+];
+
+const networkSelectEl = document.getElementById("network");
+function renderNetworkOptions(filter) {
+  const f = (filter || "").toLowerCase();
+  networkSelectEl.innerHTML = "";
+  CHAINS.filter(c => c.name.toLowerCase().includes(f)).forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c.key;
+    opt.textContent = c.chainId ? `${c.name} (chainId ${c.chainId})` : c.name;
+    networkSelectEl.appendChild(opt);
+  });
+}
+renderNetworkOptions("");
+document.getElementById("networkFilter").addEventListener("input", (e) => renderNetworkOptions(e.target.value));
+
+// Tabella nota: profileAddress -> { controller, calldata }. Estendibile a mano quando si analizza un nuovo profilo.
+const KNOWN_DEPLOYMENTS = {
+  "0x328a19ab63744aaf3d0aebfb8e6dc5246faf317b": {
+    label: "SimoneC",
+    controller: "0x86F72AF152E8b502E8Dc7CF87A115Ec94490c6f2",
+    calldata: "0x6a66a75300000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000160000000000000000000000000000000000066093407b6704b89793beffd0d8f0000000000000000000000000000000000000000000000000000000000000002603964d409172b7189ba255688faa322d8e5eed1220ec4e1562153039fd63e147800000000000000000000000000000000000000000000000000000000000000000000000000000000000000003024d38ea2434ba6635003dc1bdc0dab5882ed4f00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000024c4d66de8000000000000000000000000000000000066093407b6704b89793beffd0d8f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002fe3aed98684e7351ad2d408a43ce09a738bf8a400000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000004c4d66de800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003800000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000012000000000000000000000000000000000000000000000000000000000000000060cfc51aec37c55a4d0b1a65c6255c4bf2fbdf6277f3cc0730c45b828b6db8b474b80742de2bf82acb36300007870c5b8bc9572a8001c3f96f7ff59961b23500d4b80742de2bf82acb363000086f72af152e8b502e8dc7cf87a115ec94490c6f2df30dba06db6a30e65354d9a64c609861f089545ca58c6b4dbe31a5f338cb0e3df30dba06db6a30e65354d9a64c6098600000000000000000000000000000000df30dba06db6a30e65354d9a64c6098600000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000140000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000001c0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000147870c5b8bc9572a8001c3f96f7ff59961b23500d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000060080000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000007f3f060000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000147870c5b8bc9572a8001c3f96f7ff59961b23500d000000000000000000000000000000000000000000000000000000000000000000000000000000000000001486f72af152e8b502e8dc7cf87a115ec94490c6f2000000000000000000000000"
+  },
+  "0x1d62b8d2c63b942095ad3c7ffc7e845195d9e718": {
+    label: "birra20venti",
+    controller: "0x434667A8840e18628cbd7B3A51d7cee207fd9d4c",
+    calldata: "0x6a66a75300000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000160000000000000000000000000000000000066093407b6704b89793beffd0d8f0000000000000000000000000000000000000000000000000000000000000002609e611e07d81a9da7fbd94f579aefb528921d502f312523b1e7e89e6942835e3e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000003024d38ea2434ba6635003dc1bdc0dab5882ed4f00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000024c4d66de8000000000000000000000000000000000066093407b6704b89793beffd0d8f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002fe3aed98684e7351ad2d408a43ce09a738bf8a400000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000004c4d66de800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003800000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000012000000000000000000000000000000000000000000000000000000000000000060cfc51aec37c55a4d0b1a65c6255c4bf2fbdf6277f3cc0730c45b828b6db8b474b80742de2bf82acb36300007870c5b8bc9572a8001c3f96f7ff59961b23500d4b80742de2bf82acb3630000434667a8840e18628cbd7b3a51d7cee207fd9d4cdf30dba06db6a30e65354d9a64c609861f089545ca58c6b4dbe31a5f338cb0e3df30dba06db6a30e65354d9a64c6098600000000000000000000000000000000df30dba06db6a30e65354d9a64c6098600000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000140000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000001c0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000147870c5b8bc9572a8001c3f96f7ff59961b23500d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000060080000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000007f3f060000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000147870c5b8bc9572a8001c3f96f7ff59961b23500d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000014434667a8840e18628cbd7b3a51d7cee207fd9d4c000000000000000000000000"
+  },
+  "0x4a2605796e0d91a9667d6e30365aeec384c48c27": {
+    label: "ChainIntegrate",
+    controller: "0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c",
+    calldata: "0x6a66a75300000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000160000000000000000000000000000000000066093407b6704b89793beffd0d8f0000000000000000000000000000000000000000000000000000000000000002600081969c543e0c0c22c441a7646f446c91766035f06ca3aed1a39dbe66f96d7900000000000000000000000000000000000000000000000000000000000000000000000000000000000000003024d38ea2434ba6635003dc1bdc0dab5882ed4f00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000024c4d66de8000000000000000000000000000000000066093407b6704b89793beffd0d8f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002fe3aed98684e7351ad2d408a43ce09a738bf8a400000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000004c4d66de800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003800000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000012000000000000000000000000000000000000000000000000000000000000000060cfc51aec37c55a4d0b1a65c6255c4bf2fbdf6277f3cc0730c45b828b6db8b474b80742de2bf82acb36300007870c5b8bc9572a8001c3f96f7ff59961b23500d4b80742de2bf82acb36300009c8fd044a4c777f9f97c6cfc127c91f86b795c9cdf30dba06db6a30e65354d9a64c609861f089545ca58c6b4dbe31a5f338cb0e3df30dba06db6a30e65354d9a64c6098600000000000000000000000000000000df30dba06db6a30e65354d9a64c6098600000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000140000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000001c0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000147870c5b8bc9572a8001c3f96f7ff59961b23500d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000060080000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000007f3f060000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000147870c5b8bc9572a8001c3f96f7ff59961b23500d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000149c8fd044a4c777f9f97c6cfc127c91f86b795c9c000000000000000000000000"
+  }
+};
+
+const AP_PREFIX = "0x4b80742de2bf82acb3630000"; // AddressPermissions:Permissions:<address>
+
+let signerProvider = null, signerAddress = null;
+let matchedDeployment = null;
+
+const $ = (id) => document.getElementById(id);
+function setStatus(el, html) { el.innerHTML = html; }
+function log(msg, cls) {
+  const l = document.createElement("div");
+  if (cls) l.className = cls;
+  l.textContent = msg;
+  $("log").appendChild(l);
+}
+function resetLog() { $("log").innerHTML = ""; }
+
+networkSelectEl.addEventListener("change", () => {
+  $("customRpcWrap").style.display = networkSelectEl.value === "custom" ? "block" : "none";
+});
+
+// --- 1. Connessione wallet UP (sola lettura) ---
+$("connectUp").addEventListener("click", async () => {
+  if (!window.lukso) {
+    setStatus($("upStatus"), '<span class="badge err">Estensione UP non trovata in questo browser</span>');
+    return;
+  }
+  try {
+    const accounts = await window.lukso.request({ method: "eth_requestAccounts" });
+    const upAddress = accounts[0];
+
+    const known = KNOWN_DEPLOYMENTS[upAddress.toLowerCase()];
+    if (!known) {
+      setStatus($("upStatus"),
+        `<span class="badge err">Connesso: ${upAddress}</span><br>Nessuna deploymentCalldata nota per questo profilo — va analizzata a parte prima di poterlo replicare.`);
+      matchedDeployment = null;
+      return;
+    }
+    matchedDeployment = { address: upAddress, ...known };
+    setStatus($("upStatus"),
+      `<span class="badge ok">Connesso</span> ${known.label}<br>` +
+      `Indirizzo: ${upAddress}<br>` +
+      `Controller atteso per il deploy: ${known.controller}`);
+  } catch (e) {
+    setStatus($("upStatus"), '<span class="badge err">Connessione rifiutata o fallita</span>');
+  }
+});
+
+// --- 2. Connessione wallet firmatario (MetaMask o altro iniettato, via EIP-6963) ---
+const discoveredProviders = [];
+window.addEventListener("eip6963:announceProvider", (e) => {
+  discoveredProviders.push(e.detail);
+});
+window.dispatchEvent(new Event("eip6963:requestProvider"));
+
+$("connectSigner").addEventListener("click", async () => {
+  let candidate = discoveredProviders.find(p => !/lukso|universal profile/i.test(p.info.name))?.provider;
+  if (!candidate && window.ethereum && window.ethereum !== window.lukso) candidate = window.ethereum;
+  if (!candidate) {
+    setStatus($("signerStatus"), '<span class="badge err">Nessun wallet firmatario (es. MetaMask) trovato</span>');
+    return;
+  }
+  try {
+    const accounts = await candidate.request({ method: "eth_requestAccounts" });
+    signerAddress = accounts[0];
+    signerProvider = candidate;
+    setStatus($("signerStatus"), `<span class="badge ok">Connesso</span> ${signerAddress}`);
+  } catch (e) {
+    setStatus($("signerStatus"), '<span class="badge err">Connessione rifiutata o fallita</span>');
+  }
+});
+
+function getNetwork() {
+  const key = networkSelectEl.value;
+  if (key === "custom") {
+    return {
+      name: "Custom",
+      rpc: $("customRpc").value.trim(),
+      explorer: $("customExplorer").value.trim() || null
+    };
+  }
+  return CHAINS.find(c => c.key === key);
+}
+
+let lastCheckOk = false;
+
+// --- 3/4. Verifica ---
+$("checkBtn").addEventListener("click", async () => {
+  resetLog();
+  lastCheckOk = false;
+  $("deployBtn").disabled = true;
+
+  if (!matchedDeployment) { log("Collega prima il wallet UP con un profilo noto.", "line-err"); return; }
+  if (!signerAddress) { log("Collega prima il wallet firmatario.", "line-err"); return; }
+  const net = getNetwork();
+  if (!net.rpc) { log("Manca l'RPC URL della rete di destinazione.", "line-err"); return; }
+
+  try {
+    log(`Profilo: ${matchedDeployment.label} (${matchedDeployment.address})`, "line-dim");
+    log(`Rete: ${net.name} (${net.rpc})`, "line-dim");
+    log(`Wallet che paga il gas: ${signerAddress}`, "line-dim");
+    log(`Controller che risulterà proprietario della UP dopo il deploy: ${matchedDeployment.controller}`, "line-dim");
+    if (signerAddress.toLowerCase() === matchedDeployment.controller.toLowerCase()) {
+      log("(qui coincidono, ma non serve che sia così: chi paga il gas e chi controlla la UP sono due ruoli indipendenti)", "line-dim");
+    }
+
+    // Autoverifica: ricalcola l'indirizzo REALE che produrrà questa calldata,
+    // indipendentemente da quale label/indirizzo la pagina mostra — non ci si fida
+    // che i due campi siano stati compilati coerentemente.
+    log("Verifica che la calldata produca davvero l'indirizzo atteso...", "line-dim");
+    const predictedAddress = predictAddressFromCalldata(matchedDeployment.calldata);
+    if (predictedAddress.toLowerCase() !== matchedDeployment.address.toLowerCase()) {
+      log(`❌ BLOCCANTE — la calldata di questo profilo produce ${predictedAddress}, NON ${matchedDeployment.address}. Calldata sbagliata per questa entry, non procedere.`, "line-err");
+      return;
+    }
+    log(`✅ Calldata verificata: produce esattamente ${predictedAddress}.`, "line-ok");
+
+    const provider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
+
+    const existingCode = await provider.getCode(matchedDeployment.address);
+    if (existingCode !== "0x") {
+      log(`❌ BLOCCANTE — esiste già codice a ${matchedDeployment.address} su questa rete. Il profilo è già deployato qui, non serve rifarlo.`, "line-err");
+      return;
+    }
+    log("✅ Indirizzo della UP libero su questa rete.", "line-ok");
+
+    const balance = await provider.getBalance(signerAddress);
+    log(`Saldo del wallet che paga, su questa rete: ${ethers.formatEther(balance)}`, "line-dim");
+    if (balance === 0n) {
+      log(`❌ BLOCCANTE — saldo zero. Manda gas nativo di questa rete a ${signerAddress} prima di continuare.`, "line-err");
+      return;
+    }
+
+    const gasEstimate = await provider.estimateGas({
+      to: FACTORY_ADDRESS, data: matchedDeployment.calldata, from: signerAddress
+    });
+    const feeData = await provider.getFeeData();
+    const gasPrice = feeData.maxFeePerGas || feeData.gasPrice;
+    const estimatedCost = gasEstimate * gasPrice;
+    const costWithMargin = estimatedCost + estimatedCost / 4n; // +25% margine per oscillazioni
+
+    log(`Gas stimato: ${gasEstimate.toString()} unità`, "line-dim");
+    log(`Prezzo gas attuale: ${ethers.formatUnits(gasPrice, "gwei")} gwei`, "line-dim");
+    log(`Costo stimato: ${ethers.formatEther(estimatedCost)} (${ethers.formatEther(costWithMargin)} con margine)`, "line-dim");
+
+    if (balance < costWithMargin) {
+      const shortfall = costWithMargin - balance;
+      log(`❌ BLOCCANTE — saldo insufficiente. Mancano circa ${ethers.formatEther(shortfall)} (nativo di questa rete) rispetto al costo stimato con margine.`, "line-err");
+      return;
+    }
+    log("✅ Saldo sufficiente a coprire il costo stimato (con margine).", "line-ok");
+
+    lastCheckOk = true;
+    $("deployBtn").disabled = false;
+  } catch (e) {
+    log("Errore durante la verifica: " + (e.shortMessage || e.message), "line-err");
+  }
+});
+
+$("deployBtn").addEventListener("click", async () => {
+  if (!lastCheckOk || !matchedDeployment) return;
+  $("deployBtn").disabled = true;
+  const net = getNetwork();
+
+  try {
+    const browserProvider = new ethers.BrowserProvider(signerProvider);
+    const signerObj = await browserProvider.getSigner();
+
+    log("Invio transazione (conferma nel wallet)...", "line-dim");
+    const tx = await signerObj.sendTransaction({
+      to: FACTORY_ADDRESS,
+      data: matchedDeployment.calldata
+    });
+    log(`Tx inviata: ${tx.hash}`, "line-dim");
+    if (net.explorer) log(net.explorer + tx.hash, "line-dim");
+
+    log("In attesa di conferma...", "line-dim");
+    const receipt = await tx.wait();
+    log(`Confermata nel blocco ${receipt.blockNumber}.`, "line-dim");
+
+    const readProvider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
+    const code = await readProvider.getCode(matchedDeployment.address);
+    log(code !== "0x"
+      ? `✅✅ UP presente su ${net.name} a ${matchedDeployment.address}.`
+      : "❌ Nessun contratto trovato dopo la conferma — controlla manualmente.", code !== "0x" ? "line-ok" : "line-err");
+  } catch (e) {
+    log("Errore durante il deploy: " + (e.shortMessage || e.message), "line-err");
+  } finally {
+    $("deployBtn").disabled = false;
+  }
+});
+</script>
+
+</body>
+</html>

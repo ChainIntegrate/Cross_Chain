@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>UP Deploy Cross-Chain</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
+    --text: #e6e8ec; --text-dim: #9aa1ad;
+    --accent: #5b8cff; --ok: #3fbf6f; --warn: #e0a83c; --err: #e05a5a;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+         max-width: 820px; margin: 0 auto; padding: 32px 20px 80px; }
+  .header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .subtitle { color: var(--text-dim); font-size: 13px; margin-bottom: 28px; }
+  #langToggle { width: auto; background: #2a2f3a; padding: 8px 14px; font-size: 12.5px; font-weight: 600;
+                border-radius: 6px; border: 1px solid var(--border); color: var(--text); cursor: pointer; margin-top: 2px; flex-shrink: 0; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+  .panel h2 { font-size: 14px; margin: 0 0 14px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.03em; }
+  label { display: block; font-size: 13px; color: var(--text-dim); margin: 14px 0 6px; }
+  label:first-child { margin-top: 0; }
+  select, input, textarea { width: 100%; background: #10131a; border: 1px solid var(--border); color: var(--text);
+                  border-radius: 6px; padding: 10px 12px; font-size: 13.5px; font-family: inherit; }
+  textarea { font-family: monospace; font-size: 11.5px; min-height: 90px; resize: vertical; word-break: break-all; }
+  button { width: 100%; background: var(--accent); color: white; border: none; border-radius: 6px;
+           padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; }
+  button:disabled { background: #3a3f4b; cursor: not-allowed; }
+  button.danger { background: var(--err); }
+  button.secondary { background: #2a2f3a; }
+  .status-box { background: #10131a; border: 1px solid var(--border); border-radius: 6px; padding: 12px;
+                font-family: monospace; font-size: 12.5px; margin-top: 12px; word-break: break-all; }
+  .status-box .empty { color: var(--text-dim); }
+  #log { font-family: monospace; font-size: 12.5px; white-space: pre-wrap; word-break: break-all; line-height: 1.6; }
+  .line-ok { color: var(--ok); } .line-warn { color: var(--warn); } .line-err { color: var(--err); } .line-dim { color: var(--text-dim); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-family: monospace; }
+  .badge.ok { background: rgba(63,191,111,0.15); color: var(--ok); }
+  .badge.err { background: rgba(224,90,90,0.15); color: var(--err); }
+  .badge.warn { background: rgba(224,168,60,0.15); color: var(--warn); }
+  .ctrl-card { background: #10131a; border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin-top: 8px; }
+  .ctrl-card .addr { font-family: monospace; font-size: 12.5px; }
+  .ctrl-card .flags { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+  .divider { color: var(--text-dim); font-size: 12px; text-align: center; margin: 16px 0 6px; }
+  .note { font-size: 12px; color: var(--text-dim); margin-bottom: 10px; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<div class="header-row">
+  <div>
+    <h1 data-i18n="h1">UP Deploy Cross-Chain</h1>
+    <div class="subtitle" data-i18n="subtitle"></div>
+  </div>
+  <button id="langToggle" type="button">English</button>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel0Title">0 · Cos'è e cosa serve</h2>
+  <div class="note" data-i18n-html="panel0Note"></div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel1Title">1 · Profilo da replicare</h2>
+  <button id="connectUp" data-i18n="connectUpBtn">Connetti la tua Universal Profile</button>
+  <div class="status-box" id="upStatus"><span class="empty" data-i18n="notConnected">Non connesso.</span></div>
+
+  <label data-i18n="label1">Indirizzo UP atteso su questa rete (compilato automaticamente se connesso sopra)</label>
+  <input type="text" id="expectedAddress" data-i18n-placeholder="placeholderAddr" placeholder="0x...">
+
+  <label data-i18n="label2">Calldata di deploy originale (0x6a66a753...)</label>
+  <textarea id="calldataInput" data-i18n-placeholder="placeholderCalldata" placeholder="0x6a66a753..."></textarea>
+  <button id="decodeBtn" class="secondary" data-i18n="decodeBtn">Decodifica calldata</button>
+
+  <div class="status-box" id="decodeStatus" style="margin-top:14px;"><span class="empty" data-i18n="notDecodedYet">Non ancora decodificato.</span></div>
+  <div id="controllersBox"></div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel2Title">2 · Wallet che paga il deploy</h2>
+  <div class="note" data-i18n="panel2Note"></div>
+  <button id="connectSigner" data-i18n="connectSignerBtn">Connetti wallet firmatario (es. MetaMask)</button>
+  <div class="status-box" id="signerStatus"><span class="empty" data-i18n="notConnected">Non connesso.</span></div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel3Title">3 · Rete di destinazione</h2>
+  <input type="text" id="networkFilter" data-i18n-placeholder="networkFilterPlaceholder" placeholder="Filtra per nome... (es. base, polygon, arbitrum)">
+  <select id="network" style="margin-top:8px;"></select>
+  <div id="customRpcWrap" style="display:none;">
+    <label data-i18n="customRpcLabel">RPC URL custom</label>
+    <input type="text" id="customRpc" data-i18n-placeholder="customRpcPlaceholder" placeholder="https://...">
+    <label data-i18n="customExplorerLabel">Explorer URL custom (opzionale)</label>
+    <input type="text" id="customExplorer" data-i18n-placeholder="customExplorerPlaceholder" placeholder="https://.../address/">
+  </div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel4Title">4 · Verifica e deploy</h2>
+  <button id="checkBtn" data-i18n="checkBtn">Verifica</button>
+  <button id="deployBtn" class="danger" disabled data-i18n="deployBtn">Deploy (irreversibile)</button>
+  <div id="log" class="line-dim" style="margin-top:10px;"><span data-i18n="logInitial">In attesa dei collegamenti sopra.</span></div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+// ==================== I18N ====================
+let LANG = "it";
+
+const I18N = {
+  it: {
+    pageTitle: "UP Deploy Cross-Chain",
+    h1: "UP Deploy Cross-Chain",
+    subtitle: "Rideploy della tua Universal Profile (LSP0 + Key Manager) allo stesso indirizzo su un'altra rete EVM, tramite LSP23LinkedContractsFactory — lo stesso meccanismo usato al momento della creazione originale. Nessuna chiave privata viene mai richiesta da questa pagina: firmi tu, dal tuo wallet.",
+    langToggleBtn: "English",
+    panel0Title: "0 · Cos'è e cosa serve",
+    panel0Note: "Questa pagina ripete, su un'altra rete, l'identica transazione di creazione della tua Universal Profile — per questo l'indirizzo risultante è lo stesso. Ti servono due cose: (1) l'estensione della Universal Profile installata e connessa con il profilo che vuoi replicare; (2) la <b>calldata di deploy originale</b> della tua UP (una lunga stringa esadecimale che inizia con <code>0x6a66a753...</code>), che puoi estrarre dal backup del tuo wallet. La pagina non firma nulla per conto tuo: chiama sempre il tuo wallet per la conferma.",
+    panel1Title: "1 · Profilo da replicare",
+    connectUpBtn: "Connetti la tua Universal Profile",
+    notConnected: "Non connesso.",
+    label1: "Indirizzo UP atteso su questa rete (compilato automaticamente se connesso sopra)",
+    placeholderAddr: "0x...",
+    label2: "Calldata di deploy originale (0x6a66a753...)",
+    placeholderCalldata: "0x6a66a753...",
+    decodeBtn: "Decodifica calldata",
+    notDecodedYet: "Non ancora decodificato.",
+    panel2Title: "2 · Wallet che paga il deploy",
+    panel2Note: "Può essere un account qualsiasi: paga solo il gas della transazione, non diventa controller della UP. Chi controllerà la UP è deciso esclusivamente dalla calldata originale — verificato al punto 1.",
+    connectSignerBtn: "Connetti wallet firmatario (es. MetaMask)",
+    panel3Title: "3 · Rete di destinazione",
+    networkFilterPlaceholder: "Filtra per nome... (es. base, polygon, arbitrum)",
+    customRpcLabel: "RPC URL custom",
+    customRpcPlaceholder: "https://...",
+    customExplorerLabel: "Explorer URL custom (opzionale)",
+    customExplorerPlaceholder: "https://.../address/",
+    panel4Title: "4 · Verifica e deploy",
+    checkBtn: "Verifica",
+    deployBtn: "Deploy (irreversibile)",
+    logInitial: "In attesa dei collegamenti sopra.",
+
+    extNotFound: "Estensione Universal Profile non trovata in questo browser",
+    connectedBadge: "Connesso",
+    connectionRejected: "Connessione rifiutata o fallita",
+    noSignerFound: "Nessun wallet firmatario trovato",
+
+    pasteCalldataFirst: "Incolla prima la calldata",
+    predictedUpLabel: "Indirizzo UP predetto dalla calldata:",
+    predictedKmLabel: "Key Manager predetto:",
+    primaryImplLabel: "Implementazione primaria (LSP0):",
+    secondaryImplLabel: "Implementazione secondaria (Key Manager):",
+    differsFromExpected: (v) => `diversa dall'atteso ${v.impl}`,
+    matchOk: "✅ CORRISPONDE all'indirizzo atteso",
+    matchFail: (v) => `❌ NON corrisponde all'indirizzo atteso (${v.expected})`,
+    noExpectedWarn: "⚠️ Nessun indirizzo atteso inserito — connetti la tua UP al punto 1 o inseriscilo a mano per il controllo bloccante",
+    controllersFoundLabel: "Controller trovati nella calldata (chi otterrà il controllo della UP)",
+    notAutoDecodable: (v) => `Non decodificabile automaticamente`,
+    notAutoDecodableDetail: (v) => `${v.err}. Verifica manualmente il controller prima di procedere.`,
+    noControllersFound: "Nessun controller con permessi trovato nel formato atteso",
+    sysInfraBadge: (v) => `infrastruttura di sistema — ${v.label}`,
+    fullControlBadge: "CONTROLLO TOTALE (ALL_PERMISSIONS)",
+    limitedPermsBadge: "permessi limitati — verifica a cosa servono prima di procedere",
+    noFlags: "(nessun flag)",
+    decodeErrorMsg: (v) => `Errore di decodifica: ${v.err}. Controlla di aver incollato la calldata per intero.`,
+
+    knownLsp1Label: "LSP1UniversalReceiverDelegateUP (contratto ufficiale LUKSO)",
+    knownLsp1Note: "Gestisce automaticamente la ricezione di asset (LSP7/LSP8) e vault (LSP9) da parte della UP, aggiornando le liste LSP5ReceivedAssets/LSP10Vaults nello storage. I permessi che riceve (tipicamente SETDATA, SUPER_SETDATA, REENTRANCY) servono esclusivamente a questo — non includono TRANSFERVALUE, CALL né ADDCONTROLLER: non può muovere fondi, eseguire chiamate arbitrarie o cambiare i controller. È lo stesso indirizzo su ogni rete/profilo perché è infrastruttura condivisa, non specifica al tuo profilo.",
+
+    decodeCalldataFirstLog: "Decodifica prima la calldata (pannello 1).",
+    blockingMismatch: "❌ BLOCCANTE — l'indirizzo predetto dalla calldata non corrisponde all'indirizzo atteso. Non procedere: rischio di deployare la UP sbagliata o con calldata sbagliata.",
+    connectSignerFirstLog: "Collega prima il wallet firmatario (pannello 2).",
+    missingRpcLog: "Manca l'RPC della rete (pannello 3).",
+    walletWrongNetwork: (v) => `❌ BLOCCANTE — il wallet firmatario è connesso alla rete con chainId ${v.walletChainId}, ma qui hai selezionato ${v.netName} (chainId ${v.chainId}). Cambia rete in MetaMask prima di continuare.`,
+    walletCorrectNetwork: (v) => `✅ Il wallet firmatario è connesso alla rete corretta (chainId ${v.chainId}).`,
+    walletNetworkCheckFailed: (v) => `⚠️ Non è stato possibile verificare la rete del wallet firmatario — controlla tu stesso che MetaMask sia su ${v.netName} prima di procedere.`,
+    upExpectedLog: (v) => `UP atteso: ${v.addr}`,
+    kmExpectedLog: (v) => `Key Manager atteso: ${v.addr}`,
+    calldataVerifiedOk: "✅ Calldata verificata: l'indirizzo predetto corrisponde a quello atteso.",
+    sysAddrRecognized: (v) => `Indirizzo di sistema riconosciuto: ${v.addr} (${v.label}) — permessi necessari al funzionamento, non è un controller "proprietario".`,
+    allPermsControllerWarn: (v) => `Controller con ALL_PERMISSIONS: ${v.addr} — sarà lui a controllare la UP dopo il deploy.`,
+    noAutoControllerWarn: "⚠️ Non è stato possibile identificare automaticamente il controller dalla calldata — verificalo a mano prima di continuare.",
+    alreadyDeployedErr: (v) => `❌ BLOCCANTE — la UP risulta già deployata su questa rete (${v.addr}). Nessun nuovo deploy necessario.`,
+    kmInconsistentErr: "❌ BLOCCANTE — il Key Manager risulta già presente a questo indirizzo su questa rete, ma la UP no: stato incoerente, non procedere senza indagare.",
+    noContractOkLog: "✅ Nessun contratto presente agli indirizzi attesi su questa rete: il deploy può procedere.",
+    gasEstimateFailErr: (v) => `❌ BLOCCANTE — stima gas fallita: ${v.err}`,
+    gasEstimateOkLog: (v) => `✅ Stima gas riuscita: ${v.gas} unità.`,
+    estimatedCostLog: (v) => `Costo stimato totale (gas + eventuale funding): ${v.cost}`,
+    insufficientBalanceErr: "❌ BLOCCANTE — saldo del wallet firmatario insufficiente.",
+    sufficientBalanceLog: "✅ Saldo del wallet firmatario sufficiente.",
+    readyWarnLog: "\nPronto. Il deploy è irreversibile — ricontrolla indirizzo atteso e controller sopra prima di premere Deploy.",
+    verifyErrorLog: (v) => `Errore durante la verifica: ${v.err}`,
+
+    walletNowWrongNetwork: (v) => `❌ BLOCCANTE — il wallet è ora su chainId ${v.walletChainId}, non su ${v.netName} (chainId ${v.chainId}). Deploy annullato, rifai la verifica dopo aver sistemato la rete.`,
+    sendingTxLog: "Invio transazione di deploy (conferma nel wallet)...",
+    txHashLog: (v) => `Tx: ${v.hash}`,
+    waitingConfirmLog: "In attesa di conferma...",
+    txFailedErr: "❌ La transazione è stata inclusa ma ha status FAILED. Nessun deploy avvenuto.",
+    txConfirmedLog: "Transazione confermata on-chain. Avvio verifica rigorosa dell'esito...",
+    waitingIndexLog: (v) => `In attesa che l'RPC indicizzi il contratto (tentativo ${v.i}/${v.n})...`,
+    deployConfirmedOk: "✅✅✅ DEPLOY CONFERMATO all'indirizzo atteso.",
+    upLine: (v) => `UP:          ${v.addr}`,
+    kmLine: (v) => `Key Manager: ${v.addr}`,
+    mismatchErr: "❌❌❌ ATTENZIONE — dopo diversi tentativi, il bytecode all'indirizzo atteso NON corrisponde esattamente a quanto previsto.",
+    mismatchDetailUp: (v) => `UP: atteso proxy verso ${v.impl} (${v.expLen} char), trovato (${v.actLen} char): ${v.actual}`,
+    mismatchDetailKm: (v) => `Key Manager: atteso proxy verso ${v.impl} (${v.expLen} char), trovato (${v.actLen} char): ${v.actual}`,
+    noCodeFound: "NESSUN CODICE",
+    propagationNote: "Se il codice trovato non è vuoto ma solo leggermente diverso da quello atteso, potrebbe trattarsi comunque di un problema di propagazione dell'RPC: riverifica tra qualche minuto con il pulsante Verifica, oppure controlla direttamente sull'explorer prima di considerare il deploy fallito.",
+    deployErrorLog: (v) => `Errore durante il deploy: ${v.err}`,
+  },
+  en: {
+    pageTitle: "UP Cross-Chain Deploy",
+    h1: "UP Cross-Chain Deploy",
+    subtitle: "Redeploy your Universal Profile (LSP0 + Key Manager) at the same address on another EVM network, via LSP23LinkedContractsFactory — the exact same mechanism used when it was originally created. This page never asks for a private key: you sign from your own wallet.",
+    langToggleBtn: "Italiano",
+    panel0Title: "0 · What this is and what you need",
+    panel0Note: "This page repeats, on another network, the exact same transaction that created your Universal Profile — that's why the resulting address is identical. You need two things: (1) the Universal Profile browser extension, installed and connected with the profile you want to replicate; (2) the <b>original deployment calldata</b> of your UP (a long hex string starting with <code>0x6a66a753...</code>), which you can extract from your wallet's backup. This page never signs anything on your behalf: it always calls your wallet for confirmation.",
+    panel1Title: "1 · Profile to replicate",
+    connectUpBtn: "Connect your Universal Profile",
+    notConnected: "Not connected.",
+    label1: "Expected UP address on this network (auto-filled if connected above)",
+    placeholderAddr: "0x...",
+    label2: "Original deployment calldata (0x6a66a753...)",
+    placeholderCalldata: "0x6a66a753...",
+    decodeBtn: "Decode calldata",
+    notDecodedYet: "Not decoded yet.",
+    panel2Title: "2 · Wallet paying for the deploy",
+    panel2Note: "This can be any account: it only pays the transaction gas and does not become a controller of the UP. Who controls the UP is decided exclusively by the original calldata — verified in step 1.",
+    connectSignerBtn: "Connect signing wallet (e.g. MetaMask)",
+    panel3Title: "3 · Target network",
+    networkFilterPlaceholder: "Filter by name... (e.g. base, polygon, arbitrum)",
+    customRpcLabel: "Custom RPC URL",
+    customRpcPlaceholder: "https://...",
+    customExplorerLabel: "Custom explorer URL (optional)",
+    customExplorerPlaceholder: "https://.../address/",
+    panel4Title: "4 · Verify and deploy",
+    checkBtn: "Verify",
+    deployBtn: "Deploy (irreversible)",
+    logInitial: "Waiting for the connections above.",
+
+    extNotFound: "Universal Profile extension not found in this browser",
+    connectedBadge: "Connected",
+    connectionRejected: "Connection rejected or failed",
+    noSignerFound: "No signing wallet found",
+
+    pasteCalldataFirst: "Paste the calldata first",
+    predictedUpLabel: "UP address predicted from the calldata:",
+    predictedKmLabel: "Predicted Key Manager:",
+    primaryImplLabel: "Primary implementation (LSP0):",
+    secondaryImplLabel: "Secondary implementation (Key Manager):",
+    differsFromExpected: (v) => `differs from expected ${v.impl}`,
+    matchOk: "✅ MATCHES the expected address",
+    matchFail: (v) => `❌ does NOT match the expected address (${v.expected})`,
+    noExpectedWarn: "⚠️ No expected address entered — connect your UP in step 1 or enter it manually for the blocking check",
+    controllersFoundLabel: "Controllers found in the calldata (who will get control of the UP)",
+    notAutoDecodable: (v) => `Not automatically decodable`,
+    notAutoDecodableDetail: (v) => `${v.err}. Verify the controller manually before proceeding.`,
+    noControllersFound: "No controller with permissions found in the expected format",
+    sysInfraBadge: (v) => `system infrastructure — ${v.label}`,
+    fullControlBadge: "FULL CONTROL (ALL_PERMISSIONS)",
+    limitedPermsBadge: "limited permissions — check what they're for before proceeding",
+    noFlags: "(no flags)",
+    decodeErrorMsg: (v) => `Decode error: ${v.err}. Check that you pasted the whole calldata.`,
+
+    knownLsp1Label: "LSP1UniversalReceiverDelegateUP (official LUKSO contract)",
+    knownLsp1Note: "Automatically handles the UP's receipt of assets (LSP7/LSP8) and vaults (LSP9), updating the LSP5ReceivedAssets/LSP10Vaults lists in storage. The permissions it receives (typically SETDATA, SUPER_SETDATA, REENTRANCY) serve only this purpose — they don't include TRANSFERVALUE, CALL or ADDCONTROLLER: it cannot move funds, make arbitrary calls, or change controllers. It's the same address on every network/profile because it's shared infrastructure, not specific to your profile.",
+
+    decodeCalldataFirstLog: "Decode the calldata first (panel 1).",
+    blockingMismatch: "❌ BLOCKING — the address predicted from the calldata does not match the expected address. Do not proceed: risk of deploying the wrong UP or with the wrong calldata.",
+    connectSignerFirstLog: "Connect the signing wallet first (panel 2).",
+    missingRpcLog: "Missing network RPC (panel 3).",
+    walletWrongNetwork: (v) => `❌ BLOCKING — the signing wallet is connected to chainId ${v.walletChainId}, but you selected ${v.netName} (chainId ${v.chainId}) here. Switch network in MetaMask before continuing.`,
+    walletCorrectNetwork: (v) => `✅ The signing wallet is connected to the correct network (chainId ${v.chainId}).`,
+    walletNetworkCheckFailed: (v) => `⚠️ Could not verify the signing wallet's network — check yourself that MetaMask is on ${v.netName} before proceeding.`,
+    upExpectedLog: (v) => `Expected UP: ${v.addr}`,
+    kmExpectedLog: (v) => `Expected Key Manager: ${v.addr}`,
+    calldataVerifiedOk: "✅ Calldata verified: the predicted address matches the expected one.",
+    sysAddrRecognized: (v) => `Recognized system address: ${v.addr} (${v.label}) — permissions needed for it to function, not an "owner" controller.`,
+    allPermsControllerWarn: (v) => `Controller with ALL_PERMISSIONS: ${v.addr} — this will control the UP after the deploy.`,
+    noAutoControllerWarn: "⚠️ Could not automatically identify the controller from the calldata — verify it by hand before continuing.",
+    alreadyDeployedErr: (v) => `❌ BLOCKING — the UP already appears deployed on this network (${v.addr}). No new deploy needed.`,
+    kmInconsistentErr: "❌ BLOCKING — the Key Manager already exists at this address on this network, but the UP doesn't: inconsistent state, do not proceed without investigating.",
+    noContractOkLog: "✅ No contract present at the expected addresses on this network: the deploy can proceed.",
+    gasEstimateFailErr: (v) => `❌ BLOCKING — gas estimation failed: ${v.err}`,
+    gasEstimateOkLog: (v) => `✅ Gas estimation succeeded: ${v.gas} units.`,
+    estimatedCostLog: (v) => `Total estimated cost (gas + any funding): ${v.cost}`,
+    insufficientBalanceErr: "❌ BLOCKING — insufficient signing wallet balance.",
+    sufficientBalanceLog: "✅ Signing wallet balance sufficient.",
+    readyWarnLog: "\nReady. The deploy is irreversible — double-check the expected address and controllers above before pressing Deploy.",
+    verifyErrorLog: (v) => `Error during verification: ${v.err}`,
+
+    walletNowWrongNetwork: (v) => `❌ BLOCKING — the wallet is now on chainId ${v.walletChainId}, not ${v.netName} (chainId ${v.chainId}). Deploy cancelled, re-run Verify after fixing the network.`,
+    sendingTxLog: "Sending deploy transaction (confirm in your wallet)...",
+    txHashLog: (v) => `Tx: ${v.hash}`,
+    waitingConfirmLog: "Waiting for confirmation...",
+    txFailedErr: "❌ The transaction was included but has status FAILED. No deploy happened.",
+    txConfirmedLog: "Transaction confirmed on-chain. Starting strict verification of the outcome...",
+    waitingIndexLog: (v) => `Waiting for the RPC to index the contract (attempt ${v.i}/${v.n})...`,
+    deployConfirmedOk: "✅✅✅ DEPLOY CONFIRMED at the expected address.",
+    upLine: (v) => `UP:          ${v.addr}`,
+    kmLine: (v) => `Key Manager: ${v.addr}`,
+    mismatchErr: "❌❌❌ WARNING — after several attempts, the bytecode at the expected address does NOT exactly match what was expected.",
+    mismatchDetailUp: (v) => `UP: expected proxy to ${v.impl} (${v.expLen} chars), found (${v.actLen} chars): ${v.actual}`,
+    mismatchDetailKm: (v) => `Key Manager: expected proxy to ${v.impl} (${v.expLen} chars), found (${v.actLen} chars): ${v.actual}`,
+    noCodeFound: "NO CODE",
+    propagationNote: "If the code found is not empty but only slightly different from expected, it could still be an RPC propagation issue: re-verify in a few minutes with the Verify button, or check directly on the explorer before considering the deploy failed.",
+    deployErrorLog: (v) => `Error during deploy: ${v.err}`,
+  },
+};
+
+function t(key, vars) {
+  const v = I18N[LANG][key];
+  return typeof v === "function" ? v(vars || {}) : v;
+}
+
+function applyI18n() {
+  document.documentElement.lang = LANG;
+  document.title = t("pageTitle");
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.getAttribute("data-i18n")); });
+  document.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.getAttribute("data-i18n-html")); });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => { el.placeholder = t(el.getAttribute("data-i18n-placeholder")); });
+  $("langToggle").textContent = t("langToggleBtn");
+
+  if (!upAddressConnected) $("upStatus").innerHTML = `<span class="empty">${t("notConnected")}</span>`;
+  if (!signerAddress) $("signerStatus").innerHTML = `<span class="empty">${t("notConnected")}</span>`;
+  if (decoded) {
+    renderDecodeResult(decoded, $("expectedAddress").value.trim());
+  } else {
+    $("decodeStatus").innerHTML = `<span class="empty">${t("notDecodedYet")}</span>`;
+  }
+}
+
+$("langToggle").addEventListener("click", () => {
+  LANG = LANG === "it" ? "en" : "it";
+  applyI18n();
+});
+
+// ==================== APP ====================
+const FACTORY_ADDRESS = "0x2300000A84D25dF63081feAa37ba6b62C4c89a30"; // stesso indirizzo su ogni rete EVM
+const SECONDARY_IMPL = "0x2fe3aed98684e7351ad2d408a43ce09a738bf8a4"; // LSP6KeyManagerInit (LUKSO ufficiale)
+const ALL_PERMISSIONS_HEX = "0x00000000000000000000000000000000000000000000000000000000007f3f06";
+const PERM_PREFIX = "4b80742de2bf82acb3630000"; // bytes12: keccak("AddressPermissions:Permissions:")[0:10] + padding
+
+const PERMISSION_BITS = [
+  "CHANGEOWNER","ADDCONTROLLER","EDITPERMISSIONS","ADDEXTENSIONS","CHANGEEXTENSIONS",
+  "ADDUNIVERSALRECEIVERDELEGATE","CHANGEUNIVERSALRECEIVERDELEGATE","REENTRANCY",
+  "SUPER_TRANSFERVALUE","TRANSFERVALUE","SUPER_CALL","CALL","SUPER_STATICCALL","STATICCALL",
+  "SUPER_DELEGATECALL","DELEGATECALL","DEPLOY","SUPER_SETDATA","SETDATA","ENCRYPT","DECRYPT",
+  "SIGN","EXECUTE_RELAY_CALL","ERC1271_SIGN"
+];
+
+// Indirizzi di infrastruttura LUKSO ufficiale, riconoscibili e non legati a un singolo profilo.
+// Stesso indirizzo su ogni rete dove LUKSO ha deployato gli stessi contratti (deploy deterministico).
+// Verificato su explorer.execution.mainnet.lukso.network (contratto verificato, nome confermato).
+const KNOWN_ADDRESSES = {
+  "0x7870c5b8bc9572a8001c3f96f7ff59961b23500d": {
+    labelKey: "knownLsp1Label",
+    noteKey: "knownLsp1Note"
+  }
+};
+
+const CHAINS = [
+  { key: "0g", name: "0G", chainId: 16661, rpc: "https://evmrpc.0g.ai", explorer: "https://chainscan.0g.ai/address/", currency: "0G" },
+  { key: "apechain", name: "ApeChain", chainId: 33139, rpc: "https://rpc.apechain.com", explorer: "https://apescan.io/address/", currency: "APE" },
+  { key: "arbitrum-one", name: "Arbitrum One", chainId: 42161, rpc: "https://arb1.arbitrum.io/rpc", explorer: "https://arbiscan.io/address/", currency: "ETH" },
+  { key: "avalanche-c-chain", name: "Avalanche C-Chain", chainId: 43114, rpc: "https://api.avax.network/ext/bc/C/rpc", explorer: "https://snowscan.xyz/address/", currency: "AVAX" },
+  { key: "base", name: "Base", chainId: 8453, rpc: "https://mainnet.base.org", explorer: "https://basescan.org/address/", currency: "ETH" },
+  { key: "berachain", name: "Berachain", chainId: 80094, rpc: "https://rpc.berachain.com", explorer: "https://berascan.com/address/", currency: "BERA" },
+  { key: "blast", name: "Blast", chainId: 81457, rpc: "https://rpc.blast.io", explorer: "https://blastscan.io/address/", currency: "ETH" },
+  { key: "bnb-smart-chain", name: "BNB Smart Chain", chainId: 56, rpc: "https://bsc-dataseed1.bnbchain.org", explorer: "https://bscscan.com/address/", currency: "BNB" },
+  { key: "celo", name: "Celo", chainId: 42220, rpc: "https://forno.celo.org", explorer: "https://celoscan.io/address/", currency: "CELO" },
+  { key: "chiliz", name: "Chiliz", chainId: 88888, rpc: "https://rpc.chiliz.com", explorer: "https://chiliscan.com/address/", currency: "CHZ" },
+  { key: "conflux-evm-espace", name: "Conflux EVM eSpace", chainId: 1030, rpc: "https://evm.confluxrpc.com", explorer: "https://evm.confluxscan.net/address/", currency: "CFX" },
+  { key: "core-blockchain", name: "Core Blockchain", chainId: 1116, rpc: "https://rpc.coredao.org", explorer: "https://scan.coredao.org/address/", currency: "CORE" },
+  { key: "coti", name: "COTI", chainId: 2632500, rpc: "https://mainnet.coti.io/rpc", explorer: "https://mainnet.cotiscan.io/address/", currency: "COTI" },
+  { key: "cronos", name: "Cronos", chainId: 25, rpc: "https://evm.cronos.org", explorer: "https://explorer.cronos.org/address/", currency: "CRO" },
+  { key: "degen-chain", name: "Degen Chain", chainId: 666666666, rpc: "https://rpc.degen.tips", explorer: null, currency: "DEGEN" },
+  { key: "ethereum", name: "Ethereum", chainId: 1, rpc: "https://ethereum-rpc.publicnode.com", explorer: "https://etherscan.io/address/", currency: "ETH" },
+  { key: "ethereum-classic", name: "Ethereum Classic", chainId: 61, rpc: "https://etc.rivet.link", explorer: "https://etc.blockscout.com/address/", currency: "ETC" },
+  { key: "etherlink", name: "Etherlink", chainId: 42793, rpc: "https://node.mainnet.etherlink.com", explorer: "https://explorer.etherlink.com/address/", currency: "XTZ" },
+  { key: "flare", name: "Flare", chainId: 14, rpc: "https://flare-api.flare.network/ext/C/rpc", explorer: "https://flare-explorer.flare.network/address/", currency: "FLR" },
+  { key: "gnosis", name: "Gnosis", chainId: 100, rpc: "https://rpc.gnosischain.com", explorer: "https://gnosisscan.io/address/", currency: "XDAI" },
+  { key: "gravity-alpha", name: "Gravity Alpha", chainId: 1625, rpc: "https://rpc.gravity.xyz", explorer: "https://explorer.gravity.xyz/address/", currency: "G" },
+  { key: "hashkey-chain", name: "HashKey Chain", chainId: 177, rpc: "https://mainnet.hsk.xyz", explorer: "https://hsk.blockscout.com/address/", currency: "HSK" },
+  { key: "immutable-zkevm", name: "Immutable zkEVM", chainId: 13371, rpc: "https://rpc.immutable.com", explorer: "https://explorer.immutable.com/address/", currency: "IMX" },
+  { key: "ink", name: "Ink", chainId: 57073, rpc: "https://rpc-gel.inkonchain.com", explorer: "https://explorer.inkonchain.com/address/", currency: "ETH" },
+  { key: "katana", name: "Katana", chainId: 747474, rpc: "https://rpc.katana.network", explorer: "https://katanascan.com/address/", currency: "ETH" },
+  { key: "kava-evm", name: "Kava EVM", chainId: 2222, rpc: "https://evm.kava.io", explorer: "https://kavascan.com/address/", currency: "KAVA" },
+  { key: "lens", name: "Lens", chainId: 232, rpc: "https://rpc.lens.xyz", explorer: "https://explorer.lens.xyz/address/", currency: "GHO" },
+  { key: "linea", name: "Linea", chainId: 59144, rpc: "https://rpc.linea.build", explorer: "https://lineascan.build/address/", currency: "ETH" },
+  { key: "mantle", name: "Mantle", chainId: 5000, rpc: "https://rpc.mantle.xyz", explorer: "https://mantlescan.xyz/address/", currency: "MNT" },
+  { key: "megaeth", name: "MegaETH", chainId: 4326, rpc: "https://mainnet.megaeth.com/rpc", explorer: "https://mega.etherscan.io/address/", currency: "ETH" },
+  { key: "mode", name: "Mode", chainId: 34443, rpc: "https://mainnet.mode.network", explorer: "https://explorer.mode.network/address/", currency: "ETH" },
+  { key: "monad", name: "Monad", chainId: 143, rpc: "https://rpc.monad.xyz", explorer: "https://monadvision.com/address/", currency: "MON" },
+  { key: "moonbeam", name: "Moonbeam", chainId: 1284, rpc: "https://rpc.api.moonbeam.network", explorer: "https://moonbeam.moonscan.io/address/", currency: "GLMR" },
+  { key: "moonriver", name: "Moonriver", chainId: 1285, rpc: "https://rpc.api.moonriver.moonbeam.network", explorer: "https://moonriver.moonscan.io/address/", currency: "MOVR" },
+  { key: "optimism", name: "Optimism", chainId: 10, rpc: "https://mainnet.optimism.io", explorer: "https://optimistic.etherscan.io/address/", currency: "ETH" },
+  { key: "plasma", name: "Plasma", chainId: 9745, rpc: "https://rpc.plasma.to", explorer: "https://plasmascan.to/address/", currency: "XPL" },
+  { key: "plume", name: "Plume", chainId: 98866, rpc: "https://rpc.plume.org", explorer: "https://explorer.plume.org/address/", currency: "PLUME" },
+  { key: "polygon", name: "Polygon", chainId: 137, rpc: "https://polygon.drpc.org", explorer: "https://polygonscan.com/address/", currency: "POL" },
+  { key: "pulsechain", name: "Pulsechain", chainId: 369, rpc: "https://rpc.pulsechain.com", explorer: "https://ipfs.scan.pulsechain.com/address/", currency: "PLS" },
+  { key: "ronin", name: "Ronin", chainId: 2020, rpc: "https://api.roninchain.com/rpc", explorer: "https://app.roninchain.com/address/", currency: "RON" },
+  { key: "scroll", name: "Scroll", chainId: 534352, rpc: "https://rpc.scroll.io", explorer: "https://scrollscan.com/address/", currency: "ETH" },
+  { key: "somnia", name: "Somnia", chainId: 5031, rpc: "https://api.infra.mainnet.somnia.network", explorer: "https://mainnet.somnia.w3us.site/address/", currency: "SOMI" },
+  { key: "soneium", name: "Soneium", chainId: 1868, rpc: "https://rpc.soneium.org", explorer: "https://soneium.blockscout.com/address/", currency: "ETH" },
+  { key: "sonic", name: "Sonic", chainId: 146, rpc: "https://rpc.soniclabs.com", explorer: "https://sonicscan.org/address/", currency: "S" },
+  { key: "stable", name: "Stable", chainId: 988, rpc: "https://rpc.stable.xyz", explorer: "https://stablescan.xyz/address/", currency: "USDT0" },
+  { key: "story", name: "Story", chainId: 1514, rpc: "https://mainnet.datarpc.io", explorer: "https://datanetscan.io/address/", currency: "DATA" },
+  { key: "stratis-xertra", name: "Stratis Xertra", chainId: 105105, rpc: "https://rpc.xertra.com", explorer: "https://explorer.xertra.com/address/", currency: "STRAX" },
+  { key: "taiko-alethia", name: "Taiko Alethia", chainId: 167000, rpc: "https://rpc.mainnet.taiko.xyz", explorer: "https://taikoscan.io/address/", currency: "ETH" },
+  { key: "telos-evm", name: "Telos EVM", chainId: 40, rpc: "https://rpc.telos.net", explorer: "https://teloscan.io/address/", currency: "TLOS" },
+  { key: "tempo", name: "Tempo", chainId: 4217, rpc: "https://rpc.mainnet.tempo.xyz", explorer: "https://explore.tempo.xyz/address/", currency: "USD" },
+  { key: "unichain", name: "Unichain", chainId: 130, rpc: "https://mainnet.unichain.org", explorer: "https://uniscan.xyz/address/", currency: "ETH" },
+  { key: "world-chain", name: "World Chain", chainId: 480, rpc: "https://worldchain-mainnet.g.alchemy.com/public", explorer: "https://worldscan.org/address/", currency: "ETH" },
+  { key: "x-layer", name: "X Layer", chainId: 196, rpc: "https://rpc.xlayer.tech", explorer: "https://www.oklink.com/xlayer/address/", currency: "OKB" },
+  { key: "xai", name: "Xai", chainId: 660279, rpc: "https://xai-chain.net/rpc", explorer: "https://explorer.xai-chain.net/address/", currency: "XAI" },
+  { key: "xdc-network", name: "XDC Network", chainId: 50, rpc: "https://erpc.xinfin.network", explorer: "https://xdcscan.com/address/", currency: "XDC" },
+  { key: "zetachain", name: "ZetaChain", chainId: 7000, rpc: "https://zetachain-evm.blockpi.network/v1/rpc/public", explorer: "https://zetascan.com/address/", currency: "ZETA" },
+  { key: "zksync", name: "zkSync", chainId: 324, rpc: "https://mainnet.era.zksync.io", explorer: "https://explorer.zksync.io/address/", currency: "ETH" },
+  { key: "zora", name: "Zora", chainId: 7777777, rpc: "https://rpc.zora.energy", explorer: "https://explorer.zora.energy/address/", currency: "ETH" },
+  { key: "arbitrum-sepolia", name: "Arbitrum Sepolia (testnet)", chainId: 421614, rpc: "https://sepolia-rollup.arbitrum.io/rpc", explorer: "https://sepolia.arbiscan.io/address/", currency: "ETH" },
+  { key: "base-sepolia", name: "Base Sepolia (testnet)", chainId: 84532, rpc: "https://sepolia.base.org", explorer: "https://sepolia.basescan.org/address/", currency: "ETH" },
+  { key: "ethereum-hoodi", name: "Ethereum Hoodi (testnet)", chainId: 560048, rpc: "https://rpc.hoodi.ethpandaops.io", explorer: "https://light-hoodi.beaconcha.in/address/", currency: "ETH" },
+  { key: "ethereum-sepolia", name: "Ethereum Sepolia (testnet)", chainId: 11155111, rpc: "https://rpc.sepolia.org", explorer: "https://sepolia.etherscan.io/address/", currency: "ETH" },
+  { key: "polygon-amoy", name: "Polygon Amoy (testnet)", chainId: 80002, rpc: "https://rpc-amoy.polygon.technology", explorer: "https://amoy.polygonscan.com/address/", currency: "POL" },
+  { key: "zksync-sepolia", name: "zkSync Sepolia (testnet)", chainId: 300, rpc: "https://sepolia.era.zksync.dev", explorer: "https://sepolia.explorer.zksync.io/address/", currency: "ETH" },
+  { key: "sei", name: "Sei", chainId: 1329, rpc: "https://evm-rpc.sei-apis.com", explorer: "https://seitrace.com/address/", currency: "SEI" },
+  { key: "custom", name: "Custom RPC...", chainId: null, rpc: null, explorer: null, currency: "?" },
+];
+
+function log(msg, cls) {
+  const l = document.createElement("div");
+  if (cls) l.className = cls;
+  l.textContent = msg;
+  $("log").appendChild(l);
+}
+
+// --- Rete: filtro + lista ---
+const networkSelectEl = $("network");
+function renderNetworkOptions(filter) {
+  const f = (filter || "").toLowerCase();
+  networkSelectEl.innerHTML = "";
+  CHAINS.filter(c => c.name.toLowerCase().includes(f)).forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c.key;
+    opt.textContent = c.chainId ? `${c.name} (chainId ${c.chainId})` : c.name;
+    networkSelectEl.appendChild(opt);
+  });
+}
+renderNetworkOptions("");
+$("networkFilter").addEventListener("input", (e) => renderNetworkOptions(e.target.value));
+networkSelectEl.addEventListener("change", () => {
+  $("customRpcWrap").style.display = networkSelectEl.value === "custom" ? "block" : "none";
+});
+function getNetwork() {
+  const key = networkSelectEl.value;
+  if (key === "custom") {
+    return { name: "Custom", rpc: $("customRpc").value.trim(), explorer: $("customExplorer").value.trim() || null };
+  }
+  return CHAINS.find(c => c.key === key);
+}
+
+// --- 1. Profilo: connessione alla PROPRIA estensione UP ---
+// Nessuna tabella di profili noti: chiunque usi la pagina vede solo il proprio indirizzo,
+// letto direttamente dalla connessione, e deve fornire la propria calldata.
+let upAddressConnected = null;
+$("connectUp").addEventListener("click", async () => {
+  if (!window.lukso) {
+    $("upStatus").innerHTML = `<span class="badge err">${t("extNotFound")}</span>`;
+    return;
+  }
+  try {
+    const accounts = await window.lukso.request({ method: "eth_requestAccounts" });
+    const upAddress = accounts[0];
+    upAddressConnected = upAddress;
+    $("upStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${upAddress}`;
+    $("expectedAddress").value = ethers.getAddress(upAddress);
+  } catch (e) {
+    $("upStatus").innerHTML = `<span class="badge err">${t("connectionRejected")}</span>`;
+  }
+});
+
+// Init code EIP-1167 completo: usato SOLO per calcolare l'hash che entra nella formula CREATE2.
+// Include il preambolo "3d602d80600a3d3981f3" che al deploy copia il resto e lo restituisce.
+function minimalProxyInitcode(impl) {
+  return "0x3d602d80600a3d3981f3363d3d373d3d3d363d73" + impl.slice(2).toLowerCase() + "5af43d82803e903d91602b57fd5bf3";
+}
+
+// Runtime code EIP-1167: quello che resta effettivamente depositato on-chain e che getCode()
+// restituisce — SENZA il preambolo di 10 byte del constructor. Va usato per ogni verifica
+// del bytecode dopo il deploy, mai l'init code, altrimenti il confronto fallisce sempre.
+function minimalProxyRuntimeCode(impl) {
+  return "0x363d3d373d3d3d363d73" + impl.slice(2).toLowerCase() + "5af43d82803e903d91602b57fd5bf3";
+}
+
+function computeKeyManagerAddress(primaryAddress) {
+  const salt = ethers.keccak256(primaryAddress);
+  const initcodeHash = ethers.keccak256(minimalProxyInitcode(SECONDARY_IMPL));
+  return ethers.getCreate2Address(FACTORY_ADDRESS, salt, initcodeHash);
+}
+
+function decodePermissions(valueHex) {
+  let v = valueHex.toLowerCase();
+  if (v.startsWith("0x")) v = v.slice(2);
+  v = v.padStart(64, "0");
+  const asBigInt = BigInt("0x" + v);
+  const isAll = ("0x" + v) === ALL_PERMISSIONS_HEX;
+  const flags = [];
+  for (let bit = 0; bit < PERMISSION_BITS.length; bit++) {
+    if ((asBigInt >> BigInt(bit)) & 1n) flags.push(PERMISSION_BITS[bit]);
+  }
+  return { hex: "0x" + v, isAll, flags };
+}
+
+let decoded = null;
+
+function decodeCalldata(calldataHex, expectedAddress) {
+  const coder = ethers.AbiCoder.defaultAbiCoder();
+  let data = calldataHex.trim();
+  if (!data.startsWith("0x")) data = "0x" + data;
+  const body = "0x" + data.slice(10); // strip 4-byte selector
+
+  const outerTypes = ["tuple(bytes32,uint256,address,bytes)", "tuple(uint256,address,bytes,bool,bytes)", "address", "bytes"];
+  const [primaryT, secondaryT, postDeploymentModule, postDeploymentModuleCalldata] = coder.decode(outerTypes, body);
+
+  const primary = { salt: primaryT[0], fundingAmount: primaryT[1], impl: primaryT[2], initCalldata: primaryT[3] };
+  const secondary = { fundingAmount: secondaryT[0], impl: secondaryT[1], initCalldata: secondaryT[2], addPrimaryContractAddress: secondaryT[3], extraInitParams: secondaryT[4] };
+
+  const generatedSaltEncoded = coder.encode(
+    ["bytes32", "address", "bytes", "bool", "bytes", "address", "bytes"],
+    [primary.salt, secondary.impl, secondary.initCalldata, secondary.addPrimaryContractAddress, secondary.extraInitParams, postDeploymentModule, postDeploymentModuleCalldata]
+  );
+  const generatedSalt = ethers.keccak256(generatedSaltEncoded);
+
+  const initcodeHash = ethers.keccak256(minimalProxyInitcode(primary.impl));
+  const predictedPrimary = ethers.getCreate2Address(FACTORY_ADDRESS, generatedSalt, initcodeHash);
+  const predictedSecondary = computeKeyManagerAddress(predictedPrimary);
+
+  // postDeploymentModuleCalldata è già ABI-encoded (bytes32[] keys, bytes[] values), senza selettore davanti
+  let controllers = [];
+  let controllersDecodeError = null;
+  try {
+    const [keys, values] = coder.decode(["bytes32[]", "bytes[]"], postDeploymentModuleCalldata);
+    for (let i = 0; i < keys.length; i++) {
+      const keyHex = keys[i].toLowerCase().slice(2);
+      if (keyHex.startsWith(PERM_PREFIX)) {
+        const address = "0x" + keyHex.slice(24);
+        const perm = decodePermissions(values[i]);
+        controllers.push({ address, ...perm });
+      }
+    }
+  } catch (e) {
+    controllersDecodeError = e.message;
+  }
+
+  const addressMatches = expectedAddress && ethers.isAddress(expectedAddress)
+    ? predictedPrimary.toLowerCase() === expectedAddress.toLowerCase()
+    : null;
+
+  return { primary, secondary, postDeploymentModule, postDeploymentModuleCalldata, generatedSalt, predictedPrimary, predictedSecondary, controllers, controllersDecodeError, addressMatches, rawCalldata: data };
+}
+
+function renderDecodeResult(d, expected) {
+  let html = "";
+  html += `${t("predictedUpLabel")} <b>${d.predictedPrimary}</b><br>`;
+  html += `${t("predictedKmLabel")} <b>${d.predictedSecondary}</b><br>`;
+  html += `${t("primaryImplLabel")} ${d.primary.impl}<br>`;
+  html += `${t("secondaryImplLabel")} ${d.secondary.impl}`;
+  if (d.secondary.impl.toLowerCase() !== SECONDARY_IMPL.toLowerCase()) {
+    html += ` <span class="badge warn">${t("differsFromExpected", { impl: SECONDARY_IMPL })}</span>`;
+  }
+
+  if (d.addressMatches === true) {
+    html = `<span class="badge ok">${t("matchOk")}</span><br>` + html;
+  } else if (d.addressMatches === false) {
+    html = `<span class="badge err">${t("matchFail", { expected })}</span><br>` + html;
+  } else {
+    html = `<span class="badge warn">${t("noExpectedWarn")}</span><br>` + html;
+  }
+  $("decodeStatus").innerHTML = html;
+
+  let cHtml = `<label style="margin-top:16px;">${t("controllersFoundLabel")}</label>`;
+  if (d.controllersDecodeError) {
+    cHtml += `<div class="ctrl-card"><span class="badge warn">${t("notAutoDecodable")}</span><div class="flags">${t("notAutoDecodableDetail", { err: d.controllersDecodeError })}</div></div>`;
+  } else if (d.controllers.length === 0) {
+    cHtml += `<div class="ctrl-card"><span class="badge warn">${t("noControllersFound")}</span></div>`;
+  } else {
+    d.controllers.forEach(c => {
+      const known = KNOWN_ADDRESSES[c.address.toLowerCase()];
+      let badge, extra = "";
+      if (known) {
+        badge = `<span class="badge ok">${t("sysInfraBadge", { label: t(known.labelKey) })}</span>`;
+        extra = `<div class="flags" style="margin-top:6px;">${t(known.noteKey)}</div>`;
+      } else if (c.isAll) {
+        badge = `<span class="badge err">${t("fullControlBadge")}</span>`;
+      } else {
+        badge = `<span class="badge warn">${t("limitedPermsBadge")}</span>`;
+      }
+      cHtml += `<div class="ctrl-card"><div class="addr">${c.address}</div><div style="margin-top:4px;">${badge}</div><div class="flags">${c.flags.join(", ") || t("noFlags")}</div>${extra}</div>`;
+    });
+  }
+  $("controllersBox").innerHTML = cHtml;
+}
+
+function runDecode() {
+  decoded = null;
+  $("deployBtn").disabled = true;
+  $("controllersBox").innerHTML = "";
+  const calldataRaw = $("calldataInput").value.trim();
+  const expected = $("expectedAddress").value.trim();
+  if (!calldataRaw) {
+    $("decodeStatus").innerHTML = `<span class="badge err">${t("pasteCalldataFirst")}</span>`;
+    return;
+  }
+  try {
+    const d = decodeCalldata(calldataRaw, expected);
+    decoded = d;
+    renderDecodeResult(d, expected);
+  } catch (e) {
+    $("decodeStatus").innerHTML = `<span class="badge err">${t("decodeErrorMsg", { err: e.message })}</span>`;
+  }
+}
+$("decodeBtn").addEventListener("click", runDecode);
+
+// --- 2. Wallet firmatario ---
+let signerProvider = null, signerAddress = null;
+const discoveredProviders = [];
+window.addEventListener("eip6963:announceProvider", (e) => discoveredProviders.push(e.detail));
+window.dispatchEvent(new Event("eip6963:requestProvider"));
+
+$("connectSigner").addEventListener("click", async () => {
+  let candidate = discoveredProviders.find(p => !/lukso|universal profile/i.test(p.info.name))?.provider;
+  if (!candidate && window.ethereum && window.ethereum !== window.lukso) candidate = window.ethereum;
+  if (!candidate) {
+    $("signerStatus").innerHTML = `<span class="badge err">${t("noSignerFound")}</span>`;
+    return;
+  }
+  try {
+    const accounts = await candidate.request({ method: "eth_requestAccounts" });
+    signerAddress = accounts[0];
+    signerProvider = candidate;
+    $("signerStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${signerAddress}`;
+  } catch (e) {
+    $("signerStatus").innerHTML = `<span class="badge err">${t("connectionRejected")}</span>`;
+  }
+});
+
+// --- 4. Verifica e deploy ---
+let lastCheckOk = false;
+
+$("checkBtn").addEventListener("click", async () => {
+  $("log").innerHTML = "";
+  lastCheckOk = false;
+  $("deployBtn").disabled = true;
+
+  if (!decoded && $("calldataInput").value.trim()) runDecode();
+
+  if (!decoded) { log(t("decodeCalldataFirstLog"), "line-err"); return; }
+  if (decoded.addressMatches !== true) {
+    log(t("blockingMismatch"), "line-err");
+    return;
+  }
+  if (!signerAddress) { log(t("connectSignerFirstLog"), "line-err"); return; }
+  const net = getNetwork();
+  if (!net.rpc) { log(t("missingRpcLog"), "line-err"); return; }
+
+  // Controllo bloccante: il wallet potrebbe essere rimasto agganciato a una rete diversa
+  // da quella selezionata nel menu (capita facilmente passando da una pagina/rete all'altra).
+  // Senza questo controllo, la stima gas e il deploy stesso userebbero silenziosamente
+  // la rete sbagliata, con esiti confusi o un create2 revert su un indirizzo già occupato altrove.
+  if (net.chainId) {
+    try {
+      const walletChainIdHex = await signerProvider.request({ method: "eth_chainId" });
+      const walletChainId = parseInt(walletChainIdHex, 16);
+      if (walletChainId !== net.chainId) {
+        log(t("walletWrongNetwork", { walletChainId, netName: net.name, chainId: net.chainId }), "line-err");
+        return;
+      }
+      log(t("walletCorrectNetwork", { chainId: net.chainId }), "line-ok");
+    } catch (e) {
+      log(t("walletNetworkCheckFailed", { netName: net.name }), "line-warn");
+    }
+  }
+
+  try {
+    log(t("upExpectedLog", { addr: decoded.predictedPrimary }), "line-dim");
+    log(t("kmExpectedLog", { addr: decoded.predictedSecondary }), "line-dim");
+    log(t("calldataVerifiedOk"), "line-ok");
+
+    if (decoded.controllers.length) {
+      decoded.controllers.forEach(c => {
+        const known = KNOWN_ADDRESSES[c.address.toLowerCase()];
+        if (known) {
+          log(t("sysAddrRecognized", { addr: c.address, label: t(known.labelKey) }), "line-dim");
+        } else if (c.isAll) {
+          log(t("allPermsControllerWarn", { addr: c.address }), "line-warn");
+        }
+      });
+    } else {
+      log(t("noAutoControllerWarn"), "line-warn");
+    }
+
+    const provider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
+
+    const primaryCode = await provider.getCode(decoded.predictedPrimary);
+    if (primaryCode !== "0x") {
+      log(t("alreadyDeployedErr", { addr: decoded.predictedPrimary }), "line-err");
+      if (net.explorer) log(net.explorer + decoded.predictedPrimary, "line-dim");
+      return;
+    }
+    const kmCode = await provider.getCode(decoded.predictedSecondary);
+    if (kmCode !== "0x") {
+      log(t("kmInconsistentErr"), "line-err");
+      return;
+    }
+    log(t("noContractOkLog"), "line-ok");
+
+    const value = BigInt(decoded.primary.fundingAmount) + BigInt(decoded.secondary.fundingAmount);
+
+    const gasEstimate = await provider.estimateGas({
+      to: FACTORY_ADDRESS, data: decoded.rawCalldata, from: signerAddress, value
+    }).catch(e => {
+      log(t("gasEstimateFailErr", { err: e.shortMessage || e.message }), "line-err");
+      throw e;
+    });
+    log(t("gasEstimateOkLog", { gas: gasEstimate.toString() }), "line-ok");
+
+    const feeData = await provider.getFeeData();
+    const gasPrice = feeData.maxFeePerGas || feeData.gasPrice;
+    const gasCost = gasEstimate * gasPrice;
+    const gasCostWithMargin = gasCost + gasCost / 4n + value;
+    const signerBalance = await provider.getBalance(signerAddress);
+    log(t("estimatedCostLog", { cost: ethers.formatEther(gasCostWithMargin) }), "line-dim");
+    if (signerBalance < gasCostWithMargin) {
+      log(t("insufficientBalanceErr"), "line-err");
+      return;
+    }
+    log(t("sufficientBalanceLog"), "line-ok");
+
+    lastCheckOk = true;
+    $("deployBtn").disabled = false;
+    log(t("readyWarnLog"), "line-warn");
+  } catch (e) {
+    log(t("verifyErrorLog", { err: e.shortMessage || e.message }), "line-err");
+  }
+});
+
+$("deployBtn").addEventListener("click", async () => {
+  if (!lastCheckOk || !decoded) return;
+  $("deployBtn").disabled = true;
+  const net = getNetwork();
+  const provider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
+
+  // Ricontrolla la rete del wallet anche qui: potrebbe essere cambiata tra il click
+  // su "Verifica" e questo click su "Deploy".
+  if (net.chainId) {
+    try {
+      const walletChainIdHex = await signerProvider.request({ method: "eth_chainId" });
+      const walletChainId = parseInt(walletChainIdHex, 16);
+      if (walletChainId !== net.chainId) {
+        log(t("walletNowWrongNetwork", { walletChainId, netName: net.name, chainId: net.chainId }), "line-err");
+        lastCheckOk = false;
+        return;
+      }
+    } catch (e) { /* se il controllo fallisce, si prosegue: il tentativo di invio farà comunque da rete di sicurezza */ }
+  }
+
+  try {
+    const value = BigInt(decoded.primary.fundingAmount) + BigInt(decoded.secondary.fundingAmount);
+    const browserProvider = new ethers.BrowserProvider(signerProvider);
+    const signerObj = await browserProvider.getSigner();
+
+    log(t("sendingTxLog"), "line-dim");
+    const tx = await signerObj.sendTransaction({ to: FACTORY_ADDRESS, data: decoded.rawCalldata, value });
+    log(t("txHashLog", { hash: tx.hash }), "line-dim");
+
+    log(t("waitingConfirmLog"), "line-dim");
+    const receipt = await tx.wait();
+    if (receipt.status !== 1) {
+      log(t("txFailedErr"), "line-err");
+      return;
+    }
+    log(t("txConfirmedLog"), "line-dim");
+
+    const expectedPrimaryCode = minimalProxyRuntimeCode(decoded.primary.impl).toLowerCase();
+    const expectedSecondaryCode = minimalProxyRuntimeCode(SECONDARY_IMPL).toLowerCase();
+
+    // Molti RPC pubblici sono bilanciati su più nodi: il nodo che risponde a getCode()
+    // subito dopo la conferma potrebbe non aver ancora indicizzato il nuovo contratto
+    // (specie su L2 dove il sequencer conferma prima della piena propagazione).
+    // Si riprova più volte con una breve attesa prima di dichiarare un vero mismatch.
+    async function getCodeStable(address, attempts, delayMs) {
+      let last = "0x";
+      for (let i = 0; i < attempts; i++) {
+        last = (await provider.getCode(address)).toLowerCase();
+        if (last !== "0x") return last;
+        if (i < attempts - 1) {
+          log(t("waitingIndexLog", { i: i + 1, n: attempts }), "line-dim");
+          await new Promise(r => setTimeout(r, delayMs));
+        }
+      }
+      return last;
+    }
+
+    const actualPrimaryCode = await getCodeStable(decoded.predictedPrimary, 6, 2500);
+    const actualSecondaryCode = await getCodeStable(decoded.predictedSecondary, 6, 2500);
+
+    const primaryOk = actualPrimaryCode === expectedPrimaryCode;
+    const secondaryOk = actualSecondaryCode === expectedSecondaryCode;
+
+    if (primaryOk && secondaryOk) {
+      log(t("deployConfirmedOk"), "line-ok");
+      log(t("upLine", { addr: decoded.predictedPrimary }), "line-ok");
+      log(t("kmLine", { addr: decoded.predictedSecondary }), "line-ok");
+      if (net.explorer) {
+        log(net.explorer + decoded.predictedPrimary, "line-dim");
+        log(net.explorer + decoded.predictedSecondary, "line-dim");
+      }
+    } else {
+      log(t("mismatchErr"), "line-err");
+      if (!primaryOk) log(t("mismatchDetailUp", { impl: decoded.primary.impl, expLen: expectedPrimaryCode.length, actLen: actualPrimaryCode.length, actual: actualPrimaryCode === "0x" ? t("noCodeFound") : actualPrimaryCode }), "line-err");
+      if (!secondaryOk) log(t("mismatchDetailKm", { impl: SECONDARY_IMPL, expLen: expectedSecondaryCode.length, actLen: actualSecondaryCode.length, actual: actualSecondaryCode === "0x" ? t("noCodeFound") : actualSecondaryCode }), "line-err");
+      log(t("propagationNote"), "line-warn");
+    }
+  } catch (e) {
+    log(t("deployErrorLog", { err: e.shortMessage || e.message }), "line-err");
+  } finally {
+    lastCheckOk = false;
+  }
+});
+
+// Init lingua
+applyI18n();
+</script>
+
+</body>
+</html>

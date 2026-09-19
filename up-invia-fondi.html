@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>UP Invia Fondi — ChainIntegrate</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
+    --text: #e6e8ec; --text-dim: #9aa1ad;
+    --accent: #5b8cff; --ok: #3fbf6f; --warn: #e0a83c; --err: #e05a5a;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+         max-width: 760px; margin: 0 auto; padding: 32px 20px 80px; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .subtitle { color: var(--text-dim); font-size: 13px; margin-bottom: 28px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+  .panel h2 { font-size: 14px; margin: 0 0 14px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.03em; }
+  label { display: block; font-size: 13px; color: var(--text-dim); margin: 14px 0 6px; }
+  label:first-child { margin-top: 0; }
+  select, input { width: 100%; background: #10131a; border: 1px solid var(--border); color: var(--text);
+                  border-radius: 6px; padding: 10px 12px; font-size: 14px; font-family: inherit; }
+  button { width: 100%; background: var(--accent); color: white; border: none; border-radius: 6px;
+           padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; }
+  button:disabled { background: #3a3f4b; cursor: not-allowed; }
+  button.danger { background: var(--err); }
+  .status-box { background: #10131a; border: 1px solid var(--border); border-radius: 6px; padding: 12px;
+                font-family: monospace; font-size: 12.5px; margin-top: 12px; }
+  .status-box .empty { color: var(--text-dim); }
+  #log { font-family: monospace; font-size: 12.5px; white-space: pre-wrap; word-break: break-all; line-height: 1.6; }
+  .line-ok { color: var(--ok); } .line-warn { color: var(--warn); } .line-err { color: var(--err); } .line-dim { color: var(--text-dim); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-family: monospace; }
+  .badge.ok { background: rgba(63,191,111,0.15); color: var(--ok); }
+  .badge.err { background: rgba(224,90,90,0.15); color: var(--err); }
+  .balance-big { font-size: 22px; font-weight: 600; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<h1>UP Invia Fondi</h1>
+<div class="subtitle">Trasferisce il nativo della rete (ETH/altro) dalla UP a un altro indirizzo — firmato da MetaMask con il controller, tramite Key Manager → ERC725X.execute.</div>
+
+<div class="panel">
+  <h2>0 · Avvio in locale</h2>
+  <div style="font-size:13px; color:var(--text-dim); margin-bottom:10px;">
+    Le estensioni non si iniettano su <code>file://</code> — serve un server locale.
+  </div>
+  <div class="status-box">python3 -m http.server 8000</div>
+  <div style="font-size:12px; color:var(--text-dim); margin:10px 0 4px;">Se <code>python3</code> non c'è:</div>
+  <div class="status-box">npx serve .</div>
+</div>
+
+<div class="panel">
+  <h2>1 · Profilo (la UP da cui inviare)</h2>
+  <select id="profile" style="margin-top:4px;"></select>
+  <div class="status-box" id="profileStatus"></div>
+</div>
+
+<div class="panel">
+  <h2>2 · Wallet firmatario (il controller)</h2>
+  <button id="connectSigner">Connetti MetaMask / wallet firmatario</button>
+  <div class="status-box" id="signerStatus"><span class="empty">Non connesso.</span></div>
+</div>
+
+<div class="panel">
+  <h2>3 · Rete</h2>
+  <select id="network"></select>
+  <div id="customRpcWrap" style="display:none;">
+    <label>RPC URL custom</label>
+    <input type="text" id="customRpc" placeholder="https://...">
+    <label>Explorer URL custom (opzionale)</label>
+    <input type="text" id="customExplorer" placeholder="https://.../tx/">
+  </div>
+  <div class="status-box" id="balanceStatus"><span class="empty">Saldo UP non ancora controllato.</span></div>
+</div>
+
+<div class="panel">
+  <h2>4 · Destinazione e importo</h2>
+  <label>Indirizzo destinatario</label>
+  <input type="text" id="recipient" placeholder="0x...">
+  <label>Importo (nativo della rete, es. ETH)</label>
+  <input type="text" id="amount" placeholder="0.001">
+  <button id="checkBtn">Verifica</button>
+  <button id="sendBtn" class="danger" disabled>Invia (irreversibile)</button>
+  <div id="log" class="line-dim" style="margin-top:10px;">In attesa dei collegamenti sopra.</div>
+</div>
+
+<script>
+const FACTORY_ADDRESS = "0x2300000A84D25dF63081feAa37ba6b62C4c89a30";
+const SECONDARY_IMPL = "0x2fe3aed98684e7351ad2d408a43ce09a738bf8a4"; // LSP6KeyManagerInit
+
+const NETWORKS = [
+  { key: "ethereum", name: "Ethereum", rpc: "https://ethereum-rpc.publicnode.com", explorer: "https://etherscan.io/tx/" },
+  { key: "base", name: "Base", rpc: "https://mainnet.base.org", explorer: "https://basescan.org/tx/" },
+  { key: "sei", name: "Sei", rpc: "https://evm-rpc.sei-apis.com", explorer: "https://seitrace.com/tx/" },
+  { key: "custom", name: "Custom RPC...", rpc: null, explorer: null },
+];
+
+const PROFILES = {
+  "0x328a19ab63744aaf3d0aebfb8e6dc5246faf317b": { label: "SimoneC", controller: "0x86F72AF152E8b502E8Dc7CF87A115Ec94490c6f2" },
+  "0x1d62b8d2c63b942095ad3c7ffc7e845195d9e718": { label: "birra20venti", controller: "0x434667A8840e18628cbd7B3A51d7cee207fd9d4c" },
+  "0x4a2605796e0d91a9667d6e30365aeec384c48c27": { label: "ChainIntegrate", controller: "0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c" },
+};
+
+const $ = (id) => document.getElementById(id);
+function log(msg, cls) {
+  const l = document.createElement("div");
+  if (cls) l.className = cls;
+  l.textContent = msg;
+  $("log").appendChild(l);
+}
+
+// --- 1. Profilo ---
+const profileSelectEl = $("profile");
+Object.entries(PROFILES).forEach(([addr, p]) => {
+  const opt = document.createElement("option");
+  opt.value = addr;
+  opt.textContent = p.label;
+  profileSelectEl.appendChild(opt);
+});
+function currentProfile() {
+  const addr = profileSelectEl.value;
+  return { address: addr, ...PROFILES[addr] };
+}
+function updateProfileStatus() {
+  const p = currentProfile();
+  $("profileStatus").innerHTML = `Indirizzo UP: ${p.address}<br>Controller atteso: ${p.controller}`;
+}
+profileSelectEl.addEventListener("change", () => { updateProfileStatus(); checkBalance(); });
+updateProfileStatus();
+
+// --- 2. Wallet firmatario ---
+let signerProvider = null, signerAddress = null;
+const discoveredProviders = [];
+window.addEventListener("eip6963:announceProvider", (e) => discoveredProviders.push(e.detail));
+window.dispatchEvent(new Event("eip6963:requestProvider"));
+
+$("connectSigner").addEventListener("click", async () => {
+  let candidate = discoveredProviders.find(p => !/lukso|universal profile/i.test(p.info.name))?.provider;
+  if (!candidate && window.ethereum && window.ethereum !== window.lukso) candidate = window.ethereum;
+  if (!candidate) {
+    $("signerStatus").innerHTML = '<span class="badge err">Nessun wallet firmatario trovato</span>';
+    return;
+  }
+  try {
+    const accounts = await candidate.request({ method: "eth_requestAccounts" });
+    signerAddress = accounts[0];
+    signerProvider = candidate;
+    $("signerStatus").innerHTML = `<span class="badge ok">Connesso</span> ${signerAddress}`;
+    checkBalance();
+  } catch (e) {
+    $("signerStatus").innerHTML = '<span class="badge err">Connessione rifiutata o fallita</span>';
+  }
+});
+
+// --- 3. Rete ---
+const networkSelectEl = $("network");
+NETWORKS.forEach(n => {
+  const opt = document.createElement("option");
+  opt.value = n.key;
+  opt.textContent = n.name;
+  networkSelectEl.appendChild(opt);
+});
+networkSelectEl.addEventListener("change", () => {
+  $("customRpcWrap").style.display = networkSelectEl.value === "custom" ? "block" : "none";
+  checkBalance();
+});
+function getNetwork() {
+  if (networkSelectEl.value === "custom") {
+    return { name: "Custom", rpc: $("customRpc").value.trim(), explorer: $("customExplorer").value.trim() || null };
+  }
+  return NETWORKS.find(n => n.key === networkSelectEl.value);
+}
+
+async function checkBalance() {
+  const profile = currentProfile();
+  const net = getNetwork();
+  if (!net.rpc) return;
+  try {
+    const provider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
+    const code = await provider.getCode(profile.address);
+    if (code === "0x") {
+      $("balanceStatus").innerHTML = `<span class="badge err">La UP non risulta deployata su questa rete</span>`;
+      return;
+    }
+    const balance = await provider.getBalance(profile.address);
+    $("balanceStatus").innerHTML = `Saldo attuale della UP (${profile.label}) su ${net.name}:<div class="balance-big">${ethers.formatEther(balance)}</div>`;
+  } catch (e) {
+    $("balanceStatus").innerHTML = `<span class="badge err">Errore lettura saldo: ${e.message}</span>`;
+  }
+}
+
+// --- 4. Verifica e invio ---
+function computeKeyManagerAddress(primaryAddress) {
+  const salt = ethers.keccak256(primaryAddress);
+  const implNoPrefix = SECONDARY_IMPL.slice(2).toLowerCase();
+  const initcode = "0x3d602d80600a3d3981f3363d3d373d3d3d363d73" + implNoPrefix + "5af43d82803e903d91602b57fd5bf3";
+  const initcodeHash = ethers.keccak256(initcode);
+  return ethers.getCreate2Address(FACTORY_ADDRESS, salt, initcodeHash);
+}
+
+let lastCheckOk = false;
+let lastKeyManager = null;
+let lastValueWei = null;
+let lastRecipient = null;
+
+$("checkBtn").addEventListener("click", async () => {
+  $("log").innerHTML = "";
+  lastCheckOk = false;
+  $("sendBtn").disabled = true;
+
+  const profile = currentProfile();
+  const net = getNetwork();
+  const recipient = $("recipient").value.trim();
+  const amountStr = $("amount").value.trim();
+
+  if (!signerAddress) { log("Collega prima il wallet firmatario (pannello 2).", "line-err"); return; }
+  if (!net.rpc) { log("Manca l'RPC della rete (pannello 3).", "line-err"); return; }
+  if (!ethers.isAddress(recipient)) { log("Indirizzo destinatario non valido.", "line-err"); return; }
+  if (!amountStr || isNaN(Number(amountStr)) || Number(amountStr) <= 0) { log("Importo non valido.", "line-err"); return; }
+
+  try {
+    const valueWei = ethers.parseEther(amountStr);
+    log(`Profilo: ${profile.label} (${profile.address})`, "line-dim");
+    log(`Rete: ${net.name}`, "line-dim");
+    log(`Destinatario: ${recipient}`, "line-dim");
+    log(`Importo: ${amountStr}`, "line-dim");
+    log(`Wallet firmatario (controller): ${signerAddress}`, "line-dim");
+
+    if (signerAddress.toLowerCase() !== profile.controller.toLowerCase()) {
+      log(`⚠️ Il wallet connesso non è il controller atteso (${profile.controller}) per questo profilo — verifica di aver scelto l'account giusto in MetaMask.`, "line-warn");
+    }
+
+    const keyManagerAddress = computeKeyManagerAddress(profile.address);
+    log(`Key Manager: ${keyManagerAddress}`, "line-dim");
+
+    const provider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
+
+    const upCode = await provider.getCode(profile.address);
+    if (upCode === "0x") {
+      log(`❌ BLOCCANTE — la UP non risulta deployata su questa rete.`, "line-err");
+      return;
+    }
+    const kmCode = await provider.getCode(keyManagerAddress);
+    if (kmCode === "0x") {
+      log(`❌ BLOCCANTE — il Key Manager non risulta deployato su questa rete.`, "line-err");
+      return;
+    }
+
+    const upBalance = await provider.getBalance(profile.address);
+    log(`Saldo attuale della UP: ${ethers.formatEther(upBalance)}`, "line-dim");
+    if (upBalance < valueWei) {
+      log(`❌ BLOCCANTE — la UP non ha fondi sufficienti (ha ${ethers.formatEther(upBalance)}, servono ${amountStr}).`, "line-err");
+      return;
+    }
+    log("✅ Saldo della UP sufficiente per l'importo richiesto.", "line-ok");
+
+    // Costruzione calldata: UP.execute(0, recipient, value, "0x") wrappato in KeyManager.execute(bytes)
+    const upIface = new ethers.Interface(["function execute(uint256,address,uint256,bytes)"]);
+    const innerCalldata = upIface.encodeFunctionData("execute", [0, recipient, valueWei, "0x"]);
+    const kmIface = new ethers.Interface(["function execute(bytes) returns (bytes)"]);
+    const executeCalldata = kmIface.encodeFunctionData("execute", [innerCalldata]);
+
+    const gasEstimate = await provider.estimateGas({
+      to: keyManagerAddress, data: executeCalldata, from: signerAddress
+    }).catch(e => {
+      log("❌ BLOCCANTE — stima gas fallita, probabilmente il controller non ha i permessi TRANSFERVALUE/CALL su questa UP: " + (e.shortMessage || e.message), "line-err");
+      throw e;
+    });
+    log(`✅ Permessi verificati (stima gas riuscita: ${gasEstimate.toString()} unità).`, "line-ok");
+
+    const signerBalance = await provider.getBalance(signerAddress);
+    const feeData = await provider.getFeeData();
+    const gasPrice = feeData.maxFeePerGas || feeData.gasPrice;
+    const gasCost = gasEstimate * gasPrice;
+    const gasCostWithMargin = gasCost + gasCost / 4n;
+    log(`Costo gas stimato (a carico del firmatario, NON della UP): ${ethers.formatEther(gasCostWithMargin)} (con margine)`, "line-dim");
+    if (signerBalance < gasCostWithMargin) {
+      const shortfall = gasCostWithMargin - signerBalance;
+      log(`❌ BLOCCANTE — il wallet firmatario non ha abbastanza gas. Mancano circa ${ethers.formatEther(shortfall)}.`, "line-err");
+      return;
+    }
+    log("✅ Il wallet firmatario ha gas sufficiente.", "line-ok");
+
+    lastCheckOk = true;
+    lastKeyManager = keyManagerAddress;
+    lastValueWei = valueWei;
+    lastRecipient = recipient;
+    $("sendBtn").disabled = false;
+    log("\nPronto. Controlla ancora una volta destinatario e importo prima di premere Invia — è irreversibile.", "line-warn");
+  } catch (e) {
+    log("Errore durante la verifica: " + (e.shortMessage || e.message), "line-err");
+  }
+});
+
+$("sendBtn").addEventListener("click", async () => {
+  if (!lastCheckOk) return;
+  $("sendBtn").disabled = true;
+  const net = getNetwork();
+
+  try {
+    const upIface = new ethers.Interface(["function execute(uint256,address,uint256,bytes)"]);
+    const innerCalldata = upIface.encodeFunctionData("execute", [0, lastRecipient, lastValueWei, "0x"]);
+    const kmIface = new ethers.Interface(["function execute(bytes) returns (bytes)"]);
+    const executeCalldata = kmIface.encodeFunctionData("execute", [innerCalldata]);
+
+    const browserProvider = new ethers.BrowserProvider(signerProvider);
+    const signerObj = await browserProvider.getSigner();
+
+    log("Invio transazione (conferma nel wallet)...", "line-dim");
+    const tx = await signerObj.sendTransaction({ to: lastKeyManager, data: executeCalldata });
+    log(`Tx: ${tx.hash}`, "line-dim");
+    if (net.explorer) log(net.explorer + tx.hash, "line-dim");
+
+    log("In attesa di conferma...", "line-dim");
+    await tx.wait();
+    log("✅✅ Trasferimento confermato.", "line-ok");
+
+    checkBalance();
+  } catch (e) {
+    log("Errore durante l'invio: " + (e.shortMessage || e.message), "line-err");
+  } finally {
+    lastCheckOk = false;
+  }
+});
+</script>
+
+</body>
+</html>
