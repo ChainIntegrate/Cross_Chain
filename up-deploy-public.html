@@ -2,7 +2,19 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<title>UP Deploy Cross-Chain</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UP Deploy Cross-Chain — ChainIntegrate</title>
+<meta name="description" content="Rideploy la tua LUKSO Universal Profile allo stesso indirizzo su un'altra rete EVM, tramite LSP23LinkedContractsFactory. Nessuna chiave privata richiesta: firmi sempre dal tuo wallet.">
+<link rel="icon" href="favicon.ico">
+<meta property="og:type" content="website">
+<meta property="og:title" content="UP Deploy Cross-Chain — ChainIntegrate">
+<meta property="og:description" content="Rideploy la tua LUKSO Universal Profile allo stesso indirizzo su un'altra rete EVM. Nessuna chiave privata richiesta.">
+<meta property="og:image" content="https://chainintegrate.it/banner.png">
+<meta property="og:url" content="https://chainintegrate.it/up-deploy-public.html">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="UP Deploy Cross-Chain — ChainIntegrate">
+<meta name="twitter:description" content="Rideploy la tua LUKSO Universal Profile allo stesso indirizzo su un'altra rete EVM. Nessuna chiave privata richiesta.">
+<meta name="twitter:image" content="https://chainintegrate.it/banner.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js"></script>
 <style>
   :root {
@@ -14,6 +26,15 @@
   body { background: var(--bg); color: var(--text); font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
          max-width: 820px; margin: 0 auto; padding: 32px 20px 80px; }
   .header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .brand-row { margin-bottom: 24px; }
+  .brand-logo { display: block; width: 100%; height: auto; border-radius: 10px; }
+  .site-footer { margin-top: 40px; padding: 18px 20px; background: #f5f6f8; border: 1px solid #e3e5ea; border-radius: 10px; color: #4b4f58; }
+  .footer-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .footer-logo { height: 48px; width: auto; flex-shrink: 0; }
+  .footer-text { font-size: 13px; line-height: 1.6; }
+  .footer-li { display: inline-flex; vertical-align: middle; margin: 0 2px; }
+  .site-footer a { color: #2563eb; text-decoration: none; font-weight: 600; }
+  .site-footer a:hover { text-decoration: underline; }
   h1 { font-size: 20px; margin-bottom: 4px; }
   .subtitle { color: var(--text-dim); font-size: 13px; margin-bottom: 28px; }
   #langToggle { width: auto; background: #2a2f3a; padding: 8px 14px; font-size: 12.5px; font-weight: 600;
@@ -48,6 +69,10 @@
 </head>
 <body>
 
+<div class="brand-row">
+  <img src="banner.png" alt="ChainIntegrate" class="brand-logo" onerror="this.style.display='none'">
+</div>
+
 <div class="header-row">
   <div>
     <h1 data-i18n="h1">UP Deploy Cross-Chain</h1>
@@ -65,13 +90,14 @@
   <h2 data-i18n="panel1Title">1 · Profilo da replicare</h2>
   <button id="connectUp" data-i18n="connectUpBtn">Connetti la tua Universal Profile</button>
   <div class="status-box" id="upStatus"><span class="empty" data-i18n="notConnected">Non connesso.</span></div>
+  <div class="note" data-i18n="connectUpRequiredNote"></div>
 
   <label data-i18n="label1">Indirizzo UP atteso su questa rete (compilato automaticamente se connesso sopra)</label>
   <input type="text" id="expectedAddress" data-i18n-placeholder="placeholderAddr" placeholder="0x...">
 
   <label data-i18n="label2">Calldata di deploy originale (0x6a66a753...)</label>
   <textarea id="calldataInput" data-i18n-placeholder="placeholderCalldata" placeholder="0x6a66a753..."></textarea>
-  <button id="decodeBtn" class="secondary" data-i18n="decodeBtn">Decodifica calldata</button>
+  <button id="decodeBtn" class="secondary" disabled data-i18n="decodeBtn">Decodifica calldata</button>
 
   <div class="status-box" id="decodeStatus" style="margin-top:14px;"><span class="empty" data-i18n="notDecodedYet">Non ancora decodificato.</span></div>
   <div id="controllersBox"></div>
@@ -98,9 +124,16 @@
 
 <div class="panel">
   <h2 data-i18n="panel4Title">4 · Verifica e deploy</h2>
-  <button id="checkBtn" data-i18n="checkBtn">Verifica</button>
+  <button id="checkBtn" disabled data-i18n="checkBtn">Verifica</button>
   <button id="deployBtn" class="danger" disabled data-i18n="deployBtn">Deploy (irreversibile)</button>
   <div id="log" class="line-dim" style="margin-top:10px;"><span data-i18n="logInitial">In attesa dei collegamenti sopra.</span></div>
+</div>
+
+<div class="site-footer">
+  <div class="footer-row">
+    <img src="logo.png" alt="ChainIntegrate" class="footer-logo" onerror="this.style.display='none'">
+    <div class="footer-text" data-i18n-html="footerHtml"></div>
+  </div>
 </div>
 
 <script>
@@ -119,6 +152,7 @@ const I18N = {
     panel0Note: "Questa pagina ripete, su un'altra rete, l'identica transazione di creazione della tua Universal Profile — per questo l'indirizzo risultante è lo stesso. Ti servono due cose: (1) l'estensione della Universal Profile installata e connessa con il profilo che vuoi replicare; (2) la <b>calldata di deploy originale</b> della tua UP (una lunga stringa esadecimale che inizia con <code>0x6a66a753...</code>), che puoi estrarre dal backup del tuo wallet. La pagina non firma nulla per conto tuo: chiama sempre il tuo wallet per la conferma.",
     panel1Title: "1 · Profilo da replicare",
     connectUpBtn: "Connetti la tua Universal Profile",
+    connectUpRequiredNote: "Decodifica e verifica sono disponibili solo dopo aver connesso qui la tua Universal Profile. Non è una firma né un controllo crittografico — nessuna transazione viene fatta a questo punto — è solo un promemoria che questa pagina è pensata per rideployare il tuo profilo, non quello di qualcun altro.",
     notConnected: "Non connesso.",
     label1: "Indirizzo UP atteso su questa rete (compilato automaticamente se connesso sopra)",
     placeholderAddr: "0x...",
@@ -210,6 +244,8 @@ const I18N = {
     noCodeFound: "NESSUN CODICE",
     propagationNote: "Se il codice trovato non è vuoto ma solo leggermente diverso da quello atteso, potrebbe trattarsi comunque di un problema di propagazione dell'RPC: riverifica tra qualche minuto con il pulsante Verifica, oppure controlla direttamente sull'explorer prima di considerare il deploy fallito.",
     deployErrorLog: (v) => `Errore durante il deploy: ${v.err}`,
+
+    footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a>`,
   },
   en: {
     pageTitle: "UP Cross-Chain Deploy",
@@ -220,6 +256,7 @@ const I18N = {
     panel0Note: "This page repeats, on another network, the exact same transaction that created your Universal Profile — that's why the resulting address is identical. You need two things: (1) the Universal Profile browser extension, installed and connected with the profile you want to replicate; (2) the <b>original deployment calldata</b> of your UP (a long hex string starting with <code>0x6a66a753...</code>), which you can extract from your wallet's backup. This page never signs anything on your behalf: it always calls your wallet for confirmation.",
     panel1Title: "1 · Profile to replicate",
     connectUpBtn: "Connect your Universal Profile",
+    connectUpRequiredNote: "Decoding and verification are only available after you connect your Universal Profile here. This is not a signature or a cryptographic check — no transaction happens at this point — it's just a reminder that this page is meant to redeploy your own profile, not someone else's.",
     notConnected: "Not connected.",
     label1: "Expected UP address on this network (auto-filled if connected above)",
     placeholderAddr: "0x...",
@@ -311,6 +348,8 @@ const I18N = {
     noCodeFound: "NO CODE",
     propagationNote: "If the code found is not empty but only slightly different from expected, it could still be an RPC propagation issue: re-verify in a few minutes with the Verify button, or check directly on the explorer before considering the deploy failed.",
     deployErrorLog: (v) => `Error during deploy: ${v.err}`,
+
+    footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a>`,
   },
 };
 
@@ -481,6 +520,8 @@ $("connectUp").addEventListener("click", async () => {
     upAddressConnected = upAddress;
     $("upStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${upAddress}`;
     $("expectedAddress").value = ethers.getAddress(upAddress);
+    $("decodeBtn").disabled = false;
+    $("checkBtn").disabled = false;
   } catch (e) {
     $("upStatus").innerHTML = `<span class="badge err">${t("connectionRejected")}</span>`;
   }
