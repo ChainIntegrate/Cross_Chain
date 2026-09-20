@@ -2,7 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Replicating a Universal Profile Across Chains</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Replicating a Universal Profile Across Chains — ChainIntegrate</title>
+<meta name="description" content="Guida passo-passo per rideployare la tua LUKSO Universal Profile allo stesso indirizzo su un'altra rete EVM.">
+<link rel="icon" href="favicon.ico">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Replicating a Universal Profile Across Chains — ChainIntegrate">
+<meta property="og:description" content="Guida passo-passo per rideployare la tua LUKSO Universal Profile allo stesso indirizzo su un'altra rete EVM.">
+<meta property="og:image" content="https://chainintegrate.it/banner.png">
+<meta property="og:url" content="https://chainintegrate.it/up-crosschain-guide.html">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Replicating a Universal Profile Across Chains — ChainIntegrate">
+<meta name="twitter:description" content="Guida passo-passo per rideployare la tua LUKSO Universal Profile allo stesso indirizzo su un'altra rete EVM.">
+<meta name="twitter:image" content="https://chainintegrate.it/banner.png">
 <style>
   :root {
     --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
@@ -40,9 +52,22 @@
   .toc a { color: var(--text-dim); }
   .shot { width: 100%; border-radius: 8px; border: 1px solid var(--border); margin-top: 10px; display: block; }
   .shot-caption { font-size: 12px; color: var(--text-dim); margin-top: 6px; }
+  .brand-row { margin-top: 4px; margin-bottom: 20px; }
+  .brand-logo { display: block; width: 100%; height: auto; border-radius: 10px; }
+  .site-footer { margin-top: 32px; margin-bottom: 20px; padding: 18px 20px; background: #f5f6f8; border: 1px solid #e3e5ea; border-radius: 10px; color: #4b4f58; }
+  .footer-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .footer-logo { height: 48px; width: auto; flex-shrink: 0; }
+  .footer-text { font-size: 13px; line-height: 1.6; }
+  .footer-li { display: inline-flex; vertical-align: middle; margin: 0 2px; }
+  .site-footer a { color: #2563eb; text-decoration: none; font-weight: 600; }
+  .site-footer a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
+
+<div class="brand-row">
+  <img src="banner.png" alt="ChainIntegrate" class="brand-logo" onerror="this.style.display='none'">
+</div>
 
 <div class="langbar">
   <button class="langbtn active" data-setlang="en">English</button>
@@ -132,8 +157,9 @@
 <div class="step">
   <div class="step-num">6</div>
   <div class="step-body">
-    <h3>Confirm the controller is the wallet you extracted the key from</h3>
-    <p>The tool shows an address that will receive <code>ALL_PERMISSIONS</code> on the new deploy: this is called the <b>controller address</b>, and it's whoever will control the profile after the deploy. You need to verify it's the same controller as your wallet: open the extension again, look at the address shown for the wallet you extracted the key from in step 1, and compare it, character for character, to the controller address shown here. If your Universal Profile has ever had more than one controller over time (for example, from reinstalling the extension, or connecting a new device), make sure it's <i>this specific</i> controller — not some other one that still happens to be connected to the profile.</p>    <img class="shot" src="guide-assets/step4-controller-match.png" alt="The controller address shown by the deploy tool matches the address shown by the wallet extension">
+    <h3>Confirm it's the key you extracted in step 1</h3>
+    <p>The tool shows the address that receives <code>ALL_PERMISSIONS</code> — this is called the <b>controller address</b>, because it's the account that will control the profile after the deploy. Compare it, character for character, to the address of the key you extracted in step 1. If your Universal Profile has ever had more than one controller connected to it over time (for example, from reinstalling a wallet extension, or connecting a new device), make sure it's <i>this specific</i> controller address — not just "a" controller that currently has access. They can look functionally identical (same permissions) while only one of them reproduces the same address on another chain.</p>
+    <img class="shot" src="guide-assets/step4-controller-match.png" alt="The controller address shown by the deploy tool matches the address shown by the wallet extension">
     <div class="shot-caption">Cross-check: the <code>ALL_PERMISSIONS</code> address the tool found matches the address your own wallet extension shows for that account — same string, character for character.</div>
     <div class="note danger">If the address doesn't match the key you extracted, stop here. Proceeding without the right key means deploying a profile you won't be able to operate.</div>
   </div>
@@ -174,6 +200,13 @@
   <li><a href="up-test-operazione.html">Test</a> — confirm your controller can operate the deployed profile.</li>
   <li><a href="up-invia-fondi.html">Send</a> — transfer native currency from the profile to another address.</li>
 </ul>
+
+<div class="site-footer">
+  <div class="footer-row">
+    <img src="logo.png" alt="ChainIntegrate" class="footer-logo" onerror="this.style.display='none'">
+    <div class="footer-text">Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a></div>
+  </div>
+</div>
 
 </div>
 
@@ -260,8 +293,9 @@
 <div class="step">
   <div class="step-num">6</div>
   <div class="step-body">
-    <h3>Conferma che il controller sia il wallet da cui hai estratto la chiave</h3>
-    <p>Lo strumento mostra un indirizzo che riceverà <code>ALL_PERMISSIONS</code> sul nuovo deploy: si chiama <b>indirizzo del controller</b> ed è chi avrà il controllo del profilo dopo il deploy. Devi verificare che sia lo stesso controller del tuo wallet: apri di nuovo l'estensione, guarda l'indirizzo mostrato per il wallet da cui hai estratto la chiave al passo 1, e confrontalo carattere per carattere con l'indirizzo del controller mostrato qui. Se la tua Universal Profile ha mai avuto più di un controller nel tempo (ad esempio dopo aver reinstallato l'estensione, o collegato un nuovo dispositivo), assicurati che sia <i>proprio questo</i> controller, non un altro che al momento risulta comunque collegato al profilo.</p>    <img class="shot" src="guide-assets/step4-controller-match.png" alt="L'indirizzo del controller mostrato dallo strumento di deploy corrisponde a quello mostrato dall'estensione del wallet">
+    <h3>Conferma che sia la chiave estratta al passo 1</h3>
+    <p>Lo strumento mostra l'indirizzo che riceve <code>ALL_PERMISSIONS</code> — si chiama <b>indirizzo del controller</b>, perché è l'account che controllerà il profilo dopo il deploy. Confrontalo, carattere per carattere, con l'indirizzo della chiave estratta al passo 1. Se la tua Universal Profile ha mai avuto più di un controller collegato nel tempo (ad esempio dopo aver reinstallato un'estensione wallet, o collegato un nuovo dispositivo), assicurati che sia <i>proprio questo</i> indirizzo del controller, non semplicemente "un" controller che al momento ha accesso. Possono sembrare funzionalmente identici (stessi permessi) mentre solo uno dei due riproduce lo stesso indirizzo su un'altra rete.</p>
+    <img class="shot" src="guide-assets/step4-controller-match.png" alt="L'indirizzo del controller mostrato dallo strumento di deploy corrisponde a quello mostrato dall'estensione del wallet">
     <div class="shot-caption">Riscontro incrociato: l'indirizzo con <code>ALL_PERMISSIONS</code> trovato dallo strumento corrisponde all'indirizzo che la tua estensione wallet mostra per quell'account — stessa stringa, carattere per carattere.</div>
     <div class="note danger">Se l'indirizzo non corrisponde alla chiave estratta, fermati qui. Andare avanti senza la chiave giusta equivale a deployare un profilo che non potrai gestire.</div>
   </div>
@@ -302,6 +336,13 @@
   <li><a href="up-test-operazione.html">Test</a> — conferma che il tuo controller possa operare il profilo deployato.</li>
   <li><a href="up-invia-fondi.html">Invio</a> — trasferisce valuta nativa dal profilo a un altro indirizzo.</li>
 </ul>
+
+<div class="site-footer">
+  <div class="footer-row">
+    <img src="logo.png" alt="ChainIntegrate" class="footer-logo" onerror="this.style.display='none'">
+    <div class="footer-text">Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a></div>
+  </div>
+</div>
 
 </div>
 
