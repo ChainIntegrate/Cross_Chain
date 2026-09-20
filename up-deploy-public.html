@@ -129,6 +129,16 @@
   <div id="log" class="line-dim" style="margin-top:10px;"><span data-i18n="logInitial">In attesa dei collegamenti sopra.</span></div>
 </div>
 
+<div class="panel">
+  <h2 data-i18n="panel5Title">5 · Supporta ChainIntegrate</h2>
+  <div class="note" data-i18n="donateNote"></div>
+  <div class="status-box" id="donateAddressBox" style="margin-bottom:12px;"></div>
+  <label data-i18n="donateAmountLabel">Importo (valuta nativa della rete a cui è connesso il tuo wallet)</label>
+  <input type="text" id="donateAmount" data-i18n-placeholder="donateAmountPlaceholder" placeholder="0.01">
+  <button id="donateBtn" class="secondary" data-i18n="donateBtn">Dona</button>
+  <div id="donateLog" class="line-dim" style="margin-top:10px;"></div>
+</div>
+
 <div class="site-footer">
   <div class="footer-row">
     <img src="logo.png" alt="ChainIntegrate" class="footer-logo" onerror="this.style.display='none'">
@@ -246,6 +256,20 @@ const I18N = {
     deployErrorLog: (v) => `Errore durante il deploy: ${v.err}`,
 
     footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a>`,
+
+    panel5Title: "5 · Supporta ChainIntegrate",
+    donateAddressPrefix: "Indirizzo di donazione:",
+    donateNote: "Se questo strumento ti è stato utile, puoi lasciare una donazione libera a ChainIntegrate. Funziona come una normale transazione: apre il tuo wallet con destinatario e importo già compilati, tu confermi (o annulli) da lì. Nessun collegamento con i pannelli sopra — puoi usarlo anche senza aver fatto nessun deploy.",
+    donateAmountLabel: "Importo (valuta nativa della rete a cui è connesso il tuo wallet)",
+    donateAmountPlaceholder: "0.01",
+    donateBtn: "Dona",
+    donateNoProviderErr: "Nessun wallet trovato in questo browser (né Universal Profile, né MetaMask o altri).",
+    donateInvalidAmountErr: "Inserisci un importo valido, maggiore di zero.",
+    donateOpeningWalletLog: "Apertura del wallet per la conferma...",
+    donateTxHashLog: (v) => `Tx: ${v.hash}`,
+    donateWaitingLog: "In attesa di conferma...",
+    donateOkLog: "✅ Donazione inviata, grazie!",
+    donateFailedLog: (v) => `❌ Errore durante l'invio: ${v.err}`,
   },
   en: {
     pageTitle: "UP Cross-Chain Deploy",
@@ -350,6 +374,20 @@ const I18N = {
     deployErrorLog: (v) => `Error during deploy: ${v.err}`,
 
     footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a>`,
+
+    panel5Title: "5 · Support ChainIntegrate",
+    donateAddressPrefix: "Donation address:",
+    donateNote: "If this tool was useful to you, you can leave a free-amount donation to ChainIntegrate. It works like any normal transaction: it opens your wallet with recipient and amount already filled in, and you confirm (or cancel) from there. Not connected to the panels above — you can use it even without doing any deploy.",
+    donateAmountLabel: "Amount (native currency of the network your wallet is connected to)",
+    donateAmountPlaceholder: "0.01",
+    donateBtn: "Donate",
+    donateNoProviderErr: "No wallet found in this browser (neither Universal Profile, nor MetaMask or others).",
+    donateInvalidAmountErr: "Enter a valid amount greater than zero.",
+    donateOpeningWalletLog: "Opening your wallet for confirmation...",
+    donateTxHashLog: (v) => `Tx: ${v.hash}`,
+    donateWaitingLog: "Waiting for confirmation...",
+    donateOkLog: "✅ Donation sent, thank you!",
+    donateFailedLog: (v) => `❌ Error while sending: ${v.err}`,
   },
 };
 
@@ -368,6 +406,7 @@ function applyI18n() {
 
   if (!upAddressConnected) $("upStatus").innerHTML = `<span class="empty">${t("notConnected")}</span>`;
   if (!signerAddress) $("signerStatus").innerHTML = `<span class="empty">${t("notConnected")}</span>`;
+  $("donateAddressBox").textContent = `${t("donateAddressPrefix")} ${DONATE_ADDRESS}`;
   if (decoded) {
     renderDecodeResult(decoded, $("expectedAddress").value.trim());
   } else {
@@ -383,6 +422,7 @@ $("langToggle").addEventListener("click", () => {
 // ==================== APP ====================
 const FACTORY_ADDRESS = "0x2300000A84D25dF63081feAa37ba6b62C4c89a30"; // stesso indirizzo su ogni rete EVM
 const SECONDARY_IMPL = "0x2fe3aed98684e7351ad2d408a43ce09a738bf8a4"; // LSP6KeyManagerInit (LUKSO ufficiale)
+const DONATE_ADDRESS = "0x4a2605796e0d91A9667d6E30365aEEC384C48c27"; // ChainIntegrate
 const ALL_PERMISSIONS_HEX = "0x00000000000000000000000000000000000000000000000000000000007f3f06";
 const PERM_PREFIX = "4b80742de2bf82acb3630000"; // bytes12: keccak("AddressPermissions:Permissions:")[0:10] + padding
 
@@ -689,6 +729,60 @@ $("connectSigner").addEventListener("click", async () => {
     $("signerStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${signerAddress}`;
   } catch (e) {
     $("signerStatus").innerHTML = `<span class="badge err">${t("connectionRejected")}</span>`;
+  }
+});
+
+// --- 5. Donazione — indipendente dal resto della pagina, nessun deploy richiesto ---
+function donateLog(msg, cls) {
+  const l = document.createElement("div");
+  if (cls) l.className = cls;
+  l.textContent = msg;
+  $("donateLog").appendChild(l);
+}
+
+// Preferenza esplicita: prima il wallet Universal Profile, se presente nel browser;
+// altrimenti qualsiasi altro provider annunciato via EIP-6963 (MetaMask ecc.), altrimenti
+// window.ethereum come ultima risorsa. Stessa logica di rilevamento del pannello 2.
+async function getDonateProvider() {
+  if (window.lukso) return window.lukso;
+  const nonLukso = discoveredProviders.find(p => !/lukso|universal profile/i.test(p.info.name))?.provider;
+  if (nonLukso) return nonLukso;
+  if (window.ethereum && window.ethereum !== window.lukso) return window.ethereum;
+  return null;
+}
+
+$("donateBtn").addEventListener("click", async () => {
+  $("donateLog").innerHTML = "";
+  const amountRaw = $("donateAmount").value.trim();
+  let amountWei;
+  try {
+    if (!amountRaw || !(Number(amountRaw) > 0)) throw new Error("invalid");
+    amountWei = ethers.parseEther(amountRaw);
+  } catch (e) {
+    donateLog(t("donateInvalidAmountErr"), "line-err");
+    return;
+  }
+
+  const provider = await getDonateProvider();
+  if (!provider) {
+    donateLog(t("donateNoProviderErr"), "line-err");
+    return;
+  }
+
+  try {
+    await provider.request({ method: "eth_requestAccounts" });
+    const browserProvider = new ethers.BrowserProvider(provider);
+    const signerObj = await browserProvider.getSigner();
+
+    donateLog(t("donateOpeningWalletLog"), "line-dim");
+    const tx = await signerObj.sendTransaction({ to: ethers.getAddress(DONATE_ADDRESS), value: amountWei });
+    donateLog(t("donateTxHashLog", { hash: tx.hash }), "line-dim");
+
+    donateLog(t("donateWaitingLog"), "line-dim");
+    await tx.wait();
+    donateLog(t("donateOkLog"), "line-ok");
+  } catch (e) {
+    donateLog(t("donateFailedLog", { err: e.shortMessage || e.message }), "line-err");
   }
 });
 
