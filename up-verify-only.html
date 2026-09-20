@@ -196,6 +196,24 @@ $("verifyBtn").addEventListener("click", async () => {
       if (!primaryOk) log(`UP: ${actualPrimaryCode === "0x" ? "nessun contratto a questo indirizzo" : "bytecode diverso dall'atteso"}.`, "line-err");
       if (!secondaryOk) log(`Key Manager: ${actualSecondaryCode === "0x" ? "nessun contratto a questo indirizzo" : "bytecode diverso dall'atteso"}.`, "line-err");
     }
+
+    // Controllo aggiuntivo: l'indirizzo del proxy predetto (o già deployato) non dice nulla
+    // sul fatto che l'implementazione a cui punta (LSP0 e Key Manager) abbia davvero bytecode
+    // su questa rete. Se manca, il profilo è — o sarebbe — "muto": ogni delegatecall verso
+    // un indirizzo senza codice ritorna successo senza fare nulla, quindi nessun errore visibile
+    // a deploy avvenuto. Vale la pena segnalarlo sempre, non solo quando il proxy è già presente.
+    log("Controllo che le implementazioni referenziate dalla calldata abbiano bytecode su questa rete...", "line-dim");
+    const primaryImplCode = await provider.getCode(d.primary.impl);
+    const secondaryImplCode = await provider.getCode(SECONDARY_IMPL);
+    const primaryImplOk = primaryImplCode !== "0x";
+    const secondaryImplOk = secondaryImplCode !== "0x";
+    if (primaryImplOk && secondaryImplOk) {
+      log(`✅ Entrambe le implementazioni (LSP0 ${d.primary.impl}, Key Manager ${SECONDARY_IMPL}) hanno bytecode su questa rete: un eventuale deploy sarebbe funzionante, non solo "presente".`, "line-ok");
+    } else {
+      log(`⚠️ ATTENZIONE — anche se il proxy risultasse deployato all'indirizzo atteso, sarebbe "muto" su questa rete:`, "line-warn");
+      if (!primaryImplOk) log(`  l'implementazione LSP0 (${d.primary.impl}) non ha bytecode qui — le chiamate alla UP andrebbero a vuoto senza errore.`, "line-warn");
+      if (!secondaryImplOk) log(`  l'implementazione Key Manager (${SECONDARY_IMPL}) non ha bytecode qui — le chiamate al Key Manager andrebbero a vuoto senza errore.`, "line-warn");
+    }
   } catch (e) {
     log("Errore: " + (e.shortMessage || e.message), "line-err");
   }
