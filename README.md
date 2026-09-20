@@ -10,5 +10,7 @@ Cosa è presente nel repo
 5) Pagina pubblica per deploy in multichain - up-deploy-public.html
 6) Pagina di verifica di corretto deplly - up-verify-only.html
 7) Pagina guida how to deply multichain - up-crosschain-guide.html
+8) file immagini per le pagine base
+9) cartella file immagini per la pagina guida
 
 Lo scopo del repo è di creare un ecosistema di facile utilizzo per le persone che hanno almeno una buona dimestichezza con l'ecosistema Lukso e voglio utilizzare il loro steso account in altre chain
