@@ -181,6 +181,10 @@
   </div>
 </div>
 
+<div class="note ok">
+  <b>Two different connections, two different jobs — this trips people up.</b> On the Test and Send tools, "Connect your Universal Profile" only reads your UP's address, on LUKSO, so you don't have to copy-paste it — no signature happens there. The wallet that actually <i>operates</i> the profile is the second connection, the "signing wallet" (MetaMask with the imported controller key), and it must be connected to the <b>destination chain</b> — the network where you redeployed the profile in steps 6–7 — not to LUKSO. It's completely normal to have both the UP extension and MetaMask active in the same browser at once: each one does a different job, on a different network. Both tools show you which network the signing wallet is currently on, right next to its address — check that it matches the network you selected before doing anything.
+</div>
+
 <h2>What these tools do — and don't do</h2>
 <ul>
   <li>They never ask for a private key. The only thing you paste in is calldata — public on-chain data.</li>
@@ -315,6 +319,10 @@
     <h3>Opera il tuo profilo sulla nuova rete</h3>
     <p>Importa in MetaMask (o nel wallet che preferisci) la chiave privata estratta al passo 1 — è la normale funzione "importa account" di qualsiasi wallet. Da lì usa la <a href="up-test-operazione.html">pagina di Test</a> per confermare che il controller operi davvero il profilo — scrive un timestamp on-chain tramite il Key Manager e lo rilegge. Una volta verificato, puoi anche usare la <a href="up-invia-fondi.html">pagina di Invio</a> per trasferire valuta nativa dal profilo a un altro indirizzo, firmato dallo stesso controller.</p>
   </div>
+</div>
+
+<div class="note ok">
+  <b>Due collegamenti diversi, due compiti diversi — qui è facile confondersi.</b> Nelle pagine di Test e Invio, "Connetti la tua Universal Profile" serve solo a leggere l'indirizzo della tua UP, su LUKSO, così non devi copiarlo a mano — nessuna firma avviene in quel passaggio. Il wallet che <i>opera</i> davvero il profilo è il secondo collegamento, il "wallet firmatario" (MetaMask con la chiave del controller importata), e deve essere connesso alla <b>rete di destinazione</b> — quella dove hai rideployato il profilo ai passi 6–7 — non a LUKSO. È del tutto normale avere sia l'estensione UP che MetaMask attivi insieme nello stesso browser: ognuno fa un lavoro diverso, su una rete diversa. Entrambe le pagine mostrano su quale rete è connesso in questo momento il wallet firmatario, accanto al suo indirizzo — controlla che corrisponda alla rete selezionata prima di fare qualsiasi cosa.
 </div>
 
 <h2>Cosa fanno questi strumenti — e cosa non fanno</h2>

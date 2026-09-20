@@ -35,6 +35,9 @@
   .footer-li { display: inline-flex; vertical-align: middle; margin: 0 2px; }
   .site-footer a { color: #2563eb; text-decoration: none; font-weight: 600; }
   .site-footer a:hover { text-decoration: underline; }
+  .test-link-box { margin-top: 16px; padding: 14px 16px; background: rgba(63,191,111,0.1); border: 1px solid var(--ok); border-radius: 8px; }
+  .test-link-box a { color: var(--ok); font-weight: 700; font-size: 14px; text-decoration: none; }
+  .test-link-box a:hover { text-decoration: underline; }
   h1 { font-size: 20px; margin-bottom: 4px; }
   .subtitle { color: var(--text-dim); font-size: 13px; margin-bottom: 28px; }
   #langToggle { width: auto; background: #2a2f3a; padding: 8px 14px; font-size: 12.5px; font-weight: 600;
@@ -127,15 +130,18 @@
   <button id="checkBtn" disabled data-i18n="checkBtn">Verifica</button>
   <button id="deployBtn" class="danger" disabled data-i18n="deployBtn">Deploy (irreversibile)</button>
   <div id="log" class="line-dim" style="margin-top:10px;"><span data-i18n="logInitial">In attesa dei collegamenti sopra.</span></div>
+  <div id="testLinkBox" class="test-link-box" style="display:none;">
+    <a id="testLinkAnchor" href="up-test-operazione.html" target="_blank" data-i18n="testLinkText">→ Testa la UP appena deployata su questa rete</a>
+  </div>
 </div>
 
 <div class="panel">
   <h2 data-i18n="panel5Title">5 · Supporta ChainIntegrate</h2>
-  <div class="note" data-i18n="donateNote"></div>
+  <div class="note" data-i18n-html="donateNote"></div>
   <div class="status-box" id="donateAddressBox" style="margin-bottom:12px;"></div>
-  <label data-i18n="donateAmountLabel">Importo (valuta nativa della rete a cui è connesso il tuo wallet)</label>
+  <label data-i18n="donateAmountLabel">Importo in LYX</label>
   <input type="text" id="donateAmount" data-i18n-placeholder="donateAmountPlaceholder" placeholder="0.01">
-  <button id="donateBtn" class="secondary" data-i18n="donateBtn">Dona</button>
+  <button id="donateBtn" class="secondary" data-i18n="donateBtn">Dona in LYX con la tua UP</button>
   <div id="donateLog" class="line-dim" style="margin-top:10px;"></div>
 </div>
 
@@ -188,6 +194,7 @@ const I18N = {
     connectedBadge: "Connesso",
     connectionRejected: "Connessione rifiutata o fallita",
     noSignerFound: "Nessun wallet firmatario trovato",
+    unknownNetworkLabel: (v) => `rete sconosciuta (chainId ${v.chainId})`,
 
     pasteCalldataFirst: "Incolla prima la calldata",
     predictedUpLabel: "Indirizzo UP predetto dalla calldata:",
@@ -259,17 +266,19 @@ const I18N = {
 
     panel5Title: "5 · Supporta ChainIntegrate",
     donateAddressPrefix: "Indirizzo di donazione:",
-    donateNote: "Se questo strumento ti è stato utile, puoi lasciare una donazione libera a ChainIntegrate. Funziona come una normale transazione: apre il tuo wallet con destinatario e importo già compilati, tu confermi (o annulli) da lì. Nessun collegamento con i pannelli sopra — puoi usarlo anche senza aver fatto nessun deploy.",
-    donateAmountLabel: "Importo (valuta nativa della rete a cui è connesso il tuo wallet)",
+    donateNote: "Se questo strumento ti è stato utile, puoi lasciare una donazione libera a ChainIntegrate. Accettiamo <b>solo LYX su rete LUKSO Mainnet</b>, tramite la tua Universal Profile — per questo qui si usa esclusivamente l'estensione UP, non MetaMask o altri wallet. Funziona come una normale transazione: apre la tua UP con destinatario e importo già compilati, tu confermi (o annulli) da lì. Nessun collegamento con i pannelli sopra — puoi usarlo anche senza aver fatto nessun deploy.",
+    donateAmountLabel: "Importo in LYX",
     donateAmountPlaceholder: "0.01",
-    donateBtn: "Dona",
-    donateNoProviderErr: "Nessun wallet trovato in questo browser (né Universal Profile, né MetaMask o altri).",
+    donateBtn: "Dona in LYX con la tua UP",
+    donateNoProviderErr: "Estensione Universal Profile non trovata in questo browser. Le donazioni sono accettate solo in LYX tramite UP.",
     donateInvalidAmountErr: "Inserisci un importo valido, maggiore di zero.",
-    donateOpeningWalletLog: "Apertura del wallet per la conferma...",
+    donateWrongNetworkErr: (v) => `❌ La tua UP è connessa alla rete con chainId ${v.chainId}, non a LUKSO Mainnet (chainId 42). Cambia rete nell'estensione UP prima di donare.`,
+    donateOpeningWalletLog: "Apertura della tua Universal Profile per la conferma...",
     donateTxHashLog: (v) => `Tx: ${v.hash}`,
     donateWaitingLog: "In attesa di conferma...",
-    donateOkLog: "✅ Donazione inviata, grazie!",
+    donateOkLog: "✅ Donazione in LYX inviata, grazie!",
     donateFailedLog: (v) => `❌ Errore durante l'invio: ${v.err}`,
+    testLinkText: "→ Testa la UP appena deployata su questa rete",
   },
   en: {
     pageTitle: "UP Cross-Chain Deploy",
@@ -306,6 +315,7 @@ const I18N = {
     connectedBadge: "Connected",
     connectionRejected: "Connection rejected or failed",
     noSignerFound: "No signing wallet found",
+    unknownNetworkLabel: (v) => `unknown network (chainId ${v.chainId})`,
 
     pasteCalldataFirst: "Paste the calldata first",
     predictedUpLabel: "UP address predicted from the calldata:",
@@ -377,17 +387,19 @@ const I18N = {
 
     panel5Title: "5 · Support ChainIntegrate",
     donateAddressPrefix: "Donation address:",
-    donateNote: "If this tool was useful to you, you can leave a free-amount donation to ChainIntegrate. It works like any normal transaction: it opens your wallet with recipient and amount already filled in, and you confirm (or cancel) from there. Not connected to the panels above — you can use it even without doing any deploy.",
-    donateAmountLabel: "Amount (native currency of the network your wallet is connected to)",
+    donateNote: "If this tool was useful to you, you can leave a free-amount donation to ChainIntegrate. We only accept <b>LYX on LUKSO Mainnet</b>, via your Universal Profile — that's why this panel only uses the UP extension, not MetaMask or other wallets. It works like any normal transaction: it opens your UP with recipient and amount already filled in, and you confirm (or cancel) from there. Not connected to the panels above — you can use it even without doing any deploy.",
+    donateAmountLabel: "Amount in LYX",
     donateAmountPlaceholder: "0.01",
-    donateBtn: "Donate",
-    donateNoProviderErr: "No wallet found in this browser (neither Universal Profile, nor MetaMask or others).",
+    donateBtn: "Donate LYX with your UP",
+    donateNoProviderErr: "Universal Profile extension not found in this browser. Donations are only accepted in LYX via UP.",
     donateInvalidAmountErr: "Enter a valid amount greater than zero.",
-    donateOpeningWalletLog: "Opening your wallet for confirmation...",
+    donateWrongNetworkErr: (v) => `❌ Your UP is connected to the network with chainId ${v.chainId}, not LUKSO Mainnet (chainId 42). Switch network in the UP extension before donating.`,
+    donateOpeningWalletLog: "Opening your Universal Profile for confirmation...",
     donateTxHashLog: (v) => `Tx: ${v.hash}`,
     donateWaitingLog: "Waiting for confirmation...",
-    donateOkLog: "✅ Donation sent, thank you!",
+    donateOkLog: "✅ LYX donation sent, thank you!",
     donateFailedLog: (v) => `❌ Error while sending: ${v.err}`,
+    testLinkText: "→ Test the UP you just deployed on this network",
   },
 };
 
@@ -512,6 +524,16 @@ const CHAINS = [
   { key: "sei", name: "Sei", chainId: 1329, rpc: "https://evm-rpc.sei-apis.com", explorer: "https://seitrace.com/address/", currency: "SEI" },
   { key: "custom", name: "Custom RPC...", chainId: null, rpc: null, explorer: null, currency: "?" },
 ];
+
+// Nome rete leggibile a partire dal chainId, usato per mostrare all'utente a quale rete
+// è connesso il wallet firmatario (LUKSO stessa non è nell'elenco CHAINS sopra perché
+// quell'elenco è quello delle reti di destinazione del deploy, non della UP originale).
+function chainDisplayName(chainId) {
+  if (chainId === 42) return "LUKSO Mainnet";
+  if (chainId === 4201) return "LUKSO Testnet";
+  const found = CHAINS.find(c => c.chainId === chainId);
+  return found ? found.name : t("unknownNetworkLabel", { chainId });
+}
 
 function log(msg, cls) {
   const l = document.createElement("div");
@@ -726,7 +748,12 @@ $("connectSigner").addEventListener("click", async () => {
     const accounts = await candidate.request({ method: "eth_requestAccounts" });
     signerAddress = accounts[0];
     signerProvider = candidate;
-    $("signerStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${signerAddress}`;
+    let netLabel = "";
+    try {
+      const chainIdHex = await candidate.request({ method: "eth_chainId" });
+      netLabel = ` · ${chainDisplayName(parseInt(chainIdHex, 16))}`;
+    } catch (e) { /* se non si riesce a leggere la rete, si mostra comunque l'indirizzo */ }
+    $("signerStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${signerAddress}${netLabel}`;
   } catch (e) {
     $("signerStatus").innerHTML = `<span class="badge err">${t("connectionRejected")}</span>`;
   }
@@ -740,16 +767,11 @@ function donateLog(msg, cls) {
   $("donateLog").appendChild(l);
 }
 
-// Preferenza esplicita: prima il wallet Universal Profile, se presente nel browser;
-// altrimenti qualsiasi altro provider annunciato via EIP-6963 (MetaMask ecc.), altrimenti
-// window.ethereum come ultima risorsa. Stessa logica di rilevamento del pannello 2.
-async function getDonateProvider() {
-  if (window.lukso) return window.lukso;
-  const nonLukso = discoveredProviders.find(p => !/lukso|universal profile/i.test(p.info.name))?.provider;
-  if (nonLukso) return nonLukso;
-  if (window.ethereum && window.ethereum !== window.lukso) return window.ethereum;
-  return null;
-}
+// Donazioni: SOLO in LYX, SOLO tramite l'estensione Universal Profile (window.lukso).
+// Con due wallet spesso connessi in questa pagina (UP + MetaMask/altro) un fallback
+// automatico creerebbe ambiguità su quale wallet/rete/valuta viene usata: meglio essere
+// espliciti e usare esclusivamente la UP, che è anche l'unico wallet nativo di LUKSO/LYX.
+const LUKSO_CHAIN_ID = 42;
 
 $("donateBtn").addEventListener("click", async () => {
   $("donateLog").innerHTML = "";
@@ -763,15 +785,22 @@ $("donateBtn").addEventListener("click", async () => {
     return;
   }
 
-  const provider = await getDonateProvider();
-  if (!provider) {
+  if (!window.lukso) {
     donateLog(t("donateNoProviderErr"), "line-err");
     return;
   }
 
   try {
-    await provider.request({ method: "eth_requestAccounts" });
-    const browserProvider = new ethers.BrowserProvider(provider);
+    await window.lukso.request({ method: "eth_requestAccounts" });
+
+    const chainIdHex = await window.lukso.request({ method: "eth_chainId" });
+    const chainId = parseInt(chainIdHex, 16);
+    if (chainId !== LUKSO_CHAIN_ID) {
+      donateLog(t("donateWrongNetworkErr", { chainId }), "line-err");
+      return;
+    }
+
+    const browserProvider = new ethers.BrowserProvider(window.lukso);
     const signerObj = await browserProvider.getSigner();
 
     donateLog(t("donateOpeningWalletLog"), "line-dim");
@@ -977,6 +1006,10 @@ $("deployBtn").addEventListener("click", async () => {
         log(net.explorer + decoded.predictedPrimary, "line-dim");
         log(net.explorer + decoded.predictedSecondary, "line-dim");
       }
+      if (net.key) {
+        $("testLinkAnchor").href = `up-test-operazione.html?network=${encodeURIComponent(net.key)}`;
+      }
+      $("testLinkBox").style.display = "block";
     } else {
       log(t("mismatchErr"), "line-err");
       if (!primaryOk) log(t("mismatchDetailUp", { impl: decoded.primary.impl, expLen: expectedPrimaryCode.length, actLen: actualPrimaryCode.length, actual: actualPrimaryCode === "0x" ? t("noCodeFound") : actualPrimaryCode }), "line-err");

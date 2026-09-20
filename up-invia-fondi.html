@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>UP Invia Fondi — ChainIntegrate</title>
+<title data-i18n="pageTitle">UP Invia Fondi — ChainIntegrate</title>
 <meta name="description" content="Invia fondi dalla tua Universal Profile rideployata su una nuova rete.">
 <link rel="icon" href="favicon.ico">
 <meta property="og:type" content="website">
@@ -29,6 +29,7 @@
   .subtitle { color: var(--text-dim); font-size: 13px; margin-bottom: 28px; }
   .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
   .panel h2 { font-size: 14px; margin: 0 0 14px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.03em; }
+  .note { font-size: 12.5px; color: var(--text-dim); line-height: 1.5; margin-bottom: 12px; }
   label { display: block; font-size: 13px; color: var(--text-dim); margin: 14px 0 6px; }
   label:first-child { margin-top: 0; }
   select, input { width: 100%; background: #10131a; border: 1px solid var(--border); color: var(--text);
@@ -48,6 +49,8 @@
   .balance-big { font-size: 22px; font-weight: 600; margin-top: 4px; }
   .brand-row { margin-bottom: 24px; }
   .brand-logo { display: block; width: 100%; height: auto; border-radius: 10px; }
+  .top-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .lang-btn { width: auto; background: #2a2f3a; padding: 6px 14px; font-size: 12px; margin-top: 0; flex-shrink: 0; }
   .site-footer { margin-top: 40px; padding: 18px 20px; background: #f5f6f8; border: 1px solid #e3e5ea; border-radius: 10px; color: #4b4f58; }
   .footer-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
   .footer-logo { height: 48px; width: auto; flex-shrink: 0; }
@@ -63,79 +66,329 @@
   <img src="banner.png" alt="ChainIntegrate" class="brand-logo" onerror="this.style.display='none'">
 </div>
 
-<h1>UP Invia Fondi</h1>
-<div class="subtitle">Trasferisce il nativo della rete (ETH/altro) dalla UP a un altro indirizzo — firmato da MetaMask con il controller, tramite Key Manager → ERC725X.execute.</div>
-
-<div class="panel">
-  <h2>0 · Avvio in locale</h2>
-  <div style="font-size:13px; color:var(--text-dim); margin-bottom:10px;">
-    Le estensioni non si iniettano su <code>file://</code> — serve un server locale.
+<div class="top-row">
+  <div>
+    <h1 data-i18n="h1">UP Invia Fondi</h1>
+    <div class="subtitle" data-i18n="subtitle">Trasferisce il nativo della rete (ETH/altro) dalla UP a un altro indirizzo — firmato da MetaMask con il controller, tramite Key Manager → ERC725X.execute.</div>
   </div>
-  <div class="status-box">python3 -m http.server 8000</div>
-  <div style="font-size:12px; color:var(--text-dim); margin:10px 0 4px;">Se <code>python3</code> non c'è:</div>
-  <div class="status-box">npx serve .</div>
+  <button class="lang-btn" id="langToggle" data-i18n="langToggleBtn">English</button>
 </div>
 
 <div class="panel">
-  <h2>1 · Profilo (la UP da cui inviare)</h2>
-  <select id="profile" style="margin-top:4px;"></select>
-  <div class="status-box" id="profileStatus"></div>
+  <h2 data-i18n="panel0Title">0 · Come funziona questa pagina</h2>
+  <div class="note" data-i18n-html="panel0Note"></div>
 </div>
 
 <div class="panel">
-  <h2>2 · Wallet firmatario (il controller)</h2>
-  <button id="connectSigner">Connetti MetaMask / wallet firmatario</button>
-  <div class="status-box" id="signerStatus"><span class="empty">Non connesso.</span></div>
+  <h2 data-i18n="panel1Title">1 · Profilo (la UP da cui inviare)</h2>
+  <button id="connectUp" data-i18n="connectUpBtn">Connetti la tua Universal Profile</button>
+  <div class="status-box" id="profileStatus"><span class="empty" data-i18n="notConnected">Non connesso.</span></div>
+  <div class="note" style="margin-top:10px;" data-i18n="connectUpNote">
+    Serve solo per leggere l'indirizzo della UP — nessuna firma o transazione viene fatta a questo punto.
+    Se vuoi operare su una UP diversa da quella connessa nella tua estensione, puoi inserirne l'indirizzo a mano qui sotto.
+  </div>
+  <label data-i18n="profileAddressLabel">Indirizzo UP da cui inviare</label>
+  <input type="text" id="profileAddress" placeholder="0x...">
 </div>
 
 <div class="panel">
-  <h2>3 · Rete</h2>
-  <select id="network"></select>
+  <h2 data-i18n="panel2Title">2 · Wallet firmatario (il controller)</h2>
+  <div class="note" data-i18n="panel2Note"></div>
+  <button id="connectSigner" data-i18n="connectSignerBtn">Connetti MetaMask / wallet firmatario</button>
+  <div class="status-box" id="signerStatus"><span class="empty" data-i18n="notConnected">Non connesso.</span></div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel3Title">3 · Rete</h2>
+  <div class="note" data-i18n="panel3Note"></div>
+  <input type="text" id="networkFilter" data-i18n-placeholder="networkFilterPlaceholder" placeholder="Filtra per nome... (es. base, polygon, arbitrum)">
+  <select id="network" style="margin-top:8px;"></select>
   <div id="customRpcWrap" style="display:none;">
-    <label>RPC URL custom</label>
+    <label data-i18n="customRpcLabel">RPC URL custom</label>
     <input type="text" id="customRpc" placeholder="https://...">
-    <label>Explorer URL custom (opzionale)</label>
+    <label data-i18n="customExplorerLabel">Explorer URL custom (opzionale)</label>
     <input type="text" id="customExplorer" placeholder="https://.../tx/">
   </div>
-  <div class="status-box" id="balanceStatus"><span class="empty">Saldo UP non ancora controllato.</span></div>
+  <div class="status-box" id="balanceStatus"><span class="empty" data-i18n="balanceNotChecked">Saldo UP non ancora controllato.</span></div>
 </div>
 
 <div class="panel">
-  <h2>4 · Destinazione e importo</h2>
-  <label>Indirizzo destinatario</label>
+  <h2 data-i18n="panel4Title">4 · Destinazione e importo</h2>
+  <label data-i18n="recipientLabel">Indirizzo destinatario</label>
   <input type="text" id="recipient" placeholder="0x...">
-  <label>Importo (nativo della rete, es. ETH)</label>
+  <label data-i18n="amountLabel">Importo (nativo della rete, es. ETH)</label>
   <input type="text" id="amount" placeholder="0.001">
-  <button id="checkBtn">Verifica</button>
-  <button id="sendBtn" class="danger" disabled>Invia (irreversibile)</button>
-  <div id="log" class="line-dim" style="margin-top:10px;">In attesa dei collegamenti sopra.</div>
+  <button id="checkBtn" data-i18n="checkBtn">Verifica</button>
+  <button id="sendBtn" class="danger" disabled data-i18n="sendBtn">Invia (irreversibile)</button>
+  <div id="log" class="line-dim" style="margin-top:10px;"><span data-i18n="logInitial">In attesa dei collegamenti sopra.</span></div>
 </div>
 
 <div class="site-footer">
   <div class="footer-row">
     <img src="logo.png" alt="ChainIntegrate" class="footer-logo" onerror="this.style.display='none'">
-    <div class="footer-text">Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a></div>
+    <div class="footer-text" data-i18n-html="footerHtml"></div>
   </div>
 </div>
 
 <script>
+const $ = (id) => document.getElementById(id);
+
+// ==================== I18N ====================
+let LANG = "it";
+
+const I18N = {
+  it: {
+    pageTitle: "UP Invia Fondi — ChainIntegrate",
+    h1: "UP Invia Fondi",
+    subtitle: "Trasferisce il nativo della rete (ETH/altro) dalla UP a un altro indirizzo — firmato da MetaMask con il controller, tramite Key Manager → ERC725X.execute.",
+    langToggleBtn: "English",
+
+    panel0Title: "0 · Come funziona questa pagina",
+    panel0Note: "Si opera su una UP <b>già deployata</b> su una rete diversa da LUKSO — la UP stessa non firma questa transazione. Chi firma è il <b>wallet controller</b> (es. MetaMask) connesso alla rete di destinazione, con i permessi TRANSFERVALUE/CALL su quella UP. Per questo qui ci sono due collegamenti separati: (1) connetti la tua UP solo per leggerne comodamente l'indirizzo — nessuna firma qui; (2) connetti MetaMask (o un altro wallet) sulla <b>rete dove la UP è stata rideployata</b>, ed è quel wallet a firmare l'invio dei fondi.",
+
+    panel1Title: "1 · Profilo (la UP da cui inviare)",
+    connectUpBtn: "Connetti la tua Universal Profile",
+    notConnected: "Non connesso.",
+    connectUpNote: "Serve solo per leggere l'indirizzo della UP — nessuna firma o transazione viene fatta a questo punto. Se vuoi operare su una UP diversa da quella connessa nella tua estensione, puoi inserirne l'indirizzo a mano qui sotto.",
+    profileAddressLabel: "Indirizzo UP da cui inviare",
+
+    panel2Title: "2 · Wallet firmatario (il controller)",
+    panel2Note: "Questo è il wallet che firma davvero l'invio dei fondi, sulla rete scelta al punto 3 — deve essere connesso a quella rete, non a LUKSO. È normale avere sia l'estensione UP che MetaMask attivi insieme nel browser: usa quello giusto per ciascun passaggio.",
+    connectSignerBtn: "Connetti MetaMask / wallet firmatario",
+
+    panel3Title: "3 · Rete",
+    panel3Note: "La rete dove la tua UP è stata rideployata (non LUKSO). Il wallet firmatario del punto 2 deve essere connesso a questa stessa rete: lo stato sopra mostra la rete attuale del wallet, verificalo prima di procedere.",
+    networkFilterPlaceholder: "Filtra per nome... (es. base, polygon, arbitrum)",
+    customRpcLabel: "RPC URL custom",
+    customExplorerLabel: "Explorer URL custom (opzionale)",
+    balanceNotChecked: "Saldo UP non ancora controllato.",
+
+    panel4Title: "4 · Destinazione e importo",
+    recipientLabel: "Indirizzo destinatario",
+    amountLabel: "Importo (nativo della rete, es. ETH)",
+    checkBtn: "Verifica",
+    sendBtn: "Invia (irreversibile)",
+    logInitial: "In attesa dei collegamenti sopra.",
+
+    extNotFound: "Estensione Universal Profile non trovata in questo browser",
+    connectedBadge: "Connesso",
+    connectionRejected: "Connessione rifiutata o fallita",
+    noSignerFound: "Nessun wallet firmatario trovato",
+    unknownNetworkLabel: (v) => `rete sconosciuta (chainId ${v.chainId})`,
+    upNotDeployedErr: "La UP non risulta deployata su questa rete",
+    balanceReadErr: (v) => `Errore lettura saldo: ${v.err}`,
+    balanceLabel: (v) => `Saldo attuale della UP su ${v.net}:`,
+
+    missingAddrErr: "Indirizzo UP mancante o non valido (pannello 1) — connetti la tua UP o inseriscilo a mano.",
+    connectSignerFirstLog: "Collega prima il wallet firmatario (pannello 2).",
+    missingRpcLog: "Manca l'RPC della rete (pannello 3).",
+    invalidRecipientErr: "Indirizzo destinatario non valido.",
+    invalidAmountErr: "Importo non valido.",
+    upLog: (v) => `UP: ${v.addr}`,
+    netLog: (v) => `Rete: ${v.name}`,
+    recipientLog: (v) => `Destinatario: ${v.addr}`,
+    amountLog: (v) => `Importo: ${v.amount}`,
+    signerLog: (v) => `Wallet firmatario (controller): ${v.addr}`,
+    permCheckNote: "Nota: la validità dei permessi del controller viene verificata sotto tramite la stima del gas — se il wallet connesso non ha i permessi giusti sulla UP, la stima fallirà.",
+    kmLog: (v) => `Key Manager: ${v.addr}`,
+    upNotDeployedBlockErr: "❌ BLOCCANTE — la UP non risulta deployata su questa rete.",
+    kmNotDeployedBlockErr: "❌ BLOCCANTE — il Key Manager non risulta deployato su questa rete.",
+    upBalanceLog: (v) => `Saldo attuale della UP: ${v.balance}`,
+    insufficientUpFundsErr: (v) => `❌ BLOCCANTE — la UP non ha fondi sufficienti (ha ${v.have}, servono ${v.need}).`,
+    upFundsOkLog: "✅ Saldo della UP sufficiente per l'importo richiesto.",
+    gasFailErr: (v) => `❌ BLOCCANTE — stima gas fallita, probabilmente il controller non ha i permessi TRANSFERVALUE/CALL su questa UP: ${v.err}`,
+    permsOkLog: (v) => `✅ Permessi verificati (stima gas riuscita: ${v.gas} unità).`,
+    gasCostLog: (v) => `Costo gas stimato (a carico del firmatario, NON della UP): ${v.cost} (con margine)`,
+    insufficientGasErr: (v) => `❌ BLOCCANTE — il wallet firmatario non ha abbastanza gas. Mancano circa ${v.shortfall}.`,
+    signerGasOkLog: "✅ Il wallet firmatario ha gas sufficiente.",
+    readyWarnLog: "\nPronto. Controlla ancora una volta destinatario e importo prima di premere Invia — è irreversibile.",
+    verifyErrorLog: (v) => `Errore durante la verifica: ${v.err}`,
+    sendingTxLog: "Invio transazione (conferma nel wallet)...",
+    txHashLog: (v) => `Tx: ${v.hash}`,
+    waitingConfirmLog: "In attesa di conferma...",
+    transferConfirmedLog: "✅✅ Trasferimento confermato.",
+    sendErrorLog: (v) => `Errore durante l'invio: ${v.err}`,
+
+    footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a>`,
+  },
+  en: {
+    pageTitle: "UP Send Funds — ChainIntegrate",
+    h1: "UP Send Funds",
+    subtitle: "Transfers the network's native currency (ETH/other) from the UP to another address — signed by MetaMask with the controller, via Key Manager → ERC725X.execute.",
+    langToggleBtn: "Italiano",
+
+    panel0Title: "0 · How this page works",
+    panel0Note: "This operates on a UP that is <b>already deployed</b> on a network other than LUKSO — the UP itself doesn't sign this transaction. The one signing is the <b>controller wallet</b> (e.g. MetaMask) connected to the destination network, with TRANSFERVALUE/CALL permissions on that UP. That's why there are two separate connections here: (1) connect your UP only to read its address conveniently — no signature here; (2) connect MetaMask (or another wallet) on the <b>network where the UP was redeployed</b>, and that wallet is the one signing the funds transfer.",
+
+    panel1Title: "1 · Profile (the UP to send from)",
+    connectUpBtn: "Connect your Universal Profile",
+    notConnected: "Not connected.",
+    connectUpNote: "Only used to read the UP address — no signature or transaction happens at this point. If you want to operate on a UP other than the one connected in your extension, you can enter its address manually below.",
+    profileAddressLabel: "UP address to send from",
+
+    panel2Title: "2 · Signing wallet (the controller)",
+    panel2Note: "This is the wallet that actually signs the funds transfer, on the network chosen in step 3 — it must be connected to that network, not to LUKSO. It's normal to have both the UP extension and MetaMask active in the browser at the same time: use the right one for each step.",
+    connectSignerBtn: "Connect MetaMask / signing wallet",
+
+    panel3Title: "3 · Network",
+    panel3Note: "The network where your UP was redeployed (not LUKSO). The signing wallet from step 2 must be connected to this same network — the status above shows the wallet's current network, check it before proceeding.",
+    networkFilterPlaceholder: "Filter by name... (e.g. base, polygon, arbitrum)",
+    customRpcLabel: "Custom RPC URL",
+    customExplorerLabel: "Custom explorer URL (optional)",
+    balanceNotChecked: "UP balance not checked yet.",
+
+    panel4Title: "4 · Destination and amount",
+    recipientLabel: "Recipient address",
+    amountLabel: "Amount (network native currency, e.g. ETH)",
+    checkBtn: "Check",
+    sendBtn: "Send (irreversible)",
+    logInitial: "Waiting for the connections above.",
+
+    extNotFound: "Universal Profile extension not found in this browser",
+    connectedBadge: "Connected",
+    connectionRejected: "Connection rejected or failed",
+    noSignerFound: "No signing wallet found",
+    unknownNetworkLabel: (v) => `unknown network (chainId ${v.chainId})`,
+    upNotDeployedErr: "The UP isn't deployed on this network",
+    balanceReadErr: (v) => `Error reading balance: ${v.err}`,
+    balanceLabel: (v) => `Current UP balance on ${v.net}:`,
+
+    missingAddrErr: "Missing or invalid UP address (panel 1) — connect your UP or enter it manually.",
+    connectSignerFirstLog: "Connect the signing wallet first (panel 2).",
+    missingRpcLog: "Missing network RPC (panel 3).",
+    invalidRecipientErr: "Invalid recipient address.",
+    invalidAmountErr: "Invalid amount.",
+    upLog: (v) => `UP: ${v.addr}`,
+    netLog: (v) => `Network: ${v.name}`,
+    recipientLog: (v) => `Recipient: ${v.addr}`,
+    amountLog: (v) => `Amount: ${v.amount}`,
+    signerLog: (v) => `Signing wallet (controller): ${v.addr}`,
+    permCheckNote: "Note: the controller's permissions are verified below via the gas estimate — if the connected wallet doesn't have the right permissions on the UP, the estimate will fail.",
+    kmLog: (v) => `Key Manager: ${v.addr}`,
+    upNotDeployedBlockErr: "❌ BLOCKING — the UP isn't deployed on this network.",
+    kmNotDeployedBlockErr: "❌ BLOCKING — the Key Manager isn't deployed on this network.",
+    upBalanceLog: (v) => `Current UP balance: ${v.balance}`,
+    insufficientUpFundsErr: (v) => `❌ BLOCKING — the UP doesn't have enough funds (has ${v.have}, needs ${v.need}).`,
+    upFundsOkLog: "✅ UP balance sufficient for the requested amount.",
+    gasFailErr: (v) => `❌ BLOCKING — gas estimation failed, the controller likely doesn't have TRANSFERVALUE/CALL permissions on this UP: ${v.err}`,
+    permsOkLog: (v) => `✅ Permissions verified (gas estimate succeeded: ${v.gas} units).`,
+    gasCostLog: (v) => `Estimated gas cost (paid by the signer, NOT by the UP): ${v.cost} (with margin)`,
+    insufficientGasErr: (v) => `❌ BLOCKING — the signing wallet doesn't have enough gas. About ${v.shortfall} short.`,
+    signerGasOkLog: "✅ The signing wallet has enough gas.",
+    readyWarnLog: "\nReady. Double-check recipient and amount before pressing Send — it's irreversible.",
+    verifyErrorLog: (v) => `Error during verification: ${v.err}`,
+    sendingTxLog: "Sending transaction (confirm in your wallet)...",
+    txHashLog: (v) => `Tx: ${v.hash}`,
+    waitingConfirmLog: "Waiting for confirmation...",
+    transferConfirmedLog: "✅✅ Transfer confirmed.",
+    sendErrorLog: (v) => `Error while sending: ${v.err}`,
+
+    footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a>`,
+  },
+};
+
+function t(key, vars) {
+  const entry = I18N[LANG][key];
+  return typeof entry === "function" ? entry(vars || {}) : entry;
+}
+
+function applyI18n() {
+  document.documentElement.lang = LANG;
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.getAttribute("data-i18n")); });
+  document.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.getAttribute("data-i18n-html")); });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => { el.placeholder = t(el.getAttribute("data-i18n-placeholder")); });
+  // Elementi con stato dinamico che non vanno sovrascritti col placeholder statico se già popolati
+  if (!$("balanceStatus").querySelector(".balance-big") && !$("balanceStatus").querySelector(".badge")) {
+    $("balanceStatus").innerHTML = `<span class="empty">${t("balanceNotChecked")}</span>`;
+  }
+}
+applyI18n();
+$("langToggle").addEventListener("click", () => {
+  LANG = LANG === "it" ? "en" : "it";
+  applyI18n();
+});
+
+// ==================== APP ====================
 const FACTORY_ADDRESS = "0x2300000A84D25dF63081feAa37ba6b62C4c89a30";
 const SECONDARY_IMPL = "0x2fe3aed98684e7351ad2d408a43ce09a738bf8a4"; // LSP6KeyManagerInit
 
-const NETWORKS = [
-  { key: "ethereum", name: "Ethereum", rpc: "https://ethereum-rpc.publicnode.com", explorer: "https://etherscan.io/tx/" },
-  { key: "base", name: "Base", rpc: "https://mainnet.base.org", explorer: "https://basescan.org/tx/" },
-  { key: "sei", name: "Sei", rpc: "https://evm-rpc.sei-apis.com", explorer: "https://seitrace.com/tx/" },
-  { key: "custom", name: "Custom RPC...", rpc: null, explorer: null },
+const CHAINS = [
+  { key: "0g", name: "0G", chainId: 16661, rpc: "https://evmrpc.0g.ai", explorer: "https://chainscan.0g.ai/tx/", currency: "0G" },
+  { key: "apechain", name: "ApeChain", chainId: 33139, rpc: "https://rpc.apechain.com", explorer: "https://apescan.io/tx/", currency: "APE" },
+  { key: "arbitrum-one", name: "Arbitrum One", chainId: 42161, rpc: "https://arb1.arbitrum.io/rpc", explorer: "https://arbiscan.io/tx/", currency: "ETH" },
+  { key: "avalanche-c-chain", name: "Avalanche C-Chain", chainId: 43114, rpc: "https://api.avax.network/ext/bc/C/rpc", explorer: "https://snowscan.xyz/tx/", currency: "AVAX" },
+  { key: "base", name: "Base", chainId: 8453, rpc: "https://mainnet.base.org", explorer: "https://basescan.org/tx/", currency: "ETH" },
+  { key: "berachain", name: "Berachain", chainId: 80094, rpc: "https://rpc.berachain.com", explorer: "https://berascan.com/tx/", currency: "BERA" },
+  { key: "blast", name: "Blast", chainId: 81457, rpc: "https://rpc.blast.io", explorer: "https://blastscan.io/tx/", currency: "ETH" },
+  { key: "bnb-smart-chain", name: "BNB Smart Chain", chainId: 56, rpc: "https://bsc-dataseed1.bnbchain.org", explorer: "https://bscscan.com/tx/", currency: "BNB" },
+  { key: "celo", name: "Celo", chainId: 42220, rpc: "https://forno.celo.org", explorer: "https://celoscan.io/tx/", currency: "CELO" },
+  { key: "chiliz", name: "Chiliz", chainId: 88888, rpc: "https://rpc.chiliz.com", explorer: "https://chiliscan.com/tx/", currency: "CHZ" },
+  { key: "conflux-evm-espace", name: "Conflux EVM eSpace", chainId: 1030, rpc: "https://evm.confluxrpc.com", explorer: "https://evm.confluxscan.net/tx/", currency: "CFX" },
+  { key: "core-blockchain", name: "Core Blockchain", chainId: 1116, rpc: "https://rpc.coredao.org", explorer: "https://scan.coredao.org/tx/", currency: "CORE" },
+  { key: "coti", name: "COTI", chainId: 2632500, rpc: "https://mainnet.coti.io/rpc", explorer: "https://mainnet.cotiscan.io/tx/", currency: "COTI" },
+  { key: "cronos", name: "Cronos", chainId: 25, rpc: "https://evm.cronos.org", explorer: "https://explorer.cronos.org/tx/", currency: "CRO" },
+  { key: "degen-chain", name: "Degen Chain", chainId: 666666666, rpc: "https://rpc.degen.tips", explorer: null, currency: "DEGEN" },
+  { key: "ethereum", name: "Ethereum", chainId: 1, rpc: "https://ethereum-rpc.publicnode.com", explorer: "https://etherscan.io/tx/", currency: "ETH" },
+  { key: "ethereum-classic", name: "Ethereum Classic", chainId: 61, rpc: "https://etc.rivet.link", explorer: "https://etc.blockscout.com/tx/", currency: "ETC" },
+  { key: "etherlink", name: "Etherlink", chainId: 42793, rpc: "https://node.mainnet.etherlink.com", explorer: "https://explorer.etherlink.com/tx/", currency: "XTZ" },
+  { key: "flare", name: "Flare", chainId: 14, rpc: "https://flare-api.flare.network/ext/C/rpc", explorer: "https://flare-explorer.flare.network/tx/", currency: "FLR" },
+  { key: "gnosis", name: "Gnosis", chainId: 100, rpc: "https://rpc.gnosischain.com", explorer: "https://gnosisscan.io/tx/", currency: "XDAI" },
+  { key: "gravity-alpha", name: "Gravity Alpha", chainId: 1625, rpc: "https://rpc.gravity.xyz", explorer: "https://explorer.gravity.xyz/tx/", currency: "G" },
+  { key: "hashkey-chain", name: "HashKey Chain", chainId: 177, rpc: "https://mainnet.hsk.xyz", explorer: "https://hsk.blockscout.com/tx/", currency: "HSK" },
+  { key: "immutable-zkevm", name: "Immutable zkEVM", chainId: 13371, rpc: "https://rpc.immutable.com", explorer: "https://explorer.immutable.com/tx/", currency: "IMX" },
+  { key: "ink", name: "Ink", chainId: 57073, rpc: "https://rpc-gel.inkonchain.com", explorer: "https://explorer.inkonchain.com/tx/", currency: "ETH" },
+  { key: "katana", name: "Katana", chainId: 747474, rpc: "https://rpc.katana.network", explorer: "https://katanascan.com/tx/", currency: "ETH" },
+  { key: "kava-evm", name: "Kava EVM", chainId: 2222, rpc: "https://evm.kava.io", explorer: "https://kavascan.com/tx/", currency: "KAVA" },
+  { key: "lens", name: "Lens", chainId: 232, rpc: "https://rpc.lens.xyz", explorer: "https://explorer.lens.xyz/tx/", currency: "GHO" },
+  { key: "linea", name: "Linea", chainId: 59144, rpc: "https://rpc.linea.build", explorer: "https://lineascan.build/tx/", currency: "ETH" },
+  { key: "mantle", name: "Mantle", chainId: 5000, rpc: "https://rpc.mantle.xyz", explorer: "https://mantlescan.xyz/tx/", currency: "MNT" },
+  { key: "megaeth", name: "MegaETH", chainId: 4326, rpc: "https://mainnet.megaeth.com/rpc", explorer: "https://mega.etherscan.io/tx/", currency: "ETH" },
+  { key: "mode", name: "Mode", chainId: 34443, rpc: "https://mainnet.mode.network", explorer: "https://explorer.mode.network/tx/", currency: "ETH" },
+  { key: "monad", name: "Monad", chainId: 143, rpc: "https://rpc.monad.xyz", explorer: "https://monadvision.com/tx/", currency: "MON" },
+  { key: "moonbeam", name: "Moonbeam", chainId: 1284, rpc: "https://rpc.api.moonbeam.network", explorer: "https://moonbeam.moonscan.io/tx/", currency: "GLMR" },
+  { key: "moonriver", name: "Moonriver", chainId: 1285, rpc: "https://rpc.api.moonriver.moonbeam.network", explorer: "https://moonriver.moonscan.io/tx/", currency: "MOVR" },
+  { key: "optimism", name: "Optimism", chainId: 10, rpc: "https://mainnet.optimism.io", explorer: "https://optimistic.etherscan.io/tx/", currency: "ETH" },
+  { key: "plasma", name: "Plasma", chainId: 9745, rpc: "https://rpc.plasma.to", explorer: "https://plasmascan.to/tx/", currency: "XPL" },
+  { key: "plume", name: "Plume", chainId: 98866, rpc: "https://rpc.plume.org", explorer: "https://explorer.plume.org/tx/", currency: "PLUME" },
+  { key: "polygon", name: "Polygon", chainId: 137, rpc: "https://polygon.drpc.org", explorer: "https://polygonscan.com/tx/", currency: "POL" },
+  { key: "pulsechain", name: "Pulsechain", chainId: 369, rpc: "https://rpc.pulsechain.com", explorer: "https://ipfs.scan.pulsechain.com/tx/", currency: "PLS" },
+  { key: "ronin", name: "Ronin", chainId: 2020, rpc: "https://api.roninchain.com/rpc", explorer: "https://app.roninchain.com/tx/", currency: "RON" },
+  { key: "scroll", name: "Scroll", chainId: 534352, rpc: "https://rpc.scroll.io", explorer: "https://scrollscan.com/tx/", currency: "ETH" },
+  { key: "somnia", name: "Somnia", chainId: 5031, rpc: "https://api.infra.mainnet.somnia.network", explorer: "https://mainnet.somnia.w3us.site/tx/", currency: "SOMI" },
+  { key: "soneium", name: "Soneium", chainId: 1868, rpc: "https://rpc.soneium.org", explorer: "https://soneium.blockscout.com/tx/", currency: "ETH" },
+  { key: "sonic", name: "Sonic", chainId: 146, rpc: "https://rpc.soniclabs.com", explorer: "https://sonicscan.org/tx/", currency: "S" },
+  { key: "stable", name: "Stable", chainId: 988, rpc: "https://rpc.stable.xyz", explorer: "https://stablescan.xyz/tx/", currency: "USDT0" },
+  { key: "story", name: "Story", chainId: 1514, rpc: "https://mainnet.datarpc.io", explorer: "https://datanetscan.io/tx/", currency: "DATA" },
+  { key: "stratis-xertra", name: "Stratis Xertra", chainId: 105105, rpc: "https://rpc.xertra.com", explorer: "https://explorer.xertra.com/tx/", currency: "STRAX" },
+  { key: "taiko-alethia", name: "Taiko Alethia", chainId: 167000, rpc: "https://rpc.mainnet.taiko.xyz", explorer: "https://taikoscan.io/tx/", currency: "ETH" },
+  { key: "telos-evm", name: "Telos EVM", chainId: 40, rpc: "https://rpc.telos.net", explorer: "https://teloscan.io/tx/", currency: "TLOS" },
+  { key: "tempo", name: "Tempo", chainId: 4217, rpc: "https://rpc.mainnet.tempo.xyz", explorer: "https://explore.tempo.xyz/tx/", currency: "USD" },
+  { key: "unichain", name: "Unichain", chainId: 130, rpc: "https://mainnet.unichain.org", explorer: "https://uniscan.xyz/tx/", currency: "ETH" },
+  { key: "world-chain", name: "World Chain", chainId: 480, rpc: "https://worldchain-mainnet.g.alchemy.com/public", explorer: "https://worldscan.org/tx/", currency: "ETH" },
+  { key: "x-layer", name: "X Layer", chainId: 196, rpc: "https://rpc.xlayer.tech", explorer: "https://www.oklink.com/xlayer/tx/", currency: "OKB" },
+  { key: "xai", name: "Xai", chainId: 660279, rpc: "https://xai-chain.net/rpc", explorer: "https://explorer.xai-chain.net/tx/", currency: "XAI" },
+  { key: "xdc-network", name: "XDC Network", chainId: 50, rpc: "https://erpc.xinfin.network", explorer: "https://xdcscan.com/tx/", currency: "XDC" },
+  { key: "zetachain", name: "ZetaChain", chainId: 7000, rpc: "https://zetachain-evm.blockpi.network/v1/rpc/public", explorer: "https://zetascan.com/tx/", currency: "ZETA" },
+  { key: "zksync", name: "zkSync", chainId: 324, rpc: "https://mainnet.era.zksync.io", explorer: "https://explorer.zksync.io/tx/", currency: "ETH" },
+  { key: "zora", name: "Zora", chainId: 7777777, rpc: "https://rpc.zora.energy", explorer: "https://explorer.zora.energy/tx/", currency: "ETH" },
+  { key: "arbitrum-sepolia", name: "Arbitrum Sepolia (testnet)", chainId: 421614, rpc: "https://sepolia-rollup.arbitrum.io/rpc", explorer: "https://sepolia.arbiscan.io/tx/", currency: "ETH" },
+  { key: "base-sepolia", name: "Base Sepolia (testnet)", chainId: 84532, rpc: "https://sepolia.base.org", explorer: "https://sepolia.basescan.org/tx/", currency: "ETH" },
+  { key: "ethereum-hoodi", name: "Ethereum Hoodi (testnet)", chainId: 560048, rpc: "https://rpc.hoodi.ethpandaops.io", explorer: "https://light-hoodi.beaconcha.in/tx/", currency: "ETH" },
+  { key: "ethereum-sepolia", name: "Ethereum Sepolia (testnet)", chainId: 11155111, rpc: "https://rpc.sepolia.org", explorer: "https://sepolia.etherscan.io/tx/", currency: "ETH" },
+  { key: "polygon-amoy", name: "Polygon Amoy (testnet)", chainId: 80002, rpc: "https://rpc-amoy.polygon.technology", explorer: "https://amoy.polygonscan.com/tx/", currency: "POL" },
+  { key: "zksync-sepolia", name: "zkSync Sepolia (testnet)", chainId: 300, rpc: "https://sepolia.era.zksync.dev", explorer: "https://sepolia.explorer.zksync.io/tx/", currency: "ETH" },
+  { key: "sei", name: "Sei", chainId: 1329, rpc: "https://evm-rpc.sei-apis.com", explorer: "https://seitrace.com/tx/", currency: "SEI" },
+  { key: "custom", name: "Custom RPC...", chainId: null, rpc: null, explorer: null, currency: "?" },
 ];
 
-const PROFILES = {
-  "0x328a19ab63744aaf3d0aebfb8e6dc5246faf317b": { label: "SimoneC", controller: "0x86F72AF152E8b502E8Dc7CF87A115Ec94490c6f2" },
-  "0x1d62b8d2c63b942095ad3c7ffc7e845195d9e718": { label: "birra20venti", controller: "0x434667A8840e18628cbd7B3A51d7cee207fd9d4c" },
-  "0x4a2605796e0d91a9667d6e30365aeec384c48c27": { label: "ChainIntegrate", controller: "0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c" },
-};
+// Nome rete leggibile a partire dal chainId, per mostrare a quale rete è connesso il wallet firmatario.
+function chainDisplayName(chainId) {
+  if (chainId === 42) return "LUKSO Mainnet";
+  if (chainId === 4201) return "LUKSO Testnet";
+  const found = CHAINS.find(n => n.chainId === chainId);
+  return found ? found.name : t("unknownNetworkLabel", { chainId });
+}
 
-const $ = (id) => document.getElementById(id);
 function log(msg, cls) {
   const l = document.createElement("div");
   if (cls) l.className = cls;
@@ -143,24 +396,29 @@ function log(msg, cls) {
   $("log").appendChild(l);
 }
 
-// --- 1. Profilo ---
-const profileSelectEl = $("profile");
-Object.entries(PROFILES).forEach(([addr, p]) => {
-  const opt = document.createElement("option");
-  opt.value = addr;
-  opt.textContent = p.label;
-  profileSelectEl.appendChild(opt);
+// --- 1. Profilo: connessione alla PROPRIA estensione UP, come nella pagina di deploy.
+// Pagina pubblica: nessuna tabella di profili noti, chiunque la usi vede solo il proprio
+// indirizzo, letto direttamente dalla connessione. Il campo indirizzo resta editabile per
+// chi vuole operare su una UP diversa da quella connessa nell'estensione.
+$("connectUp").addEventListener("click", async () => {
+  if (!window.lukso) {
+    $("profileStatus").innerHTML = `<span class="badge err">${t("extNotFound")}</span>`;
+    return;
+  }
+  try {
+    const accounts = await window.lukso.request({ method: "eth_requestAccounts" });
+    const upAddress = accounts[0];
+    $("profileAddress").value = upAddress;
+    $("profileStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${upAddress}`;
+    checkBalance();
+  } catch (e) {
+    $("profileStatus").innerHTML = `<span class="badge err">${t("connectionRejected")}</span>`;
+  }
 });
 function currentProfile() {
-  const addr = profileSelectEl.value;
-  return { address: addr, ...PROFILES[addr] };
+  return { address: $("profileAddress").value.trim() };
 }
-function updateProfileStatus() {
-  const p = currentProfile();
-  $("profileStatus").innerHTML = `Indirizzo UP: ${p.address}<br>Controller atteso: ${p.controller}`;
-}
-profileSelectEl.addEventListener("change", () => { updateProfileStatus(); checkBalance(); });
-updateProfileStatus();
+$("profileAddress").addEventListener("change", checkBalance);
 
 // --- 2. Wallet firmatario ---
 let signerProvider = null, signerAddress = null;
@@ -172,28 +430,39 @@ $("connectSigner").addEventListener("click", async () => {
   let candidate = discoveredProviders.find(p => !/lukso|universal profile/i.test(p.info.name))?.provider;
   if (!candidate && window.ethereum && window.ethereum !== window.lukso) candidate = window.ethereum;
   if (!candidate) {
-    $("signerStatus").innerHTML = '<span class="badge err">Nessun wallet firmatario trovato</span>';
+    $("signerStatus").innerHTML = `<span class="badge err">${t("noSignerFound")}</span>`;
     return;
   }
   try {
     const accounts = await candidate.request({ method: "eth_requestAccounts" });
     signerAddress = accounts[0];
     signerProvider = candidate;
-    $("signerStatus").innerHTML = `<span class="badge ok">Connesso</span> ${signerAddress}`;
+    let netLabel = "";
+    try {
+      const chainIdHex = await candidate.request({ method: "eth_chainId" });
+      netLabel = ` · ${chainDisplayName(parseInt(chainIdHex, 16))}`;
+    } catch (e) { /* se non si riesce a leggere la rete, si mostra comunque l'indirizzo */ }
+    $("signerStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${signerAddress}${netLabel}`;
     checkBalance();
   } catch (e) {
-    $("signerStatus").innerHTML = '<span class="badge err">Connessione rifiutata o fallita</span>';
+    $("signerStatus").innerHTML = `<span class="badge err">${t("connectionRejected")}</span>`;
   }
 });
 
 // --- 3. Rete ---
 const networkSelectEl = $("network");
-NETWORKS.forEach(n => {
-  const opt = document.createElement("option");
-  opt.value = n.key;
-  opt.textContent = n.name;
-  networkSelectEl.appendChild(opt);
-});
+function renderNetworkOptions(filter) {
+  const f = (filter || "").toLowerCase();
+  networkSelectEl.innerHTML = "";
+  CHAINS.filter(c => c.name.toLowerCase().includes(f)).forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c.key;
+    opt.textContent = c.chainId ? `${c.name} (chainId ${c.chainId})` : c.name;
+    networkSelectEl.appendChild(opt);
+  });
+}
+renderNetworkOptions("");
+$("networkFilter").addEventListener("input", (e) => renderNetworkOptions(e.target.value));
 networkSelectEl.addEventListener("change", () => {
   $("customRpcWrap").style.display = networkSelectEl.value === "custom" ? "block" : "none";
   checkBalance();
@@ -202,24 +471,25 @@ function getNetwork() {
   if (networkSelectEl.value === "custom") {
     return { name: "Custom", rpc: $("customRpc").value.trim(), explorer: $("customExplorer").value.trim() || null };
   }
-  return NETWORKS.find(n => n.key === networkSelectEl.value);
+  return CHAINS.find(c => c.key === networkSelectEl.value);
 }
 
 async function checkBalance() {
   const profile = currentProfile();
+  if (!profile.address || !ethers.isAddress(profile.address)) return;
   const net = getNetwork();
   if (!net.rpc) return;
   try {
     const provider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
     const code = await provider.getCode(profile.address);
     if (code === "0x") {
-      $("balanceStatus").innerHTML = `<span class="badge err">La UP non risulta deployata su questa rete</span>`;
+      $("balanceStatus").innerHTML = `<span class="badge err">${t("upNotDeployedErr")}</span>`;
       return;
     }
     const balance = await provider.getBalance(profile.address);
-    $("balanceStatus").innerHTML = `Saldo attuale della UP (${profile.label}) su ${net.name}:<div class="balance-big">${ethers.formatEther(balance)}</div>`;
+    $("balanceStatus").innerHTML = `${t("balanceLabel", { net: net.name })}<div class="balance-big">${ethers.formatEther(balance)}</div>`;
   } catch (e) {
-    $("balanceStatus").innerHTML = `<span class="badge err">Errore lettura saldo: ${e.message}</span>`;
+    $("balanceStatus").innerHTML = `<span class="badge err">${t("balanceReadErr", { err: e.message })}</span>`;
   }
 }
 
@@ -247,46 +517,44 @@ $("checkBtn").addEventListener("click", async () => {
   const recipient = $("recipient").value.trim();
   const amountStr = $("amount").value.trim();
 
-  if (!signerAddress) { log("Collega prima il wallet firmatario (pannello 2).", "line-err"); return; }
-  if (!net.rpc) { log("Manca l'RPC della rete (pannello 3).", "line-err"); return; }
-  if (!ethers.isAddress(recipient)) { log("Indirizzo destinatario non valido.", "line-err"); return; }
-  if (!amountStr || isNaN(Number(amountStr)) || Number(amountStr) <= 0) { log("Importo non valido.", "line-err"); return; }
+  if (!profile.address || !ethers.isAddress(profile.address)) { log(t("missingAddrErr"), "line-err"); return; }
+  if (!signerAddress) { log(t("connectSignerFirstLog"), "line-err"); return; }
+  if (!net.rpc) { log(t("missingRpcLog"), "line-err"); return; }
+  if (!ethers.isAddress(recipient)) { log(t("invalidRecipientErr"), "line-err"); return; }
+  if (!amountStr || isNaN(Number(amountStr)) || Number(amountStr) <= 0) { log(t("invalidAmountErr"), "line-err"); return; }
 
   try {
     const valueWei = ethers.parseEther(amountStr);
-    log(`Profilo: ${profile.label} (${profile.address})`, "line-dim");
-    log(`Rete: ${net.name}`, "line-dim");
-    log(`Destinatario: ${recipient}`, "line-dim");
-    log(`Importo: ${amountStr}`, "line-dim");
-    log(`Wallet firmatario (controller): ${signerAddress}`, "line-dim");
-
-    if (signerAddress.toLowerCase() !== profile.controller.toLowerCase()) {
-      log(`⚠️ Il wallet connesso non è il controller atteso (${profile.controller}) per questo profilo — verifica di aver scelto l'account giusto in MetaMask.`, "line-warn");
-    }
+    log(t("upLog", { addr: profile.address }), "line-dim");
+    log(t("netLog", { name: net.name }), "line-dim");
+    log(t("recipientLog", { addr: recipient }), "line-dim");
+    log(t("amountLog", { amount: amountStr }), "line-dim");
+    log(t("signerLog", { addr: signerAddress }), "line-dim");
+    log(t("permCheckNote"), "line-dim");
 
     const keyManagerAddress = computeKeyManagerAddress(profile.address);
-    log(`Key Manager: ${keyManagerAddress}`, "line-dim");
+    log(t("kmLog", { addr: keyManagerAddress }), "line-dim");
 
     const provider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
 
     const upCode = await provider.getCode(profile.address);
     if (upCode === "0x") {
-      log(`❌ BLOCCANTE — la UP non risulta deployata su questa rete.`, "line-err");
+      log(t("upNotDeployedBlockErr"), "line-err");
       return;
     }
     const kmCode = await provider.getCode(keyManagerAddress);
     if (kmCode === "0x") {
-      log(`❌ BLOCCANTE — il Key Manager non risulta deployato su questa rete.`, "line-err");
+      log(t("kmNotDeployedBlockErr"), "line-err");
       return;
     }
 
     const upBalance = await provider.getBalance(profile.address);
-    log(`Saldo attuale della UP: ${ethers.formatEther(upBalance)}`, "line-dim");
+    log(t("upBalanceLog", { balance: ethers.formatEther(upBalance) }), "line-dim");
     if (upBalance < valueWei) {
-      log(`❌ BLOCCANTE — la UP non ha fondi sufficienti (ha ${ethers.formatEther(upBalance)}, servono ${amountStr}).`, "line-err");
+      log(t("insufficientUpFundsErr", { have: ethers.formatEther(upBalance), need: amountStr }), "line-err");
       return;
     }
-    log("✅ Saldo della UP sufficiente per l'importo richiesto.", "line-ok");
+    log(t("upFundsOkLog"), "line-ok");
 
     // Costruzione calldata: UP.execute(0, recipient, value, "0x") wrappato in KeyManager.execute(bytes)
     const upIface = new ethers.Interface(["function execute(uint256,address,uint256,bytes)"]);
@@ -297,32 +565,32 @@ $("checkBtn").addEventListener("click", async () => {
     const gasEstimate = await provider.estimateGas({
       to: keyManagerAddress, data: executeCalldata, from: signerAddress
     }).catch(e => {
-      log("❌ BLOCCANTE — stima gas fallita, probabilmente il controller non ha i permessi TRANSFERVALUE/CALL su questa UP: " + (e.shortMessage || e.message), "line-err");
+      log(t("gasFailErr", { err: e.shortMessage || e.message }), "line-err");
       throw e;
     });
-    log(`✅ Permessi verificati (stima gas riuscita: ${gasEstimate.toString()} unità).`, "line-ok");
+    log(t("permsOkLog", { gas: gasEstimate.toString() }), "line-ok");
 
     const signerBalance = await provider.getBalance(signerAddress);
     const feeData = await provider.getFeeData();
     const gasPrice = feeData.maxFeePerGas || feeData.gasPrice;
     const gasCost = gasEstimate * gasPrice;
     const gasCostWithMargin = gasCost + gasCost / 4n;
-    log(`Costo gas stimato (a carico del firmatario, NON della UP): ${ethers.formatEther(gasCostWithMargin)} (con margine)`, "line-dim");
+    log(t("gasCostLog", { cost: ethers.formatEther(gasCostWithMargin) }), "line-dim");
     if (signerBalance < gasCostWithMargin) {
       const shortfall = gasCostWithMargin - signerBalance;
-      log(`❌ BLOCCANTE — il wallet firmatario non ha abbastanza gas. Mancano circa ${ethers.formatEther(shortfall)}.`, "line-err");
+      log(t("insufficientGasErr", { shortfall: ethers.formatEther(shortfall) }), "line-err");
       return;
     }
-    log("✅ Il wallet firmatario ha gas sufficiente.", "line-ok");
+    log(t("signerGasOkLog"), "line-ok");
 
     lastCheckOk = true;
     lastKeyManager = keyManagerAddress;
     lastValueWei = valueWei;
     lastRecipient = recipient;
     $("sendBtn").disabled = false;
-    log("\nPronto. Controlla ancora una volta destinatario e importo prima di premere Invia — è irreversibile.", "line-warn");
+    log(t("readyWarnLog"), "line-warn");
   } catch (e) {
-    log("Errore durante la verifica: " + (e.shortMessage || e.message), "line-err");
+    log(t("verifyErrorLog", { err: e.shortMessage || e.message }), "line-err");
   }
 });
 
@@ -340,18 +608,18 @@ $("sendBtn").addEventListener("click", async () => {
     const browserProvider = new ethers.BrowserProvider(signerProvider);
     const signerObj = await browserProvider.getSigner();
 
-    log("Invio transazione (conferma nel wallet)...", "line-dim");
+    log(t("sendingTxLog"), "line-dim");
     const tx = await signerObj.sendTransaction({ to: lastKeyManager, data: executeCalldata });
-    log(`Tx: ${tx.hash}`, "line-dim");
+    log(t("txHashLog", { hash: tx.hash }), "line-dim");
     if (net.explorer) log(net.explorer + tx.hash, "line-dim");
 
-    log("In attesa di conferma...", "line-dim");
+    log(t("waitingConfirmLog"), "line-dim");
     await tx.wait();
-    log("✅✅ Trasferimento confermato.", "line-ok");
+    log(t("transferConfirmedLog"), "line-ok");
 
     checkBalance();
   } catch (e) {
-    log("Errore durante l'invio: " + (e.shortMessage || e.message), "line-err");
+    log(t("sendErrorLog", { err: e.shortMessage || e.message }), "line-err");
   } finally {
     lastCheckOk = false;
   }
