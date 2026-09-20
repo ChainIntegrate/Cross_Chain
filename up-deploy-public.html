@@ -183,6 +183,9 @@ const I18N = {
     alreadyDeployedErr: (v) => `❌ BLOCCANTE — la UP risulta già deployata su questa rete (${v.addr}). Nessun nuovo deploy necessario.`,
     kmInconsistentErr: "❌ BLOCCANTE — il Key Manager risulta già presente a questo indirizzo su questa rete, ma la UP no: stato incoerente, non procedere senza indagare.",
     noContractOkLog: "✅ Nessun contratto presente agli indirizzi attesi su questa rete: il deploy può procedere.",
+    checkingImplLog: "Controllo che le implementazioni referenziate dalla calldata esistano davvero su questa rete...",
+    implMissingErr: (v) => `❌ BLOCCANTE — l'implementazione ${v.label} (${v.addr}) referenziata dalla calldata non ha bytecode su questa rete. Il proxy si deployerebbe comunque, allo stesso indirizzo, ma ogni chiamata andrebbe a vuoto (delegatecall verso un indirizzo senza codice ritorna successo senza fare nulla): un profilo "muto", non un errore visibile. Non procedere finché LUKSO non pubblica questa versione dell'implementazione su questa rete.`,
+    implOkLog: (v) => `✅ Implementazione ${v.label} presente e con bytecode su questa rete (${v.addr}).`,
     gasEstimateFailErr: (v) => `❌ BLOCCANTE — stima gas fallita: ${v.err}`,
     gasEstimateOkLog: (v) => `✅ Stima gas riuscita: ${v.gas} unità.`,
     estimatedCostLog: (v) => `Costo stimato totale (gas + eventuale funding): ${v.cost}`,
@@ -281,6 +284,9 @@ const I18N = {
     alreadyDeployedErr: (v) => `❌ BLOCKING — the UP already appears deployed on this network (${v.addr}). No new deploy needed.`,
     kmInconsistentErr: "❌ BLOCKING — the Key Manager already exists at this address on this network, but the UP doesn't: inconsistent state, do not proceed without investigating.",
     noContractOkLog: "✅ No contract present at the expected addresses on this network: the deploy can proceed.",
+    checkingImplLog: "Checking that the implementations referenced by the calldata actually exist on this network...",
+    implMissingErr: (v) => `❌ BLOCKING — the ${v.label} implementation (${v.addr}) referenced by the calldata has no bytecode on this network. The proxy would still deploy at the same address, but every call would go nowhere (a delegatecall to an address with no code returns success while doing nothing): a "mute" profile, with no visible error. Do not proceed until LUKSO publishes this implementation version on this network.`,
+    implOkLog: (v) => `✅ ${v.label} implementation present and has bytecode on this network (${v.addr}).`,
     gasEstimateFailErr: (v) => `❌ BLOCKING — gas estimation failed: ${v.err}`,
     gasEstimateOkLog: (v) => `✅ Gas estimation succeeded: ${v.gas} units.`,
     estimatedCostLog: (v) => `Total estimated cost (gas + any funding): ${v.cost}`,
@@ -714,6 +720,26 @@ $("checkBtn").addEventListener("click", async () => {
       return;
     }
     log(t("noContractOkLog"), "line-ok");
+
+    // Controllo bloccante: l'indirizzo CREATE2 predetto non dipende dal fatto che le
+    // implementazioni referenziate dalla calldata (LSP0 primaria e Key Manager secondaria)
+    // siano davvero pubblicate su questa rete. Se non lo sono, il proxy si deploya comunque
+    // allo stesso indirizzo, ma ogni delegatecall verso un'implementazione senza bytecode
+    // ritorna successo senza fare nulla: un profilo "muto", nessun errore visibile a deploy
+    // avvenuto. Va intercettato qui, prima di firmare, non dopo.
+    log(t("checkingImplLog"), "line-dim");
+    const primaryImplCode = await provider.getCode(decoded.primary.impl);
+    if (primaryImplCode === "0x") {
+      log(t("implMissingErr", { label: "LSP0 (UniversalProfile)", addr: decoded.primary.impl }), "line-err");
+      return;
+    }
+    log(t("implOkLog", { label: "LSP0 (UniversalProfile)", addr: decoded.primary.impl }), "line-ok");
+    const secondaryImplCode = await provider.getCode(decoded.secondary.impl);
+    if (secondaryImplCode === "0x") {
+      log(t("implMissingErr", { label: "Key Manager", addr: decoded.secondary.impl }), "line-err");
+      return;
+    }
+    log(t("implOkLog", { label: "Key Manager", addr: decoded.secondary.impl }), "line-ok");
 
     const value = BigInt(decoded.primary.fundingAmount) + BigInt(decoded.secondary.fundingAmount);
 
