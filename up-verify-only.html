@@ -2,7 +2,19 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<title>UP Deploy — Sola Verifica</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UP Deploy — Sola Verifica — ChainIntegrate</title>
+<meta name="description" content="Verifica in sola lettura se la tua LUKSO Universal Profile può essere rideployata correttamente su un'altra rete — nessuna connessione wallet richiesta.">
+<link rel="icon" href="favicon.ico">
+<meta property="og:type" content="website">
+<meta property="og:title" content="UP Deploy — Sola Verifica — ChainIntegrate">
+<meta property="og:description" content="Verifica in sola lettura se la tua LUKSO Universal Profile può essere rideployata correttamente su un'altra rete.">
+<meta property="og:image" content="https://chainintegrate.it/banner.png">
+<meta property="og:url" content="https://chainintegrate.it/up-verify-only.html">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="UP Deploy — Sola Verifica — ChainIntegrate">
+<meta name="twitter:description" content="Verifica in sola lettura se la tua LUKSO Universal Profile può essere rideployata correttamente su un'altra rete.">
+<meta name="twitter:image" content="https://chainintegrate.it/banner.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js"></script>
 <style>
   :root {
@@ -27,9 +39,22 @@
   button.secondary { background: #2a2f3a; }
   #log { font-family: monospace; font-size: 12.5px; white-space: pre-wrap; word-break: break-all; line-height: 1.6; margin-top: 10px; }
   .line-ok { color: var(--ok); } .line-warn { color: var(--warn); } .line-err { color: var(--err); } .line-dim { color: var(--text-dim); }
+  .brand-row { margin-bottom: 24px; }
+  .brand-logo { display: block; width: 100%; height: auto; border-radius: 10px; }
+  .site-footer { margin-top: 40px; padding: 18px 20px; background: #f5f6f8; border: 1px solid #e3e5ea; border-radius: 10px; color: #4b4f58; }
+  .footer-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .footer-logo { height: 48px; width: auto; flex-shrink: 0; }
+  .footer-text { font-size: 13px; line-height: 1.6; }
+  .footer-li { display: inline-flex; vertical-align: middle; margin: 0 2px; }
+  .site-footer a { color: #2563eb; text-decoration: none; font-weight: 600; }
+  .site-footer a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
+
+<div class="brand-row">
+  <img src="banner.png" alt="ChainIntegrate" class="brand-logo" onerror="this.style.display='none'">
+</div>
 
 <h1>UP Deploy — Sola Verifica</h1>
 <div class="subtitle">Controlla, senza firmare né spendere nulla, se una Universal Profile risulta correttamente deployata su una rete a partire dalla sua calldata originale. Solo lettura — nessun wallet richiesto.</div>
@@ -56,6 +81,13 @@
   <h2>3 · Verifica</h2>
   <button id="verifyBtn">Verifica deploy</button>
   <div id="log" class="line-dim">In attesa dei dati sopra.</div>
+</div>
+
+<div class="site-footer">
+  <div class="footer-row">
+    <img src="logo.png" alt="ChainIntegrate" class="footer-logo" onerror="this.style.display='none'">
+    <div class="footer-text">Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a></div>
+  </div>
 </div>
 
 <script>
