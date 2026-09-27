@@ -12,6 +12,15 @@ A UP is a proxy that delegates everything to an implementation contract (LSP0 fo
 
 LUKSO published its implementations through Nick's deterministic deployment proxy (`0x4e59b44847b379578588920cA78FbF26c0B4956C`), which lives at the same address on almost every EVM chain. Replaying the original transaction there creates the implementation at the same address. `up-publish-implementation.html` does this: it reads the original transaction from LUKSO, checks that it produces exactly the expected address, and has any wallet sign it. The operation is permissionless, gives nobody control over any profile, and only costs gas.
 
+#### Implementations already published with this tool
+
+| Chain | Contract | Address | Transaction |
+|---|---|---|---|
+| Polygon | UniversalProfileInit v0.12.1 | [`0x52c90985AF970D4E0DC26Cb5D052505278aF32A9`](https://polygonscan.com/address/0x52c90985AF970D4E0DC26Cb5D052505278aF32A9) | [0x7bcf539c…48c2cf](https://polygonscan.com/tx/0x7bcf539c9ab67814df727e597e398c6e661ac06befbe63d8b30d7c08f148c2cf) |
+| Polygon | LSP6KeyManagerInit v0.12.1 | [`0xa75684d7D048704a2DB851D05Ba0c3cbe226264C`](https://polygonscan.com/address/0xa75684d7D048704a2DB851D05Ba0c3cbe226264C) | [0xb29fae94…83bce8](https://polygonscan.com/tx/0xb29fae94613fd890eef5e4be4b193615aec8795143aae774ea6e8d424383bce8) |
+
+The deployed bytecode is identical to LUKSO mainnet. LUKSO has been informed, with a request to verify the source code on Polygonscan: [lukso-network/lsp-smart-contracts#1151](https://github.com/lukso-network/lsp-smart-contracts/issues/1151).
+
 The tools never ask for a private key. The calldata is public on-chain data, and every transaction is signed in your own wallet.
 
 ## Contents
