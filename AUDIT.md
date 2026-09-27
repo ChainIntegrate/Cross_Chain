@@ -163,11 +163,12 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
   - `README.md` and `AUDIT.md`, the internal documentation and audit report.
 - **Fix:** A root `.htaccess` returns 404 for `.git/`, `.gitignore`, `.htaccess`, `tools/` and every `.md` file (Apache, mod_alias). The README documents the nginx equivalent, an optional sparse checkout that keeps `tools/` off the server, and the URLs to check after each deploy.
 - **Confirmed:** on 2026-09-27 the maintainer checked `https://crosschain-lukso.chainintegrate.it/.git/HEAD`, which returned `ref: refs/heads/main`: the git metadata was publicly readable. The whole history must therefore be treated as public. The audit found no secrets in it, but `.git/config` on the server may contain the credentials used for `git pull` (see below).
-- **Required actions:**
-  1. Check `/.git/config` on the site. If the `url =` line contains a token or password (`https://user:TOKEN@github.com/...`), revoke it on GitHub immediately and switch the server to a read-only deploy key.
-  2. Merge and pull, then check that `/.git/HEAD`, `/.git/config`, `/tools/decrypt.js` and `/README.md` return 404.
-  3. If `/.git/HEAD` is still readable (the host ignores `.htaccess`), move the git directory out of the web root on the server: `mv .git ../cross_chain.git && echo "gitdir: ../cross_chain.git" > .git`. Git keeps working as before (`git pull` included). After that, `/.git` is a one-line file that contains only a path.
-- **Status:** ⏳ Mitigated in the repository. It becomes fixed only after the checks in step 2 pass on the live site.
+- **Follow-up:** after the fix was merged and pulled, `/tools/decrypt.js` was still served: the web server on this host does not apply `.htaccess`. The protection was therefore moved to the server's git clone, which works with any web server:
+  - `git sparse-checkout set --no-cone '/*' '!/tools/'` keeps `tools/` out of the web root, now and on every future pull;
+  - `mv .git /var/www/repos/crosschain-lukso.git && echo "gitdir: /var/www/repos/crosschain-lukso.git" > .git` moves the git metadata out of the web root, into `/var/www/repos` (created once with `sudo`, owned by the deploy user, mode 750, not the root of any site).
+
+  `.git/config` was checked and contains no credentials (plain `https://github.com/...` remote). The maintainer plans to make the repository public, so the exposed history does not disclose anything that will not become public anyway.
+- **Status:** ⏳ Mitigated. It becomes fixed once `/.git/HEAD`, `/.git/config` and `/tools/decrypt.js` return 404 on the live site.
 
 ### L-01 — Network filter could leave no option selected, causing an uncaught `TypeError`
 

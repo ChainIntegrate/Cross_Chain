@@ -29,6 +29,7 @@ The tools never ask for a private key. The calldata is public on-chain data, and
 | `guide-assets/` | Screenshots used by the guide. |
 | `banner.png`, `logo.png`, `favicon.ico` | Branding for the pages. |
 | `AUDIT.md` | Full security, privacy and bug audit report. |
+| `SECURITY.md` | How to report a vulnerability privately. |
 
 ## Usage
 
@@ -44,26 +45,30 @@ It runs locally and offline (`node tools/decrypt.js`); instructions are in [tool
 
 ## Publishing the website
 
-The site is deployed by running `git pull` in the web root, so the **whole repository** lands on the server, including `.git/` (the full history), `tools/` and the Markdown files. Only the HTML pages, the images and `guide-assets/` are website content.
+The site is deployed by running `git pull` in the web root (`https://crosschain-lukso.chainintegrate.it/`), so the whole repository lands on the server. Only the HTML pages, the images and `guide-assets/` are website content. The `.git/` folder and `tools/` must not be reachable from the web.
 
-- **Apache:** the root `.htaccess` returns 404 for `.git/`, `.gitignore`, `.htaccess`, `tools/` and every `.md` file. It works only if the host allows `.htaccess` overrides (`AllowOverride`), so check it after each deploy (below).
-- **nginx** ignores `.htaccess`. Add this to the server block instead:
-  ```nginx
-  location ~ (^|/)\.(git|gitignore|htaccess) { return 404; }
-  location ^~ /tools/ { return 404; }
-  location ~ \.md$ { return 404; }
-  ```
-- **Optional, stronger:** keep `tools/` off the server entirely with a sparse checkout in the server's clone (one-time):
-  ```bash
-  git sparse-checkout set --no-cone '/*' '!/tools/'
-  ```
+The web server on this host **does not apply `.htaccess`**, so the protection is done in the server's git clone. It works with any web server. Run this **once**, inside the site folder on the server:
 
-**Check after every deploy.** Each of these URLs must return *404 Not Found*:
+```bash
+# 1. Keep tools/ out of the web root: files outside the pattern are removed now and on every future pull.
+git sparse-checkout set --no-cone '/*' '!/tools/'
+
+# 2. Move the git metadata out of the web root, into a folder shared by all sites' git dirs.
+#    Create it once (the only step that needs sudo), owned by the deploy user:
+sudo mkdir -p /var/www/repos && sudo chown ubuntu:ubuntu /var/www/repos && sudo chmod 750 /var/www/repos
+#    `.git` becomes a one-line file containing only a path.
+mv .git /var/www/repos/crosschain-lukso.git && echo "gitdir: /var/www/repos/crosschain-lukso.git" > .git
+```
+
+`/var/www/repos` is not the root of any site, so it is not reachable from the web. Always run `git pull` as the deploy user (`ubuntu`), never with `sudo`: root-owned files would break the next pull.
+
+After that, `git pull` works exactly as before. The root `.htaccess` stays in the repository as an extra safety net for hosts that do apply it (Apache).
+
+**Check after every deploy.** Each of these URLs must return *404 Not Found*; `/.git` may return the one-line `gitdir:` file, which contains only a path and no repository data:
 
 - `https://crosschain-lukso.chainintegrate.it/.git/HEAD`
 - `https://crosschain-lukso.chainintegrate.it/.git/config`
 - `https://crosschain-lukso.chainintegrate.it/tools/decrypt.js`
-- `https://crosschain-lukso.chainintegrate.it/README.md`
 - `https://crosschain-lukso.chainintegrate.it/decrypt.js` (old location, removed by the pull)
 
 ## Requirements
