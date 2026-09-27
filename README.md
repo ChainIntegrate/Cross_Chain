@@ -34,7 +34,7 @@ The tools never ask for a private key. The calldata is public on-chain data, and
 
 ### Online
 
-The pages are published at `https://chainintegrate.it/`. Start with the guide: `up-crosschain-guide.html`.
+The pages are published at `https://crosschain-lukso.chainintegrate.it/`. Start with the guide: [up-crosschain-guide.html](https://crosschain-lukso.chainintegrate.it/up-crosschain-guide.html).
 
 ### Advanced: `tools/decrypt.js` (offline only)
 
@@ -60,11 +60,11 @@ The site is deployed by running `git pull` in the web root, so the **whole repos
 
 **Check after every deploy.** Each of these URLs must return *404 Not Found*:
 
-- `https://chainintegrate.it/.git/HEAD`
-- `https://chainintegrate.it/.git/config`
-- `https://chainintegrate.it/tools/decrypt.js`
-- `https://chainintegrate.it/README.md`
-- `https://chainintegrate.it/decrypt.js` (old location, removed by the pull)
+- `https://crosschain-lukso.chainintegrate.it/.git/HEAD`
+- `https://crosschain-lukso.chainintegrate.it/.git/config`
+- `https://crosschain-lukso.chainintegrate.it/tools/decrypt.js`
+- `https://crosschain-lukso.chainintegrate.it/README.md`
+- `https://crosschain-lukso.chainintegrate.it/decrypt.js` (old location, removed by the pull)
 
 ## Requirements
 

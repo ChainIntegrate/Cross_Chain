@@ -288,7 +288,7 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 
 | ID | Action | Why |
 |---|---|---|
-| R-01 | Redeploy the website with the fixed pages. | The fixes only protect users once the published copies on `chainintegrate.it` are replaced. |
+| R-01 | Redeploy the website with the fixed pages. | The fixes only protect users once the published copies on `crosschain-lukso.chainintegrate.it` are replaced. |
 | R-02 | Implement a CSP (I-03) and serve the site with `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` and `frame-ancestors 'none'`. | Defence in depth, anti-clickjacking. |
 | R-03 | Re-test all RPC endpoints (L-07), and whenever the ethers version is bumped, update the SRI hash (`openssl dgst -sha384 -binary ethers.umd.min.js \| openssl base64 -A`). | Otherwise a version bump breaks the pages or silently drops the integrity protection. |
 | R-04 | Consider moving the shared code (chain list, decoding, `checkChains`, `escapeHtml`) into one versioned JS file. | Six copies of the same logic had drifted apart. That drift caused several of the findings above. |
