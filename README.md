@@ -53,10 +53,14 @@ The web server on this host **does not apply `.htaccess`**, so the protection is
 # 1. Keep tools/ out of the web root: files outside the pattern are removed now and on every future pull.
 git sparse-checkout set --no-cone '/*' '!/tools/'
 
-# 2. Move the git metadata out of the web root, into your home (no root permissions needed).
+# 2. Move the git metadata out of the web root, into a folder shared by all sites' git dirs.
+#    Create it once (the only step that needs sudo), owned by the deploy user:
+sudo mkdir -p /var/www/repos && sudo chown ubuntu:ubuntu /var/www/repos && sudo chmod 750 /var/www/repos
 #    `.git` becomes a one-line file containing only a path.
-mv .git ~/crosschain-lukso.git && echo "gitdir: $HOME/crosschain-lukso.git" > .git
+mv .git /var/www/repos/crosschain-lukso.git && echo "gitdir: /var/www/repos/crosschain-lukso.git" > .git
 ```
+
+`/var/www/repos` is not the root of any site, so it is not reachable from the web. Always run `git pull` as the deploy user (`ubuntu`), never with `sudo`: root-owned files would break the next pull.
 
 After that, `git pull` works exactly as before. The root `.htaccess` stays in the repository as an extra safety net for hosts that do apply it (Apache).
 
