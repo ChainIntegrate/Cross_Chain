@@ -1,9 +1,12 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>UP Multi-chain Deploy — ChainIntegrate</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>DEPRECATED — UP Multi-chain Deploy (initial test page)</title>
+<meta name="robots" content="noindex, nofollow">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
   :root {
     --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
@@ -19,7 +22,7 @@
   .panel h2 { font-size: 14px; margin: 0 0 14px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.03em; }
   label { display: block; font-size: 13px; color: var(--text-dim); margin: 14px 0 6px; }
   label:first-child { margin-top: 0; }
-  select, input { width: 100%; background: #10131a; border: 1px solid var(--border); color: var(--text);
+  select, input, textarea { width: 100%; background: #10131a; border: 1px solid var(--border); color: var(--text);
                   border-radius: 6px; padding: 10px 12px; font-size: 14px; font-family: inherit; }
   button { width: 100%; background: var(--accent); color: white; border: none; border-radius: 6px;
            padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; }
@@ -32,76 +35,117 @@
   .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-family: monospace; }
   .badge.ok { background: rgba(63,191,111,0.15); color: var(--ok); }
   .badge.err { background: rgba(224,90,90,0.15); color: var(--err); }
+  textarea { font-family: monospace; font-size: 11.5px; min-height: 90px; resize: vertical; word-break: break-all; }
+  .badge.warn { background: rgba(224,168,60,0.15); color: var(--warn); }
+
 </style>
 </head>
 <body>
 
-<h1>UP Multi-chain Deploy</h1>
-<div class="subtitle">Collega il wallet UP (letto profilo + permessi live) e un wallet firmatario (paga e firma il deploy) — nessuna chiave privata digitata.</div>
+<div class="panel" style="border-color: var(--err); background: rgba(224,90,90,0.12);">
+  <h2 style="color: var(--err);">Deprecated — do not use</h2>
+  <div style="font-size:14px; line-height:1.5;">
+    This is the initial test page used on localhost before the public tools went online. It is kept in the
+    repository for reference only and all its actions are disabled.
+    Use the <a href="up-deploy-public.html" style="color: var(--accent);">UP Deploy Cross-Chain tool</a> instead.
+  </div>
+</div>
+
+<h1>UP Multi-chain Deploy (local)</h1>
+<div class="subtitle">Connect your UP wallet (read-only), paste your profile's original deployment calldata, and connect a signing wallet that pays for and signs the deploy — no private key is ever typed into this page.</div>
 
 <div class="panel">
-  <h2>0 · Avvio in locale</h2>
+  <h2>0 · Running locally</h2>
   <div style="font-size:13px; color:var(--text-dim); margin-bottom:10px;">
-    Le estensioni del browser (UP, MetaMask) spesso non si iniettano su una pagina aperta direttamente da disco (<code>file://</code>).
-    Serve un piccolo server locale — gira solo sulla tua macchina, nessun dato esce.
+    Browser extensions (UP, MetaMask) often do not inject into a page opened straight from disk (<code>file://</code>).
+    You need a small local server — it only runs on your machine.
   </div>
-  <div style="font-size:12px; color:var(--text-dim); margin-bottom:4px;">Apri un terminale nella cartella dove hai salvato questo file:</div>
-  <div class="status-box">python3 -m http.server 8000</div>
-  <div style="font-size:12px; color:var(--text-dim); margin:10px 0 4px;">Se <code>python3</code> non è installato (verifica con <code>python3 --version</code>), in alternativa, con Node.js già presente:</div>
-  <div class="status-box">npx serve .</div>
+  <div style="font-size:12px; color:var(--text-dim); margin-bottom:4px;">Open a terminal in the folder where you saved this file:</div>
+  <div class="status-box">python3 -m http.server 8000 --bind 127.0.0.1</div>
+  <div style="font-size:12px; color:var(--text-dim); margin:10px 0 4px;">If <code>python3</code> is not installed (check with <code>python3 --version</code>), with Node.js you can use:</div>
+  <div class="status-box">npx serve -l tcp://127.0.0.1:3000 .</div>
   <div style="font-size:12px; color:var(--text-dim); margin-top:10px;">
-    Poi apri <code>http://localhost:8000/</code> (o l'URL che ti stampa <code>npx serve</code>, di solito <code>http://localhost:3000</code>) — non <code>file://</code>.
+    Then open <code>http://localhost:8000/</code> (or the URL printed by <code>npx serve</code>) — not <code>file://</code>.
   </div>
 </div>
 
 <div class="panel">
-  <h2>1 · Wallet UP (sola lettura)</h2>
-  <button id="connectUp">Connetti estensione UP</button>
-  <div class="status-box" id="upStatus"><span class="empty">Non connesso.</span></div>
+  <h2>1 · UP wallet (read-only) and deployment calldata</h2>
+  <button id="connectUp">Connect UP extension</button>
+  <div class="status-box" id="upStatus"><span class="empty">Not connected.</span></div>
+  <label for="calldataInput">Original deployment calldata (0x6a66a753...)</label>
+  <textarea id="calldataInput" placeholder="0x6a66a753..."></textarea>
+  <div style="font-size:12px; color:var(--text-dim); margin-top:6px;">
+    Public on-chain data: the input of your UP's creation transaction on LUKSO (see the guide, steps 2–3).
+  </div>
 </div>
 
 <div class="panel">
-  <h2>2 · Wallet firmatario (paga il deploy)</h2>
-  <button id="connectSigner">Connetti MetaMask / wallet firmatario</button>
-  <div class="status-box" id="signerStatus"><span class="empty">Non connesso.</span></div>
+  <h2>2 · Signing wallet (pays for the deploy)</h2>
+  <button id="connectSigner">Connect MetaMask / signing wallet</button>
+  <div class="status-box" id="signerStatus"><span class="empty">Not connected.</span></div>
 </div>
 
 <div class="panel">
-  <h2>3 · Rete di destinazione</h2>
-  <input type="text" id="networkFilter" placeholder="Filtra per nome... (es. base, polygon, arbitrum)">
+  <h2>3 · Target network</h2>
+  <input type="text" id="networkFilter" placeholder="Filter by name... (e.g. base, polygon, arbitrum)">
   <select id="network" style="margin-top:8px;"></select>
   <div id="customRpcWrap" style="display:none;">
-    <label>RPC URL custom</label>
+    <label>Custom RPC URL</label>
     <input type="text" id="customRpc" placeholder="https://...">
-    <label>Explorer URL custom (opzionale, per il link alla tx)</label>
+    <label>Custom explorer URL (optional, for the tx link)</label>
     <input type="text" id="customExplorer" placeholder="https://.../tx/">
   </div>
 </div>
 
 <div class="panel">
-  <h2>4 · Verifica e deploy</h2>
-  <button id="checkBtn">Verifica</button>
-  <button id="deployBtn" disabled>Esegui deploy</button>
-  <div id="log" class="line-dim">In attesa dei collegamenti sopra.</div>
+  <h2>4 · Verify and deploy</h2>
+  <button id="checkBtn">Verify</button>
+  <button id="deployBtn" disabled>Deploy (irreversible)</button>
+  <div id="log" class="line-dim">Waiting for the connections above.</div>
 </div>
 
 <script>
+// Deprecated page: every action is disabled. Kept for reference only; use up-deploy-public.html.
+const DEPRECATED = true;
+window.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll("button, input, textarea, select").forEach(el => { el.disabled = true; });
+});
 const FACTORY_ADDRESS = "0x2300000A84D25dF63081feAa37ba6b62C4c89a30";
-const LUKSO_RPC = "https://rpc.mainnet.lukso.network";
+const DEPLOY_SELECTOR = "0x6a66a753"; // deployERC1167Proxies(...) on LSP23LinkedContractsFactory
+// Data key prefix of LSP6 "AddressPermissions:Permissions:<address>" (bytes10 + bytes2 padding).
+const PERM_PREFIX = "4b80742de2bf82acb3630000";
 
-// Ricalcola l'indirizzo REALE che una data deploymentCalldata produrrà,
-// replicando esattamente la logica di LSP23LinkedContractsFactory._generatePrimaryContractProxySalt
-// (verificata contro transazioni reali). Serve a non fidarsi mai ciecamente
-// che calldata e indirizzo dichiarato in KNOWN_DEPLOYMENTS siano coerenti.
-function predictAddressFromCalldata(calldataHex) {
-  const data = "0x" + calldataHex.slice(10); // rimuove "0x" + selettore (4 byte)
+const $ = (id) => document.getElementById(id);
+// Every value that did not originate in this file (user input, wallet responses, RPC or
+// library error messages) must be escaped before being interpolated into innerHTML.
+const escapeHtml = (v) => String(v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function minimalProxyInitcode(impl) {
+  return "0x3d602d80600a3d3981f3363d3d373d3d3d363d73" + impl.slice(2).toLowerCase() + "5af43d82803e903d91602b57fd5bf3";
+}
+// EIP-1167 runtime code, i.e. what getCode() returns after the deploy.
+function minimalProxyRuntimeCode(impl) {
+  return "0x363d3d373d3d3d363d73" + impl.slice(2).toLowerCase() + "5af43d82803e903d91602b57fd5bf3";
+}
+
+// Recomputes the addresses a given deployment calldata will really produce, replicating
+// LSP23LinkedContractsFactory._generatePrimaryContractProxySalt and the secondary proxy salt
+// keccak256(abi.encodePacked(primaryAddress)). Never trust a declared address blindly.
+function decodeCalldata(calldataHex) {
+  let data = calldataHex.trim();
+  if (!data.startsWith("0x")) data = "0x" + data;
+  if (!ethers.isHexString(data)) throw new Error("the calldata is not a hex string");
+  const selector = data.slice(0, 10).toLowerCase();
+  if (selector !== DEPLOY_SELECTOR) throw new Error(`the calldata does not start with the deployERC1167Proxies selector (${DEPLOY_SELECTOR}), but with ${selector}`);
+
   const coder = ethers.AbiCoder.defaultAbiCoder();
   const [primary, secondary, postModule, postCalldata] = coder.decode(
     ["tuple(bytes32,uint256,address,bytes)", "tuple(uint256,address,bytes,bool,bytes)", "address", "bytes"],
-    data
+    "0x" + data.slice(10)
   );
-  const [salt, , implA] = primary;
-  const [, implB, initCalldataB, addPrimary, extraInitB] = secondary;
+  const [salt, fundingA, implA] = primary;
+  const [fundingB, implB, initCalldataB, addPrimary, extraInitB] = secondary;
 
   const generatedSalt = ethers.keccak256(
     coder.encode(
@@ -109,12 +153,20 @@ function predictAddressFromCalldata(calldataHex) {
       [salt, implB, initCalldataB, addPrimary, extraInitB, postModule, postCalldata]
     )
   );
+  const predictedPrimary = ethers.getCreate2Address(FACTORY_ADDRESS, generatedSalt, ethers.keccak256(minimalProxyInitcode(implA)));
+  const predictedSecondary = ethers.getCreate2Address(FACTORY_ADDRESS, ethers.keccak256(predictedPrimary), ethers.keccak256(minimalProxyInitcode(implB)));
 
-  const implNoPrefix = implA.slice(2).toLowerCase();
-  const initcode = "0x3d602d80600a3d3981f3363d3d373d3d3d363d73" + implNoPrefix + "5af43d82803e903d91602b57fd5bf3";
-  const initcodeHash = ethers.keccak256(initcode);
+  // Controllers named by the post-deployment module (bytes32[] keys, bytes[] values).
+  const controllers = [];
+  try {
+    const [keys, values] = coder.decode(["bytes32[]", "bytes[]"], postCalldata);
+    keys.forEach((k, i) => {
+      const keyHex = k.toLowerCase().slice(2);
+      if (keyHex.startsWith(PERM_PREFIX)) controllers.push({ address: ethers.getAddress("0x" + keyHex.slice(24)), permissions: values[i] });
+    });
+  } catch (e) { /* not in the expected format: reported as "no controllers found" */ }
 
-  return ethers.getCreate2Address(FACTORY_ADDRESS, generatedSalt, initcodeHash);
+  return { rawCalldata: data, implA, implB, value: BigInt(fundingA) + BigInt(fundingB), predictedPrimary, predictedSecondary, controllers };
 }
 
 const CHAINS = [
@@ -185,7 +237,7 @@ const CHAINS = [
   { key: "custom", name: "Custom RPC...", chainId: null, rpc: null, explorer: null, currency: "?" },
 ];
 
-const networkSelectEl = document.getElementById("network");
+const networkSelectEl = $("network");
 function renderNetworkOptions(filter) {
   const f = (filter || "").toLowerCase();
   networkSelectEl.innerHTML = "";
@@ -197,34 +249,23 @@ function renderNetworkOptions(filter) {
   });
 }
 renderNetworkOptions("");
-document.getElementById("networkFilter").addEventListener("input", (e) => renderNetworkOptions(e.target.value));
+$("networkFilter").addEventListener("input", (e) => {
+  renderNetworkOptions(e.target.value);
+  // Filtering can silently change the selected option: propagate it like a user selection.
+  networkSelectEl.dispatchEvent(new Event("change"));
+});
+networkSelectEl.addEventListener("change", () => {
+  $("customRpcWrap").style.display = networkSelectEl.value === "custom" ? "block" : "none";
+});
 
-// Tabella nota: profileAddress -> { controller, calldata }. Estendibile a mano quando si analizza un nuovo profilo.
-const KNOWN_DEPLOYMENTS = {
-  "0x328a19ab63744aaf3d0aebfb8e6dc5246faf317b": {
-    label: "SimoneC",
-    controller: "0x86F72AF152E8b502E8Dc7CF87A115Ec94490c6f2",
-    calldata: "0x6a66a75300000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000160000000000000000000000000000000000066093407b6704b89793beffd0d8f0000000000000000000000000000000000000000000000000000000000000002603964d409172b7189ba255688faa322d8e5eed1220ec4e1562153039fd63e147800000000000000000000000000000000000000000000000000000000000000000000000000000000000000003024d38ea2434ba6635003dc1bdc0dab5882ed4f00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000024c4d66de8000000000000000000000000000000000066093407b6704b89793beffd0d8f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002fe3aed98684e7351ad2d408a43ce09a738bf8a400000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000004c4d66de800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003800000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000012000000000000000000000000000000000000000000000000000000000000000060cfc51aec37c55a4d0b1a65c6255c4bf2fbdf6277f3cc0730c45b828b6db8b474b80742de2bf82acb36300007870c5b8bc9572a8001c3f96f7ff59961b23500d4b80742de2bf82acb363000086f72af152e8b502e8dc7cf87a115ec94490c6f2df30dba06db6a30e65354d9a64c609861f089545ca58c6b4dbe31a5f338cb0e3df30dba06db6a30e65354d9a64c6098600000000000000000000000000000000df30dba06db6a30e65354d9a64c6098600000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000140000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000001c0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000147870c5b8bc9572a8001c3f96f7ff59961b23500d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000060080000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000007f3f060000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000147870c5b8bc9572a8001c3f96f7ff59961b23500d000000000000000000000000000000000000000000000000000000000000000000000000000000000000001486f72af152e8b502e8dc7cf87a115ec94490c6f2000000000000000000000000"
-  },
-  "0x1d62b8d2c63b942095ad3c7ffc7e845195d9e718": {
-    label: "birra20venti",
-    controller: "0x434667A8840e18628cbd7B3A51d7cee207fd9d4c",
-    calldata: "0x6a66a75300000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000160000000000000000000000000000000000066093407b6704b89793beffd0d8f0000000000000000000000000000000000000000000000000000000000000002609e611e07d81a9da7fbd94f579aefb528921d502f312523b1e7e89e6942835e3e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000003024d38ea2434ba6635003dc1bdc0dab5882ed4f00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000024c4d66de8000000000000000000000000000000000066093407b6704b89793beffd0d8f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002fe3aed98684e7351ad2d408a43ce09a738bf8a400000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000004c4d66de800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003800000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000012000000000000000000000000000000000000000000000000000000000000000060cfc51aec37c55a4d0b1a65c6255c4bf2fbdf6277f3cc0730c45b828b6db8b474b80742de2bf82acb36300007870c5b8bc9572a8001c3f96f7ff59961b23500d4b80742de2bf82acb3630000434667a8840e18628cbd7b3a51d7cee207fd9d4cdf30dba06db6a30e65354d9a64c609861f089545ca58c6b4dbe31a5f338cb0e3df30dba06db6a30e65354d9a64c6098600000000000000000000000000000000df30dba06db6a30e65354d9a64c6098600000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000140000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000001c0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000147870c5b8bc9572a8001c3f96f7ff59961b23500d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000060080000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000007f3f060000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000147870c5b8bc9572a8001c3f96f7ff59961b23500d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000014434667a8840e18628cbd7b3a51d7cee207fd9d4c000000000000000000000000"
-  },
-  "0x4a2605796e0d91a9667d6e30365aeec384c48c27": {
-    label: "ChainIntegrate",
-    controller: "0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c",
-    calldata: "0x6a66a75300000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000160000000000000000000000000000000000066093407b6704b89793beffd0d8f0000000000000000000000000000000000000000000000000000000000000002600081969c543e0c0c22c441a7646f446c91766035f06ca3aed1a39dbe66f96d7900000000000000000000000000000000000000000000000000000000000000000000000000000000000000003024d38ea2434ba6635003dc1bdc0dab5882ed4f00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000024c4d66de8000000000000000000000000000000000066093407b6704b89793beffd0d8f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002fe3aed98684e7351ad2d408a43ce09a738bf8a400000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000004c4d66de800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003800000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000012000000000000000000000000000000000000000000000000000000000000000060cfc51aec37c55a4d0b1a65c6255c4bf2fbdf6277f3cc0730c45b828b6db8b474b80742de2bf82acb36300007870c5b8bc9572a8001c3f96f7ff59961b23500d4b80742de2bf82acb36300009c8fd044a4c777f9f97c6cfc127c91f86b795c9cdf30dba06db6a30e65354d9a64c609861f089545ca58c6b4dbe31a5f338cb0e3df30dba06db6a30e65354d9a64c6098600000000000000000000000000000000df30dba06db6a30e65354d9a64c6098600000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000140000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000001c0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000147870c5b8bc9572a8001c3f96f7ff59961b23500d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000060080000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000007f3f060000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000147870c5b8bc9572a8001c3f96f7ff59961b23500d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000149c8fd044a4c777f9f97c6cfc127c91f86b795c9c000000000000000000000000"
+function getNetwork() {
+  const key = networkSelectEl.value;
+  if (key === "custom") {
+    return { name: "Custom", chainId: null, rpc: $("customRpc").value.trim(), explorer: $("customExplorer").value.trim() || null };
   }
-};
+  return CHAINS.find(c => c.key === key);
+}
 
-const AP_PREFIX = "0x4b80742de2bf82acb3630000"; // AddressPermissions:Permissions:<address>
-
-let signerProvider = null, signerAddress = null;
-let matchedDeployment = null;
-
-const $ = (id) => document.getElementById(id);
-function setStatus(el, html) { el.innerHTML = html; }
 function log(msg, cls) {
   const l = document.createElement("div");
   if (cls) l.className = cls;
@@ -233,178 +274,236 @@ function log(msg, cls) {
 }
 function resetLog() { $("log").innerHTML = ""; }
 
-networkSelectEl.addEventListener("change", () => {
-  $("customRpcWrap").style.display = networkSelectEl.value === "custom" ? "block" : "none";
-});
+let upAddress = null;
+let signerProvider = null, signerAddress = null;
+let lastCheckOk = false;
+let checked = null; // snapshot of what a successful Verify validated
 
-// --- 1. Connessione wallet UP (sola lettura) ---
+// Any change after a successful Verify invalidates it: the deploy must only ever run
+// against exactly what was verified.
+function invalidateCheck() {
+  if (lastCheckOk) log("Data, network or wallet changed after verification: press Verify again.", "line-warn");
+  lastCheckOk = false;
+  checked = null;
+  $("deployBtn").disabled = true;
+}
+["calldataInput", "customRpc", "customExplorer"].forEach(id => $(id).addEventListener("input", invalidateCheck));
+networkSelectEl.addEventListener("change", invalidateCheck);
+
+// --- 1. UP wallet (read-only) ---
 $("connectUp").addEventListener("click", async () => {
+  if (DEPRECATED) return;
   if (!window.lukso) {
-    setStatus($("upStatus"), '<span class="badge err">Estensione UP non trovata in questo browser</span>');
+    $("upStatus").innerHTML = '<span class="badge err">UP extension not found in this browser</span>';
     return;
   }
   try {
     const accounts = await window.lukso.request({ method: "eth_requestAccounts" });
-    const upAddress = accounts[0];
-
-    const known = KNOWN_DEPLOYMENTS[upAddress.toLowerCase()];
-    if (!known) {
-      setStatus($("upStatus"),
-        `<span class="badge err">Connesso: ${upAddress}</span><br>Nessuna deploymentCalldata nota per questo profilo — va analizzata a parte prima di poterlo replicare.`);
-      matchedDeployment = null;
-      return;
-    }
-    matchedDeployment = { address: upAddress, ...known };
-    setStatus($("upStatus"),
-      `<span class="badge ok">Connesso</span> ${known.label}<br>` +
-      `Indirizzo: ${upAddress}<br>` +
-      `Controller atteso per il deploy: ${known.controller}`);
+    upAddress = ethers.getAddress(accounts[0]);
+    invalidateCheck();
+    $("upStatus").innerHTML = `<span class="badge ok">Connected</span> ${escapeHtml(upAddress)}`;
   } catch (e) {
-    setStatus($("upStatus"), '<span class="badge err">Connessione rifiutata o fallita</span>');
+    $("upStatus").innerHTML = '<span class="badge err">Connection rejected or failed</span>';
   }
 });
 
-// --- 2. Connessione wallet firmatario (MetaMask o altro iniettato, via EIP-6963) ---
+// --- 2. Signing wallet (MetaMask or another injected wallet, via EIP-6963) ---
 const discoveredProviders = [];
-window.addEventListener("eip6963:announceProvider", (e) => {
-  discoveredProviders.push(e.detail);
-});
+window.addEventListener("eip6963:announceProvider", (e) => discoveredProviders.push(e.detail));
 window.dispatchEvent(new Event("eip6963:requestProvider"));
 
+let watchedSigner = null;
+function watchSigner(p) {
+  if (watchedSigner === p || typeof p.on !== "function") return;
+  watchedSigner = p;
+  p.on("chainChanged", invalidateCheck);
+  p.on("accountsChanged", (accs) => { signerAddress = accs && accs[0] ? accs[0] : null; invalidateCheck(); });
+}
+
 $("connectSigner").addEventListener("click", async () => {
+  if (DEPRECATED) return;
   let candidate = discoveredProviders.find(p => !/lukso|universal profile/i.test(p.info.name))?.provider;
   if (!candidate && window.ethereum && window.ethereum !== window.lukso) candidate = window.ethereum;
   if (!candidate) {
-    setStatus($("signerStatus"), '<span class="badge err">Nessun wallet firmatario (es. MetaMask) trovato</span>');
+    $("signerStatus").innerHTML = '<span class="badge err">No signing wallet (e.g. MetaMask) found</span>';
     return;
   }
   try {
     const accounts = await candidate.request({ method: "eth_requestAccounts" });
     signerAddress = accounts[0];
     signerProvider = candidate;
-    setStatus($("signerStatus"), `<span class="badge ok">Connesso</span> ${signerAddress}`);
+    watchSigner(candidate);
+    invalidateCheck();
+    let netLabel = "";
+    try {
+      netLabel = ` · chainId ${parseInt(await candidate.request({ method: "eth_chainId" }), 16)}`;
+    } catch (e) { /* the address is shown anyway */ }
+    $("signerStatus").innerHTML = `<span class="badge ok">Connected</span> ${escapeHtml(signerAddress + netLabel)}`;
   } catch (e) {
-    setStatus($("signerStatus"), '<span class="badge err">Connessione rifiutata o fallita</span>');
+    $("signerStatus").innerHTML = '<span class="badge err">Connection rejected or failed</span>';
   }
 });
 
-function getNetwork() {
-  const key = networkSelectEl.value;
-  if (key === "custom") {
-    return {
-      name: "Custom",
-      rpc: $("customRpc").value.trim(),
-      explorer: $("customExplorer").value.trim() || null
-    };
+// The transaction is signed on the wallet's chain while every check runs against the RPC:
+// both must be the selected chain.
+async function checkChains(net, provider) {
+  const rpcChainId = Number(await provider.send("eth_chainId", []));
+  const expectedChainId = net.chainId || rpcChainId;
+  if (rpcChainId !== expectedChainId) {
+    return { ok: false, msg: `❌ BLOCKING — the RPC answers with chainId ${rpcChainId}, but the selected network is ${net.name} (chainId ${expectedChainId}).` };
   }
-  return CHAINS.find(c => c.key === key);
+  let walletChainId;
+  try {
+    walletChainId = parseInt(await signerProvider.request({ method: "eth_chainId" }), 16);
+  } catch (e) {
+    return { ok: false, msg: "❌ BLOCKING — could not read the signing wallet's network." };
+  }
+  if (walletChainId !== expectedChainId) {
+    return { ok: false, msg: `❌ BLOCKING — the signing wallet is on chainId ${walletChainId}, but the selected network is ${net.name} (chainId ${expectedChainId}). Switch network in the wallet.` };
+  }
+  return { ok: true, chainId: expectedChainId };
 }
 
-let lastCheckOk = false;
-
-// --- 3/4. Verifica ---
+// --- 3/4. Verify ---
 $("checkBtn").addEventListener("click", async () => {
+  if (DEPRECATED) return;
   resetLog();
   lastCheckOk = false;
+  checked = null;
   $("deployBtn").disabled = true;
 
-  if (!matchedDeployment) { log("Collega prima il wallet UP con un profilo noto.", "line-err"); return; }
-  if (!signerAddress) { log("Collega prima il wallet firmatario.", "line-err"); return; }
+  if (!upAddress) { log("Connect the UP wallet first.", "line-err"); return; }
+  if (!signerAddress) { log("Connect the signing wallet first.", "line-err"); return; }
   const net = getNetwork();
-  if (!net.rpc) { log("Manca l'RPC URL della rete di destinazione.", "line-err"); return; }
+  if (!net || !net.rpc) { log("The target network RPC URL is missing.", "line-err"); return; }
+
+  let d;
+  try {
+    d = decodeCalldata($("calldataInput").value);
+  } catch (e) {
+    log("❌ Decode error: " + (e.shortMessage || e.message), "line-err");
+    return;
+  }
 
   try {
-    log(`Profilo: ${matchedDeployment.label} (${matchedDeployment.address})`, "line-dim");
-    log(`Rete: ${net.name} (${net.rpc})`, "line-dim");
-    log(`Wallet che paga il gas: ${signerAddress}`, "line-dim");
-    log(`Controller che risulterà proprietario della UP dopo il deploy: ${matchedDeployment.controller}`, "line-dim");
-    if (signerAddress.toLowerCase() === matchedDeployment.controller.toLowerCase()) {
-      log("(qui coincidono, ma non serve che sia così: chi paga il gas e chi controlla la UP sono due ruoli indipendenti)", "line-dim");
-    }
+    log(`Profile: ${upAddress}`, "line-dim");
+    log(`Network: ${net.name} (${net.rpc})`, "line-dim");
+    log(`Wallet paying for gas: ${signerAddress}`, "line-dim");
 
-    // Autoverifica: ricalcola l'indirizzo REALE che produrrà questa calldata,
-    // indipendentemente da quale label/indirizzo la pagina mostra — non ci si fida
-    // che i due campi siano stati compilati coerentemente.
-    log("Verifica che la calldata produca davvero l'indirizzo atteso...", "line-dim");
-    const predictedAddress = predictAddressFromCalldata(matchedDeployment.calldata);
-    if (predictedAddress.toLowerCase() !== matchedDeployment.address.toLowerCase()) {
-      log(`❌ BLOCCANTE — la calldata di questo profilo produce ${predictedAddress}, NON ${matchedDeployment.address}. Calldata sbagliata per questa entry, non procedere.`, "line-err");
+    // Self-check: the calldata must produce exactly the connected UP's address.
+    if (d.predictedPrimary.toLowerCase() !== upAddress.toLowerCase()) {
+      log(`❌ BLOCKING — this calldata produces ${d.predictedPrimary}, NOT ${upAddress}. Wrong calldata for this profile, do not proceed.`, "line-err");
       return;
     }
-    log(`✅ Calldata verificata: produce esattamente ${predictedAddress}.`, "line-ok");
+    log(`✅ Calldata verified: it produces exactly ${d.predictedPrimary} (Key Manager ${d.predictedSecondary}).`, "line-ok");
+    if (d.controllers.length) {
+      d.controllers.forEach(c => log(`Controller named by the calldata: ${c.address} (permissions ${c.permissions})`, "line-warn"));
+    } else {
+      log("⚠️ No controller found in the expected format — verify it by hand before continuing.", "line-warn");
+    }
 
     const provider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
+    const chains = await checkChains(net, provider);
+    if (!chains.ok) { log(chains.msg, "line-err"); return; }
+    log(`✅ Signing wallet and RPC are on the same network (chainId ${chains.chainId}).`, "line-ok");
 
-    const existingCode = await provider.getCode(matchedDeployment.address);
-    if (existingCode !== "0x") {
-      log(`❌ BLOCCANTE — esiste già codice a ${matchedDeployment.address} su questa rete. Il profilo è già deployato qui, non serve rifarlo.`, "line-err");
+    if ((await provider.getCode(d.predictedPrimary)) !== "0x") {
+      log(`❌ BLOCKING — there is already code at ${d.predictedPrimary} on this network. The profile is already deployed here.`, "line-err");
       return;
     }
-    log("✅ Indirizzo della UP libero su questa rete.", "line-ok");
+    if ((await provider.getCode(d.predictedSecondary)) !== "0x") {
+      log("❌ BLOCKING — the Key Manager already exists on this network but the UP does not: inconsistent state, do not proceed.", "line-err");
+      return;
+    }
+    log("✅ UP address is free on this network.", "line-ok");
+
+    // Without the implementations, the proxies would deploy but every call would silently
+    // succeed doing nothing (delegatecall to an address without code): a "mute" profile.
+    for (const [label, impl] of [["LSP0 (UniversalProfile)", d.implA], ["Key Manager", d.implB]]) {
+      if ((await provider.getCode(impl)) === "0x") {
+        log(`❌ BLOCKING — the ${label} implementation (${impl}) has no bytecode on this network: the profile would be "mute". Do not proceed.`, "line-err");
+        return;
+      }
+      log(`✅ ${label} implementation present on this network (${impl}).`, "line-ok");
+    }
 
     const balance = await provider.getBalance(signerAddress);
-    log(`Saldo del wallet che paga, su questa rete: ${ethers.formatEther(balance)}`, "line-dim");
-    if (balance === 0n) {
-      log(`❌ BLOCCANTE — saldo zero. Manda gas nativo di questa rete a ${signerAddress} prima di continuare.`, "line-err");
-      return;
-    }
+    log(`Paying wallet balance on this network: ${ethers.formatEther(balance)}`, "line-dim");
 
     const gasEstimate = await provider.estimateGas({
-      to: FACTORY_ADDRESS, data: matchedDeployment.calldata, from: signerAddress
+      to: FACTORY_ADDRESS, data: d.rawCalldata, from: signerAddress, value: d.value
     });
     const feeData = await provider.getFeeData();
     const gasPrice = feeData.maxFeePerGas || feeData.gasPrice;
+    if (!gasPrice) { log("❌ BLOCKING — the RPC did not return a gas price.", "line-err"); return; }
     const estimatedCost = gasEstimate * gasPrice;
-    const costWithMargin = estimatedCost + estimatedCost / 4n; // +25% margine per oscillazioni
+    const costWithMargin = estimatedCost + estimatedCost / 4n + d.value; // +25% margin for fee swings
 
-    log(`Gas stimato: ${gasEstimate.toString()} unità`, "line-dim");
-    log(`Prezzo gas attuale: ${ethers.formatUnits(gasPrice, "gwei")} gwei`, "line-dim");
-    log(`Costo stimato: ${ethers.formatEther(estimatedCost)} (${ethers.formatEther(costWithMargin)} con margine)`, "line-dim");
+    log(`Estimated gas: ${gasEstimate.toString()} units`, "line-dim");
+    log(`Current gas price: ${ethers.formatUnits(gasPrice, "gwei")} gwei`, "line-dim");
+    log(`Estimated cost: ${ethers.formatEther(estimatedCost)} (${ethers.formatEther(costWithMargin)} with margin and funding)`, "line-dim");
 
     if (balance < costWithMargin) {
       const shortfall = costWithMargin - balance;
-      log(`❌ BLOCCANTE — saldo insufficiente. Mancano circa ${ethers.formatEther(shortfall)} (nativo di questa rete) rispetto al costo stimato con margine.`, "line-err");
+      log(`❌ BLOCKING — insufficient balance. About ${ethers.formatEther(shortfall)} (native currency of this network) missing.`, "line-err");
       return;
     }
-    log("✅ Saldo sufficiente a coprire il costo stimato (con margine).", "line-ok");
+    log("✅ Balance covers the estimated cost (with margin).", "line-ok");
 
     lastCheckOk = true;
+    checked = { d, rpc: net.rpc, chainId: chains.chainId, signer: signerAddress };
     $("deployBtn").disabled = false;
   } catch (e) {
-    log("Errore durante la verifica: " + (e.shortMessage || e.message), "line-err");
+    log("Error during verification: " + (e.shortMessage || e.message), "line-err");
   }
 });
 
 $("deployBtn").addEventListener("click", async () => {
-  if (!lastCheckOk || !matchedDeployment) return;
+  if (DEPRECATED) return;
+  if (!lastCheckOk || !checked) return;
   $("deployBtn").disabled = true;
   const net = getNetwork();
+  const { d } = checked;
 
   try {
+    if (!net || net.rpc !== checked.rpc) { log("❌ The network changed after verification: press Verify again.", "line-err"); return; }
+    const walletChainId = parseInt(await signerProvider.request({ method: "eth_chainId" }), 16);
+    if (walletChainId !== checked.chainId) {
+      log(`❌ BLOCKING — the wallet is now on chainId ${walletChainId}, not ${checked.chainId}. Deploy cancelled.`, "line-err");
+      return;
+    }
     const browserProvider = new ethers.BrowserProvider(signerProvider);
     const signerObj = await browserProvider.getSigner();
+    if (signerObj.address.toLowerCase() !== checked.signer.toLowerCase()) {
+      log(`❌ BLOCKING — the active wallet account (${signerObj.address}) is not the one that was verified. Verify again.`, "line-err");
+      return;
+    }
 
-    log("Invio transazione (conferma nel wallet)...", "line-dim");
-    const tx = await signerObj.sendTransaction({
-      to: FACTORY_ADDRESS,
-      data: matchedDeployment.calldata
-    });
-    log(`Tx inviata: ${tx.hash}`, "line-dim");
+    log("Sending transaction (confirm in your wallet)...", "line-dim");
+    const tx = await signerObj.sendTransaction({ to: FACTORY_ADDRESS, data: d.rawCalldata, value: d.value });
+    log(`Tx sent: ${tx.hash}`, "line-dim");
     if (net.explorer) log(net.explorer + tx.hash, "line-dim");
 
-    log("In attesa di conferma...", "line-dim");
+    log("Waiting for confirmation...", "line-dim");
     const receipt = await tx.wait();
-    log(`Confermata nel blocco ${receipt.blockNumber}.`, "line-dim");
+    log(`Confirmed in block ${receipt.blockNumber}.`, "line-dim");
 
     const readProvider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
-    const code = await readProvider.getCode(matchedDeployment.address);
-    log(code !== "0x"
-      ? `✅✅ UP presente su ${net.name} a ${matchedDeployment.address}.`
-      : "❌ Nessun contratto trovato dopo la conferma — controlla manualmente.", code !== "0x" ? "line-ok" : "line-err");
+    let code = "0x";
+    for (let i = 0; i < 6 && code === "0x"; i++) {
+      code = (await readProvider.getCode(d.predictedPrimary)).toLowerCase();
+      if (code === "0x") await new Promise(r => setTimeout(r, 2500));
+    }
+    const ok = code === minimalProxyRuntimeCode(d.implA).toLowerCase();
+    log(ok
+      ? `✅✅ UP present on ${net.name} at ${d.predictedPrimary}.`
+      : "❌ The bytecode at the expected address does not match (or is not indexed yet) — check manually on the explorer.", ok ? "line-ok" : "line-err");
   } catch (e) {
-    log("Errore durante il deploy: " + (e.shortMessage || e.message), "line-err");
+    log("Error during deploy: " + (e.shortMessage || e.message), "line-err");
   } finally {
-    $("deployBtn").disabled = false;
+    // Never re-enable the button after a send: a second deploy of the same calldata can only revert.
+    lastCheckOk = false;
+    checked = null;
   }
 });
 </script>

@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
 <title data-i18n="pageTitle">UP Deploy — Sola Verifica — ChainIntegrate</title>
 <meta name="description" content="Verifica in sola lettura se la tua LUKSO Universal Profile può essere rideployata correttamente su un'altra rete — nessuna connessione wallet richiesta.">
 <link rel="icon" href="favicon.ico">
@@ -15,7 +16,7 @@
 <meta name="twitter:title" content="UP Deploy — Sola Verifica — ChainIntegrate">
 <meta name="twitter:description" content="Verifica in sola lettura se la tua LUKSO Universal Profile può essere rideployata correttamente su un'altra rete.">
 <meta name="twitter:image" content="https://chainintegrate.it/banner.png">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
   :root {
     --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
@@ -116,6 +117,9 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
+// Every value that did not originate in this file (user input, wallet responses, RPC or
+// library error messages) must be escaped before being interpolated into innerHTML.
+const escapeHtml = (v) => String(v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 // ==================== I18N ====================
 let LANG = "it";
@@ -170,6 +174,9 @@ const I18N = {
     primaryImplMissing: (v) => `  l'implementazione LSP0 (${v.addr}) non ha bytecode qui — le chiamate alla UP andrebbero a vuoto senza errore.`,
     secondaryImplMissing: (v) => `  l'implementazione Key Manager (${v.addr}) non ha bytecode qui — le chiamate al Key Manager andrebbero a vuoto senza errore.`,
     genericErrorLog: (v) => `Errore: ${v.err}`,
+    wrongSelectorErr: (v) => `la calldata non inizia con il selettore di deployERC1167Proxies (0x6a66a753), ma con ${v.sel}`,
+    rpcChainMismatchErr: (v) => `❌ L'RPC risponde con chainId ${v.rpcChainId}, ma la rete selezionata è ${v.netName} (chainId ${v.chainId}): il risultato non sarebbe affidabile.`,
+    invalidExpectedErr: "❌ L'indirizzo UP atteso non è un indirizzo valido.",
 
     footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a>`,
   },
@@ -222,6 +229,9 @@ const I18N = {
     primaryImplMissing: (v) => `  the LSP0 implementation (${v.addr}) has no bytecode here — calls to the UP would silently do nothing.`,
     secondaryImplMissing: (v) => `  the Key Manager implementation (${v.addr}) has no bytecode here — calls to the Key Manager would silently do nothing.`,
     genericErrorLog: (v) => `Error: ${v.err}`,
+    wrongSelectorErr: (v) => `the calldata does not start with the deployERC1167Proxies selector (0x6a66a753), but with ${v.sel}`,
+    rpcChainMismatchErr: (v) => `❌ The RPC answers with chainId ${v.rpcChainId}, but the selected network is ${v.netName} (chainId ${v.chainId}): the result would not be reliable.`,
+    invalidExpectedErr: "❌ The expected UP address is not a valid address.",
 
     footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a>`,
   },
@@ -246,7 +256,7 @@ $("langToggle").addEventListener("click", () => {
 
 // ==================== APP ====================
 const FACTORY_ADDRESS = "0x2300000A84D25dF63081feAa37ba6b62C4c89a30";
-const SECONDARY_IMPL = "0x2fe3aed98684e7351ad2d408a43ce09a738bf8a4";
+const DEPLOY_SELECTOR = "0x6a66a753"; // deployERC1167Proxies(...) on LSP23LinkedContractsFactory
 
 const CHAINS = [
   { key: "0g", name: "0G", chainId: 16661, rpc: "https://evmrpc.0g.ai", explorer: "https://chainscan.0g.ai/tx/", currency: "0G" },
@@ -334,7 +344,7 @@ $("connectUp").addEventListener("click", async () => {
     const accounts = await window.lukso.request({ method: "eth_requestAccounts" });
     const upAddress = accounts[0];
     $("expectedAddress").value = ethers.getAddress(upAddress);
-    $("upStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${upAddress}`;
+    $("upStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${escapeHtml(upAddress)}`;
   } catch (e) {
     $("upStatus").innerHTML = `<span class="badge err">${t("connectionRejected")}</span>`;
   }
@@ -352,7 +362,11 @@ function renderNetworkOptions(filter) {
   });
 }
 renderNetworkOptions("");
-$("networkFilter").addEventListener("input", (e) => renderNetworkOptions(e.target.value));
+$("networkFilter").addEventListener("input", (e) => {
+  renderNetworkOptions(e.target.value);
+  // Filtering can silently change the selected option: propagate it like a user selection.
+  networkSelectEl.dispatchEvent(new Event("change"));
+});
 networkSelectEl.addEventListener("change", () => {
   $("customRpcWrap").style.display = networkSelectEl.value === "custom" ? "block" : "none";
 });
@@ -370,9 +384,11 @@ function minimalProxyInitcode(impl) {
 function minimalProxyRuntimeCode(impl) {
   return "0x363d3d373d3d3d363d73" + impl.slice(2).toLowerCase() + "5af43d82803e903d91602b57fd5bf3";
 }
-function computeKeyManagerAddress(primaryAddress) {
+// LSP23: the secondary proxy is cloned from the implementation named in the calldata,
+// with salt keccak256(abi.encodePacked(primaryAddress)).
+function computeKeyManagerAddress(primaryAddress, secondaryImpl) {
   const salt = ethers.keccak256(primaryAddress);
-  const initcodeHash = ethers.keccak256(minimalProxyInitcode(SECONDARY_IMPL));
+  const initcodeHash = ethers.keccak256(minimalProxyInitcode(secondaryImpl));
   return ethers.getCreate2Address(FACTORY_ADDRESS, salt, initcodeHash);
 }
 
@@ -380,6 +396,9 @@ function decodeCalldata(calldataHex) {
   const coder = ethers.AbiCoder.defaultAbiCoder();
   let data = calldataHex.trim();
   if (!data.startsWith("0x")) data = "0x" + data;
+  if (!ethers.isHexString(data)) throw new Error("not a hex string");
+  const selector = data.slice(0, 10).toLowerCase();
+  if (selector !== DEPLOY_SELECTOR) throw new Error(t("wrongSelectorErr", { sel: selector }));
   const body = "0x" + data.slice(10);
   const outerTypes = ["tuple(bytes32,uint256,address,bytes)", "tuple(uint256,address,bytes,bool,bytes)", "address", "bytes"];
   const [primaryT, secondaryT, postDeploymentModule, postDeploymentModuleCalldata] = coder.decode(outerTypes, body);
@@ -392,7 +411,7 @@ function decodeCalldata(calldataHex) {
   const generatedSalt = ethers.keccak256(generatedSaltEncoded);
   const initcodeHash = ethers.keccak256(minimalProxyInitcode(primary.impl));
   const predictedPrimary = ethers.getCreate2Address(FACTORY_ADDRESS, generatedSalt, initcodeHash);
-  const predictedSecondary = computeKeyManagerAddress(predictedPrimary);
+  const predictedSecondary = computeKeyManagerAddress(predictedPrimary, secondary.impl);
   return { primary, secondary, predictedPrimary, predictedSecondary };
 }
 
@@ -403,14 +422,18 @@ $("verifyBtn").addEventListener("click", async () => {
   const net = getNetwork();
 
   if (!calldataRaw) { log(t("pasteCalldataErr"), "line-err"); return; }
-  if (!net.rpc) { log(t("missingRpcErr"), "line-err"); return; }
+  if (!net || !net.rpc) { log(t("missingRpcErr"), "line-err"); return; }
 
   try {
     const d = decodeCalldata(calldataRaw);
     log(t("predictedUpLog", { addr: d.predictedPrimary }), "line-dim");
     log(t("predictedKmLog", { addr: d.predictedSecondary }), "line-dim");
 
-    if (expected && ethers.isAddress(expected)) {
+    if (expected && !ethers.isAddress(expected)) {
+      log(t("invalidExpectedErr"), "line-err");
+      return;
+    }
+    if (expected) {
       if (d.predictedPrimary.toLowerCase() !== expected.toLowerCase()) {
         log(t("mismatchExpectedErr", { addr: expected }), "line-err");
         return;
@@ -419,6 +442,13 @@ $("verifyBtn").addEventListener("click", async () => {
     }
 
     const provider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
+    if (net.chainId) {
+      const rpcChainId = Number(await provider.send("eth_chainId", []));
+      if (rpcChainId !== net.chainId) {
+        log(t("rpcChainMismatchErr", { rpcChainId, netName: net.name, chainId: net.chainId }), "line-err");
+        return;
+      }
+    }
 
     async function getCodeStable(address, attempts, delayMs) {
       let last = "0x";
@@ -435,7 +465,7 @@ $("verifyBtn").addEventListener("click", async () => {
     const actualSecondaryCode = await getCodeStable(d.predictedSecondary, 4, 2000);
 
     const expectedPrimaryCode = minimalProxyRuntimeCode(d.primary.impl).toLowerCase();
-    const expectedSecondaryCode = minimalProxyRuntimeCode(SECONDARY_IMPL).toLowerCase();
+    const expectedSecondaryCode = minimalProxyRuntimeCode(d.secondary.impl).toLowerCase();
 
     const primaryOk = actualPrimaryCode === expectedPrimaryCode;
     const secondaryOk = actualSecondaryCode === expectedSecondaryCode;
@@ -457,15 +487,15 @@ $("verifyBtn").addEventListener("click", async () => {
     // a deploy avvenuto. Vale la pena segnalarlo sempre, non solo quando il proxy è già presente.
     log(t("checkingImplLog"), "line-dim");
     const primaryImplCode = await provider.getCode(d.primary.impl);
-    const secondaryImplCode = await provider.getCode(SECONDARY_IMPL);
+    const secondaryImplCode = await provider.getCode(d.secondary.impl);
     const primaryImplOk = primaryImplCode !== "0x";
     const secondaryImplOk = secondaryImplCode !== "0x";
     if (primaryImplOk && secondaryImplOk) {
-      log(t("bothImplOk", { primary: d.primary.impl, secondary: SECONDARY_IMPL }), "line-ok");
+      log(t("bothImplOk", { primary: d.primary.impl, secondary: d.secondary.impl }), "line-ok");
     } else {
       log(t("implWarnHeader"), "line-warn");
       if (!primaryImplOk) log(t("primaryImplMissing", { addr: d.primary.impl }), "line-warn");
-      if (!secondaryImplOk) log(t("secondaryImplMissing", { addr: SECONDARY_IMPL }), "line-warn");
+      if (!secondaryImplOk) log(t("secondaryImplMissing", { addr: d.secondary.impl }), "line-warn");
     }
   } catch (e) {
     log(t("genericErrorLog", { err: e.shortMessage || e.message }), "line-err");

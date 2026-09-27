@@ -1,0 +1,16 @@
+# Never commit wallet backups, decrypted secrets or local environment files.
+*.backup
+*backup*.json
+*.key
+*.pem
+.env
+.env.*
+secrets/
+decrypted*.txt
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+node_modules/

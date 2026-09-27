@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
 <title data-i18n="pageTitle">UP Test Operazione — ChainIntegrate</title>
 <meta name="description" content="Testa la tua Universal Profile rideployata scrivendo e leggendo un timestamp on-chain tramite il Key Manager.">
 <link rel="icon" href="favicon.ico">
@@ -15,7 +16,7 @@
 <meta name="twitter:title" content="UP Test Operazione — ChainIntegrate">
 <meta name="twitter:description" content="Testa la tua Universal Profile rideployata scrivendo e leggendo un timestamp on-chain tramite il Key Manager.">
 <meta name="twitter:image" content="https://chainintegrate.it/banner.png">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
   :root {
     --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
@@ -126,6 +127,9 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
+// Every value that did not originate in this file (user input, wallet responses, RPC or
+// library error messages) must be escaped before being interpolated into innerHTML.
+const escapeHtml = (v) => String(v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 // ==================== I18N ====================
 let LANG = "it";
@@ -173,7 +177,7 @@ const I18N = {
     upLog: (v) => `UP: ${v.addr}`,
     kmLog: (v) => `Key Manager: ${v.addr}`,
     netLog: (v) => `Rete: ${v.name}`,
-    noKmFoundErr: "❌ Nessun Key Manager trovato a questo indirizzo su questa rete — la UP non è ancora deployata qui.",
+    signerChangedErr: "❌ L'account attivo nel wallet è cambiato: ricollega il wallet firmatario e ripeti il test.",
     gasFailErr: (v) => `❌ Stima gas fallita — il controller probabilmente non ha i permessi giusti su questa UP/rete: ${v.err}`,
     permsOkLog: (v) => `✅ Permessi verificati (stima gas riuscita: ${v.gas} unità).`,
     sendingTestTxLog: "Invio transazione di test (conferma nel wallet)...",
@@ -182,6 +186,13 @@ const I18N = {
     writeConfirmedLog: (v) => `✅✅ Scrittura confermata e riletta on-chain: "${v.value}"`,
     controllerOkLog: "Il controller in MetaMask sa operare questa UP su questa rete.",
     genericErrorLog: (v) => `Errore: ${v.err}`,
+    ownerNotKmErr: (v) => `❌ L'owner della UP (${v.addr}) non ha bytecode su questa rete: non è un Key Manager.`,
+    upNotDeployedErr: "❌ La UP non risulta deployata su questa rete.",
+    rpcChainMismatchErr: (v) => `❌ BLOCCANTE — l'RPC risponde con chainId ${v.rpcChainId}, ma la rete selezionata è ${v.netName} (chainId ${v.chainId}).`,
+    walletWrongNetwork: (v) => `❌ BLOCCANTE — il wallet firmatario è sulla rete con chainId ${v.walletChainId}, ma la rete selezionata è ${v.netName} (chainId ${v.chainId}). Cambia rete nel wallet.`,
+    walletNetworkCheckFailed: "❌ BLOCCANTE — impossibile leggere la rete del wallet firmatario.",
+    walletCorrectNetwork: (v) => `✅ Wallet firmatario e RPC sulla stessa rete (chainId ${v.chainId}).`,
+    readBackMismatchErr: (v) => `❌ Il valore riletto on-chain ("${v.got}") non corrisponde a quello scritto ("${v.expected}"). Se la tx è confermata, riprova tra poco: l'RPC potrebbe non essere ancora aggiornato.`,
 
     footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a>`,
   },
@@ -227,7 +238,7 @@ const I18N = {
     upLog: (v) => `UP: ${v.addr}`,
     kmLog: (v) => `Key Manager: ${v.addr}`,
     netLog: (v) => `Network: ${v.name}`,
-    noKmFoundErr: "❌ No Key Manager found at this address on this network — the UP isn't deployed here yet.",
+    signerChangedErr: "❌ The active wallet account changed: reconnect the signing wallet and run the test again.",
     gasFailErr: (v) => `❌ Gas estimation failed — the controller likely doesn't have the right permissions on this UP/network: ${v.err}`,
     permsOkLog: (v) => `✅ Permissions verified (gas estimate succeeded: ${v.gas} units).`,
     sendingTestTxLog: "Sending test transaction (confirm in your wallet)...",
@@ -236,6 +247,13 @@ const I18N = {
     writeConfirmedLog: (v) => `✅✅ Write confirmed and read back on-chain: "${v.value}"`,
     controllerOkLog: "The controller in MetaMask can operate this UP on this network.",
     genericErrorLog: (v) => `Error: ${v.err}`,
+    ownerNotKmErr: (v) => `❌ The UP owner (${v.addr}) has no bytecode on this network: it is not a Key Manager.`,
+    upNotDeployedErr: "❌ The UP isn't deployed on this network.",
+    rpcChainMismatchErr: (v) => `❌ BLOCKING — the RPC answers with chainId ${v.rpcChainId}, but the selected network is ${v.netName} (chainId ${v.chainId}).`,
+    walletWrongNetwork: (v) => `❌ BLOCKING — the signing wallet is on chainId ${v.walletChainId}, but the selected network is ${v.netName} (chainId ${v.chainId}). Switch network in the wallet.`,
+    walletNetworkCheckFailed: "❌ BLOCKING — could not read the signing wallet's network.",
+    walletCorrectNetwork: (v) => `✅ Signing wallet and RPC are on the same network (chainId ${v.chainId}).`,
+    readBackMismatchErr: (v) => `❌ The value read back on-chain ("${v.got}") does not match the one written ("${v.expected}"). If the tx is confirmed, retry shortly: the RPC may not be up to date yet.`,
 
     footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a>`,
   },
@@ -259,8 +277,6 @@ $("langToggle").addEventListener("click", () => {
 });
 
 // ==================== APP ====================
-const FACTORY_ADDRESS = "0x2300000A84D25dF63081feAa37ba6b62C4c89a30";
-const SECONDARY_IMPL = "0x2fe3aed98684e7351ad2d408a43ce09a738bf8a4"; // LSP6KeyManagerInit, stesso indirizzo su ogni chain
 
 const CHAINS = [
   { key: "0g", name: "0G", chainId: 16661, rpc: "https://evmrpc.0g.ai", explorer: "https://chainscan.0g.ai/tx/", currency: "0G" },
@@ -351,7 +367,7 @@ $("connectUp").addEventListener("click", async () => {
     const accounts = await window.lukso.request({ method: "eth_requestAccounts" });
     const upAddress = accounts[0];
     $("profileAddress").value = upAddress;
-    $("profileStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${upAddress}`;
+    $("profileStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${escapeHtml(upAddress)}`;
   } catch (e) {
     $("profileStatus").innerHTML = `<span class="badge err">${t("connectionRejected")}</span>`;
   }
@@ -382,7 +398,7 @@ $("connectSigner").addEventListener("click", async () => {
       const chainIdHex = await candidate.request({ method: "eth_chainId" });
       netLabel = ` · ${chainDisplayName(parseInt(chainIdHex, 16))}`;
     } catch (e) { /* se non si riesce a leggere la rete, si mostra comunque l'indirizzo */ }
-    $("signerStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${signerAddress}${netLabel}`;
+    $("signerStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${escapeHtml(signerAddress + netLabel)}`;
   } catch (e) {
     $("signerStatus").innerHTML = `<span class="badge err">${t("connectionRejected")}</span>`;
   }
@@ -416,11 +432,15 @@ renderNetworkOptions("");
 // Se si arriva da un link della pagina di deploy dopo un deploy confermato, preseleziona
 // la stessa rete appena usata.
 const presetNetworkKey = new URLSearchParams(location.search).get("network");
-if (presetNetworkKey && CHAINS.some(c => c.key === presetNetworkKey)) {
+if (presetNetworkKey && presetNetworkKey !== "custom" && CHAINS.some(c => c.key === presetNetworkKey)) {
   networkSelectEl.value = presetNetworkKey;
 }
 
-$("networkFilter").addEventListener("input", (e) => renderNetworkOptions(e.target.value));
+$("networkFilter").addEventListener("input", (e) => {
+  renderNetworkOptions(e.target.value);
+  // Filtering can silently change the selected option: propagate it like a user selection.
+  networkSelectEl.dispatchEvent(new Event("change"));
+});
 networkSelectEl.addEventListener("change", () => {
   $("customRpcWrap").style.display = networkSelectEl.value === "custom" ? "block" : "none";
 });
@@ -432,12 +452,30 @@ function getNetwork() {
 }
 
 // --- 4. Test ---
-function computeKeyManagerAddress(primaryAddress) {
-  const salt = ethers.keccak256(primaryAddress);
-  const implNoPrefix = SECONDARY_IMPL.slice(2).toLowerCase();
-  const initcode = "0x3d602d80600a3d3981f3363d3d373d3d3d363d73" + implNoPrefix + "5af43d82803e903d91602b57fd5bf3";
-  const initcodeHash = ethers.keccak256(initcode);
-  return ethers.getCreate2Address(FACTORY_ADDRESS, salt, initcodeHash);
+// The Key Manager is read from the UP itself (LSP0 owner()), not recomputed from a fixed
+// implementation address: this works whatever Key Manager version the profile uses.
+async function readKeyManager(provider, upAddress) {
+  const up = new ethers.Contract(upAddress, ["function owner() view returns (address)"], provider);
+  return ethers.getAddress(await up.owner());
+}
+
+// Both the RPC used for checks and the wallet that signs must be on the selected chain.
+async function checkChains(net, provider) {
+  const rpcChainId = Number(await provider.send("eth_chainId", []));
+  const expectedChainId = net.chainId || rpcChainId;
+  if (rpcChainId !== expectedChainId) {
+    return { ok: false, msg: t("rpcChainMismatchErr", { rpcChainId, netName: net.name, chainId: expectedChainId }) };
+  }
+  let walletChainId;
+  try {
+    walletChainId = parseInt(await signerProvider.request({ method: "eth_chainId" }), 16);
+  } catch (e) {
+    return { ok: false, msg: t("walletNetworkCheckFailed") };
+  }
+  if (walletChainId !== expectedChainId) {
+    return { ok: false, msg: t("walletWrongNetwork", { walletChainId, netName: net.name, chainId: expectedChainId }) };
+  }
+  return { ok: true, chainId: expectedChainId };
 }
 
 $("testBtn").addEventListener("click", async () => {
@@ -446,23 +484,32 @@ $("testBtn").addEventListener("click", async () => {
   if (!profile.address || !ethers.isAddress(profile.address)) { log(t("missingAddrErr"), "line-err"); return; }
   if (!signerAddress) { log(t("connectSignerFirstLog"), "line-err"); return; }
   const net = getNetwork();
-  if (!net.rpc) { log(t("missingRpcLog"), "line-err"); return; }
+  if (!net || !net.rpc) { log(t("missingRpcLog"), "line-err"); return; }
 
   try {
-    const keyManagerAddress = computeKeyManagerAddress(profile.address);
     log(t("upLog", { addr: profile.address }), "line-dim");
-    log(t("kmLog", { addr: keyManagerAddress }), "line-dim");
     log(t("netLog", { name: net.name }), "line-dim");
 
     const readProvider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
+    const chains = await checkChains(net, readProvider);
+    if (!chains.ok) { log(chains.msg, "line-err"); return; }
+    log(t("walletCorrectNetwork", { chainId: chains.chainId }), "line-ok");
+
+    if ((await readProvider.getCode(profile.address)) === "0x") {
+      log(t("upNotDeployedErr"), "line-err");
+      return;
+    }
+    const keyManagerAddress = await readKeyManager(readProvider, profile.address);
+    log(t("kmLog", { addr: keyManagerAddress }), "line-dim");
     const kmCode = await readProvider.getCode(keyManagerAddress);
     if (kmCode === "0x") {
-      log(t("noKmFoundErr"), "line-err");
+      log(t("ownerNotKmErr", { addr: keyManagerAddress }), "line-err");
       return;
     }
 
     const testKey = ethers.id("up.test.ping");
-    const testValue = ethers.toUtf8Bytes("ok-" + Date.now());
+    const testValueText = "ok-" + Date.now();
+    const testValue = ethers.toUtf8Bytes(testValueText);
 
     const upIface = new ethers.Interface(["function setData(bytes32,bytes)"]);
     const setDataCalldata = upIface.encodeFunctionData("setData", [testKey, testValue]);
@@ -480,6 +527,11 @@ $("testBtn").addEventListener("click", async () => {
 
     const browserProvider = new ethers.BrowserProvider(signerProvider);
     const signerObj = await browserProvider.getSigner();
+    // Gas was estimated for signerAddress: make sure the wallet still signs with that account.
+    if (signerObj.address.toLowerCase() !== signerAddress.toLowerCase()) {
+      log(t("signerChangedErr"), "line-err");
+      return;
+    }
 
     log(t("sendingTestTxLog"), "line-dim");
     const tx = await signerObj.sendTransaction({ to: keyManagerAddress, data: executeCalldata });
@@ -491,8 +543,17 @@ $("testBtn").addEventListener("click", async () => {
 
     const upReadIface = new ethers.Interface(["function getData(bytes32) view returns (bytes)"]);
     const upContract = new ethers.Contract(profile.address, upReadIface, readProvider);
-    const readBack = await upContract.getData(testKey);
-    const readBackText = ethers.toUtf8String(readBack);
+    // Public RPCs are often load-balanced: retry briefly before declaring a mismatch.
+    let readBackText = "";
+    for (let i = 0; i < 5; i++) {
+      readBackText = ethers.toUtf8String(await upContract.getData(testKey));
+      if (readBackText === testValueText) break;
+      await new Promise(r => setTimeout(r, 2000));
+    }
+    if (readBackText !== testValueText) {
+      log(t("readBackMismatchErr", { got: readBackText, expected: testValueText }), "line-err");
+      return;
+    }
 
     log(t("writeConfirmedLog", { value: readBackText }), "line-ok");
     log(t("controllerOkLog"), "line-ok");
