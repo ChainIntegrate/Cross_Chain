@@ -89,7 +89,7 @@ After that, `git pull` works exactly as before. The root `.htaccess` stays in th
 
 | Date | Scope | Result | Report |
 |---|---|---|---|
-| 2026-09-27 | Whole repository and git history (commit `f56dd29`) | 2 High, 7 Medium, 9 Low, 6 Informational. All High and Medium findings are fixed. | [AUDIT.md](AUDIT.md) |
+| 2026-09-27 | Whole repository and git history (commit `f56dd29`) | 2 High, 8 Medium, 9 Low, 6 Informational. All High and Medium findings are fixed. | [AUDIT.md](AUDIT.md) |
 
 Main fixes from the 2026-09-27 audit:
 

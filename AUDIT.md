@@ -4,7 +4,7 @@
 |---|---|
 | **Audit date** | 2026-09-27 |
 | **Commit audited** | `f56dd29` (branch `main`) |
-| **Revision** | 3 — rev. 2 reclassified H-03, M-05, I-01 and I-02 after the maintainer's feedback (salt/IV are public format values; all profiles and addresses shown belong to the maintainer and are public by choice); rev. 3 adds L-09, found while testing the new implementation-publishing page, and M-08, after the maintainer described how the site is deployed |
+| **Revision** | 3 — rev. 2 reclassified H-03, M-05, I-01 and I-02 after the maintainer's feedback (salt/IV are public format values; all profiles and addresses shown belong to the maintainer and are public by choice); rev. 3 adds L-09, found while testing the new implementation-publishing page, and M-08, after the maintainer described how the site is deployed; M-08 was fixed and verified on the live site the same day |
 | **Scope** | Every file in the repository: 6 HTML tools, `decrypt.js`, README, images in `guide-assets/`, and the full git history |
 | **Method** | Manual code review, cross-check against the LUKSO reference contracts (`@lukso/lsp6-contracts` 0.16.3, `@lukso/lsp23-contracts` 0.16.3), browser end-to-end tests with mocked wallets/RPCs (Playwright + Chromium), and a git history review for secrets and personal data |
 
@@ -26,7 +26,7 @@ The tools are static, client-side pages. They never ask for a private key: every
 | Severity | Count | Fixed | Open (recommendation only) |
 |---|---|---|---|
 | High | 2 | 2 | 0 |
-| Medium | 8 | 7 | 1 (mitigated, needs a check on the live server) |
+| Medium | 8 | 8 | 0 |
 | Low | 9 | 8 | 1 |
 | Informational | 6 | 2 | 4 (documented / accepted) |
 
@@ -168,7 +168,7 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
   - `mv .git /var/www/repos/crosschain-lukso.git && echo "gitdir: /var/www/repos/crosschain-lukso.git" > .git` moves the git metadata out of the web root, into `/var/www/repos` (created once with `sudo`, owned by the deploy user, mode 750, not the root of any site).
 
   `.git/config` was checked and contains no credentials (plain `https://github.com/...` remote). The maintainer plans to make the repository public, so the exposed history does not disclose anything that will not become public anyway.
-- **Status:** ⏳ Mitigated. It becomes fixed once `/.git/HEAD`, `/.git/config` and `/tools/decrypt.js` return 404 on the live site.
+- **Status:** ✅ Fixed. Verified on 2026-09-27 from the server with `curl`: `/.git/HEAD`, `/.git/config`, `/tools/decrypt.js` and `/decrypt.js` all return 404. `/.git` is now a one-line `gitdir:` file with no repository data.
 
 ### L-01 — Network filter could leave no option selected, causing an uncaught `TypeError`
 
@@ -294,7 +294,7 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 
 | ID | Action | Why |
 |---|---|---|
-| R-01 | Redeploy the website with the fixed pages. | The fixes only protect users once the published copies on `crosschain-lukso.chainintegrate.it` are replaced. |
+| R-01 | ~~Redeploy the website with the fixed pages.~~ ✅ Done on 2026-09-27 (all fixes pulled on `crosschain-lukso.chainintegrate.it`). | The fixes only protect users once the published copies are replaced. |
 | R-02 | Implement a CSP (I-03) and serve the site with `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` and `frame-ancestors 'none'`. | Defence in depth, anti-clickjacking. |
 | R-03 | Re-test all RPC endpoints (L-07), and whenever the ethers version is bumped, update the SRI hash (`openssl dgst -sha384 -binary ethers.umd.min.js \| openssl base64 -A`). | Otherwise a version bump breaks the pages or silently drops the integrity protection. |
 | R-04 | Consider moving the shared code (chain list, decoding, `checkChains`, `escapeHtml`) into one versioned JS file. | Six copies of the same logic had drifted apart. That drift caused several of the findings above. |
