@@ -40,9 +40,31 @@ The pages are published at `https://chainintegrate.it/`. Start with the guide: `
 
 **Only for people who know exactly what they are doing.** You normally don't need it: the controller key can be exported directly from the Universal Profile extension (Settings → Developer → *Reveal private key*, guide step 1). The script only helps in unusual setups, for example an extension installation whose controller is not the profile's original one, when the original key is only in an old backup.
 
-It runs locally and offline (`node tools/decrypt.js`); instructions are in [tools/README.md](tools/README.md).
+It runs locally and offline (`node tools/decrypt.js`); instructions are in [tools/README.md](tools/README.md). It is not served by the website (see below).
 
-**Publishing the website:** upload only the pages and images in the repository root and `guide-assets/`, never the `tools/` folder. `tools/.htaccess` refuses access to it on Apache servers, as a safety net only.
+## Publishing the website
+
+The site is deployed by running `git pull` in the web root, so the **whole repository** lands on the server, including `.git/` (the full history), `tools/` and the Markdown files. Only the HTML pages, the images and `guide-assets/` are website content.
+
+- **Apache:** the root `.htaccess` returns 404 for `.git/`, `.gitignore`, `.htaccess`, `tools/` and every `.md` file. It works only if the host allows `.htaccess` overrides (`AllowOverride`), so check it after each deploy (below).
+- **nginx** ignores `.htaccess`. Add this to the server block instead:
+  ```nginx
+  location ~ (^|/)\.(git|gitignore|htaccess) { return 404; }
+  location ^~ /tools/ { return 404; }
+  location ~ \.md$ { return 404; }
+  ```
+- **Optional, stronger:** keep `tools/` off the server entirely with a sparse checkout in the server's clone (one-time):
+  ```bash
+  git sparse-checkout set --no-cone '/*' '!/tools/'
+  ```
+
+**Check after every deploy.** Each of these URLs must return *404 Not Found*:
+
+- `https://chainintegrate.it/.git/HEAD`
+- `https://chainintegrate.it/.git/config`
+- `https://chainintegrate.it/tools/decrypt.js`
+- `https://chainintegrate.it/README.md`
+- `https://chainintegrate.it/decrypt.js` (old location, removed by the pull)
 
 ## Requirements
 

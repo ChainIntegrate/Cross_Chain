@@ -1,6 +1,6 @@
 # tools/ — offline tools, not for the website
 
-This folder contains command-line tools meant to be run **locally, offline**, by people who know exactly what they are doing. **Do not upload this folder to the website.**
+This folder contains command-line tools meant to be run **locally, offline**, by people who know exactly what they are doing. **This folder must not be served by the website**: the root `.htaccess` blocks it on Apache; for other servers see "Publishing the website" in the main README.
 
 ## `decrypt.js`
 

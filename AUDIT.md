@@ -4,7 +4,7 @@
 |---|---|
 | **Audit date** | 2026-09-27 |
 | **Commit audited** | `f56dd29` (branch `main`) |
-| **Revision** | 3 — rev. 2 reclassified H-03, M-05, I-01 and I-02 after the maintainer's feedback (salt/IV are public format values; all profiles and addresses shown belong to the maintainer and are public by choice); rev. 3 adds L-09, found while testing the new implementation-publishing page |
+| **Revision** | 3 — rev. 2 reclassified H-03, M-05, I-01 and I-02 after the maintainer's feedback (salt/IV are public format values; all profiles and addresses shown belong to the maintainer and are public by choice); rev. 3 adds L-09, found while testing the new implementation-publishing page, and M-08, after the maintainer described how the site is deployed |
 | **Scope** | Every file in the repository: 6 HTML tools, `decrypt.js`, README, images in `guide-assets/`, and the full git history |
 | **Method** | Manual code review, cross-check against the LUKSO reference contracts (`@lukso/lsp6-contracts` 0.16.3, `@lukso/lsp23-contracts` 0.16.3), browser end-to-end tests with mocked wallets/RPCs (Playwright + Chromium), and a git history review for secrets and personal data |
 
@@ -26,7 +26,7 @@ The tools are static, client-side pages. They never ask for a private key: every
 | Severity | Count | Fixed | Open (recommendation only) |
 |---|---|---|---|
 | High | 2 | 2 | 0 |
-| Medium | 7 | 7 | 0 |
+| Medium | 8 | 7 | 1 (mitigated, needs a check on the live server) |
 | Low | 9 | 8 | 1 |
 | Informational | 6 | 2 | 4 (documented / accepted) |
 
@@ -153,6 +153,16 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 - **Impact:** The page had no wallet-chain check, no implementation-bytecode check and no Key Manager check. It ignored the funding `value` of the calldata. It re-enabled *Deploy* after every attempt, which allowed double submission, and it declared success on "any code at the address".
 - **Fix:** The page was rewritten on the same checks as the public deploy page (see H-01, H-02, M-02, M-06). It now verifies the exact EIP-1167 runtime bytecode after the deploy.
 - **Status:** ✅ Fixed
+
+### M-08 — Deploying the site with `git pull` publishes the whole repository
+
+- **Files:** web server configuration; new root `.htaccess`
+- **Impact:** The website is deployed by running `git pull` in the web root. Everything in the repository is therefore reachable over HTTP unless the server blocks it:
+  - `.git/`, which lets anyone download the **full history of a private repository**;
+  - `tools/decrypt.js`, which should only be used offline by expert users;
+  - `README.md` and `AUDIT.md`, the internal documentation and audit report.
+- **Fix:** A root `.htaccess` returns 404 for `.git/`, `.gitignore`, `.htaccess`, `tools/` and every `.md` file (Apache, mod_alias). The README documents the nginx equivalent, an optional sparse checkout that keeps `tools/` off the server, and the URLs to check after each deploy.
+- **Status:** ⏳ Mitigated. `.htaccess` only works on Apache with overrides allowed, and the live site could not be reached from the audit environment. Check after the next deploy that `/.git/HEAD`, `/tools/decrypt.js` and `/README.md` return 404.
 
 ### L-01 — Network filter could leave no option selected, causing an uncaught `TypeError`
 
