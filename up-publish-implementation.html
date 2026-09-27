@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>UP Pubblica Implementazione — ChainIntegrate</title>
+<meta name="description" content="Pubblica su un'altra rete EVM un'implementazione LUKSO (LSP0, Key Manager) mancante, ripetendo il deploy deterministico originale tramite la Nick's factory.">
+<link rel="icon" href="favicon.ico">
+<meta property="og:type" content="website">
+<meta property="og:title" content="UP Pubblica Implementazione — ChainIntegrate">
+<meta property="og:description" content="Pubblica su un'altra rete EVM un'implementazione LUKSO mancante, allo stesso indirizzo che ha su LUKSO.">
+<meta property="og:image" content="https://chainintegrate.it/banner.png">
+<meta property="og:url" content="https://chainintegrate.it/up-publish-implementation.html">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://chainintegrate.it/banner.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
+    --text: #e6e8ec; --text-dim: #9aa1ad;
+    --accent: #5b8cff; --ok: #3fbf6f; --warn: #e0a83c; --err: #e05a5a;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+         max-width: 820px; margin: 0 auto; padding: 32px 20px 80px; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .subtitle { color: var(--text-dim); font-size: 13px; margin-bottom: 28px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+  .panel h2 { font-size: 14px; margin: 0 0 14px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.03em; }
+  .note { font-size: 12.5px; color: var(--text-dim); line-height: 1.5; margin-bottom: 12px; }
+  label { display: block; font-size: 13px; color: var(--text-dim); margin: 14px 0 6px; }
+  label:first-child { margin-top: 0; }
+  select, input, textarea { width: 100%; background: #10131a; border: 1px solid var(--border); color: var(--text);
+                  border-radius: 6px; padding: 10px 12px; font-size: 13.5px; font-family: inherit; }
+  textarea { font-family: monospace; font-size: 11.5px; min-height: 90px; resize: vertical; word-break: break-all; }
+  button { width: 100%; background: var(--accent); color: white; border: none; border-radius: 6px;
+           padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; }
+  button.secondary { background: #2a2f3a; }
+  .status-box { background: #10131a; border: 1px solid var(--border); border-radius: 6px; padding: 12px;
+                font-family: monospace; font-size: 12.5px; margin-top: 12px; }
+  .status-box .empty { color: var(--text-dim); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-family: monospace; }
+  .badge.ok { background: rgba(63,191,111,0.15); color: var(--ok); }
+  .badge.err { background: rgba(224,90,90,0.15); color: var(--err); }
+  #log { font-family: monospace; font-size: 12.5px; white-space: pre-wrap; word-break: break-all; line-height: 1.6; margin-top: 10px; }
+  .line-ok { color: var(--ok); } .line-warn { color: var(--warn); } .line-err { color: var(--err); } .line-dim { color: var(--text-dim); }
+  .brand-row { margin-bottom: 24px; }
+  .brand-logo { display: block; width: 100%; height: auto; border-radius: 10px; }
+  .top-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .lang-btn { width: auto; background: #2a2f3a; padding: 6px 14px; font-size: 12px; margin-top: 0; flex-shrink: 0; }
+  .site-footer { margin-top: 40px; padding: 18px 20px; background: #f5f6f8; border: 1px solid #e3e5ea; border-radius: 10px; color: #4b4f58; }
+  .footer-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .footer-logo { height: 48px; width: auto; flex-shrink: 0; }
+  .footer-text { font-size: 13px; line-height: 1.6; }
+  .footer-li { display: inline-flex; vertical-align: middle; margin: 0 2px; }
+  .site-footer a { color: #2563eb; text-decoration: none; font-weight: 600; }
+  .site-footer a:hover { text-decoration: underline; }
+  button:disabled { background: #3a3f4b; cursor: not-allowed; }
+  button.danger { background: var(--err); }
+  .badge.warn { background: rgba(224,168,60,0.15); color: var(--warn); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip { width: auto; margin: 0; padding: 6px 10px; font-size: 11.5px; font-family: monospace; background: #2a2f3a; }
+</style>
+</head>
+<body>
+
+<div class="brand-row">
+  <img src="banner.png" alt="ChainIntegrate" class="brand-logo" onerror="this.style.display='none'">
+</div>
+
+<div class="top-row">
+  <div>
+    <h1 data-i18n="h1">UP Pubblica Implementazione</h1>
+    <div class="subtitle" data-i18n="subtitle"></div>
+  </div>
+  <button class="lang-btn" id="langToggle" data-i18n="langToggleBtn">English</button>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel0Title">0 · Come funziona questa pagina</h2>
+  <div class="note" data-i18n-html="panel0Note"></div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel1Title">1 · Implementazione da pubblicare</h2>
+  <label for="implAddress" data-i18n="implLabel">Indirizzo dell'implementazione (come su LUKSO)</label>
+  <input type="text" id="implAddress" placeholder="0x...">
+  <div class="chips" id="implChips"></div>
+  <label for="txHash" data-i18n="txHashLabel">Hash della transazione di creazione su LUKSO (facoltativo)</label>
+  <input type="text" id="txHash" placeholder="0x...">
+  <div class="note" style="margin-top:6px;" data-i18n="txHashNote"></div>
+  <button id="loadBtn" class="secondary" data-i18n="loadBtn">Leggi il deploy originale da LUKSO</button>
+  <div class="status-box" id="sourceStatus"><span class="empty" data-i18n="notLoaded">Non ancora letto.</span></div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel2Title">2 · Wallet che paga la pubblicazione</h2>
+  <div class="note" data-i18n="panel2Note"></div>
+  <button id="connectSigner" data-i18n="connectSignerBtn">Connetti wallet firmatario (es. MetaMask)</button>
+  <div class="status-box" id="signerStatus"><span class="empty" data-i18n="notConnected">Non connesso.</span></div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel3Title">3 · Rete di destinazione</h2>
+  <input type="text" id="networkFilter" data-i18n-placeholder="networkFilterPlaceholder" placeholder="Filtra per nome...">
+  <select id="network" style="margin-top:8px;"></select>
+  <div id="customRpcWrap" style="display:none;">
+    <label data-i18n="customRpcLabel">RPC URL custom</label>
+    <input type="text" id="customRpc" placeholder="https://...">
+  </div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel4Title">4 · Verifica e pubblica</h2>
+  <button id="checkBtn" data-i18n="checkBtn">Verifica</button>
+  <button id="publishBtn" class="danger" disabled data-i18n="publishBtn">Pubblica implementazione</button>
+  <div id="log" class="line-dim"><span data-i18n="logInitial">In attesa dei dati sopra.</span></div>
+</div>
+
+<div class="site-footer">
+  <div class="footer-row">
+    <img src="logo.png" alt="ChainIntegrate" class="footer-logo" onerror="this.style.display='none'">
+    <div class="footer-text" data-i18n-html="footerHtml"></div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+// Every value that did not originate in this file (user input, wallet responses, RPC or
+// library error messages) must be escaped before being interpolated into innerHTML.
+const escapeHtml = (v) => String(v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+// ==================== I18N ====================
+let LANG = "it";
+
+const I18N = {
+  it: {
+    pageTitle: "UP Pubblica Implementazione — ChainIntegrate",
+    h1: "UP Pubblica Implementazione",
+    subtitle: "Pubblica su un'altra rete un'implementazione LUKSO (LSP0 o Key Manager) che lì manca, allo stesso identico indirizzo che ha su LUKSO — così il tuo profilo rideployato non resta \"muto\".",
+    langToggleBtn: "English",
+    panel0Title: "0 · Come funziona questa pagina",
+    panel0Note: "Una Universal Profile è un proxy che delega tutto a un'<b>implementazione</b> (LSP0 per il profilo, LSP6 per il Key Manager). Profili creati con versioni diverse dei contratti puntano a implementazioni diverse: se quella del tuo profilo non esiste sulla rete di destinazione, il profilo lì sarebbe \"muto\". LUKSO ha pubblicato le implementazioni tramite la <b>Nick's factory</b> (<code>0x4e59b448…4956C</code>), un deployer deterministico presente allo stesso indirizzo su quasi tutte le reti EVM: ripetendo sulla rete di destinazione la <i>stessa identica</i> transazione, l'implementazione nasce allo <i>stesso identico</i> indirizzo. Questa pagina legge da LUKSO la transazione originale, verifica matematicamente che produca l'indirizzo atteso e la fa firmare al tuo wallet. È un'operazione permissionless e innocua: chiunque può farla, non dà a nessuno alcun controllo su alcun profilo, e costa solo gas.",
+    panel1Title: "1 · Implementazione da pubblicare",
+    implLabel: "Indirizzo dell'implementazione (come su LUKSO)",
+    txHashLabel: "Hash della transazione di creazione su LUKSO (facoltativo)",
+    txHashNote: "Di solito viene trovato automaticamente. Se non succede: apri l'indirizzo dell'implementazione sull'explorer di LUKSO, scheda Details, e copia l'hash del link \"at txn\" nella riga Creator.",
+    loadBtn: "Leggi il deploy originale da LUKSO",
+    notLoaded: "Non ancora letto.",
+    panel2Title: "2 · Wallet che paga la pubblicazione",
+    panel2Note: "Un account qualsiasi con un po' di gas sulla rete di destinazione: paga solo la transazione, non ottiene alcun permesso su niente.",
+    connectSignerBtn: "Connetti wallet firmatario (es. MetaMask)",
+    notConnected: "Non connesso.",
+    panel3Title: "3 · Rete di destinazione",
+    networkFilterPlaceholder: "Filtra per nome...",
+    customRpcLabel: "RPC URL custom",
+    panel4Title: "4 · Verifica e pubblica",
+    checkBtn: "Verifica",
+    publishBtn: "Pubblica implementazione",
+    logInitial: "In attesa dei dati sopra.",
+
+    connectedBadge: "Connesso",
+    connectionRejected: "Connessione rifiutata o fallita",
+    noSignerFound: "Nessun wallet firmatario trovato",
+    invalidImpl: "Indirizzo dell'implementazione non valido.",
+    loading: "Lettura da LUKSO in corso...",
+    implNotOnLukso: "Su LUKSO non c'è codice a questo indirizzo: non è un'implementazione pubblicata.",
+    creationTxNotFound: "Transazione di creazione non trovata automaticamente: incolla il suo hash nel campo sopra e riprova.",
+    txNotFound: "Transazione non trovata su LUKSO.",
+    notViaFactory: (v) => `Questa implementazione non è stata creata tramite la Nick's factory (la transazione va a ${v.to}): il deploy non si può ripetere allo stesso indirizzo da questa pagina.`,
+    addressMismatch: (v) => `La transazione indicata produce ${v.predicted}, non ${v.impl}: non è la transazione di creazione di questa implementazione.`,
+    sourceOk: (v) => `✅ Deploy originale verificato: la transazione ${v.tx} alla Nick's factory produce esattamente ${v.impl}.`,
+    sourceSize: (v) => `Bytecode dell'implementazione su LUKSO: ${v.bytes} byte.`,
+    genericError: (v) => `Errore: ${v.err}`,
+    staleCheckLog: "Dati, rete o wallet modificati dopo la verifica: premi di nuovo Verifica.",
+
+    loadSourceFirst: "Leggi prima il deploy originale da LUKSO (pannello 1).",
+    connectSignerFirst: "Collega prima il wallet firmatario (pannello 2).",
+    missingRpc: "Manca l'RPC della rete (pannello 3).",
+    rpcChainMismatch: (v) => `❌ BLOCCANTE — l'RPC risponde con chainId ${v.rpcChainId}, ma la rete selezionata è ${v.netName} (chainId ${v.chainId}).`,
+    walletWrongNetwork: (v) => `❌ BLOCCANTE — il wallet firmatario è sulla rete con chainId ${v.walletChainId}, ma la rete selezionata è ${v.netName} (chainId ${v.chainId}). Cambia rete nel wallet.`,
+    walletNetworkCheckFailed: "❌ BLOCCANTE — impossibile leggere la rete del wallet firmatario.",
+    chainsOk: (v) => `✅ Wallet firmatario e RPC sulla stessa rete (chainId ${v.chainId}).`,
+    noFactory: "❌ BLOCCANTE — la Nick's factory non esiste su questa rete: non si può ottenere lo stesso indirizzo.",
+    factoryOk: "✅ Nick's factory presente su questa rete.",
+    alreadyPublished: (v) => `✅ L'implementazione è già pubblicata su ${v.net} con lo stesso bytecode di LUKSO: non serve fare nulla.`,
+    differentCode: "❌ BLOCCANTE — a questo indirizzo c'è già un contratto, ma con bytecode diverso da quello su LUKSO. Non procedere e indaga.",
+    freeOk: "✅ L'indirizzo è libero su questa rete: l'implementazione non è ancora pubblicata.",
+    gasFail: (v) => `❌ BLOCCANTE — stima gas fallita: ${v.err}`,
+    gasOk: (v) => `✅ Stima gas riuscita: ${v.gas} unità.`,
+    noGasPrice: "❌ BLOCCANTE — l'RPC non ha restituito un prezzo del gas.",
+    costLog: (v) => `Costo stimato (con margine): ${v.cost}`,
+    insufficientBalance: (v) => `❌ BLOCCANTE — saldo insufficiente, mancano circa ${v.shortfall}.`,
+    balanceOk: "✅ Saldo del wallet firmatario sufficiente.",
+    readyLog: "\nPronto. La pubblicazione è permissionless e non cambia nulla dei tuoi profili: crea solo il contratto di implementazione.",
+    signerChanged: (v) => `❌ BLOCCANTE — l'account attivo nel wallet (${v.now}) non è quello verificato (${v.checked}). Rifai la verifica.`,
+    sendingLog: "Invio transazione (conferma nel wallet)...",
+    txHashLog: (v) => `Tx: ${v.hash}`,
+    waitingLog: "In attesa di conferma...",
+    txFailed: "❌ La transazione è stata inclusa ma è fallita. Nulla è stato pubblicato.",
+    waitingIndexLog: (v) => `In attesa che l'RPC indicizzi il contratto (tentativo ${v.i}/${v.n})...`,
+    publishedOk: (v) => `✅✅ Implementazione pubblicata su ${v.net} a ${v.impl}, con bytecode identico a LUKSO.`,
+    publishedMismatch: "❌ Dopo la conferma il bytecode all'indirizzo non corrisponde (o non è ancora indicizzato): ricontrolla tra qualche minuto con Verifica.",
+    nextStepLog: "Ora puoi tornare alla pagina di verifica o di deploy del tuo profilo.",
+
+    footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a>`,
+  },
+  en: {
+    pageTitle: "UP Publish Implementation — ChainIntegrate",
+    h1: "UP Publish Implementation",
+    subtitle: "Publish on another network a LUKSO implementation (LSP0 or Key Manager) that is missing there, at the exact same address it has on LUKSO — so your redeployed profile is not \"mute\".",
+    langToggleBtn: "Italiano",
+    panel0Title: "0 · How this page works",
+    panel0Note: "A Universal Profile is a proxy that delegates everything to an <b>implementation</b> (LSP0 for the profile, LSP6 for the Key Manager). Profiles created with different contract versions point to different implementations: if your profile's one does not exist on the target network, the profile would be \"mute\" there. LUKSO published its implementations through <b>Nick's factory</b> (<code>0x4e59b448…4956C</code>), a deterministic deployer that lives at the same address on almost every EVM network: replaying the <i>exact same</i> transaction on the target network creates the implementation at the <i>exact same</i> address. This page reads the original transaction from LUKSO, mathematically checks that it produces the expected address, and has your wallet sign it. It is permissionless and harmless: anyone can do it, it gives nobody any control over any profile, and it only costs gas.",
+    panel1Title: "1 · Implementation to publish",
+    implLabel: "Implementation address (as on LUKSO)",
+    txHashLabel: "Creation transaction hash on LUKSO (optional)",
+    txHashNote: "Usually found automatically. If not: open the implementation address on the LUKSO explorer, Details tab, and copy the hash of the \"at txn\" link in the Creator row.",
+    loadBtn: "Read the original deploy from LUKSO",
+    notLoaded: "Not read yet.",
+    panel2Title: "2 · Wallet paying for the publication",
+    panel2Note: "Any account with a little gas on the target network: it only pays for the transaction and gets no permission on anything.",
+    connectSignerBtn: "Connect signing wallet (e.g. MetaMask)",
+    notConnected: "Not connected.",
+    panel3Title: "3 · Target network",
+    networkFilterPlaceholder: "Filter by name...",
+    customRpcLabel: "Custom RPC URL",
+    panel4Title: "4 · Verify and publish",
+    checkBtn: "Verify",
+    publishBtn: "Publish implementation",
+    logInitial: "Waiting for the data above.",
+
+    connectedBadge: "Connected",
+    connectionRejected: "Connection rejected or failed",
+    noSignerFound: "No signing wallet found",
+    invalidImpl: "Invalid implementation address.",
+    loading: "Reading from LUKSO...",
+    implNotOnLukso: "There is no code at this address on LUKSO: it is not a published implementation.",
+    creationTxNotFound: "Creation transaction not found automatically: paste its hash in the field above and try again.",
+    txNotFound: "Transaction not found on LUKSO.",
+    notViaFactory: (v) => `This implementation was not created through Nick's factory (the transaction goes to ${v.to}): its deploy cannot be replayed at the same address from this page.`,
+    addressMismatch: (v) => `The given transaction produces ${v.predicted}, not ${v.impl}: it is not this implementation's creation transaction.`,
+    sourceOk: (v) => `✅ Original deploy verified: transaction ${v.tx} to Nick's factory produces exactly ${v.impl}.`,
+    sourceSize: (v) => `Implementation bytecode on LUKSO: ${v.bytes} bytes.`,
+    genericError: (v) => `Error: ${v.err}`,
+    staleCheckLog: "Data, network or wallet changed after verification: press Verify again.",
+
+    loadSourceFirst: "Read the original deploy from LUKSO first (panel 1).",
+    connectSignerFirst: "Connect the signing wallet first (panel 2).",
+    missingRpc: "Missing network RPC (panel 3).",
+    rpcChainMismatch: (v) => `❌ BLOCKING — the RPC answers with chainId ${v.rpcChainId}, but the selected network is ${v.netName} (chainId ${v.chainId}).`,
+    walletWrongNetwork: (v) => `❌ BLOCKING — the signing wallet is on chainId ${v.walletChainId}, but the selected network is ${v.netName} (chainId ${v.chainId}). Switch network in the wallet.`,
+    walletNetworkCheckFailed: "❌ BLOCKING — could not read the signing wallet's network.",
+    chainsOk: (v) => `✅ Signing wallet and RPC are on the same network (chainId ${v.chainId}).`,
+    noFactory: "❌ BLOCKING — Nick's factory does not exist on this network: the same address cannot be obtained.",
+    factoryOk: "✅ Nick's factory present on this network.",
+    alreadyPublished: (v) => `✅ The implementation is already published on ${v.net} with the same bytecode as on LUKSO: nothing to do.`,
+    differentCode: "❌ BLOCKING — there is already a contract at this address, but its bytecode differs from LUKSO's. Do not proceed; investigate.",
+    freeOk: "✅ The address is free on this network: the implementation is not published yet.",
+    gasFail: (v) => `❌ BLOCKING — gas estimation failed: ${v.err}`,
+    gasOk: (v) => `✅ Gas estimation succeeded: ${v.gas} units.`,
+    noGasPrice: "❌ BLOCKING — the RPC did not return a gas price.",
+    costLog: (v) => `Estimated cost (with margin): ${v.cost}`,
+    insufficientBalance: (v) => `❌ BLOCKING — insufficient balance, about ${v.shortfall} missing.`,
+    balanceOk: "✅ Signing wallet balance sufficient.",
+    readyLog: "\nReady. Publishing is permissionless and changes nothing in your profiles: it only creates the implementation contract.",
+    signerChanged: (v) => `❌ BLOCKING — the active wallet account (${v.now}) is not the one that was verified (${v.checked}). Verify again.`,
+    sendingLog: "Sending transaction (confirm in your wallet)...",
+    txHashLog: (v) => `Tx: ${v.hash}`,
+    waitingLog: "Waiting for confirmation...",
+    txFailed: "❌ The transaction was included but failed. Nothing was published.",
+    waitingIndexLog: (v) => `Waiting for the RPC to index the contract (attempt ${v.i}/${v.n})...`,
+    publishedOk: (v) => `✅✅ Implementation published on ${v.net} at ${v.impl}, with bytecode identical to LUKSO.`,
+    publishedMismatch: "❌ After confirmation the bytecode at the address does not match (or is not indexed yet): re-check in a few minutes with Verify.",
+    nextStepLog: "You can now go back to the verify or deploy page for your profile.",
+
+    footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a>`,
+  },
+};
+
+function t(key, vars) {
+  const entry = I18N[LANG][key];
+  return typeof entry === "function" ? entry(vars || {}) : entry;
+}
+
+function applyI18n() {
+  document.documentElement.lang = LANG;
+  document.title = t("pageTitle");
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.getAttribute("data-i18n")); });
+  document.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.getAttribute("data-i18n-html")); });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => { el.placeholder = t(el.getAttribute("data-i18n-placeholder")); });
+  if (!source) $("sourceStatus").innerHTML = `<span class="empty">${t("notLoaded")}</span>`;
+  if (!signerAddress) $("signerStatus").innerHTML = `<span class="empty">${t("notConnected")}</span>`;
+}
+$("langToggle").addEventListener("click", () => {
+  LANG = LANG === "it" ? "en" : "it";
+  applyI18n();
+});
+
+// ==================== APP ====================
+// Nick's deterministic deployment proxy: same address on almost every EVM chain. Its calldata
+// is salt (32 bytes) ++ init code, and it deploys with CREATE2(salt, init code).
+const NICK_FACTORY = "0x4e59b44847b379578588920cA78FbF26c0B4956C";
+const LUKSO_RPC = "https://rpc.mainnet.lukso.network";
+const LUKSO_EXPLORER_API = "https://explorer.execution.mainnet.lukso.network/api/v2/addresses/";
+
+const CHAINS = [
+  { key: "0g", name: "0G", chainId: 16661, rpc: "https://evmrpc.0g.ai", explorer: "https://chainscan.0g.ai/address/", currency: "0G" },
+  { key: "apechain", name: "ApeChain", chainId: 33139, rpc: "https://rpc.apechain.com", explorer: "https://apescan.io/address/", currency: "APE" },
+  { key: "arbitrum-one", name: "Arbitrum One", chainId: 42161, rpc: "https://arb1.arbitrum.io/rpc", explorer: "https://arbiscan.io/address/", currency: "ETH" },
+  { key: "avalanche-c-chain", name: "Avalanche C-Chain", chainId: 43114, rpc: "https://api.avax.network/ext/bc/C/rpc", explorer: "https://snowscan.xyz/address/", currency: "AVAX" },
+  { key: "base", name: "Base", chainId: 8453, rpc: "https://mainnet.base.org", explorer: "https://basescan.org/address/", currency: "ETH" },
+  { key: "berachain", name: "Berachain", chainId: 80094, rpc: "https://rpc.berachain.com", explorer: "https://berascan.com/address/", currency: "BERA" },
+  { key: "blast", name: "Blast", chainId: 81457, rpc: "https://rpc.blast.io", explorer: "https://blastscan.io/address/", currency: "ETH" },
+  { key: "bnb-smart-chain", name: "BNB Smart Chain", chainId: 56, rpc: "https://bsc-dataseed1.bnbchain.org", explorer: "https://bscscan.com/address/", currency: "BNB" },
+  { key: "celo", name: "Celo", chainId: 42220, rpc: "https://forno.celo.org", explorer: "https://celoscan.io/address/", currency: "CELO" },
+  { key: "chiliz", name: "Chiliz", chainId: 88888, rpc: "https://rpc.chiliz.com", explorer: "https://chiliscan.com/address/", currency: "CHZ" },
+  { key: "conflux-evm-espace", name: "Conflux EVM eSpace", chainId: 1030, rpc: "https://evm.confluxrpc.com", explorer: "https://evm.confluxscan.net/address/", currency: "CFX" },
+  { key: "core-blockchain", name: "Core Blockchain", chainId: 1116, rpc: "https://rpc.coredao.org", explorer: "https://scan.coredao.org/address/", currency: "CORE" },
+  { key: "coti", name: "COTI", chainId: 2632500, rpc: "https://mainnet.coti.io/rpc", explorer: "https://mainnet.cotiscan.io/address/", currency: "COTI" },
+  { key: "cronos", name: "Cronos", chainId: 25, rpc: "https://evm.cronos.org", explorer: "https://explorer.cronos.org/address/", currency: "CRO" },
+  { key: "degen-chain", name: "Degen Chain", chainId: 666666666, rpc: "https://rpc.degen.tips", explorer: null, currency: "DEGEN" },
+  { key: "ethereum", name: "Ethereum", chainId: 1, rpc: "https://ethereum-rpc.publicnode.com", explorer: "https://etherscan.io/address/", currency: "ETH" },
+  { key: "ethereum-classic", name: "Ethereum Classic", chainId: 61, rpc: "https://etc.rivet.link", explorer: "https://etc.blockscout.com/address/", currency: "ETC" },
+  { key: "etherlink", name: "Etherlink", chainId: 42793, rpc: "https://node.mainnet.etherlink.com", explorer: "https://explorer.etherlink.com/address/", currency: "XTZ" },
+  { key: "flare", name: "Flare", chainId: 14, rpc: "https://flare-api.flare.network/ext/C/rpc", explorer: "https://flare-explorer.flare.network/address/", currency: "FLR" },
+  { key: "gnosis", name: "Gnosis", chainId: 100, rpc: "https://rpc.gnosischain.com", explorer: "https://gnosisscan.io/address/", currency: "XDAI" },
+  { key: "gravity-alpha", name: "Gravity Alpha", chainId: 1625, rpc: "https://rpc.gravity.xyz", explorer: "https://explorer.gravity.xyz/address/", currency: "G" },
+  { key: "hashkey-chain", name: "HashKey Chain", chainId: 177, rpc: "https://mainnet.hsk.xyz", explorer: "https://hsk.blockscout.com/address/", currency: "HSK" },
+  { key: "immutable-zkevm", name: "Immutable zkEVM", chainId: 13371, rpc: "https://rpc.immutable.com", explorer: "https://explorer.immutable.com/address/", currency: "IMX" },
+  { key: "ink", name: "Ink", chainId: 57073, rpc: "https://rpc-gel.inkonchain.com", explorer: "https://explorer.inkonchain.com/address/", currency: "ETH" },
+  { key: "katana", name: "Katana", chainId: 747474, rpc: "https://rpc.katana.network", explorer: "https://katanascan.com/address/", currency: "ETH" },
+  { key: "kava-evm", name: "Kava EVM", chainId: 2222, rpc: "https://evm.kava.io", explorer: "https://kavascan.com/address/", currency: "KAVA" },
+  { key: "lens", name: "Lens", chainId: 232, rpc: "https://rpc.lens.xyz", explorer: "https://explorer.lens.xyz/address/", currency: "GHO" },
+  { key: "linea", name: "Linea", chainId: 59144, rpc: "https://rpc.linea.build", explorer: "https://lineascan.build/address/", currency: "ETH" },
+  { key: "mantle", name: "Mantle", chainId: 5000, rpc: "https://rpc.mantle.xyz", explorer: "https://mantlescan.xyz/address/", currency: "MNT" },
+  { key: "megaeth", name: "MegaETH", chainId: 4326, rpc: "https://mainnet.megaeth.com/rpc", explorer: "https://mega.etherscan.io/address/", currency: "ETH" },
+  { key: "mode", name: "Mode", chainId: 34443, rpc: "https://mainnet.mode.network", explorer: "https://explorer.mode.network/address/", currency: "ETH" },
+  { key: "monad", name: "Monad", chainId: 143, rpc: "https://rpc.monad.xyz", explorer: "https://monadvision.com/address/", currency: "MON" },
+  { key: "moonbeam", name: "Moonbeam", chainId: 1284, rpc: "https://rpc.api.moonbeam.network", explorer: "https://moonbeam.moonscan.io/address/", currency: "GLMR" },
+  { key: "moonriver", name: "Moonriver", chainId: 1285, rpc: "https://rpc.api.moonriver.moonbeam.network", explorer: "https://moonriver.moonscan.io/address/", currency: "MOVR" },
+  { key: "optimism", name: "Optimism", chainId: 10, rpc: "https://mainnet.optimism.io", explorer: "https://optimistic.etherscan.io/address/", currency: "ETH" },
+  { key: "plasma", name: "Plasma", chainId: 9745, rpc: "https://rpc.plasma.to", explorer: "https://plasmascan.to/address/", currency: "XPL" },
+  { key: "plume", name: "Plume", chainId: 98866, rpc: "https://rpc.plume.org", explorer: "https://explorer.plume.org/address/", currency: "PLUME" },
+  { key: "polygon", name: "Polygon", chainId: 137, rpc: "https://polygon.drpc.org", explorer: "https://polygonscan.com/address/", currency: "POL" },
+  { key: "pulsechain", name: "Pulsechain", chainId: 369, rpc: "https://rpc.pulsechain.com", explorer: "https://ipfs.scan.pulsechain.com/address/", currency: "PLS" },
+  { key: "ronin", name: "Ronin", chainId: 2020, rpc: "https://api.roninchain.com/rpc", explorer: "https://app.roninchain.com/address/", currency: "RON" },
+  { key: "scroll", name: "Scroll", chainId: 534352, rpc: "https://rpc.scroll.io", explorer: "https://scrollscan.com/address/", currency: "ETH" },
+  { key: "somnia", name: "Somnia", chainId: 5031, rpc: "https://api.infra.mainnet.somnia.network", explorer: "https://mainnet.somnia.w3us.site/address/", currency: "SOMI" },
+  { key: "soneium", name: "Soneium", chainId: 1868, rpc: "https://rpc.soneium.org", explorer: "https://soneium.blockscout.com/address/", currency: "ETH" },
+  { key: "sonic", name: "Sonic", chainId: 146, rpc: "https://rpc.soniclabs.com", explorer: "https://sonicscan.org/address/", currency: "S" },
+  { key: "stable", name: "Stable", chainId: 988, rpc: "https://rpc.stable.xyz", explorer: "https://stablescan.xyz/address/", currency: "USDT0" },
+  { key: "story", name: "Story", chainId: 1514, rpc: "https://mainnet.datarpc.io", explorer: "https://datanetscan.io/address/", currency: "DATA" },
+  { key: "stratis-xertra", name: "Stratis Xertra", chainId: 105105, rpc: "https://rpc.xertra.com", explorer: "https://explorer.xertra.com/address/", currency: "STRAX" },
+  { key: "taiko-alethia", name: "Taiko Alethia", chainId: 167000, rpc: "https://rpc.mainnet.taiko.xyz", explorer: "https://taikoscan.io/address/", currency: "ETH" },
+  { key: "telos-evm", name: "Telos EVM", chainId: 40, rpc: "https://rpc.telos.net", explorer: "https://teloscan.io/address/", currency: "TLOS" },
+  { key: "tempo", name: "Tempo", chainId: 4217, rpc: "https://rpc.mainnet.tempo.xyz", explorer: "https://explore.tempo.xyz/address/", currency: "USD" },
+  { key: "unichain", name: "Unichain", chainId: 130, rpc: "https://mainnet.unichain.org", explorer: "https://uniscan.xyz/address/", currency: "ETH" },
+  { key: "world-chain", name: "World Chain", chainId: 480, rpc: "https://worldchain-mainnet.g.alchemy.com/public", explorer: "https://worldscan.org/address/", currency: "ETH" },
+  { key: "x-layer", name: "X Layer", chainId: 196, rpc: "https://rpc.xlayer.tech", explorer: "https://www.oklink.com/xlayer/address/", currency: "OKB" },
+  { key: "xai", name: "Xai", chainId: 660279, rpc: "https://xai-chain.net/rpc", explorer: "https://explorer.xai-chain.net/address/", currency: "XAI" },
+  { key: "xdc-network", name: "XDC Network", chainId: 50, rpc: "https://erpc.xinfin.network", explorer: "https://xdcscan.com/address/", currency: "XDC" },
+  { key: "zetachain", name: "ZetaChain", chainId: 7000, rpc: "https://zetachain-evm.blockpi.network/v1/rpc/public", explorer: "https://zetascan.com/address/", currency: "ZETA" },
+  { key: "zksync", name: "zkSync", chainId: 324, rpc: "https://mainnet.era.zksync.io", explorer: "https://explorer.zksync.io/address/", currency: "ETH" },
+  { key: "zora", name: "Zora", chainId: 7777777, rpc: "https://rpc.zora.energy", explorer: "https://explorer.zora.energy/address/", currency: "ETH" },
+  { key: "arbitrum-sepolia", name: "Arbitrum Sepolia (testnet)", chainId: 421614, rpc: "https://sepolia-rollup.arbitrum.io/rpc", explorer: "https://sepolia.arbiscan.io/address/", currency: "ETH" },
+  { key: "base-sepolia", name: "Base Sepolia (testnet)", chainId: 84532, rpc: "https://sepolia.base.org", explorer: "https://sepolia.basescan.org/address/", currency: "ETH" },
+  { key: "ethereum-hoodi", name: "Ethereum Hoodi (testnet)", chainId: 560048, rpc: "https://rpc.hoodi.ethpandaops.io", explorer: "https://light-hoodi.beaconcha.in/address/", currency: "ETH" },
+  { key: "ethereum-sepolia", name: "Ethereum Sepolia (testnet)", chainId: 11155111, rpc: "https://rpc.sepolia.org", explorer: "https://sepolia.etherscan.io/address/", currency: "ETH" },
+  { key: "polygon-amoy", name: "Polygon Amoy (testnet)", chainId: 80002, rpc: "https://rpc-amoy.polygon.technology", explorer: "https://amoy.polygonscan.com/address/", currency: "POL" },
+  { key: "zksync-sepolia", name: "zkSync Sepolia (testnet)", chainId: 300, rpc: "https://sepolia.era.zksync.dev", explorer: "https://sepolia.explorer.zksync.io/address/", currency: "ETH" },
+  { key: "sei", name: "Sei", chainId: 1329, rpc: "https://evm-rpc.sei-apis.com", explorer: "https://seitrace.com/address/", currency: "SEI" },
+  { key: "custom", name: "Custom RPC...", chainId: null, rpc: null, explorer: null, currency: "?" },
+];
+
+// Upper bound of the gas price, read straight from the RPC. ethers' getFeeData() is avoided on
+// purpose: on some chains (e.g. Polygon) it calls a third-party gas-station API and fails when
+// that service is down or blocked. Same formula as ethers: 2 * baseFee + priority fee.
+async function estimateMaxGasPrice(provider) {
+  const gasPrice = BigInt(await provider.send("eth_gasPrice", []));
+  const block = await provider.send("eth_getBlockByNumber", ["latest", false]);
+  if (!block || !block.baseFeePerGas) return gasPrice;
+  const baseFee = BigInt(block.baseFeePerGas);
+  const tip = gasPrice > baseFee ? gasPrice - baseFee : 0n;
+  return 2n * baseFee + tip;
+}
+
+function log(msg, cls) {
+  const l = document.createElement("div");
+  if (cls) l.className = cls;
+  l.textContent = msg;
+  $("log").appendChild(l);
+}
+
+// --- Network ---
+const networkSelectEl = $("network");
+function renderNetworkOptions(filter) {
+  const f = (filter || "").toLowerCase();
+  networkSelectEl.innerHTML = "";
+  CHAINS.filter(c => c.name.toLowerCase().includes(f)).forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c.key;
+    opt.textContent = c.chainId ? `${c.name} (chainId ${c.chainId})` : c.name;
+    networkSelectEl.appendChild(opt);
+  });
+}
+renderNetworkOptions("");
+$("networkFilter").addEventListener("input", (e) => {
+  renderNetworkOptions(e.target.value);
+  // Filtering can silently change the selected option: propagate it like a user selection.
+  networkSelectEl.dispatchEvent(new Event("change"));
+});
+networkSelectEl.addEventListener("change", () => {
+  $("customRpcWrap").style.display = networkSelectEl.value === "custom" ? "block" : "none";
+});
+function getNetwork() {
+  if (networkSelectEl.value === "custom") return { name: "Custom", chainId: null, rpc: $("customRpc").value.trim() };
+  return CHAINS.find(c => c.key === networkSelectEl.value);
+}
+
+// --- Preset from the verify/deploy pages: ?network=<key>&impl=<addr>,<addr> ---
+const params = new URLSearchParams(location.search);
+const presetNetwork = params.get("network");
+if (presetNetwork && presetNetwork !== "custom" && CHAINS.some(c => c.key === presetNetwork)) networkSelectEl.value = presetNetwork;
+const presetImpls = (params.get("impl") || "").split(",").map(s => s.trim()).filter(s => ethers.isAddress(s));
+presetImpls.forEach(addr => {
+  const chip = document.createElement("button");
+  chip.type = "button";
+  chip.className = "chip";
+  chip.textContent = ethers.getAddress(addr);
+  chip.addEventListener("click", () => { $("implAddress").value = chip.textContent; $("txHash").value = ""; resetSource(); });
+  $("implChips").appendChild(chip);
+});
+if (presetImpls.length) $("implAddress").value = ethers.getAddress(presetImpls[0]);
+
+// --- State and invalidation ---
+let source = null;         // verified original deploy read from LUKSO
+let signerProvider = null, signerAddress = null;
+let lastCheckOk = false;
+let checkedContext = null; // { rpc, chainId, signer, gasLimit }
+
+function invalidateCheck() {
+  if (lastCheckOk) log(t("staleCheckLog"), "line-warn");
+  lastCheckOk = false;
+  checkedContext = null;
+  $("publishBtn").disabled = true;
+}
+function resetSource() {
+  source = null;
+  $("sourceStatus").innerHTML = `<span class="empty">${t("notLoaded")}</span>`;
+  invalidateCheck();
+}
+["implAddress", "txHash"].forEach(id => $(id).addEventListener("input", resetSource));
+$("customRpc").addEventListener("input", invalidateCheck);
+networkSelectEl.addEventListener("change", invalidateCheck);
+
+// --- 1. Read and verify the original deploy on LUKSO ---
+async function findCreationTx(impl) {
+  // Blockscout API of the LUKSO explorer; best effort, the user can paste the hash instead.
+  try {
+    const res = await fetch(LUKSO_EXPLORER_API + impl, { referrerPolicy: "no-referrer" });
+    if (!res.ok) return null;
+    const j = await res.json();
+    const h = j.creation_transaction_hash || j.creation_tx_hash;
+    return typeof h === "string" && /^0x[0-9a-fA-F]{64}$/.test(h) ? h : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function showSourceError(msg) {
+  $("sourceStatus").innerHTML = `<span class="badge err">${escapeHtml(msg)}</span>`;
+}
+
+$("loadBtn").addEventListener("click", async () => {
+  source = null;
+  invalidateCheck();
+  const implRaw = $("implAddress").value.trim();
+  if (!ethers.isAddress(implRaw)) { showSourceError(t("invalidImpl")); return; }
+  const impl = ethers.getAddress(implRaw);
+  $("sourceStatus").innerHTML = `<span class="empty">${t("loading")}</span>`;
+
+  try {
+    const lukso = new ethers.JsonRpcProvider(LUKSO_RPC, 42, { staticNetwork: true, batchMaxCount: 1 });
+    const code = await lukso.getCode(impl);
+    if (code === "0x") { showSourceError(t("implNotOnLukso")); return; }
+
+    let txHash = $("txHash").value.trim();
+    if (!txHash) {
+      txHash = await findCreationTx(impl);
+      if (!txHash) { showSourceError(t("creationTxNotFound")); return; }
+      $("txHash").value = txHash;
+    }
+    if (!/^0x[0-9a-fA-F]{64}$/.test(txHash)) { showSourceError(t("txNotFound")); return; }
+
+    const tx = await lukso.getTransaction(txHash);
+    if (!tx) { showSourceError(t("txNotFound")); return; }
+    if (!tx.to || tx.to.toLowerCase() !== NICK_FACTORY.toLowerCase()) {
+      showSourceError(t("notViaFactory", { to: tx.to || "(contract creation)" }));
+      return;
+    }
+    const data = tx.data;
+    if (data.length <= 2 + 64) { showSourceError(t("txNotFound")); return; }
+    const salt = "0x" + data.slice(2, 66);
+    const initCode = "0x" + data.slice(66);
+    const predicted = ethers.getCreate2Address(NICK_FACTORY, salt, ethers.keccak256(initCode));
+    if (predicted.toLowerCase() !== impl.toLowerCase()) {
+      showSourceError(t("addressMismatch", { predicted, impl }));
+      return;
+    }
+
+    source = { impl, txHash, data, runtimeHash: ethers.keccak256(code), codeBytes: (code.length - 2) / 2 };
+    $("sourceStatus").innerHTML =
+      `<span class="badge ok">OK</span> ${escapeHtml(t("sourceOk", { tx: txHash, impl }))}<br>` +
+      escapeHtml(t("sourceSize", { bytes: source.codeBytes }));
+  } catch (e) {
+    showSourceError(t("genericError", { err: e.shortMessage || e.message }));
+  }
+});
+
+// --- 2. Signing wallet ---
+const discoveredProviders = [];
+window.addEventListener("eip6963:announceProvider", (e) => discoveredProviders.push(e.detail));
+window.dispatchEvent(new Event("eip6963:requestProvider"));
+
+let watchedSigner = null;
+function watchSigner(p) {
+  if (watchedSigner === p || typeof p.on !== "function") return;
+  watchedSigner = p;
+  p.on("chainChanged", invalidateCheck);
+  p.on("accountsChanged", (accs) => { signerAddress = accs && accs[0] ? accs[0] : null; invalidateCheck(); });
+}
+
+$("connectSigner").addEventListener("click", async () => {
+  let candidate = discoveredProviders.find(p => !/lukso|universal profile/i.test(p.info.name))?.provider;
+  if (!candidate && window.ethereum && window.ethereum !== window.lukso) candidate = window.ethereum;
+  if (!candidate) {
+    $("signerStatus").innerHTML = `<span class="badge err">${t("noSignerFound")}</span>`;
+    return;
+  }
+  try {
+    const accounts = await candidate.request({ method: "eth_requestAccounts" });
+    signerAddress = accounts[0];
+    signerProvider = candidate;
+    watchSigner(candidate);
+    invalidateCheck();
+    let netLabel = "";
+    try {
+      netLabel = ` · chainId ${parseInt(await candidate.request({ method: "eth_chainId" }), 16)}`;
+    } catch (e) { /* the address is shown anyway */ }
+    $("signerStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${escapeHtml(signerAddress + netLabel)}`;
+  } catch (e) {
+    $("signerStatus").innerHTML = `<span class="badge err">${t("connectionRejected")}</span>`;
+  }
+});
+
+// The transaction is signed on the wallet's chain while every check runs against the RPC:
+// both must be the selected chain.
+async function checkChains(net, provider) {
+  const rpcChainId = Number(await provider.send("eth_chainId", []));
+  const expectedChainId = net.chainId || rpcChainId;
+  if (rpcChainId !== expectedChainId) {
+    return { ok: false, msg: t("rpcChainMismatch", { rpcChainId, netName: net.name, chainId: expectedChainId }) };
+  }
+  let walletChainId;
+  try {
+    walletChainId = parseInt(await signerProvider.request({ method: "eth_chainId" }), 16);
+  } catch (e) {
+    return { ok: false, msg: t("walletNetworkCheckFailed") };
+  }
+  if (walletChainId !== expectedChainId) {
+    return { ok: false, msg: t("walletWrongNetwork", { walletChainId, netName: net.name, chainId: expectedChainId }) };
+  }
+  return { ok: true, chainId: expectedChainId };
+}
+
+// --- 4. Verify ---
+$("checkBtn").addEventListener("click", async () => {
+  $("log").innerHTML = "";
+  lastCheckOk = false;
+  checkedContext = null;
+  $("publishBtn").disabled = true;
+
+  if (!source) { log(t("loadSourceFirst"), "line-err"); return; }
+  if (!signerAddress) { log(t("connectSignerFirst"), "line-err"); return; }
+  const net = getNetwork();
+  if (!net || !net.rpc) { log(t("missingRpc"), "line-err"); return; }
+
+  try {
+    const provider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
+    const chains = await checkChains(net, provider);
+    if (!chains.ok) { log(chains.msg, "line-err"); return; }
+    log(t("chainsOk", { chainId: chains.chainId }), "line-ok");
+
+    if ((await provider.getCode(NICK_FACTORY)) === "0x") { log(t("noFactory"), "line-err"); return; }
+    log(t("factoryOk"), "line-ok");
+
+    const existing = await provider.getCode(source.impl);
+    if (existing !== "0x") {
+      if (ethers.keccak256(existing) === source.runtimeHash) log(t("alreadyPublished", { net: net.name }), "line-ok");
+      else log(t("differentCode"), "line-err");
+      return;
+    }
+    log(t("freeOk"), "line-ok");
+
+    const gasEstimate = await provider.estimateGas({ from: signerAddress, to: NICK_FACTORY, data: source.data })
+      .catch(e => { log(t("gasFail", { err: e.shortMessage || e.message }), "line-err"); throw e; });
+    log(t("gasOk", { gas: gasEstimate.toString() }), "line-ok");
+
+    const gasPrice = await estimateMaxGasPrice(provider);
+    if (!gasPrice) { log(t("noGasPrice"), "line-err"); return; }
+    const gasLimit = gasEstimate + gasEstimate / 5n; // +20%: large init code, estimates can be tight
+    const cost = gasLimit * gasPrice;
+    log(t("costLog", { cost: ethers.formatEther(cost) }), "line-dim");
+    const balance = await provider.getBalance(signerAddress);
+    if (balance < cost) { log(t("insufficientBalance", { shortfall: ethers.formatEther(cost - balance) }), "line-err"); return; }
+    log(t("balanceOk"), "line-ok");
+
+    lastCheckOk = true;
+    checkedContext = { rpc: net.rpc, chainId: chains.chainId, signer: signerAddress, gasLimit };
+    $("publishBtn").disabled = false;
+    log(t("readyLog"), "line-warn");
+  } catch (e) {
+    log(t("genericError", { err: e.shortMessage || e.message }), "line-err");
+  }
+});
+
+// --- 4. Publish ---
+$("publishBtn").addEventListener("click", async () => {
+  if (!lastCheckOk || !checkedContext || !source) return;
+  $("publishBtn").disabled = true;
+  const net = getNetwork();
+  const ctx = checkedContext;
+
+  try {
+    if (!net || net.rpc !== ctx.rpc) { log(t("staleCheckLog"), "line-err"); return; }
+    const walletChainId = parseInt(await signerProvider.request({ method: "eth_chainId" }), 16);
+    if (walletChainId !== ctx.chainId) {
+      log(t("walletWrongNetwork", { walletChainId, netName: net.name, chainId: ctx.chainId }), "line-err");
+      return;
+    }
+    const signerObj = await new ethers.BrowserProvider(signerProvider).getSigner();
+    if (signerObj.address.toLowerCase() !== ctx.signer.toLowerCase()) {
+      log(t("signerChanged", { now: signerObj.address, checked: ctx.signer }), "line-err");
+      return;
+    }
+
+    log(t("sendingLog"), "line-dim");
+    const tx = await signerObj.sendTransaction({ to: NICK_FACTORY, data: source.data, gasLimit: ctx.gasLimit });
+    log(t("txHashLog", { hash: tx.hash }), "line-dim");
+    log(t("waitingLog"), "line-dim");
+    const receipt = await tx.wait();
+    if (!receipt || receipt.status !== 1) { log(t("txFailed"), "line-err"); return; }
+
+    const provider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
+    let code = "0x";
+    const attempts = 6;
+    for (let i = 0; i < attempts; i++) {
+      code = await provider.getCode(source.impl);
+      if (code !== "0x") break;
+      if (i < attempts - 1) {
+        log(t("waitingIndexLog", { i: i + 1, n: attempts }), "line-dim");
+        await new Promise(r => setTimeout(r, 2500));
+      }
+    }
+    if (code !== "0x" && ethers.keccak256(code) === source.runtimeHash) {
+      log(t("publishedOk", { net: net.name, impl: source.impl }), "line-ok");
+      if (net.explorer) log(net.explorer + source.impl, "line-dim");
+      log(t("nextStepLog"), "line-dim");
+    } else {
+      log(t("publishedMismatch"), "line-err");
+    }
+  } catch (e) {
+    log(t("genericError", { err: e.shortMessage || e.message }), "line-err");
+  } finally {
+    lastCheckOk = false;
+    checkedContext = null;
+  }
+});
+
+applyI18n();
+</script>
+
+</body>
+</html>

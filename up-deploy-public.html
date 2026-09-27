@@ -245,7 +245,7 @@ const I18N = {
     kmInconsistentErr: "❌ BLOCCANTE — il Key Manager risulta già presente a questo indirizzo su questa rete, ma la UP no: stato incoerente, non procedere senza indagare.",
     noContractOkLog: "✅ Nessun contratto presente agli indirizzi attesi su questa rete: il deploy può procedere.",
     checkingImplLog: "Controllo che le implementazioni referenziate dalla calldata esistano davvero su questa rete...",
-    implMissingErr: (v) => `❌ BLOCCANTE — l'implementazione ${v.label} (${v.addr}) referenziata dalla calldata non ha bytecode su questa rete. Il proxy si deployerebbe comunque, allo stesso indirizzo, ma ogni chiamata andrebbe a vuoto (delegatecall verso un indirizzo senza codice ritorna successo senza fare nulla): un profilo "muto", non un errore visibile. Non procedere finché LUKSO non pubblica questa versione dell'implementazione su questa rete.`,
+    implMissingErr: (v) => `❌ BLOCCANTE — l'implementazione ${v.label} (${v.addr}) referenziata dalla calldata non ha bytecode su questa rete. Il proxy si deployerebbe comunque, allo stesso indirizzo, ma ogni chiamata andrebbe a vuoto (delegatecall verso un indirizzo senza codice ritorna successo senza fare nulla): un profilo "muto", non un errore visibile. Non procedere finché l'implementazione non è pubblicata su questa rete (puoi farlo tu con il link qui sotto).`,
     implOkLog: (v) => `✅ Implementazione ${v.label} presente e con bytecode su questa rete (${v.addr}).`,
     gasEstimateFailErr: (v) => `❌ BLOCCANTE — stima gas fallita: ${v.err}`,
     gasEstimateOkLog: (v) => `✅ Stima gas riuscita: ${v.gas} unità.`,
@@ -289,6 +289,7 @@ const I18N = {
     donateOkLog: "✅ Donazione in LYX inviata, grazie!",
     donateFailedLog: (v) => `❌ Errore durante l'invio: ${v.err}`,
     testLinkText: "→ Testa la UP appena deployata su questa rete",
+    publishLinkText: "→ Pubblica le implementazioni mancanti su questa rete",
   },
   en: {
     pageTitle: "UP Cross-Chain Deploy",
@@ -372,7 +373,7 @@ const I18N = {
     kmInconsistentErr: "❌ BLOCKING — the Key Manager already exists at this address on this network, but the UP doesn't: inconsistent state, do not proceed without investigating.",
     noContractOkLog: "✅ No contract present at the expected addresses on this network: the deploy can proceed.",
     checkingImplLog: "Checking that the implementations referenced by the calldata actually exist on this network...",
-    implMissingErr: (v) => `❌ BLOCKING — the ${v.label} implementation (${v.addr}) referenced by the calldata has no bytecode on this network. The proxy would still deploy at the same address, but every call would go nowhere (a delegatecall to an address with no code returns success while doing nothing): a "mute" profile, with no visible error. Do not proceed until LUKSO publishes this implementation version on this network.`,
+    implMissingErr: (v) => `❌ BLOCKING — the ${v.label} implementation (${v.addr}) referenced by the calldata has no bytecode on this network. The proxy would still deploy at the same address, but every call would go nowhere (a delegatecall to an address with no code returns success while doing nothing): a "mute" profile, with no visible error. Do not proceed until the implementation is published on this network (you can do it yourself with the link below).`,
     implOkLog: (v) => `✅ ${v.label} implementation present and has bytecode on this network (${v.addr}).`,
     gasEstimateFailErr: (v) => `❌ BLOCKING — gas estimation failed: ${v.err}`,
     gasEstimateOkLog: (v) => `✅ Gas estimation succeeded: ${v.gas} units.`,
@@ -416,6 +417,7 @@ const I18N = {
     donateOkLog: "✅ LYX donation sent, thank you!",
     donateFailedLog: (v) => `❌ Error while sending: ${v.err}`,
     testLinkText: "→ Test the UP you just deployed on this network",
+    publishLinkText: "→ Publish the missing implementations on this network",
   },
 };
 
@@ -558,6 +560,34 @@ function chainDisplayName(chainId) {
   if (chainId === 4201) return "LUKSO Testnet";
   const found = CHAINS.find(c => c.chainId === chainId);
   return found ? found.name : t("unknownNetworkLabel", { chainId });
+}
+
+// Link to the publish page, pre-filled with the missing implementations and the network.
+function showPublishLink(net, impls) {
+  const params = new URLSearchParams({ impl: impls.join(",") });
+  if (net.key && net.key !== "custom") params.set("network", net.key);
+  const box = document.createElement("div");
+  box.style.cssText = "margin-top:10px; padding:12px 14px; border:1px solid var(--warn); border-radius:8px; background:rgba(224,168,60,0.1);";
+  const a = document.createElement("a");
+  a.href = "up-publish-implementation.html?" + params.toString();
+  a.target = "_blank";
+  a.rel = "noopener";
+  a.style.cssText = "color: var(--warn); font-weight: 700; text-decoration: none;";
+  a.textContent = t("publishLinkText");
+  box.appendChild(a);
+  $("log").appendChild(box);
+}
+
+// Upper bound of the gas price, read straight from the RPC. ethers' getFeeData() is avoided on
+// purpose: on some chains (e.g. Polygon) it calls a third-party gas-station API and fails when
+// that service is down or blocked. Same formula as ethers: 2 * baseFee + priority fee.
+async function estimateMaxGasPrice(provider) {
+  const gasPrice = BigInt(await provider.send("eth_gasPrice", []));
+  const block = await provider.send("eth_getBlockByNumber", ["latest", false]);
+  if (!block || !block.baseFeePerGas) return gasPrice;
+  const baseFee = BigInt(block.baseFeePerGas);
+  const tip = gasPrice > baseFee ? gasPrice - baseFee : 0n;
+  return 2n * baseFee + tip;
 }
 
 function log(msg, cls) {
@@ -960,18 +990,19 @@ $("checkBtn").addEventListener("click", async () => {
     // ritorna successo senza fare nulla: un profilo "muto", nessun errore visibile a deploy
     // avvenuto. Va intercettato qui, prima di firmare, non dopo.
     log(t("checkingImplLog"), "line-dim");
-    const primaryImplCode = await provider.getCode(decoded.primary.impl);
-    if (primaryImplCode === "0x") {
-      log(t("implMissingErr", { label: "LSP0 (UniversalProfile)", addr: decoded.primary.impl }), "line-err");
+    const missingImpls = [];
+    for (const [label, impl] of [["LSP0 (UniversalProfile)", decoded.primary.impl], ["Key Manager", decoded.secondary.impl]]) {
+      if ((await provider.getCode(impl)) === "0x") {
+        log(t("implMissingErr", { label, addr: impl }), "line-err");
+        missingImpls.push(impl);
+      } else {
+        log(t("implOkLog", { label, addr: impl }), "line-ok");
+      }
+    }
+    if (missingImpls.length) {
+      showPublishLink(net, missingImpls);
       return;
     }
-    log(t("implOkLog", { label: "LSP0 (UniversalProfile)", addr: decoded.primary.impl }), "line-ok");
-    const secondaryImplCode = await provider.getCode(decoded.secondary.impl);
-    if (secondaryImplCode === "0x") {
-      log(t("implMissingErr", { label: "Key Manager", addr: decoded.secondary.impl }), "line-err");
-      return;
-    }
-    log(t("implOkLog", { label: "Key Manager", addr: decoded.secondary.impl }), "line-ok");
 
     const value = BigInt(decoded.primary.fundingAmount) + BigInt(decoded.secondary.fundingAmount);
 
@@ -983,8 +1014,7 @@ $("checkBtn").addEventListener("click", async () => {
     });
     log(t("gasEstimateOkLog", { gas: gasEstimate.toString() }), "line-ok");
 
-    const feeData = await provider.getFeeData();
-    const gasPrice = feeData.maxFeePerGas || feeData.gasPrice;
+    const gasPrice = await estimateMaxGasPrice(provider);
     if (!gasPrice) { log(t("noGasPriceErr"), "line-err"); return; }
     const gasCost = gasEstimate * gasPrice;
     const gasCostWithMargin = gasCost + gasCost / 4n + value;

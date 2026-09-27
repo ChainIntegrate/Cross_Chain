@@ -408,6 +408,18 @@ function chainDisplayName(chainId) {
   return found ? found.name : t("unknownNetworkLabel", { chainId });
 }
 
+// Upper bound of the gas price, read straight from the RPC. ethers' getFeeData() is avoided on
+// purpose: on some chains (e.g. Polygon) it calls a third-party gas-station API and fails when
+// that service is down or blocked. Same formula as ethers: 2 * baseFee + priority fee.
+async function estimateMaxGasPrice(provider) {
+  const gasPrice = BigInt(await provider.send("eth_gasPrice", []));
+  const block = await provider.send("eth_getBlockByNumber", ["latest", false]);
+  if (!block || !block.baseFeePerGas) return gasPrice;
+  const baseFee = BigInt(block.baseFeePerGas);
+  const tip = gasPrice > baseFee ? gasPrice - baseFee : 0n;
+  return 2n * baseFee + tip;
+}
+
 function log(msg, cls) {
   const l = document.createElement("div");
   if (cls) l.className = cls;
@@ -647,8 +659,7 @@ $("checkBtn").addEventListener("click", async () => {
     log(t("permsOkLog", { gas: gasEstimate.toString() }), "line-ok");
 
     const signerBalance = await provider.getBalance(signerAddress);
-    const feeData = await provider.getFeeData();
-    const gasPrice = feeData.maxFeePerGas || feeData.gasPrice;
+    const gasPrice = await estimateMaxGasPrice(provider);
     if (!gasPrice) { log(t("noGasPriceErr"), "line-err"); return; }
     const gasCost = gasEstimate * gasPrice;
     const gasCostWithMargin = gasCost + gasCost / 4n;

@@ -4,7 +4,7 @@
 |---|---|
 | **Audit date** | 2026-09-27 |
 | **Commit audited** | `f56dd29` (branch `main`) |
-| **Revision** | 2 — findings H-03, M-05, I-01 and I-02 reclassified after the maintainer's feedback (salt/IV are public format values; all profiles and addresses shown belong to the maintainer and are public by choice) |
+| **Revision** | 3 — rev. 2 reclassified H-03, M-05, I-01 and I-02 after the maintainer's feedback (salt/IV are public format values; all profiles and addresses shown belong to the maintainer and are public by choice); rev. 3 adds L-09, found while testing the new implementation-publishing page |
 | **Scope** | Every file in the repository: 6 HTML tools, `decrypt.js`, README, images in `guide-assets/`, and the full git history |
 | **Method** | Manual code review, cross-check against the LUKSO reference contracts (`@lukso/lsp6-contracts` 0.16.3, `@lukso/lsp23-contracts` 0.16.3), browser end-to-end tests with mocked wallets/RPCs (Playwright + Chromium), and a git history review for secrets and personal data |
 
@@ -27,7 +27,7 @@ The tools are static, client-side pages. They never ask for a private key: every
 |---|---|---|---|
 | High | 2 | 2 | 0 |
 | Medium | 7 | 7 | 0 |
-| Low | 8 | 7 | 1 |
+| Low | 9 | 8 | 1 |
 | Informational | 6 | 2 | 4 (documented / accepted) |
 
 Severity scale: **High** means funds can be lost or sent to the wrong place, or personal data is exposed. **Medium** means the page gives a wrong or misleading security result, or there is a realistic injection or supply-chain vector. **Low** means a robustness or UX flaw with limited impact. **Informational** covers hardening advice and accepted design risks.
@@ -206,6 +206,13 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 - **Impact:** `python3 -m http.server 8000` listens on `0.0.0.0`, which exposes the working folder to the local network. That folder may contain backups.
 - **Fix:** The instructions now bind to `127.0.0.1`.
 - **Status:** ✅ Fixed. ⏳ The same note applies to anyone serving the other pages locally; the README says so.
+
+### L-09 — Gas price lookup depended on a third-party service on Polygon
+
+- **Files:** `up-deploy-public.html`, `up-invia-fondi.html` (and the new `up-publish-implementation.html`)
+- **Impact:** The pages used ethers' `getFeeData()`. On chainId 137, ethers 6.13.4 does not ask the RPC for the gas price: it calls the Polygon gas-station API (`gasstation.polygon.technology`). If that service is down, rate-limited or blocked by the browser or network, Verify fails with `error encountered with polygon gas station`, even though the RPC works.
+- **Fix:** A new `estimateMaxGasPrice()` helper reads `eth_gasPrice` and the latest block's base fee directly from the selected RPC. It uses the same upper bound as ethers: `2 × baseFee + priority fee`. Signing is unaffected: the wallet computes its own fees, and ethers' JSON-RPC signer does not call `getFeeData()`.
+- **Status:** ✅ Fixed (reproduced in the browser test with Polygon selected, then verified)
 
 ### I-01 — The guide instructs users to reveal and import the controller private key
 
