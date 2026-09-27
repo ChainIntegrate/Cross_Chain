@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
-<title>UP Multi-chain Deploy — ChainIntegrate</title>
+<title>DEPRECATED — UP Multi-chain Deploy (initial test page)</title>
+<meta name="robots" content="noindex, nofollow">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
   :root {
@@ -40,6 +41,15 @@
 </style>
 </head>
 <body>
+
+<div class="panel" style="border-color: var(--err); background: rgba(224,90,90,0.12);">
+  <h2 style="color: var(--err);">Deprecated — do not use</h2>
+  <div style="font-size:14px; line-height:1.5;">
+    This is the initial test page used on localhost before the public tools went online. It is kept in the
+    repository for reference only and all its actions are disabled.
+    Use the <a href="up-deploy-public.html" style="color: var(--accent);">UP Deploy Cross-Chain tool</a> instead.
+  </div>
+</div>
 
 <h1>UP Multi-chain Deploy (local)</h1>
 <div class="subtitle">Connect your UP wallet (read-only), paste your profile's original deployment calldata, and connect a signing wallet that pays for and signs the deploy — no private key is ever typed into this page.</div>
@@ -96,6 +106,11 @@
 </div>
 
 <script>
+// Deprecated page: every action is disabled. Kept for reference only; use up-deploy-public.html.
+const DEPRECATED = true;
+window.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll("button, input, textarea, select").forEach(el => { el.disabled = true; });
+});
 const FACTORY_ADDRESS = "0x2300000A84D25dF63081feAa37ba6b62C4c89a30";
 const DEPLOY_SELECTOR = "0x6a66a753"; // deployERC1167Proxies(...) on LSP23LinkedContractsFactory
 // Data key prefix of LSP6 "AddressPermissions:Permissions:<address>" (bytes10 + bytes2 padding).
@@ -277,6 +292,7 @@ networkSelectEl.addEventListener("change", invalidateCheck);
 
 // --- 1. UP wallet (read-only) ---
 $("connectUp").addEventListener("click", async () => {
+  if (DEPRECATED) return;
   if (!window.lukso) {
     $("upStatus").innerHTML = '<span class="badge err">UP extension not found in this browser</span>';
     return;
@@ -305,6 +321,7 @@ function watchSigner(p) {
 }
 
 $("connectSigner").addEventListener("click", async () => {
+  if (DEPRECATED) return;
   let candidate = discoveredProviders.find(p => !/lukso|universal profile/i.test(p.info.name))?.provider;
   if (!candidate && window.ethereum && window.ethereum !== window.lukso) candidate = window.ethereum;
   if (!candidate) {
@@ -349,6 +366,7 @@ async function checkChains(net, provider) {
 
 // --- 3/4. Verify ---
 $("checkBtn").addEventListener("click", async () => {
+  if (DEPRECATED) return;
   resetLog();
   lastCheckOk = false;
   checked = null;
@@ -441,6 +459,7 @@ $("checkBtn").addEventListener("click", async () => {
 });
 
 $("deployBtn").addEventListener("click", async () => {
+  if (DEPRECATED) return;
   if (!lastCheckOk || !checked) return;
   $("deployBtn").disabled = true;
   const net = getNetwork();
