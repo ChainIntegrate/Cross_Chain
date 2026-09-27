@@ -126,7 +126,7 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 
 ### M-05 — `decrypt.js` asked users to paste their password and encrypted secret into the source file
 
-- **File:** `decrypt.js`
+- **File:** `decrypt.js` (moved to `tools/decrypt.js` after the audit, so it is not published with the website)
 - **Impact:** Users were told to edit the script and paste their **backup password and encrypted secret** into it. An edited copy is easy to commit, sync to a cloud folder or share by mistake, and the password also ends up in editor history and backups.
 - **Note on salt and IV:** the script also embeds a salt and an IV. The maintainer confirmed that these are the **public values of the UP extension backup format**, published in LUKSO's repositories, and not secret. They are kept as defaults for convenience (press Enter to use them). If every backup shares the same salt and IV, the backup's security rests entirely on the strength of the password, so users should choose a strong one. That is a property of the extension's format, not of this repository.
 - **Fix:** The script was rewritten:

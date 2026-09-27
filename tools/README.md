@@ -1,0 +1,15 @@
+# tools/ — offline tools, not for the website
+
+This folder contains command-line tools meant to be run **locally, offline**, by people who know exactly what they are doing. **Do not upload this folder to the website.**
+
+## `decrypt.js`
+
+Decrypts a secret (e.g. a controller private key) from a Universal Profile browser-extension backup.
+
+**You normally don't need it.** The standard way to get your controller key is the extension itself: Settings → Developer → *Reveal private key* (see step 1 of the guide). The script is only useful in unusual cases where the extension cannot show the right key. For example, an installation whose controller is not the profile's original one, when you need the original controller that is still stored in an old backup.
+
+```bash
+node tools/decrypt.js
+```
+
+The script asks for SALT and IV (press Enter to use the public defaults of the UP extension backup format), SECRET (base64, from your backup) and the password, which is not echoed. Run it offline on a trusted machine, then clear your terminal and its scrollback: the output is a private key that gives full control of the profile. **Do not paste your values into the file.**

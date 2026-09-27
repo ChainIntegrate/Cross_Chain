@@ -1,0 +1,3 @@
+# This folder holds offline command-line tools, not web content.
+# If the site is uploaded together with it by mistake, refuse to serve it (Apache).
+Require all denied

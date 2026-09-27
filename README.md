@@ -25,7 +25,7 @@ The tools never ask for a private key. The calldata is public on-chain data, and
 | `up-publish-implementation.html` | **Publish implementation.** Publishes on the target chain a LUKSO implementation (LSP0 or Key Manager) that is missing there, at the same address, by replaying LUKSO's original deploy through Nick's factory. The Verify and Deploy pages link to it when an implementation is missing. |
 | `up-multichain-deploy-v2.html` | **Deprecated — do not use.** Initial test page of the deploy flow, used on `localhost` before the public tools went online. Kept for reference only: all its actions are disabled, it shows a warning banner and is marked `noindex`. Use `up-deploy-public.html`. |
 | `up-crosschain-guide.html` | **Step-by-step guide (EN/IT)**: how the address is derived, how to find your calldata, how to check the controller, and how to deploy and operate. |
-| `decrypt.js` | Offline Node.js helper that decrypts a secret from a UP browser-extension backup (AES-256-GCM, PBKDF2-SHA256). It prompts for its inputs and never stores them. |
+| `tools/decrypt.js` | **Advanced, offline only — not published on the website.** Node.js helper that decrypts a secret from a UP browser-extension backup (AES-256-GCM, PBKDF2-SHA256). See [tools/README.md](tools/README.md). |
 | `guide-assets/` | Screenshots used by the guide. |
 | `banner.png`, `logo.png`, `favicon.ico` | Branding for the pages. |
 | `AUDIT.md` | Full security, privacy and bug audit report. |
@@ -36,13 +36,13 @@ The tools never ask for a private key. The calldata is public on-chain data, and
 
 The pages are published at `https://chainintegrate.it/`. Start with the guide: `up-crosschain-guide.html`.
 
-### `decrypt.js`
+### Advanced: `tools/decrypt.js` (offline only)
 
-```bash
-node decrypt.js
-```
+**Only for people who know exactly what they are doing.** You normally don't need it: the controller key can be exported directly from the Universal Profile extension (Settings → Developer → *Reveal private key*, guide step 1). The script only helps in unusual setups, for example an extension installation whose controller is not the profile's original one, when the original key is only in an old backup.
 
-The script asks for SALT and IV (press Enter to use the public defaults of the UP extension backup format), SECRET (base64, from your backup) and the password, which is not echoed. Run it offline on a trusted machine, and clear your terminal afterwards. **Do not paste your values into the file.**
+It runs locally and offline (`node tools/decrypt.js`); instructions are in [tools/README.md](tools/README.md).
+
+**Publishing the website:** upload only the pages and images in the repository root and `guide-assets/`, never the `tools/` folder. `tools/.htaccess` refuses access to it on Apache servers, as a safety net only.
 
 ## Requirements
 
@@ -73,7 +73,7 @@ Main fixes from the 2026-09-27 audit:
 - The Key Manager is derived from the calldata or read from `owner()`, instead of using a hard-coded implementation.
 - Correct LSP6 permission classification: admin-level permissions are always flagged.
 - SRI on the ethers script, and a no-referrer policy.
-- `decrypt.js` rewritten: interactive input (public salt/IV kept as defaults), hidden password prompt, input validation.
+- `tools/decrypt.js` (moved out of the published files) rewritten: interactive input (public salt/IV kept as defaults), hidden password prompt, input validation.
 - Much more explicit private-key handling rules in the guide (steps 1 and 8).
 
 Follow-up on the same date: gas prices are now read directly from the RPC. Before, ethers called a third-party gas-station API on Polygon, and the checks failed when that service was unreachable (AUDIT.md L-09).
