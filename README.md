@@ -109,4 +109,6 @@ Open items that need the maintainer to act (site redeploy, CSP, RPC refresh) are
 
 ## License
 
-No license has been declared yet. All rights reserved by ChainIntegrate unless stated otherwise.
+Released under the [MIT License](LICENSE). The software is provided "as is", without warranty of any kind: these tools prepare irreversible on-chain transactions, and you use them at your own risk.
+
+The ChainIntegrate name, logo and banner are not covered by the license.
