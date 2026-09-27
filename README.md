@@ -16,7 +16,7 @@ The tools never ask for a private key. The calldata is public on-chain data, and
 | `up-verify-only.html` | **Verify only.** A read-only check of whether a correct deploy of a given calldata exists on a chain, and whether the implementations it points to are present there. |
 | `up-test-operazione.html` | **Test.** Writes a test key (`up.test.ping`) through the Key Manager and reads it back, to prove the controller can operate the profile on the new chain. |
 | `up-invia-fondi.html` | **Send funds.** Transfers the chain's native currency from the redeployed UP through `KeyManager.execute → ERC725X.execute`. |
-| `up-multichain-deploy-v2.html` | **Local deploy tool.** A lighter, English-only version of the deploy flow, meant to be served from `localhost`. |
+| `up-multichain-deploy-v2.html` | **Initial test page.** The first version of the deploy flow, used on `localhost` for testing before the public tools went online. Kept for reference; use `up-deploy-public.html` instead. |
 | `up-crosschain-guide.html` | **Step-by-step guide (EN/IT)**: how the address is derived, how to find your calldata, how to check the controller, and how to deploy and operate. |
 | `decrypt.js` | Offline Node.js helper that decrypts a secret from a UP browser-extension backup (AES-256-GCM, PBKDF2-SHA256). It prompts for its inputs and never stores them. |
 | `guide-assets/` | Screenshots used by the guide. |

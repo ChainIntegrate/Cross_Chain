@@ -247,11 +247,11 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 - **Recommendation:** Use an organisation-owned channel, and state on the pages that support will never ask for a private key, seed phrase or backup password.
 - **Status:** ⏳ Open (informational)
 
-### I-06 — Local deploy page limited to a hard-coded list of profiles
+### I-06 — Initial test page (v2) limited to a hard-coded list of profiles
 
 - **File:** `up-multichain-deploy-v2.html` (table `KNOWN_DEPLOYMENTS`)
 - **Impact:** The page only worked for three hard-coded profiles (`SimoneC`, `birra20venti`, `ChainIntegrate`), each with a label, its controller EOA and its full deployment calldata. The maintainer confirmed that all three belong to them and are public by choice, so there is no third-party privacy issue. The remaining drawbacks are that the page could not be used for any other profile, and that a label/address/controller mapping lived in page code.
-- **Fix:** The table is removed. The local page now works like the public one: the user connects their UP, pastes their calldata, and the page checks that it produces the connected address. The page also got the public tool's safety checks (see M-07).
+- **Fix:** The table is removed. The initial test page (used on localhost before the public tools went online) now works like the public one: the user connects their UP, pastes their calldata, and the page checks that it produces the connected address. The page also got the public tool's safety checks (see M-07).
 - **Status:** ✅ Fixed
 
 ---
