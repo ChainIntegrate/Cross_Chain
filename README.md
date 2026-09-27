@@ -29,6 +29,7 @@ The tools never ask for a private key. The calldata is public on-chain data, and
 | `guide-assets/` | Screenshots used by the guide. |
 | `banner.png`, `logo.png`, `favicon.ico` | Branding for the pages. |
 | `AUDIT.md` | Full security, privacy and bug audit report. |
+| `SECURITY.md` | How to report a vulnerability privately. |
 
 ## Usage
 
