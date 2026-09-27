@@ -89,7 +89,7 @@ After that, `git pull` works exactly as before. The root `.htaccess` stays in th
 
 | Date | Scope | Result | Report |
 |---|---|---|---|
-| 2026-09-27 | Whole repository and git history (commit `f56dd29`) | 2 High, 7 Medium, 9 Low, 6 Informational. All High and Medium findings are fixed. | [AUDIT.md](AUDIT.md) |
+| 2026-09-27 | Whole repository and git history (commit `f56dd29`) | 2 High, 8 Medium, 9 Low, 6 Informational. All High and Medium findings are fixed. | [AUDIT.md](AUDIT.md) |
 
 Main fixes from the 2026-09-27 audit:
 
@@ -109,4 +109,6 @@ Open items that need the maintainer to act (site redeploy, CSP, RPC refresh) are
 
 ## License
 
-No license has been declared yet. All rights reserved by ChainIntegrate unless stated otherwise.
+Released under the [MIT License](LICENSE). The software is provided "as is", without warranty of any kind: these tools prepare irreversible on-chain transactions, and you use them at your own risk.
+
+The ChainIntegrate name, logo and banner are not covered by the license.
