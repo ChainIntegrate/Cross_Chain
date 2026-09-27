@@ -165,7 +165,7 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 - **Confirmed:** on 2026-09-27 the maintainer checked `https://crosschain-lukso.chainintegrate.it/.git/HEAD`, which returned `ref: refs/heads/main`: the git metadata was publicly readable. The whole history must therefore be treated as public. The audit found no secrets in it, but `.git/config` on the server may contain the credentials used for `git pull` (see below).
 - **Follow-up:** after the fix was merged and pulled, `/tools/decrypt.js` was still served: the web server on this host does not apply `.htaccess`. The protection was therefore moved to the server's git clone, which works with any web server:
   - `git sparse-checkout set --no-cone '/*' '!/tools/'` keeps `tools/` out of the web root, now and on every future pull;
-  - `mv .git ../cross_chain.git && echo "gitdir: ../cross_chain.git" > .git` moves the git metadata out of the web root.
+  - `mv .git ~/crosschain-lukso.git && echo "gitdir: $HOME/crosschain-lukso.git" > .git` moves the git metadata out of the web root, into the deploy user's home (the web root's parent `/var/www` is owned by root).
 
   `.git/config` was checked and contains no credentials (plain `https://github.com/...` remote). The maintainer plans to make the repository public, so the exposed history does not disclose anything that will not become public anyway.
 - **Status:** ⏳ Mitigated. It becomes fixed once `/.git/HEAD`, `/.git/config` and `/tools/decrypt.js` return 404 on the live site.

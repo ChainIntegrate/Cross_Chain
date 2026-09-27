@@ -53,13 +53,14 @@ The web server on this host **does not apply `.htaccess`**, so the protection is
 # 1. Keep tools/ out of the web root: files outside the pattern are removed now and on every future pull.
 git sparse-checkout set --no-cone '/*' '!/tools/'
 
-# 2. Move the git metadata out of the web root. `.git` becomes a one-line file containing only a path.
-mv .git ../cross_chain.git && echo "gitdir: ../cross_chain.git" > .git
+# 2. Move the git metadata out of the web root, into your home (no root permissions needed).
+#    `.git` becomes a one-line file containing only a path.
+mv .git ~/crosschain-lukso.git && echo "gitdir: $HOME/crosschain-lukso.git" > .git
 ```
 
 After that, `git pull` works exactly as before. The root `.htaccess` stays in the repository as an extra safety net for hosts that do apply it (Apache).
 
-**Check after every deploy.** Each of these URLs must return *404 Not Found*; `/.git` may return the one-line `gitdir:` file, which contains no repository data:
+**Check after every deploy.** Each of these URLs must return *404 Not Found*; `/.git` may return the one-line `gitdir:` file, which contains only a path and no repository data:
 
 - `https://crosschain-lukso.chainintegrate.it/.git/HEAD`
 - `https://crosschain-lukso.chainintegrate.it/.git/config`
