@@ -5,7 +5,7 @@
 // backup password; the 16-byte GCM auth tag is appended to the ciphertext (WebCrypto layout).
 //
 // Usage (run it offline, on a trusted machine):
-//   node decrypt.js
+//   node tools/decrypt.js
 // The script asks for SALT, IV and SECRET (base64, as found in your backup file) and for the
 // password, which is read without being echoed. SALT and IV default to the public values
 // used by UP extension backups: just press Enter to use them. Nothing is read from or

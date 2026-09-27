@@ -4,7 +4,7 @@
 |---|---|
 | **Audit date** | 2026-09-27 |
 | **Commit audited** | `f56dd29` (branch `main`) |
-| **Revision** | 2 — findings H-03, M-05, I-01 and I-02 reclassified after the maintainer's feedback (salt/IV are public format values; all profiles and addresses shown belong to the maintainer and are public by choice) |
+| **Revision** | 3 — rev. 2 reclassified H-03, M-05, I-01 and I-02 after the maintainer's feedback (salt/IV are public format values; all profiles and addresses shown belong to the maintainer and are public by choice); rev. 3 adds L-09, found while testing the new implementation-publishing page, and M-08, after the maintainer described how the site is deployed |
 | **Scope** | Every file in the repository: 6 HTML tools, `decrypt.js`, README, images in `guide-assets/`, and the full git history |
 | **Method** | Manual code review, cross-check against the LUKSO reference contracts (`@lukso/lsp6-contracts` 0.16.3, `@lukso/lsp23-contracts` 0.16.3), browser end-to-end tests with mocked wallets/RPCs (Playwright + Chromium), and a git history review for secrets and personal data |
 
@@ -26,8 +26,8 @@ The tools are static, client-side pages. They never ask for a private key: every
 | Severity | Count | Fixed | Open (recommendation only) |
 |---|---|---|---|
 | High | 2 | 2 | 0 |
-| Medium | 7 | 7 | 0 |
-| Low | 8 | 7 | 1 |
+| Medium | 8 | 7 | 1 (mitigated, needs a check on the live server) |
+| Low | 9 | 8 | 1 |
 | Informational | 6 | 2 | 4 (documented / accepted) |
 
 Severity scale: **High** means funds can be lost or sent to the wrong place, or personal data is exposed. **Medium** means the page gives a wrong or misleading security result, or there is a realistic injection or supply-chain vector. **Low** means a robustness or UX flaw with limited impact. **Informational** covers hardening advice and accepted design risks.
@@ -126,7 +126,7 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 
 ### M-05 — `decrypt.js` asked users to paste their password and encrypted secret into the source file
 
-- **File:** `decrypt.js`
+- **File:** `decrypt.js` (moved to `tools/decrypt.js` after the audit, so it is not published with the website)
 - **Impact:** Users were told to edit the script and paste their **backup password and encrypted secret** into it. An edited copy is easy to commit, sync to a cloud folder or share by mistake, and the password also ends up in editor history and backups.
 - **Note on salt and IV:** the script also embeds a salt and an IV. The maintainer confirmed that these are the **public values of the UP extension backup format**, published in LUKSO's repositories, and not secret. They are kept as defaults for convenience (press Enter to use them). If every backup shares the same salt and IV, the backup's security rests entirely on the strength of the password, so users should choose a strong one. That is a property of the extension's format, not of this repository.
 - **Fix:** The script was rewritten:
@@ -153,6 +153,21 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 - **Impact:** The page had no wallet-chain check, no implementation-bytecode check and no Key Manager check. It ignored the funding `value` of the calldata. It re-enabled *Deploy* after every attempt, which allowed double submission, and it declared success on "any code at the address".
 - **Fix:** The page was rewritten on the same checks as the public deploy page (see H-01, H-02, M-02, M-06). It now verifies the exact EIP-1167 runtime bytecode after the deploy.
 - **Status:** ✅ Fixed
+
+### M-08 — Deploying the site with `git pull` publishes the whole repository
+
+- **Files:** web server configuration; new root `.htaccess`
+- **Impact:** The website is deployed by running `git pull` in the web root. Everything in the repository is therefore reachable over HTTP unless the server blocks it:
+  - `.git/`, which lets anyone download the **full history of a private repository**;
+  - `tools/decrypt.js`, which should only be used offline by expert users;
+  - `README.md` and `AUDIT.md`, the internal documentation and audit report.
+- **Fix:** A root `.htaccess` returns 404 for `.git/`, `.gitignore`, `.htaccess`, `tools/` and every `.md` file (Apache, mod_alias). The README documents the nginx equivalent, an optional sparse checkout that keeps `tools/` off the server, and the URLs to check after each deploy.
+- **Confirmed:** on 2026-09-27 the maintainer checked `https://crosschain-lukso.chainintegrate.it/.git/HEAD`, which returned `ref: refs/heads/main`: the git metadata was publicly readable. The whole history must therefore be treated as public. The audit found no secrets in it, but `.git/config` on the server may contain the credentials used for `git pull` (see below).
+- **Required actions:**
+  1. Check `/.git/config` on the site. If the `url =` line contains a token or password (`https://user:TOKEN@github.com/...`), revoke it on GitHub immediately and switch the server to a read-only deploy key.
+  2. Merge and pull, then check that `/.git/HEAD`, `/.git/config`, `/tools/decrypt.js` and `/README.md` return 404.
+  3. If `/.git/HEAD` is still readable (the host ignores `.htaccess`), move the git directory out of the web root on the server: `mv .git ../cross_chain.git && echo "gitdir: ../cross_chain.git" > .git`. Git keeps working as before (`git pull` included). After that, `/.git` is a one-line file that contains only a path.
+- **Status:** ⏳ Mitigated in the repository. It becomes fixed only after the checks in step 2 pass on the live site.
 
 ### L-01 — Network filter could leave no option selected, causing an uncaught `TypeError`
 
@@ -206,6 +221,13 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 - **Impact:** `python3 -m http.server 8000` listens on `0.0.0.0`, which exposes the working folder to the local network. That folder may contain backups.
 - **Fix:** The instructions now bind to `127.0.0.1`.
 - **Status:** ✅ Fixed. ⏳ The same note applies to anyone serving the other pages locally; the README says so.
+
+### L-09 — Gas price lookup depended on a third-party service on Polygon
+
+- **Files:** `up-deploy-public.html`, `up-invia-fondi.html` (and the new `up-publish-implementation.html`)
+- **Impact:** The pages used ethers' `getFeeData()`. On chainId 137, ethers 6.13.4 does not ask the RPC for the gas price: it calls the Polygon gas-station API (`gasstation.polygon.technology`). If that service is down, rate-limited or blocked by the browser or network, Verify fails with `error encountered with polygon gas station`, even though the RPC works.
+- **Fix:** A new `estimateMaxGasPrice()` helper reads `eth_gasPrice` and the latest block's base fee directly from the selected RPC. It uses the same upper bound as ethers: `2 × baseFee + priority fee`. Signing is unaffected: the wallet computes its own fees, and ethers' JSON-RPC signer does not call `getFeeData()`.
+- **Status:** ✅ Fixed (reproduced in the browser test with Polygon selected, then verified)
 
 ### I-01 — The guide instructs users to reveal and import the controller private key
 
@@ -271,7 +293,7 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 
 | ID | Action | Why |
 |---|---|---|
-| R-01 | Redeploy the website with the fixed pages. | The fixes only protect users once the published copies on `chainintegrate.it` are replaced. |
+| R-01 | Redeploy the website with the fixed pages. | The fixes only protect users once the published copies on `crosschain-lukso.chainintegrate.it` are replaced. |
 | R-02 | Implement a CSP (I-03) and serve the site with `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` and `frame-ancestors 'none'`. | Defence in depth, anti-clickjacking. |
 | R-03 | Re-test all RPC endpoints (L-07), and whenever the ethers version is bumped, update the SRI hash (`openssl dgst -sha384 -binary ethers.umd.min.js \| openssl base64 -A`). | Otherwise a version bump breaks the pages or silently drops the integrity protection. |
 | R-04 | Consider moving the shared code (chain list, decoding, `checkChains`, `escapeHtml`) into one versioned JS file. | Six copies of the same logic had drifted apart. That drift caused several of the findings above. |

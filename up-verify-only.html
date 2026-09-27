@@ -10,12 +10,12 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="UP Deploy — Sola Verifica — ChainIntegrate">
 <meta property="og:description" content="Verifica in sola lettura se la tua LUKSO Universal Profile può essere rideployata correttamente su un'altra rete.">
-<meta property="og:image" content="https://chainintegrate.it/banner.png">
-<meta property="og:url" content="https://chainintegrate.it/up-verify-only.html">
+<meta property="og:image" content="https://crosschain-lukso.chainintegrate.it/banner.png">
+<meta property="og:url" content="https://crosschain-lukso.chainintegrate.it/up-verify-only.html">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="UP Deploy — Sola Verifica — ChainIntegrate">
 <meta name="twitter:description" content="Verifica in sola lettura se la tua LUKSO Universal Profile può essere rideployata correttamente su un'altra rete.">
-<meta name="twitter:image" content="https://chainintegrate.it/banner.png">
+<meta name="twitter:image" content="https://crosschain-lukso.chainintegrate.it/banner.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
   :root {
@@ -174,6 +174,7 @@ const I18N = {
     primaryImplMissing: (v) => `  l'implementazione LSP0 (${v.addr}) non ha bytecode qui — le chiamate alla UP andrebbero a vuoto senza errore.`,
     secondaryImplMissing: (v) => `  l'implementazione Key Manager (${v.addr}) non ha bytecode qui — le chiamate al Key Manager andrebbero a vuoto senza errore.`,
     genericErrorLog: (v) => `Errore: ${v.err}`,
+    publishLinkText: "→ Pubblica le implementazioni mancanti su questa rete",
     wrongSelectorErr: (v) => `la calldata non inizia con il selettore di deployERC1167Proxies (0x6a66a753), ma con ${v.sel}`,
     rpcChainMismatchErr: (v) => `❌ L'RPC risponde con chainId ${v.rpcChainId}, ma la rete selezionata è ${v.netName} (chainId ${v.chainId}): il risultato non sarebbe affidabile.`,
     invalidExpectedErr: "❌ L'indirizzo UP atteso non è un indirizzo valido.",
@@ -229,6 +230,7 @@ const I18N = {
     primaryImplMissing: (v) => `  the LSP0 implementation (${v.addr}) has no bytecode here — calls to the UP would silently do nothing.`,
     secondaryImplMissing: (v) => `  the Key Manager implementation (${v.addr}) has no bytecode here — calls to the Key Manager would silently do nothing.`,
     genericErrorLog: (v) => `Error: ${v.err}`,
+    publishLinkText: "→ Publish the missing implementations on this network",
     wrongSelectorErr: (v) => `the calldata does not start with the deployERC1167Proxies selector (0x6a66a753), but with ${v.sel}`,
     rpcChainMismatchErr: (v) => `❌ The RPC answers with chainId ${v.rpcChainId}, but the selected network is ${v.netName} (chainId ${v.chainId}): the result would not be reliable.`,
     invalidExpectedErr: "❌ The expected UP address is not a valid address.",
@@ -326,6 +328,22 @@ const CHAINS = [
   { key: "sei", name: "Sei", chainId: 1329, rpc: "https://evm-rpc.sei-apis.com", explorer: "https://seitrace.com/tx/", currency: "SEI" },
   { key: "custom", name: "Custom RPC...", chainId: null, rpc: null, explorer: null, currency: "?" },
 ];
+
+// Link to the publish page, pre-filled with the missing implementations and the network.
+function showPublishLink(net, impls) {
+  const params = new URLSearchParams({ impl: impls.join(",") });
+  if (net.key && net.key !== "custom") params.set("network", net.key);
+  const box = document.createElement("div");
+  box.style.cssText = "margin-top:10px; padding:12px 14px; border:1px solid var(--warn); border-radius:8px; background:rgba(224,168,60,0.1);";
+  const a = document.createElement("a");
+  a.href = "up-publish-implementation.html?" + params.toString();
+  a.target = "_blank";
+  a.rel = "noopener";
+  a.style.cssText = "color: var(--warn); font-weight: 700; text-decoration: none;";
+  a.textContent = t("publishLinkText");
+  box.appendChild(a);
+  $("log").appendChild(box);
+}
 
 function log(msg, cls) {
   const l = document.createElement("div");
@@ -496,6 +514,7 @@ $("verifyBtn").addEventListener("click", async () => {
       log(t("implWarnHeader"), "line-warn");
       if (!primaryImplOk) log(t("primaryImplMissing", { addr: d.primary.impl }), "line-warn");
       if (!secondaryImplOk) log(t("secondaryImplMissing", { addr: d.secondary.impl }), "line-warn");
+      showPublishLink(net, [!primaryImplOk && d.primary.impl, !secondaryImplOk && d.secondary.impl].filter(Boolean));
     }
   } catch (e) {
     log(t("genericErrorLog", { err: e.shortMessage || e.message }), "line-err");

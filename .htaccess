@@ -1,0 +1,7 @@
+# The website is deployed with `git pull` into the web root, so the whole repository ends up
+# on the server. Only the pages, images and guide-assets/ are website content: everything else
+# (git metadata, offline tools, documentation) must not be served. Apache (mod_alias).
+RedirectMatch 404 "/\.git(/|$)"
+RedirectMatch 404 "/\.(gitignore|htaccess)$"
+RedirectMatch 404 "/tools(/|$)"
+RedirectMatch 404 "\.md$"

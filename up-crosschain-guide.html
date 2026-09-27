@@ -10,12 +10,12 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="Replicating a Universal Profile Across Chains — ChainIntegrate">
 <meta property="og:description" content="Guida passo-passo per rideployare la tua LUKSO Universal Profile allo stesso indirizzo su un'altra rete EVM.">
-<meta property="og:image" content="https://chainintegrate.it/banner.png">
-<meta property="og:url" content="https://chainintegrate.it/up-crosschain-guide.html">
+<meta property="og:image" content="https://crosschain-lukso.chainintegrate.it/banner.png">
+<meta property="og:url" content="https://crosschain-lukso.chainintegrate.it/up-crosschain-guide.html">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Replicating a Universal Profile Across Chains — ChainIntegrate">
 <meta name="twitter:description" content="Guida passo-passo per rideployare la tua LUKSO Universal Profile allo stesso indirizzo su un'altra rete EVM.">
-<meta name="twitter:image" content="https://chainintegrate.it/banner.png">
+<meta name="twitter:image" content="https://crosschain-lukso.chainintegrate.it/banner.png">
 <style>
   :root {
     --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
@@ -225,6 +225,7 @@
   <li><a href="up-verify-only.html">Verify only</a> — check whether a deploy already exists on another chain. It only reads public data from an RPC: no wallet is required, but you can optionally connect your Universal Profile to auto-fill the address it checks for, instead of typing it by hand.</li>
   <li><a href="up-test-operazione.html">Test</a> — confirm your controller can operate the deployed profile.</li>
   <li><a href="up-invia-fondi.html">Send</a> — transfer native currency from the profile to another address.</li>
+  <li><a href="up-publish-implementation.html">Publish implementation</a> — if the Verify or Deploy tool reports that your profile's LSP0 or Key Manager implementation is missing on the target chain, publish it there at the same address, by replaying LUKSO's original deterministic deploy. Anyone can do it; it only costs gas.</li>
 </ul>
 
 <div class="site-footer">
@@ -384,6 +385,7 @@
   <li><a href="up-verify-only.html">Sola verifica</a> — controlla se un deploy esiste già su un'altra rete. Legge solo dati pubblici da un RPC: non serve nessun wallet, ma puoi connettere facoltativamente la tua Universal Profile per compilare automaticamente l'indirizzo da controllare, invece di digitarlo a mano.</li>
   <li><a href="up-test-operazione.html">Test</a> — conferma che il tuo controller possa operare il profilo deployato.</li>
   <li><a href="up-invia-fondi.html">Invio</a> — trasferisce valuta nativa dal profilo a un altro indirizzo.</li>
+  <li><a href="up-publish-implementation.html">Pubblica implementazione</a> — se la pagina di Verifica o di Deploy segnala che l'implementazione LSP0 o Key Manager del tuo profilo manca sulla rete di destinazione, la pubblica lì allo stesso indirizzo, ripetendo il deploy deterministico originale di LUKSO. Può farlo chiunque, costa solo gas.</li>
 </ul>
 
 <div class="site-footer">
