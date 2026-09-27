@@ -162,7 +162,12 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
   - `tools/decrypt.js`, which should only be used offline by expert users;
   - `README.md` and `AUDIT.md`, the internal documentation and audit report.
 - **Fix:** A root `.htaccess` returns 404 for `.git/`, `.gitignore`, `.htaccess`, `tools/` and every `.md` file (Apache, mod_alias). The README documents the nginx equivalent, an optional sparse checkout that keeps `tools/` off the server, and the URLs to check after each deploy.
-- **Status:** ⏳ Mitigated. `.htaccess` only works on Apache with overrides allowed, and the live site could not be reached from the audit environment. Check after the next deploy that `/.git/HEAD`, `/tools/decrypt.js` and `/README.md` return 404.
+- **Confirmed:** on 2026-09-27 the maintainer checked `https://crosschain-lukso.chainintegrate.it/.git/HEAD`, which returned `ref: refs/heads/main`: the git metadata was publicly readable. The whole history must therefore be treated as public. The audit found no secrets in it, but `.git/config` on the server may contain the credentials used for `git pull` (see below).
+- **Required actions:**
+  1. Check `/.git/config` on the site. If the `url =` line contains a token or password (`https://user:TOKEN@github.com/...`), revoke it on GitHub immediately and switch the server to a read-only deploy key.
+  2. Merge and pull, then check that `/.git/HEAD`, `/.git/config`, `/tools/decrypt.js` and `/README.md` return 404.
+  3. If `/.git/HEAD` is still readable (the host ignores `.htaccess`), move the git directory out of the web root on the server: `mv .git ../cross_chain.git && git init --separate-git-dir=../cross_chain.git` would recreate it; the simplest form is `mv .git ../cross_chain.git && echo "gitdir: ../cross_chain.git" > .git`. After that, `/.git` is a one-line file that contains only a path.
+- **Status:** ⏳ Mitigated in the repository. It becomes fixed only after the checks in step 2 pass on the live site.
 
 ### L-01 — Network filter could leave no option selected, causing an uncaught `TypeError`
 
