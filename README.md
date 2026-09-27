@@ -1,16 +1,89 @@
-# Cross_Chain
-Repository privato per l'adozione della cross chain
+# Cross_Chain — LUKSO Universal Profile cross-chain toolkit
 
-Cosa è presente nel repo
+Browser tools by [ChainIntegrate](https://chainintegrate.it) for redeploying an existing **LUKSO Universal Profile (UP)** at the **same address** on other EVM chains, then checking and using it there.
 
-1) Script di decrypt per recuperare le private key dei controller registrati nel file di backup - decrypt.js
-2) Pagina in locale per il deploy in multichain - up.multichain-deploy-v2.html
-3) Pagina locale per test operazione su account deployato su altre chain up-test.operazione.html
-4) Pagina locale per invio fondi con account deployato su altre chain up-invia-fondi.html
-5) Pagina pubblica per deploy in multichain - up-deploy-public.html
-6) Pagina di verifica di corretto deplly - up-verify-only.html
-7) Pagina guida how to deply multichain - up-crosschain-guide.html
-8) file immagini per le pagine base
-9) cartella file immagini per la pagina guida
+## How it works
 
-Lo scopo del repo è di creare un ecosistema di facile utilizzo per le persone che hanno almeno una buona dimestichezza con l'ecosistema Lukso e voglio utilizzare il loro steso account in altre chain
+A UP is created by LUKSO's `LSP23LinkedContractsFactory`, which lives at the same address (`0x2300000A84D25dF63081feAa37ba6b62C4c89a30`) on every EVM chain where it has been published. The profile's address is a `CREATE2` result computed from the **entire original creation calldata** (`deployERC1167Proxies`, selector `0x6a66a753`). If you send that exact calldata to the factory on another chain, you get the same UP (LSP0) and Key Manager (LSP6) addresses there. The controller that gets control of the profile is the one named in that calldata.
+
+The tools never ask for a private key. The calldata is public on-chain data, and every transaction is signed in your own wallet.
+
+## Contents
+
+| File | Purpose |
+|---|---|
+| `up-deploy-public.html` | **Deploy tool (public).** Connects your UP, decodes the calldata and checks that it produces your address. It shows every controller and its permissions, then checks the target chain: wallet/RPC chain match, free addresses, implementation bytecode, gas and balance. Finally it deploys and verifies the resulting bytecode. It also has an optional LYX donation panel. |
+| `up-verify-only.html` | **Verify only.** A read-only check of whether a correct deploy of a given calldata exists on a chain, and whether the implementations it points to are present there. |
+| `up-test-operazione.html` | **Test.** Writes a test key (`up.test.ping`) through the Key Manager and reads it back, to prove the controller can operate the profile on the new chain. |
+| `up-invia-fondi.html` | **Send funds.** Transfers the chain's native currency from the redeployed UP through `KeyManager.execute → ERC725X.execute`. |
+| `up-multichain-deploy-v2.html` | **Local deploy tool.** A lighter, English-only version of the deploy flow, meant to be served from `localhost`. |
+| `up-crosschain-guide.html` | **Step-by-step guide (EN/IT)**: how the address is derived, how to find your calldata, how to check the controller, and how to deploy and operate. |
+| `decrypt.js` | Offline Node.js helper that decrypts a secret from a UP browser-extension backup (AES-256-GCM, PBKDF2-SHA256). It prompts for its inputs and never stores them. |
+| `guide-assets/` | Screenshots used by the guide. |
+| `banner.png`, `logo.png`, `favicon.ico` | Branding for the pages. |
+| `AUDIT.md` | Full security, privacy and bug audit report. |
+
+## Usage
+
+### Online
+
+The pages are published at `https://chainintegrate.it/`. Start with the guide: `up-crosschain-guide.html`.
+
+### Locally
+
+Wallet extensions usually do not inject into `file://` pages, so serve the folder on the loopback interface only:
+
+```bash
+python3 -m http.server 8000 --bind 127.0.0.1
+# or
+npx serve -l tcp://127.0.0.1:3000 .
+```
+
+Then open `http://localhost:8000/up-deploy-public.html`.
+
+Do not serve a folder that contains wallet backups or other private files.
+
+### `decrypt.js`
+
+```bash
+node decrypt.js
+```
+
+The script asks for SALT, IV and SECRET (base64, from your backup) and for the password, which is not echoed. Run it offline on a trusted machine, and clear your terminal afterwards. **Do not paste your values into the file.**
+
+## Requirements
+
+- A browser with the **Universal Profile extension**, used to read your UP address.
+- A **signing wallet** such as MetaMask, connected to the target chain. For deploys it can be any funded account. For Test and Send it must be the profile's controller.
+- The original deployment calldata of your UP. The guide explains how to find it on the LUKSO explorer.
+
+## Security and privacy notes
+
+- **Irreversible actions.** Deploys and transfers cannot be undone. Try a testnet or a small amount first.
+- **Chain checks.** Every transaction requires the signing wallet, the RPC and the selected network to be on the same chain. A check is invalidated as soon as any input, the network or the wallet account changes.
+- **Private key handling.** Operating the profile on another chain needs the original controller key (guide, steps 1 and 8). Import it into a dedicated wallet, and treat it as the key that also controls your profile on LUKSO.
+- **Third parties.** The only third-party script is `ethers 6.13.4` from cdnjs, pinned with Subresource Integrity. There are no analytics or trackers. Checks are made through public RPCs, which can see your IP address and the addresses you query. You can use the "Custom RPC" option to choose your own provider.
+- **Support.** Support will never ask for a private key, seed phrase or backup password.
+
+## Audit trail
+
+| Date | Scope | Result | Report |
+|---|---|---|---|
+| 2026-09-27 | Whole repository and git history (commit `f56dd29`) | 3 High, 7 Medium, 8 Low, 5 Informational. All High and Medium findings are fixed. | [AUDIT.md](AUDIT.md) |
+
+Main fixes from the 2026-09-27 audit:
+
+- Wallet and RPC chain verification before every transaction. Previously the Send and Test pages could sign on the wrong chain, including LUKSO.
+- A verification is invalidated whenever inputs, the network or the wallet account change.
+- Third-party profile data (labels, controllers, calldata) removed from the local deploy page.
+- HTML escaping of all untrusted values (a DOM XSS through pasted calldata is fixed).
+- The Key Manager is derived from the calldata or read from `owner()`, instead of using a hard-coded implementation.
+- Correct LSP6 permission classification: admin-level permissions are always flagged.
+- SRI on the ethers script, and a no-referrer policy.
+- `decrypt.js` rewritten: no embedded backup data, hidden password prompt, input validation.
+
+Open items that need the maintainer to act (history purge, screenshots, CSP, RPC refresh) are listed in [AUDIT.md §5](AUDIT.md#5-residual-risks-and-recommendations).
+
+## License
+
+No license has been declared yet. All rights reserved by ChainIntegrate unless stated otherwise.

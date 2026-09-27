@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
 <title>Replicating a Universal Profile Across Chains — ChainIntegrate</title>
 <meta name="description" content="Guida passo-passo per rideployare la tua LUKSO Universal Profile allo stesso indirizzo su un'altra rete EVM.">
 <link rel="icon" href="favicon.ico">
@@ -112,7 +113,7 @@
   <div class="step-num">2</div>
   <div class="step-body">
     <h3>Find your UP's original creation transaction</h3>
-    <p>Open your UP's address on the <a href="https://explorer.execution.mainnet.lukso.network" target="_blank">LUKSO mainnet explorer</a>, on its <b>Details</b> tab. Find the <b>Creator</b> row — it shows the creator's address <i>"at txn"</i> followed by a transaction hash. Click that transaction hash link: it takes you straight to the creation transaction.</p>
+    <p>Open your UP's address on the <a href="https://explorer.execution.mainnet.lukso.network" target="_blank" rel="noopener noreferrer">LUKSO mainnet explorer</a>, on its <b>Details</b> tab. Find the <b>Creator</b> row — it shows the creator's address <i>"at txn"</i> followed by a transaction hash. Click that transaction hash link: it takes you straight to the creation transaction.</p>
     <img class="shot" src="guide-assets/step-genesis-link.png" alt="Contract details page with the Creator row showing 'at txn' followed by the creation transaction hash link">
     <div class="shot-caption">On the Details tab, the "at txn" link next to Creator is the shortcut straight to the creation transaction — no need to scroll through the transaction list.</div>
     <p>Once you're on that transaction's page, switch to its <b>Raw trace</b> tab.</p>
@@ -182,7 +183,7 @@
 </div>
 
 <div class="note ok">
-  <b>Two different connections, two different jobs — this trips people up.</b> On the Test and Send tools, "Connect your Universal Profile" only reads your UP's address, on LUKSO, so you don't have to copy-paste it — no signature happens there. The wallet that actually <i>operates</i> the profile is the second connection, the "signing wallet" (MetaMask with the imported controller key), and it must be connected to the <b>destination chain</b> — the network where you redeployed the profile in steps 6–7 — not to LUKSO. It's completely normal to have both the UP extension and MetaMask active in the same browser at once: each one does a different job, on a different network. Both tools show you which network the signing wallet is currently on, right next to its address — check that it matches the network you selected before doing anything.
+  <b>Two different connections, two different jobs — this trips people up.</b> On the Test and Send tools, "Connect your Universal Profile" only reads your UP's address, on LUKSO, so you don't have to copy-paste it — no signature happens there. The wallet that actually <i>operates</i> the profile is the second connection, the "signing wallet" (MetaMask with the imported controller key), and it must be connected to the <b>destination chain</b> — the network where you redeployed the profile in steps 6–7 — not to LUKSO. It's completely normal to have both the UP extension and MetaMask active in the same browser at once: each one does a different job, on a different network. Both tools show you which network the signing wallet is currently on, right next to its address, and refuse to send anything if the wallet, the RPC and the network you selected are not the same chain — still, check it yourself before doing anything.
 </div>
 
 <h2>What these tools do — and don't do</h2>
@@ -190,6 +191,7 @@
   <li>They never ask for a private key. The only thing you paste in is calldata — public on-chain data.</li>
   <li>Signing always happens in your own wallet (MetaMask or similar). These pages only prepare the transaction and hand it to your wallet for approval.</li>
   <li>They perform address and bytecode verification automatically, so a mistake in the calldata is caught before you sign, not after.</li>
+  <li>They check that the signing wallet, the RPC and the selected network are the same chain before every transaction, and invalidate a previous check as soon as you change any input.</li>
   <li>They don't manage your keys, your backups, or your security — that responsibility stays entirely with you. If you're not confident distinguishing your own controllers or reading a block explorer, get help from someone who is before proceeding.</li>
 </ul>
 
@@ -252,7 +254,7 @@
   <div class="step-num">2</div>
   <div class="step-body">
     <h3>Trova la transazione di creazione originale della tua UP</h3>
-    <p>Apri l'indirizzo della tua UP sull'<a href="https://explorer.execution.mainnet.lukso.network" target="_blank">explorer di LUKSO mainnet</a>, nella scheda <b>Details</b>. Trova la riga <b>Creator</b> — mostra l'indirizzo del creatore <i>"at txn"</i> seguito da un hash di transazione. Clicca su quel link dell'hash: ti porta direttamente alla transazione di creazione.</p>
+    <p>Apri l'indirizzo della tua UP sull'<a href="https://explorer.execution.mainnet.lukso.network" target="_blank" rel="noopener noreferrer">explorer di LUKSO mainnet</a>, nella scheda <b>Details</b>. Trova la riga <b>Creator</b> — mostra l'indirizzo del creatore <i>"at txn"</i> seguito da un hash di transazione. Clicca su quel link dell'hash: ti porta direttamente alla transazione di creazione.</p>
     <img class="shot" src="guide-assets/step-genesis-link.png" alt="Pagina dei dettagli del contratto con la riga Creator che mostra 'at txn' seguito dal link all'hash della transazione di creazione">
     <div class="shot-caption">Nella scheda Details, il link "at txn" accanto a Creator è la scorciatoia diretta alla transazione di creazione — non serve scorrere l'elenco delle transazioni.</div>
     <p>Una volta sulla pagina di quella transazione, passa alla scheda <b>Raw trace</b>.</p>
@@ -322,7 +324,7 @@
 </div>
 
 <div class="note ok">
-  <b>Due collegamenti diversi, due compiti diversi — qui è facile confondersi.</b> Nelle pagine di Test e Invio, "Connetti la tua Universal Profile" serve solo a leggere l'indirizzo della tua UP, su LUKSO, così non devi copiarlo a mano — nessuna firma avviene in quel passaggio. Il wallet che <i>opera</i> davvero il profilo è il secondo collegamento, il "wallet firmatario" (MetaMask con la chiave del controller importata), e deve essere connesso alla <b>rete di destinazione</b> — quella dove hai rideployato il profilo ai passi 6–7 — non a LUKSO. È del tutto normale avere sia l'estensione UP che MetaMask attivi insieme nello stesso browser: ognuno fa un lavoro diverso, su una rete diversa. Entrambe le pagine mostrano su quale rete è connesso in questo momento il wallet firmatario, accanto al suo indirizzo — controlla che corrisponda alla rete selezionata prima di fare qualsiasi cosa.
+  <b>Due collegamenti diversi, due compiti diversi — qui è facile confondersi.</b> Nelle pagine di Test e Invio, "Connetti la tua Universal Profile" serve solo a leggere l'indirizzo della tua UP, su LUKSO, così non devi copiarlo a mano — nessuna firma avviene in quel passaggio. Il wallet che <i>opera</i> davvero il profilo è il secondo collegamento, il "wallet firmatario" (MetaMask con la chiave del controller importata), e deve essere connesso alla <b>rete di destinazione</b> — quella dove hai rideployato il profilo ai passi 6–7 — non a LUKSO. È del tutto normale avere sia l'estensione UP che MetaMask attivi insieme nello stesso browser: ognuno fa un lavoro diverso, su una rete diversa. Entrambe le pagine mostrano su quale rete è connesso in questo momento il wallet firmatario, accanto al suo indirizzo, e si rifiutano di inviare qualsiasi cosa se wallet, RPC e rete selezionata non sono la stessa chain — controlla comunque tu stesso prima di fare qualsiasi cosa.
 </div>
 
 <h2>Cosa fanno questi strumenti — e cosa non fanno</h2>
@@ -330,6 +332,7 @@
   <li>Non chiedono mai una chiave privata. L'unica cosa che incolli è la calldata — dato pubblico on-chain.</li>
   <li>La firma avviene sempre nel tuo wallet (MetaMask o simili). Queste pagine preparano solo la transazione e la passano al tuo wallet per l'approvazione.</li>
   <li>Eseguono automaticamente la verifica di indirizzo e bytecode, così un errore nella calldata viene intercettato prima della firma, non dopo.</li>
+  <li>Prima di ogni transazione controllano che wallet firmatario, RPC e rete selezionata siano la stessa chain, e annullano una verifica precedente appena modifichi un dato.</li>
   <li>Non gestiscono le tue chiavi, i tuoi backup né la tua sicurezza — questa responsabilità resta interamente tua. Se non sei sicuro di distinguere i tuoi controller o di leggere un block explorer, fatti aiutare da chi lo sa fare prima di procedere.</li>
 </ul>
 

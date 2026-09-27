@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
 <title>UP Deploy Cross-Chain — ChainIntegrate</title>
 <meta name="description" content="Rideploy la tua LUKSO Universal Profile allo stesso indirizzo su un'altra rete EVM, tramite LSP23LinkedContractsFactory. Nessuna chiave privata richiesta: firmi sempre dal tuo wallet.">
 <link rel="icon" href="favicon.ico">
@@ -15,7 +16,7 @@
 <meta name="twitter:title" content="UP Deploy Cross-Chain — ChainIntegrate">
 <meta name="twitter:description" content="Rideploy la tua LUKSO Universal Profile allo stesso indirizzo su un'altra rete EVM. Nessuna chiave privata richiesta.">
 <meta name="twitter:image" content="https://chainintegrate.it/banner.png">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
   :root {
     --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
@@ -154,6 +155,9 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
+// Every value that did not originate in this file (user input, wallet responses, RPC or
+// library error messages) must be escaped before being interpolated into innerHTML.
+const escapeHtml = (v) => String(v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 // ==================== I18N ====================
 let LANG = "it";
@@ -211,9 +215,15 @@ const I18N = {
     noControllersFound: "Nessun controller con permessi trovato nel formato atteso",
     sysInfraBadge: (v) => `infrastruttura di sistema — ${v.label}`,
     fullControlBadge: "CONTROLLO TOTALE (ALL_PERMISSIONS)",
+    privilegedBadge: "PERMESSI AMMINISTRATIVI — può cambiare owner/controller o eseguire delegatecall",
     limitedPermsBadge: "permessi limitati — verifica a cosa servono prima di procedere",
     noFlags: "(nessun flag)",
     decodeErrorMsg: (v) => `Errore di decodifica: ${v.err}. Controlla di aver incollato la calldata per intero.`,
+    wrongSelectorErr: (v) => `la calldata non inizia con il selettore di deployERC1167Proxies (0x6a66a753), ma con ${v.sel}`,
+    staleCheckLog: "Dati o rete modificati dopo la verifica: premi di nuovo Verifica.",
+    rpcChainMismatchErr: (v) => `❌ BLOCCANTE — l'RPC risponde con chainId ${v.rpcChainId}, ma la rete selezionata è ${v.netName} (chainId ${v.chainId}). Non procedere.`,
+    signerChangedErr: (v) => `❌ BLOCCANTE — l'account attivo nel wallet (${v.now}) non è quello verificato (${v.checked}). Rifai la verifica.`,
+    noGasPriceErr: "❌ BLOCCANTE — l'RPC non ha restituito un prezzo del gas.",
 
     knownLsp1Label: "LSP1UniversalReceiverDelegateUP (contratto ufficiale LUKSO)",
     knownLsp1Note: "Gestisce automaticamente la ricezione di asset (LSP7/LSP8) e vault (LSP9) da parte della UP, aggiornando le liste LSP5ReceivedAssets/LSP10Vaults nello storage. I permessi che riceve (tipicamente SETDATA, SUPER_SETDATA, REENTRANCY) servono esclusivamente a questo — non includono TRANSFERVALUE, CALL né ADDCONTROLLER: non può muovere fondi, eseguire chiamate arbitrarie o cambiare i controller. È lo stesso indirizzo su ogni rete/profilo perché è infrastruttura condivisa, non specifica al tuo profilo.",
@@ -332,9 +342,15 @@ const I18N = {
     noControllersFound: "No controller with permissions found in the expected format",
     sysInfraBadge: (v) => `system infrastructure — ${v.label}`,
     fullControlBadge: "FULL CONTROL (ALL_PERMISSIONS)",
+    privilegedBadge: "ADMIN-LEVEL PERMISSIONS — can change owner/controllers or perform delegatecall",
     limitedPermsBadge: "limited permissions — check what they're for before proceeding",
     noFlags: "(no flags)",
     decodeErrorMsg: (v) => `Decode error: ${v.err}. Check that you pasted the whole calldata.`,
+    wrongSelectorErr: (v) => `the calldata does not start with the deployERC1167Proxies selector (0x6a66a753), but with ${v.sel}`,
+    staleCheckLog: "Data or network changed after verification: press Verify again.",
+    rpcChainMismatchErr: (v) => `❌ BLOCKING — the RPC answers with chainId ${v.rpcChainId}, but the selected network is ${v.netName} (chainId ${v.chainId}). Do not proceed.`,
+    signerChangedErr: (v) => `❌ BLOCKING — the active wallet account (${v.now}) is not the one that was verified (${v.checked}). Verify again.`,
+    noGasPriceErr: "❌ BLOCKING — the RPC did not return a gas price.",
 
     knownLsp1Label: "LSP1UniversalReceiverDelegateUP (official LUKSO contract)",
     knownLsp1Note: "Automatically handles the UP's receipt of assets (LSP7/LSP8) and vaults (LSP9), updating the LSP5ReceivedAssets/LSP10Vaults lists in storage. The permissions it receives (typically SETDATA, SUPER_SETDATA, REENTRANCY) serve only this purpose — they don't include TRANSFERVALUE, CALL or ADDCONTROLLER: it cannot move funds, make arbitrary calls, or change controllers. It's the same address on every network/profile because it's shared infrastructure, not specific to your profile.",
@@ -435,15 +451,24 @@ $("langToggle").addEventListener("click", () => {
 const FACTORY_ADDRESS = "0x2300000A84D25dF63081feAa37ba6b62C4c89a30"; // stesso indirizzo su ogni rete EVM
 const SECONDARY_IMPL = "0x2fe3aed98684e7351ad2d408a43ce09a738bf8a4"; // LSP6KeyManagerInit (LUKSO ufficiale)
 const DONATE_ADDRESS = "0x4a2605796e0d91A9667d6E30365aEEC384C48c27"; // ChainIntegrate
-const ALL_PERMISSIONS_HEX = "0x00000000000000000000000000000000000000000000000000000000007f3f06";
-const PERM_PREFIX = "4b80742de2bf82acb3630000"; // bytes12: keccak("AddressPermissions:Permissions:")[0:10] + padding
+const DEPLOY_SELECTOR = "0x6a66a753"; // deployERC1167Proxies(...) on LSP23LinkedContractsFactory
+// Set of permissions the UP browser extension grants to its main controller. LSP6
+// ALL_REGULAR_PERMISSIONS (0x7f3f7f) is a superset of it, so "full control" is detected
+// as "contains every bit of this mask", not as strict equality.
+const FULL_CONTROL_MASK = 0x7f3f06n;
+// Permissions that allow taking over the profile (owner/controller changes) or running
+// arbitrary code in its context: always flagged, even when the full set is not present.
+const PRIVILEGED_MASK = 0x1n | 0x2n | 0x4n | 0x4000n | 0x8000n; // CHANGEOWNER, ADDCONTROLLER, EDITPERMISSIONS, SUPER_DELEGATECALL, DELEGATECALL
+// Data key prefix of LSP6 "AddressPermissions:Permissions:<address>" (bytes10 + bytes2 padding).
+const PERM_PREFIX = "4b80742de2bf82acb3630000";
 
+// Bit order as defined in @lukso/lsp6-contracts LSP6Constants.sol (bits 0..22).
 const PERMISSION_BITS = [
   "CHANGEOWNER","ADDCONTROLLER","EDITPERMISSIONS","ADDEXTENSIONS","CHANGEEXTENSIONS",
   "ADDUNIVERSALRECEIVERDELEGATE","CHANGEUNIVERSALRECEIVERDELEGATE","REENTRANCY",
   "SUPER_TRANSFERVALUE","TRANSFERVALUE","SUPER_CALL","CALL","SUPER_STATICCALL","STATICCALL",
   "SUPER_DELEGATECALL","DELEGATECALL","DEPLOY","SUPER_SETDATA","SETDATA","ENCRYPT","DECRYPT",
-  "SIGN","EXECUTE_RELAY_CALL","ERC1271_SIGN"
+  "SIGN","EXECUTE_RELAY_CALL"
 ];
 
 // Indirizzi di infrastruttura LUKSO ufficiale, riconoscibili e non legati a un singolo profilo.
@@ -555,7 +580,11 @@ function renderNetworkOptions(filter) {
   });
 }
 renderNetworkOptions("");
-$("networkFilter").addEventListener("input", (e) => renderNetworkOptions(e.target.value));
+$("networkFilter").addEventListener("input", (e) => {
+  renderNetworkOptions(e.target.value);
+  // Filtering can silently change the selected option: propagate it like a user selection.
+  networkSelectEl.dispatchEvent(new Event("change"));
+});
 networkSelectEl.addEventListener("change", () => {
   $("customRpcWrap").style.display = networkSelectEl.value === "custom" ? "block" : "none";
 });
@@ -580,7 +609,7 @@ $("connectUp").addEventListener("click", async () => {
     const accounts = await window.lukso.request({ method: "eth_requestAccounts" });
     const upAddress = accounts[0];
     upAddressConnected = upAddress;
-    $("upStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${upAddress}`;
+    $("upStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${escapeHtml(upAddress)}`;
     $("expectedAddress").value = ethers.getAddress(upAddress);
     $("decodeBtn").disabled = false;
     $("checkBtn").disabled = false;
@@ -602,9 +631,11 @@ function minimalProxyRuntimeCode(impl) {
   return "0x363d3d373d3d3d363d73" + impl.slice(2).toLowerCase() + "5af43d82803e903d91602b57fd5bf3";
 }
 
-function computeKeyManagerAddress(primaryAddress) {
+// LSP23: the secondary proxy is cloned from the implementation named in the calldata,
+// with salt keccak256(abi.encodePacked(primaryAddress)). Never assume a fixed implementation.
+function computeKeyManagerAddress(primaryAddress, secondaryImpl) {
   const salt = ethers.keccak256(primaryAddress);
-  const initcodeHash = ethers.keccak256(minimalProxyInitcode(SECONDARY_IMPL));
+  const initcodeHash = ethers.keccak256(minimalProxyInitcode(secondaryImpl));
   return ethers.getCreate2Address(FACTORY_ADDRESS, salt, initcodeHash);
 }
 
@@ -613,12 +644,13 @@ function decodePermissions(valueHex) {
   if (v.startsWith("0x")) v = v.slice(2);
   v = v.padStart(64, "0");
   const asBigInt = BigInt("0x" + v);
-  const isAll = ("0x" + v) === ALL_PERMISSIONS_HEX;
+  const isAll = (asBigInt & FULL_CONTROL_MASK) === FULL_CONTROL_MASK;
+  const isPrivileged = (asBigInt & PRIVILEGED_MASK) !== 0n;
   const flags = [];
-  for (let bit = 0; bit < PERMISSION_BITS.length; bit++) {
-    if ((asBigInt >> BigInt(bit)) & 1n) flags.push(PERMISSION_BITS[bit]);
+  for (let bit = 0; bit < 256; bit++) {
+    if ((asBigInt >> BigInt(bit)) & 1n) flags.push(PERMISSION_BITS[bit] || `UNKNOWN_BIT_${bit}`);
   }
-  return { hex: "0x" + v, isAll, flags };
+  return { hex: "0x" + v, isAll, isPrivileged, flags };
 }
 
 let decoded = null;
@@ -627,6 +659,9 @@ function decodeCalldata(calldataHex, expectedAddress) {
   const coder = ethers.AbiCoder.defaultAbiCoder();
   let data = calldataHex.trim();
   if (!data.startsWith("0x")) data = "0x" + data;
+  if (!ethers.isHexString(data)) throw new Error("not a hex string");
+  const selector = data.slice(0, 10).toLowerCase();
+  if (selector !== DEPLOY_SELECTOR) throw new Error(t("wrongSelectorErr", { sel: selector }));
   const body = "0x" + data.slice(10); // strip 4-byte selector
 
   const outerTypes = ["tuple(bytes32,uint256,address,bytes)", "tuple(uint256,address,bytes,bool,bytes)", "address", "bytes"];
@@ -643,7 +678,7 @@ function decodeCalldata(calldataHex, expectedAddress) {
 
   const initcodeHash = ethers.keccak256(minimalProxyInitcode(primary.impl));
   const predictedPrimary = ethers.getCreate2Address(FACTORY_ADDRESS, generatedSalt, initcodeHash);
-  const predictedSecondary = computeKeyManagerAddress(predictedPrimary);
+  const predictedSecondary = computeKeyManagerAddress(predictedPrimary, secondary.impl);
 
   // postDeploymentModuleCalldata è già ABI-encoded (bytes32[] keys, bytes[] values), senza selettore davanti
   let controllers = [];
@@ -682,7 +717,7 @@ function renderDecodeResult(d, expected) {
   if (d.addressMatches === true) {
     html = `<span class="badge ok">${t("matchOk")}</span><br>` + html;
   } else if (d.addressMatches === false) {
-    html = `<span class="badge err">${t("matchFail", { expected })}</span><br>` + html;
+    html = `<span class="badge err">${escapeHtml(t("matchFail", { expected }))}</span><br>` + html;
   } else {
     html = `<span class="badge warn">${t("noExpectedWarn")}</span><br>` + html;
   }
@@ -690,7 +725,7 @@ function renderDecodeResult(d, expected) {
 
   let cHtml = `<label style="margin-top:16px;">${t("controllersFoundLabel")}</label>`;
   if (d.controllersDecodeError) {
-    cHtml += `<div class="ctrl-card"><span class="badge warn">${t("notAutoDecodable")}</span><div class="flags">${t("notAutoDecodableDetail", { err: d.controllersDecodeError })}</div></div>`;
+    cHtml += `<div class="ctrl-card"><span class="badge warn">${t("notAutoDecodable")}</span><div class="flags">${escapeHtml(t("notAutoDecodableDetail", { err: d.controllersDecodeError }))}</div></div>`;
   } else if (d.controllers.length === 0) {
     cHtml += `<div class="ctrl-card"><span class="badge warn">${t("noControllersFound")}</span></div>`;
   } else {
@@ -702,6 +737,8 @@ function renderDecodeResult(d, expected) {
         extra = `<div class="flags" style="margin-top:6px;">${t(known.noteKey)}</div>`;
       } else if (c.isAll) {
         badge = `<span class="badge err">${t("fullControlBadge")}</span>`;
+      } else if (c.isPrivileged) {
+        badge = `<span class="badge err">${t("privilegedBadge")}</span>`;
       } else {
         badge = `<span class="badge warn">${t("limitedPermsBadge")}</span>`;
       }
@@ -726,7 +763,7 @@ function runDecode() {
     decoded = d;
     renderDecodeResult(d, expected);
   } catch (e) {
-    $("decodeStatus").innerHTML = `<span class="badge err">${t("decodeErrorMsg", { err: e.message })}</span>`;
+    $("decodeStatus").innerHTML = `<span class="badge err">${escapeHtml(t("decodeErrorMsg", { err: e.shortMessage || e.message }))}</span>`;
   }
 }
 $("decodeBtn").addEventListener("click", runDecode);
@@ -748,12 +785,13 @@ $("connectSigner").addEventListener("click", async () => {
     const accounts = await candidate.request({ method: "eth_requestAccounts" });
     signerAddress = accounts[0];
     signerProvider = candidate;
+    watchSigner(candidate);
     let netLabel = "";
     try {
       const chainIdHex = await candidate.request({ method: "eth_chainId" });
       netLabel = ` · ${chainDisplayName(parseInt(chainIdHex, 16))}`;
     } catch (e) { /* se non si riesce a leggere la rete, si mostra comunque l'indirizzo */ }
-    $("signerStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${signerAddress}${netLabel}`;
+    $("signerStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${escapeHtml(signerAddress + netLabel)}`;
   } catch (e) {
     $("signerStatus").innerHTML = `<span class="badge err">${t("connectionRejected")}</span>`;
   }
@@ -817,13 +855,55 @@ $("donateBtn").addEventListener("click", async () => {
 
 // --- 4. Verifica e deploy ---
 let lastCheckOk = false;
+let checkedContext = null; // { rpc, chainId, signer } snapshot taken by a successful Verify
+
+// Any change to inputs, network or wallet after a successful Verify invalidates it: the
+// deploy must only ever run against exactly what was verified.
+function invalidateCheck() {
+  if (lastCheckOk) log(t("staleCheckLog"), "line-warn");
+  lastCheckOk = false;
+  checkedContext = null;
+  $("deployBtn").disabled = true;
+}
+["calldataInput", "expectedAddress", "customRpc", "customExplorer"].forEach(id => $(id).addEventListener("input", invalidateCheck));
+networkSelectEl.addEventListener("change", invalidateCheck);
+
+let watchedSigner = null;
+function watchSigner(p) {
+  if (watchedSigner === p || typeof p.on !== "function") return;
+  watchedSigner = p;
+  p.on("chainChanged", invalidateCheck);
+  p.on("accountsChanged", (accs) => { signerAddress = accs && accs[0] ? accs[0] : null; invalidateCheck(); });
+}
+
+// The transaction is signed on the wallet's chain, while every check runs against the RPC:
+// both must be the chain the user selected, otherwise checks and deploy diverge silently.
+async function checkChains(net, provider) {
+  const rpcChainId = Number(await provider.send("eth_chainId", []));
+  const expectedChainId = net.chainId || rpcChainId;
+  if (rpcChainId !== expectedChainId) {
+    return { ok: false, msg: t("rpcChainMismatchErr", { rpcChainId, netName: net.name, chainId: expectedChainId }) };
+  }
+  let walletChainId;
+  try {
+    walletChainId = parseInt(await signerProvider.request({ method: "eth_chainId" }), 16);
+  } catch (e) {
+    return { ok: false, msg: t("walletNetworkCheckFailed", { netName: net.name }) };
+  }
+  if (walletChainId !== expectedChainId) {
+    return { ok: false, msg: t("walletWrongNetwork", { walletChainId, netName: net.name, chainId: expectedChainId }) };
+  }
+  return { ok: true, chainId: expectedChainId };
+}
 
 $("checkBtn").addEventListener("click", async () => {
   $("log").innerHTML = "";
   lastCheckOk = false;
+  checkedContext = null;
   $("deployBtn").disabled = true;
 
-  if (!decoded && $("calldataInput").value.trim()) runDecode();
+  // Always decode the calldata currently in the textarea: never verify a stale decode.
+  if ($("calldataInput").value.trim()) runDecode(); else decoded = null;
 
   if (!decoded) { log(t("decodeCalldataFirstLog"), "line-err"); return; }
   if (decoded.addressMatches !== true) {
@@ -832,27 +912,17 @@ $("checkBtn").addEventListener("click", async () => {
   }
   if (!signerAddress) { log(t("connectSignerFirstLog"), "line-err"); return; }
   const net = getNetwork();
-  if (!net.rpc) { log(t("missingRpcLog"), "line-err"); return; }
-
-  // Controllo bloccante: il wallet potrebbe essere rimasto agganciato a una rete diversa
-  // da quella selezionata nel menu (capita facilmente passando da una pagina/rete all'altra).
-  // Senza questo controllo, la stima gas e il deploy stesso userebbero silenziosamente
-  // la rete sbagliata, con esiti confusi o un create2 revert su un indirizzo già occupato altrove.
-  if (net.chainId) {
-    try {
-      const walletChainIdHex = await signerProvider.request({ method: "eth_chainId" });
-      const walletChainId = parseInt(walletChainIdHex, 16);
-      if (walletChainId !== net.chainId) {
-        log(t("walletWrongNetwork", { walletChainId, netName: net.name, chainId: net.chainId }), "line-err");
-        return;
-      }
-      log(t("walletCorrectNetwork", { chainId: net.chainId }), "line-ok");
-    } catch (e) {
-      log(t("walletNetworkCheckFailed", { netName: net.name }), "line-warn");
-    }
-  }
+  if (!net || !net.rpc) { log(t("missingRpcLog"), "line-err"); return; }
 
   try {
+    // Blocking check: the wallet may still be on a different network than the one selected
+    // (easy when moving between pages/networks), and a custom RPC may point to yet another
+    // chain. Without this, gas estimation and the deploy would silently use different chains.
+    const provider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
+    const chains = await checkChains(net, provider);
+    if (!chains.ok) { log(chains.msg, "line-err"); return; }
+    log(t("walletCorrectNetwork", { chainId: chains.chainId }), "line-ok");
+
     log(t("upExpectedLog", { addr: decoded.predictedPrimary }), "line-dim");
     log(t("kmExpectedLog", { addr: decoded.predictedSecondary }), "line-dim");
     log(t("calldataVerifiedOk"), "line-ok");
@@ -862,15 +932,13 @@ $("checkBtn").addEventListener("click", async () => {
         const known = KNOWN_ADDRESSES[c.address.toLowerCase()];
         if (known) {
           log(t("sysAddrRecognized", { addr: c.address, label: t(known.labelKey) }), "line-dim");
-        } else if (c.isAll) {
+        } else if (c.isAll || c.isPrivileged) {
           log(t("allPermsControllerWarn", { addr: c.address }), "line-warn");
         }
       });
     } else {
       log(t("noAutoControllerWarn"), "line-warn");
     }
-
-    const provider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
 
     const primaryCode = await provider.getCode(decoded.predictedPrimary);
     if (primaryCode !== "0x") {
@@ -917,6 +985,7 @@ $("checkBtn").addEventListener("click", async () => {
 
     const feeData = await provider.getFeeData();
     const gasPrice = feeData.maxFeePerGas || feeData.gasPrice;
+    if (!gasPrice) { log(t("noGasPriceErr"), "line-err"); return; }
     const gasCost = gasEstimate * gasPrice;
     const gasCostWithMargin = gasCost + gasCost / 4n + value;
     const signerBalance = await provider.getBalance(signerAddress);
@@ -928,6 +997,7 @@ $("checkBtn").addEventListener("click", async () => {
     log(t("sufficientBalanceLog"), "line-ok");
 
     lastCheckOk = true;
+    checkedContext = { rpc: net.rpc, chainId: chains.chainId, signer: signerAddress };
     $("deployBtn").disabled = false;
     log(t("readyWarnLog"), "line-warn");
   } catch (e) {
@@ -936,29 +1006,28 @@ $("checkBtn").addEventListener("click", async () => {
 });
 
 $("deployBtn").addEventListener("click", async () => {
-  if (!lastCheckOk || !decoded) return;
+  if (!lastCheckOk || !decoded || !checkedContext) return;
   $("deployBtn").disabled = true;
   const net = getNetwork();
+  if (net.rpc !== checkedContext.rpc) { invalidateCheck(); log(t("staleCheckLog"), "line-err"); return; }
   const provider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
 
-  // Ricontrolla la rete del wallet anche qui: potrebbe essere cambiata tra il click
-  // su "Verifica" e questo click su "Deploy".
-  if (net.chainId) {
-    try {
-      const walletChainIdHex = await signerProvider.request({ method: "eth_chainId" });
-      const walletChainId = parseInt(walletChainIdHex, 16);
-      if (walletChainId !== net.chainId) {
-        log(t("walletNowWrongNetwork", { walletChainId, netName: net.name, chainId: net.chainId }), "line-err");
-        lastCheckOk = false;
-        return;
-      }
-    } catch (e) { /* se il controllo fallisce, si prosegue: il tentativo di invio farà comunque da rete di sicurezza */ }
-  }
-
   try {
+    // Re-check the wallet network here too: it may have changed between Verify and Deploy.
+    // A failed check is blocking: never send a transaction on an unknown chain.
+    const walletChainId = parseInt(await signerProvider.request({ method: "eth_chainId" }), 16);
+    if (walletChainId !== checkedContext.chainId) {
+      log(t("walletNowWrongNetwork", { walletChainId, netName: net.name, chainId: checkedContext.chainId }), "line-err");
+      return;
+    }
+
     const value = BigInt(decoded.primary.fundingAmount) + BigInt(decoded.secondary.fundingAmount);
     const browserProvider = new ethers.BrowserProvider(signerProvider);
     const signerObj = await browserProvider.getSigner();
+    if (signerObj.address.toLowerCase() !== checkedContext.signer.toLowerCase()) {
+      log(t("signerChangedErr", { now: signerObj.address, checked: checkedContext.signer }), "line-err");
+      return;
+    }
 
     log(t("sendingTxLog"), "line-dim");
     const tx = await signerObj.sendTransaction({ to: FACTORY_ADDRESS, data: decoded.rawCalldata, value });
@@ -973,7 +1042,7 @@ $("deployBtn").addEventListener("click", async () => {
     log(t("txConfirmedLog"), "line-dim");
 
     const expectedPrimaryCode = minimalProxyRuntimeCode(decoded.primary.impl).toLowerCase();
-    const expectedSecondaryCode = minimalProxyRuntimeCode(SECONDARY_IMPL).toLowerCase();
+    const expectedSecondaryCode = minimalProxyRuntimeCode(decoded.secondary.impl).toLowerCase();
 
     // Molti RPC pubblici sono bilanciati su più nodi: il nodo che risponde a getCode()
     // subito dopo la conferma potrebbe non aver ancora indicizzato il nuovo contratto
@@ -1013,13 +1082,14 @@ $("deployBtn").addEventListener("click", async () => {
     } else {
       log(t("mismatchErr"), "line-err");
       if (!primaryOk) log(t("mismatchDetailUp", { impl: decoded.primary.impl, expLen: expectedPrimaryCode.length, actLen: actualPrimaryCode.length, actual: actualPrimaryCode === "0x" ? t("noCodeFound") : actualPrimaryCode }), "line-err");
-      if (!secondaryOk) log(t("mismatchDetailKm", { impl: SECONDARY_IMPL, expLen: expectedSecondaryCode.length, actLen: actualSecondaryCode.length, actual: actualSecondaryCode === "0x" ? t("noCodeFound") : actualSecondaryCode }), "line-err");
+      if (!secondaryOk) log(t("mismatchDetailKm", { impl: decoded.secondary.impl, expLen: expectedSecondaryCode.length, actLen: actualSecondaryCode.length, actual: actualSecondaryCode === "0x" ? t("noCodeFound") : actualSecondaryCode }), "line-err");
       log(t("propagationNote"), "line-warn");
     }
   } catch (e) {
     log(t("deployErrorLog", { err: e.shortMessage || e.message }), "line-err");
   } finally {
     lastCheckOk = false;
+    checkedContext = null;
   }
 });
 

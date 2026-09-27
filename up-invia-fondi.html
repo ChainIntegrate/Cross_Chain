@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
 <title data-i18n="pageTitle">UP Invia Fondi — ChainIntegrate</title>
 <meta name="description" content="Invia fondi dalla tua Universal Profile rideployata su una nuova rete.">
 <link rel="icon" href="favicon.ico">
@@ -15,7 +16,7 @@
 <meta name="twitter:title" content="UP Invia Fondi — ChainIntegrate">
 <meta name="twitter:description" content="Invia fondi dalla tua Universal Profile rideployata su una nuova rete.">
 <meta name="twitter:image" content="https://chainintegrate.it/banner.png">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
   :root {
     --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
@@ -132,6 +133,9 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
+// Every value that did not originate in this file (user input, wallet responses, RPC or
+// library error messages) must be escaped before being interpolated into innerHTML.
+const escapeHtml = (v) => String(v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 // ==================== I18N ====================
 let LANG = "it";
@@ -192,7 +196,6 @@ const I18N = {
     permCheckNote: "Nota: la validità dei permessi del controller viene verificata sotto tramite la stima del gas — se il wallet connesso non ha i permessi giusti sulla UP, la stima fallirà.",
     kmLog: (v) => `Key Manager: ${v.addr}`,
     upNotDeployedBlockErr: "❌ BLOCCANTE — la UP non risulta deployata su questa rete.",
-    kmNotDeployedBlockErr: "❌ BLOCCANTE — il Key Manager non risulta deployato su questa rete.",
     upBalanceLog: (v) => `Saldo attuale della UP: ${v.balance}`,
     insufficientUpFundsErr: (v) => `❌ BLOCCANTE — la UP non ha fondi sufficienti (ha ${v.have}, servono ${v.need}).`,
     upFundsOkLog: "✅ Saldo della UP sufficiente per l'importo richiesto.",
@@ -208,6 +211,16 @@ const I18N = {
     waitingConfirmLog: "In attesa di conferma...",
     transferConfirmedLog: "✅✅ Trasferimento confermato.",
     sendErrorLog: (v) => `Errore durante l'invio: ${v.err}`,
+    recipientIsSelfErr: "❌ BLOCCANTE — il destinatario coincide con la UP stessa.",
+    recipientZeroErr: "❌ BLOCCANTE — il destinatario è l'indirizzo zero: i fondi andrebbero persi.",
+    ownerNotKmErr: (v) => `❌ BLOCCANTE — l'owner della UP (${v.addr}) non ha bytecode su questa rete: non è un Key Manager.`,
+    rpcChainMismatchErr: (v) => `❌ BLOCCANTE — l'RPC risponde con chainId ${v.rpcChainId}, ma la rete selezionata è ${v.netName} (chainId ${v.chainId}).`,
+    walletWrongNetwork: (v) => `❌ BLOCCANTE — il wallet firmatario è sulla rete con chainId ${v.walletChainId}, ma la rete selezionata è ${v.netName} (chainId ${v.chainId}). Cambia rete nel wallet: la transazione partirebbe sulla rete sbagliata.`,
+    walletNetworkCheckFailed: "❌ BLOCCANTE — impossibile leggere la rete del wallet firmatario.",
+    walletCorrectNetwork: (v) => `✅ Wallet firmatario e RPC sulla stessa rete (chainId ${v.chainId}).`,
+    signerChangedErr: (v) => `❌ BLOCCANTE — l'account attivo nel wallet (${v.now}) non è quello verificato (${v.checked}). Rifai la verifica.`,
+    staleCheckLog: "Dati, rete o wallet modificati dopo la verifica: premi di nuovo Verifica.",
+    noGasPriceErr: "❌ BLOCCANTE — l'RPC non ha restituito un prezzo del gas.",
 
     footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a>`,
   },
@@ -266,7 +279,6 @@ const I18N = {
     permCheckNote: "Note: the controller's permissions are verified below via the gas estimate — if the connected wallet doesn't have the right permissions on the UP, the estimate will fail.",
     kmLog: (v) => `Key Manager: ${v.addr}`,
     upNotDeployedBlockErr: "❌ BLOCKING — the UP isn't deployed on this network.",
-    kmNotDeployedBlockErr: "❌ BLOCKING — the Key Manager isn't deployed on this network.",
     upBalanceLog: (v) => `Current UP balance: ${v.balance}`,
     insufficientUpFundsErr: (v) => `❌ BLOCKING — the UP doesn't have enough funds (has ${v.have}, needs ${v.need}).`,
     upFundsOkLog: "✅ UP balance sufficient for the requested amount.",
@@ -282,6 +294,16 @@ const I18N = {
     waitingConfirmLog: "Waiting for confirmation...",
     transferConfirmedLog: "✅✅ Transfer confirmed.",
     sendErrorLog: (v) => `Error while sending: ${v.err}`,
+    recipientIsSelfErr: "❌ BLOCKING — the recipient is the UP itself.",
+    recipientZeroErr: "❌ BLOCKING — the recipient is the zero address: the funds would be lost.",
+    ownerNotKmErr: (v) => `❌ BLOCKING — the UP owner (${v.addr}) has no bytecode on this network: it is not a Key Manager.`,
+    rpcChainMismatchErr: (v) => `❌ BLOCKING — the RPC answers with chainId ${v.rpcChainId}, but the selected network is ${v.netName} (chainId ${v.chainId}).`,
+    walletWrongNetwork: (v) => `❌ BLOCKING — the signing wallet is on chainId ${v.walletChainId}, but the selected network is ${v.netName} (chainId ${v.chainId}). Switch network in the wallet: the transaction would be sent on the wrong chain.`,
+    walletNetworkCheckFailed: "❌ BLOCKING — could not read the signing wallet's network.",
+    walletCorrectNetwork: (v) => `✅ Signing wallet and RPC are on the same network (chainId ${v.chainId}).`,
+    signerChangedErr: (v) => `❌ BLOCKING — the active wallet account (${v.now}) is not the one that was verified (${v.checked}). Check again.`,
+    staleCheckLog: "Data, network or wallet changed after the check: press Check again.",
+    noGasPriceErr: "❌ BLOCKING — the RPC did not return a gas price.",
 
     footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a>`,
   },
@@ -309,9 +331,6 @@ $("langToggle").addEventListener("click", () => {
 });
 
 // ==================== APP ====================
-const FACTORY_ADDRESS = "0x2300000A84D25dF63081feAa37ba6b62C4c89a30";
-const SECONDARY_IMPL = "0x2fe3aed98684e7351ad2d408a43ce09a738bf8a4"; // LSP6KeyManagerInit
-
 const CHAINS = [
   { key: "0g", name: "0G", chainId: 16661, rpc: "https://evmrpc.0g.ai", explorer: "https://chainscan.0g.ai/tx/", currency: "0G" },
   { key: "apechain", name: "ApeChain", chainId: 33139, rpc: "https://rpc.apechain.com", explorer: "https://apescan.io/tx/", currency: "APE" },
@@ -409,7 +428,8 @@ $("connectUp").addEventListener("click", async () => {
     const accounts = await window.lukso.request({ method: "eth_requestAccounts" });
     const upAddress = accounts[0];
     $("profileAddress").value = upAddress;
-    $("profileStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${upAddress}`;
+    invalidateCheck();
+    $("profileStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${escapeHtml(upAddress)}`;
     checkBalance();
   } catch (e) {
     $("profileStatus").innerHTML = `<span class="badge err">${t("connectionRejected")}</span>`;
@@ -437,12 +457,14 @@ $("connectSigner").addEventListener("click", async () => {
     const accounts = await candidate.request({ method: "eth_requestAccounts" });
     signerAddress = accounts[0];
     signerProvider = candidate;
+    watchSigner(candidate);
+    invalidateCheck();
     let netLabel = "";
     try {
       const chainIdHex = await candidate.request({ method: "eth_chainId" });
       netLabel = ` · ${chainDisplayName(parseInt(chainIdHex, 16))}`;
     } catch (e) { /* se non si riesce a leggere la rete, si mostra comunque l'indirizzo */ }
-    $("signerStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${signerAddress}${netLabel}`;
+    $("signerStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${escapeHtml(signerAddress + netLabel)}`;
     checkBalance();
   } catch (e) {
     $("signerStatus").innerHTML = `<span class="badge err">${t("connectionRejected")}</span>`;
@@ -462,7 +484,11 @@ function renderNetworkOptions(filter) {
   });
 }
 renderNetworkOptions("");
-$("networkFilter").addEventListener("input", (e) => renderNetworkOptions(e.target.value));
+$("networkFilter").addEventListener("input", (e) => {
+  renderNetworkOptions(e.target.value);
+  // Filtering can silently change the selected option: propagate it like a user selection.
+  networkSelectEl.dispatchEvent(new Event("change"));
+});
 networkSelectEl.addEventListener("change", () => {
   $("customRpcWrap").style.display = networkSelectEl.value === "custom" ? "block" : "none";
   checkBalance();
@@ -474,38 +500,84 @@ function getNetwork() {
   return CHAINS.find(c => c.key === networkSelectEl.value);
 }
 
+let balanceRequestId = 0;
 async function checkBalance() {
   const profile = currentProfile();
   if (!profile.address || !ethers.isAddress(profile.address)) return;
   const net = getNetwork();
-  if (!net.rpc) return;
+  if (!net || !net.rpc) return;
+  // Only the latest request may update the UI: a slow RPC answering late must not
+  // overwrite the balance of the network that is selected now.
+  const requestId = ++balanceRequestId;
   try {
     const provider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
     const code = await provider.getCode(profile.address);
+    if (requestId !== balanceRequestId) return;
     if (code === "0x") {
       $("balanceStatus").innerHTML = `<span class="badge err">${t("upNotDeployedErr")}</span>`;
       return;
     }
     const balance = await provider.getBalance(profile.address);
-    $("balanceStatus").innerHTML = `${t("balanceLabel", { net: net.name })}<div class="balance-big">${ethers.formatEther(balance)}</div>`;
+    if (requestId !== balanceRequestId) return;
+    $("balanceStatus").innerHTML = `${escapeHtml(t("balanceLabel", { net: net.name }))}<div class="balance-big">${escapeHtml(ethers.formatEther(balance))}</div>`;
   } catch (e) {
-    $("balanceStatus").innerHTML = `<span class="badge err">${t("balanceReadErr", { err: e.message })}</span>`;
+    if (requestId !== balanceRequestId) return;
+    $("balanceStatus").innerHTML = `<span class="badge err">${escapeHtml(t("balanceReadErr", { err: e.shortMessage || e.message }))}</span>`;
   }
 }
 
 // --- 4. Verifica e invio ---
-function computeKeyManagerAddress(primaryAddress) {
-  const salt = ethers.keccak256(primaryAddress);
-  const implNoPrefix = SECONDARY_IMPL.slice(2).toLowerCase();
-  const initcode = "0x3d602d80600a3d3981f3363d3d373d3d3d363d73" + implNoPrefix + "5af43d82803e903d91602b57fd5bf3";
-  const initcodeHash = ethers.keccak256(initcode);
-  return ethers.getCreate2Address(FACTORY_ADDRESS, salt, initcodeHash);
+// The Key Manager is read from the UP itself (LSP0 owner()), not recomputed from a fixed
+// implementation address: this works whatever Key Manager version the profile was created
+// with, and follows any later ownership change.
+async function readKeyManager(provider, upAddress) {
+  const up = new ethers.Contract(upAddress, ["function owner() view returns (address)"], provider);
+  return ethers.getAddress(await up.owner());
 }
 
 let lastCheckOk = false;
 let lastKeyManager = null;
 let lastValueWei = null;
 let lastRecipient = null;
+let checkedContext = null; // { rpc, chainId, signer, up } snapshot of a successful Check
+
+function invalidateCheck() {
+  if (lastCheckOk) log(t("staleCheckLog"), "line-warn");
+  lastCheckOk = false;
+  checkedContext = null;
+  $("sendBtn").disabled = true;
+}
+["profileAddress", "recipient", "amount", "customRpc"].forEach(id => $(id).addEventListener("input", invalidateCheck));
+networkSelectEl.addEventListener("change", invalidateCheck);
+
+let watchedSigner = null;
+function watchSigner(p) {
+  if (watchedSigner === p || typeof p.on !== "function") return;
+  watchedSigner = p;
+  p.on("chainChanged", invalidateCheck);
+  p.on("accountsChanged", (accs) => { signerAddress = accs && accs[0] ? accs[0] : null; invalidateCheck(); });
+}
+
+// The transaction is signed on the wallet's chain, while every check runs against the RPC:
+// both must be the selected chain. On LUKSO the same UP/Key Manager addresses exist too, so a
+// wallet left on the wrong chain would move real funds there.
+async function checkChains(net, provider) {
+  const rpcChainId = Number(await provider.send("eth_chainId", []));
+  const expectedChainId = net.chainId || rpcChainId;
+  if (rpcChainId !== expectedChainId) {
+    return { ok: false, msg: t("rpcChainMismatchErr", { rpcChainId, netName: net.name, chainId: expectedChainId }) };
+  }
+  let walletChainId;
+  try {
+    walletChainId = parseInt(await signerProvider.request({ method: "eth_chainId" }), 16);
+  } catch (e) {
+    return { ok: false, msg: t("walletNetworkCheckFailed") };
+  }
+  if (walletChainId !== expectedChainId) {
+    return { ok: false, msg: t("walletWrongNetwork", { walletChainId, netName: net.name, chainId: expectedChainId }) };
+  }
+  return { ok: true, chainId: expectedChainId };
+}
 
 $("checkBtn").addEventListener("click", async () => {
   $("log").innerHTML = "";
@@ -519,8 +591,10 @@ $("checkBtn").addEventListener("click", async () => {
 
   if (!profile.address || !ethers.isAddress(profile.address)) { log(t("missingAddrErr"), "line-err"); return; }
   if (!signerAddress) { log(t("connectSignerFirstLog"), "line-err"); return; }
-  if (!net.rpc) { log(t("missingRpcLog"), "line-err"); return; }
+  if (!net || !net.rpc) { log(t("missingRpcLog"), "line-err"); return; }
   if (!ethers.isAddress(recipient)) { log(t("invalidRecipientErr"), "line-err"); return; }
+  if (BigInt(recipient) === 0n) { log(t("recipientZeroErr"), "line-err"); return; }
+  if (recipient.toLowerCase() === profile.address.toLowerCase()) { log(t("recipientIsSelfErr"), "line-err"); return; }
   if (!amountStr || isNaN(Number(amountStr)) || Number(amountStr) <= 0) { log(t("invalidAmountErr"), "line-err"); return; }
 
   try {
@@ -532,19 +606,21 @@ $("checkBtn").addEventListener("click", async () => {
     log(t("signerLog", { addr: signerAddress }), "line-dim");
     log(t("permCheckNote"), "line-dim");
 
-    const keyManagerAddress = computeKeyManagerAddress(profile.address);
-    log(t("kmLog", { addr: keyManagerAddress }), "line-dim");
-
     const provider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
+    const chains = await checkChains(net, provider);
+    if (!chains.ok) { log(chains.msg, "line-err"); return; }
+    log(t("walletCorrectNetwork", { chainId: chains.chainId }), "line-ok");
 
     const upCode = await provider.getCode(profile.address);
     if (upCode === "0x") {
       log(t("upNotDeployedBlockErr"), "line-err");
       return;
     }
+    const keyManagerAddress = await readKeyManager(provider, profile.address);
+    log(t("kmLog", { addr: keyManagerAddress }), "line-dim");
     const kmCode = await provider.getCode(keyManagerAddress);
     if (kmCode === "0x") {
-      log(t("kmNotDeployedBlockErr"), "line-err");
+      log(t("ownerNotKmErr", { addr: keyManagerAddress }), "line-err");
       return;
     }
 
@@ -573,6 +649,7 @@ $("checkBtn").addEventListener("click", async () => {
     const signerBalance = await provider.getBalance(signerAddress);
     const feeData = await provider.getFeeData();
     const gasPrice = feeData.maxFeePerGas || feeData.gasPrice;
+    if (!gasPrice) { log(t("noGasPriceErr"), "line-err"); return; }
     const gasCost = gasEstimate * gasPrice;
     const gasCostWithMargin = gasCost + gasCost / 4n;
     log(t("gasCostLog", { cost: ethers.formatEther(gasCostWithMargin) }), "line-dim");
@@ -587,6 +664,7 @@ $("checkBtn").addEventListener("click", async () => {
     lastKeyManager = keyManagerAddress;
     lastValueWei = valueWei;
     lastRecipient = recipient;
+    checkedContext = { rpc: net.rpc, chainId: chains.chainId, signer: signerAddress };
     $("sendBtn").disabled = false;
     log(t("readyWarnLog"), "line-warn");
   } catch (e) {
@@ -595,11 +673,19 @@ $("checkBtn").addEventListener("click", async () => {
 });
 
 $("sendBtn").addEventListener("click", async () => {
-  if (!lastCheckOk) return;
+  if (!lastCheckOk || !checkedContext) return;
   $("sendBtn").disabled = true;
   const net = getNetwork();
+  if (!net || net.rpc !== checkedContext.rpc) { invalidateCheck(); log(t("staleCheckLog"), "line-err"); return; }
 
   try {
+    // Re-check the wallet network right before signing: it may have changed since Check.
+    const walletChainId = parseInt(await signerProvider.request({ method: "eth_chainId" }), 16);
+    if (walletChainId !== checkedContext.chainId) {
+      log(t("walletWrongNetwork", { walletChainId, netName: net.name, chainId: checkedContext.chainId }), "line-err");
+      return;
+    }
+
     const upIface = new ethers.Interface(["function execute(uint256,address,uint256,bytes)"]);
     const innerCalldata = upIface.encodeFunctionData("execute", [0, lastRecipient, lastValueWei, "0x"]);
     const kmIface = new ethers.Interface(["function execute(bytes) returns (bytes)"]);
@@ -607,6 +693,10 @@ $("sendBtn").addEventListener("click", async () => {
 
     const browserProvider = new ethers.BrowserProvider(signerProvider);
     const signerObj = await browserProvider.getSigner();
+    if (signerObj.address.toLowerCase() !== checkedContext.signer.toLowerCase()) {
+      log(t("signerChangedErr", { now: signerObj.address, checked: checkedContext.signer }), "line-err");
+      return;
+    }
 
     log(t("sendingTxLog"), "line-dim");
     const tx = await signerObj.sendTransaction({ to: lastKeyManager, data: executeCalldata });
@@ -622,6 +712,7 @@ $("sendBtn").addEventListener("click", async () => {
     log(t("sendErrorLog", { err: e.shortMessage || e.message }), "line-err");
   } finally {
     lastCheckOk = false;
+    checkedContext = null;
   }
 });
 </script>
