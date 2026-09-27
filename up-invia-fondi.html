@@ -95,6 +95,7 @@
 <div class="panel">
   <h2 data-i18n="panel2Title">2 · Wallet firmatario (il controller)</h2>
   <div class="note" data-i18n="panel2Note"></div>
+  <div class="note" style="margin-top:12px; padding:12px 14px; border:1px solid var(--warn); border-radius:8px; background:rgba(224,168,60,0.08); color:var(--text);" data-i18n-html="fundsNote"></div>
   <button id="connectSigner" data-i18n="connectSignerBtn">Connetti MetaMask / wallet firmatario</button>
   <div class="status-box" id="signerStatus"><span class="empty" data-i18n="notConnected">Non connesso.</span></div>
 </div>
@@ -158,6 +159,7 @@ const I18N = {
 
     panel2Title: "2 · Wallet firmatario (il controller)",
     panel2Note: "Questo è il wallet che firma davvero l'invio dei fondi, sulla rete scelta al punto 3 — deve essere connesso a quella rete, non a LUKSO. È normale avere sia l'estensione UP che MetaMask attivi insieme nel browser: usa quello giusto per ciascun passaggio.",
+    fundsNote: "<b>💡 I fondi: due indirizzi, tutti e due tuoi</b><br>• <b>L'indirizzo della tua UP</b> (uguale su tutte le reti) è il tuo <i>conto</i>: puoi mandarci fondi senza problemi, anche prima del deploy — li ritrovi nella UP appena è deployata.<br>• <b>L'indirizzo del controller</b> (il wallet in MetaMask) è la <i>chiave</i> che firma. Ogni operazione costa una piccola commissione (gas), e <b>la paga il controller, non la UP</b>.<br>👉 Quindi manda un po' di fondi <b>anche al controller</b>, sulla stessa rete (es. POL su Polygon, ETH su Base o Arbitrum): quanto basta per qualche transazione. Senza, il controller non può firmare nulla, anche se la UP è piena.",
     connectSignerBtn: "Connetti MetaMask / wallet firmatario",
 
     panel3Title: "3 · Rete",
@@ -202,7 +204,7 @@ const I18N = {
     gasFailErr: (v) => `❌ BLOCCANTE — stima gas fallita, probabilmente il controller non ha i permessi TRANSFERVALUE/CALL su questa UP: ${v.err}`,
     permsOkLog: (v) => `✅ Permessi verificati (stima gas riuscita: ${v.gas} unità).`,
     gasCostLog: (v) => `Costo gas stimato (a carico del firmatario, NON della UP): ${v.cost} (con margine)`,
-    insufficientGasErr: (v) => `❌ BLOCCANTE — il wallet firmatario non ha abbastanza gas. Mancano circa ${v.shortfall}.`,
+    insufficientGasErr: (v) => `❌ BLOCCANTE — il controller (${v.addr}) non ha abbastanza ${v.currency} su ${v.net} per pagare la commissione: mancano circa ${v.shortfall}. La commissione la paga il controller, non la UP: anche se la UP ha fondi, manda un po' di ${v.currency} all'indirizzo del controller e riprova.`,
     signerGasOkLog: "✅ Il wallet firmatario ha gas sufficiente.",
     readyWarnLog: "\nPronto. Controlla ancora una volta destinatario e importo prima di premere Invia — è irreversibile.",
     verifyErrorLog: (v) => `Errore durante la verifica: ${v.err}`,
@@ -241,6 +243,7 @@ const I18N = {
 
     panel2Title: "2 · Signing wallet (the controller)",
     panel2Note: "This is the wallet that actually signs the funds transfer, on the network chosen in step 3 — it must be connected to that network, not to LUKSO. It's normal to have both the UP extension and MetaMask active in the browser at the same time: use the right one for each step.",
+    fundsNote: "<b>💡 Funds: two addresses, both yours</b><br>• <b>Your UP address</b> (the same on every network) is your <i>account</i>: you can send funds to it with no problem, even before the deploy — you will find them in the UP as soon as it is deployed.<br>• <b>The controller address</b> (the wallet in MetaMask) is the <i>key</i> that signs. Every operation costs a small fee (gas), and <b>the controller pays it, not the UP</b>.<br>👉 So send some funds <b>to the controller too</b>, on the same network (e.g. POL on Polygon, ETH on Base or Arbitrum): enough for a few transactions. Without them the controller cannot sign anything, even if the UP is full.",
     connectSignerBtn: "Connect MetaMask / signing wallet",
 
     panel3Title: "3 · Network",
@@ -285,7 +288,7 @@ const I18N = {
     gasFailErr: (v) => `❌ BLOCKING — gas estimation failed, the controller likely doesn't have TRANSFERVALUE/CALL permissions on this UP: ${v.err}`,
     permsOkLog: (v) => `✅ Permissions verified (gas estimate succeeded: ${v.gas} units).`,
     gasCostLog: (v) => `Estimated gas cost (paid by the signer, NOT by the UP): ${v.cost} (with margin)`,
-    insufficientGasErr: (v) => `❌ BLOCKING — the signing wallet doesn't have enough gas. About ${v.shortfall} short.`,
+    insufficientGasErr: (v) => `❌ BLOCKING — the controller (${v.addr}) does not have enough ${v.currency} on ${v.net} to pay the fee: about ${v.shortfall} missing. The fee is paid by the controller, not by the UP: even if the UP has funds, send some ${v.currency} to the controller address and try again.`,
     signerGasOkLog: "✅ The signing wallet has enough gas.",
     readyWarnLog: "\nReady. Double-check recipient and amount before pressing Send — it's irreversible.",
     verifyErrorLog: (v) => `Error during verification: ${v.err}`,
@@ -666,7 +669,7 @@ $("checkBtn").addEventListener("click", async () => {
     log(t("gasCostLog", { cost: ethers.formatEther(gasCostWithMargin) }), "line-dim");
     if (signerBalance < gasCostWithMargin) {
       const shortfall = gasCostWithMargin - signerBalance;
-      log(t("insufficientGasErr", { shortfall: ethers.formatEther(shortfall) }), "line-err");
+      log(t("insufficientGasErr", { shortfall: ethers.formatEther(shortfall), addr: signerAddress, net: net.name, currency: net.currency || "" }), "line-err");
       return;
     }
     log(t("signerGasOkLog"), "line-ok");
