@@ -205,7 +205,7 @@
 <div class="note">
   <b>💡 Funds: two addresses, both yours — don't forget the controller.</b>
   <ul>
-    <li><b>Your UP address</b> (the same on every chain) is your <i>account</i>. You can send funds to it with no problem, even before the deploy: you will find them in the UP as soon as it is deployed.</li>
+    <li><b>Your UP address</b> (the same on every chain) is your <i>account</i>. Send funds to it <b>only after</b> the deploy (step 7) and the test with the Test tool (step 8) have both succeeded. If something goes wrong — the wrong controller key, a failed deploy — funds sent earlier would stay stuck at that address.</li>
     <li><b>The controller address</b> (the account you imported into MetaMask in step 8) is the <i>key</i> that signs. Every operation — test, transfer, anything — costs a small fee (gas), and <b>the controller pays it, not the UP</b>.</li>
     <li>👉 So on the new chain send some funds <b>to the controller too</b> (e.g. POL on Polygon, ETH on Base or Arbitrum): at least enough for a few transactions. Without them the controller cannot sign anything, even if the UP is full.</li>
   </ul>
@@ -375,7 +375,7 @@
 <div class="note">
   <b>💡 I fondi: due indirizzi, tutti e due tuoi — non dimenticare il controller.</b>
   <ul>
-    <li><b>L'indirizzo della tua UP</b> (uguale su tutte le reti) è il tuo <i>conto</i>. Puoi mandarci fondi senza problemi, anche prima del deploy: li ritrovi nella UP appena è deployata.</li>
+    <li><b>L'indirizzo della tua UP</b> (uguale su tutte le reti) è il tuo <i>conto</i>. Mandaci fondi <b>solo dopo</b> che il deploy (passo 7) e il test con la pagina di Test (passo 8) sono andati entrambi a buon fine. Se qualcosa va storto — chiave del controller sbagliata, deploy fallito — i fondi mandati prima resterebbero bloccati a quell'indirizzo.</li>
     <li><b>L'indirizzo del controller</b> (l'account che hai importato in MetaMask al passo 8) è la <i>chiave</i> che firma. Ogni operazione — test, invio, qualsiasi cosa — costa una piccola commissione (gas), e <b>la paga il controller, non la UP</b>.</li>
     <li>👉 Quindi sulla nuova rete manda un po' di fondi <b>anche al controller</b> (es. POL su Polygon, ETH su Base o Arbitrum): almeno quanto basta per qualche transazione. Senza, il controller non può firmare nulla, anche se la UP è piena.</li>
   </ul>
