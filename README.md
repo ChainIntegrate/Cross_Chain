@@ -49,7 +49,7 @@ Do not serve a folder that contains wallet backups or other private files.
 node decrypt.js
 ```
 
-The script asks for SALT, IV and SECRET (base64, from your backup) and for the password, which is not echoed. Run it offline on a trusted machine, and clear your terminal afterwards. **Do not paste your values into the file.**
+The script asks for SALT and IV (press Enter to use the public defaults of the UP extension backup format), SECRET (base64, from your backup) and the password, which is not echoed. Run it offline on a trusted machine, and clear your terminal afterwards. **Do not paste your values into the file.**
 
 ## Requirements
 
@@ -69,20 +69,21 @@ The script asks for SALT, IV and SECRET (base64, from your backup) and for the p
 
 | Date | Scope | Result | Report |
 |---|---|---|---|
-| 2026-09-27 | Whole repository and git history (commit `f56dd29`) | 3 High, 7 Medium, 8 Low, 5 Informational. All High and Medium findings are fixed. | [AUDIT.md](AUDIT.md) |
+| 2026-09-27 | Whole repository and git history (commit `f56dd29`) | 2 High, 7 Medium, 8 Low, 6 Informational. All High and Medium findings are fixed. | [AUDIT.md](AUDIT.md) |
 
 Main fixes from the 2026-09-27 audit:
 
 - Wallet and RPC chain verification before every transaction. Previously the Send and Test pages could sign on the wrong chain, including LUKSO.
 - A verification is invalidated whenever inputs, the network or the wallet account change.
-- Third-party profile data (labels, controllers, calldata) removed from the local deploy page.
+- The local deploy page works with any profile's pasted calldata instead of a hard-coded list.
 - HTML escaping of all untrusted values (a DOM XSS through pasted calldata is fixed).
 - The Key Manager is derived from the calldata or read from `owner()`, instead of using a hard-coded implementation.
 - Correct LSP6 permission classification: admin-level permissions are always flagged.
 - SRI on the ethers script, and a no-referrer policy.
-- `decrypt.js` rewritten: no embedded backup data, hidden password prompt, input validation.
+- `decrypt.js` rewritten: interactive input (public salt/IV kept as defaults), hidden password prompt, input validation.
+- Much more explicit private-key handling rules in the guide (steps 1 and 8).
 
-Open items that need the maintainer to act (history purge, screenshots, CSP, RPC refresh) are listed in [AUDIT.md §5](AUDIT.md#5-residual-risks-and-recommendations).
+Open items that need the maintainer to act (site redeploy, CSP, RPC refresh) are listed in [AUDIT.md §5](AUDIT.md#5-residual-risks-and-recommendations).
 
 ## License
 

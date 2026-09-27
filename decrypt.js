@@ -7,14 +7,20 @@
 // Usage (run it offline, on a trusted machine):
 //   node decrypt.js
 // The script asks for SALT, IV and SECRET (base64, as found in your backup file) and for the
-// password, which is read without being echoed. Nothing is read from or written to disk, and
-// nothing is sent over the network.
+// password, which is read without being echoed. SALT and IV default to the public values
+// used by UP extension backups: just press Enter to use them. Nothing is read from or
+// written to disk, and nothing is sent over the network.
 //
-// NEVER edit this file to paste your values into it: an edited copy is easy to commit, share
-// or leave in a synced folder by mistake.
+// NEVER edit this file to paste your SECRET or password into it: an edited copy is easy to
+// commit, share or leave in a synced folder by mistake.
 
 const crypto = require('crypto');
 const readline = require('readline');
+
+// Public salt and IV of the UP browser extension backup format (not secret: published in
+// LUKSO's repositories). Kept here as defaults for convenience.
+const DEFAULT_SALT_B64 = 'zxySQImT+cEdbmmk9SYlvtmkw4+Rqc9MAxxPyqWFP+4=';
+const DEFAULT_IV_B64 = '5yqc5s4cLdlNQBa6uLIGIQ==';
 
 const PBKDF2_ITERATIONS = 10000;
 const KEY_LENGTH = 32;
@@ -70,8 +76,8 @@ function decodeBase64(name, value) {
 
 async function main() {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  const saltB64 = await ask(rl, 'SALT (base64): ');
-  const ivB64 = await ask(rl, 'IV (base64): ');
+  const saltB64 = (await ask(rl, 'SALT (base64) [Enter = default]: ')) || DEFAULT_SALT_B64;
+  const ivB64 = (await ask(rl, 'IV (base64) [Enter = default]: ')) || DEFAULT_IV_B64;
   const secretB64 = await ask(rl, 'SECRET (base64): ');
   rl.close();
 

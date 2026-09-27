@@ -4,6 +4,7 @@
 |---|---|
 | **Audit date** | 2026-09-27 |
 | **Commit audited** | `f56dd29` (branch `main`) |
+| **Revision** | 2 — findings H-03, M-05, I-01 and I-02 reclassified after the maintainer's feedback (salt/IV are public format values; all profiles and addresses shown belong to the maintainer and are public by choice) |
 | **Scope** | Every file in the repository: 6 HTML tools, `decrypt.js`, README, images in `guide-assets/`, and the full git history |
 | **Method** | Manual code review, cross-check against the LUKSO reference contracts (`@lukso/lsp6-contracts` 0.16.3, `@lukso/lsp23-contracts` 0.16.3), browser end-to-end tests with mocked wallets/RPCs (Playwright + Chromium), and a git history review for secrets and personal data |
 
@@ -20,14 +21,14 @@
 
 ## 1. Summary
 
-The tools are static, client-side pages. They never ask for a private key: every transaction is signed in the user's own wallet. That keeps the attack surface small. Even so, the audit found several ways a user could lose funds or deploy an unusable profile without being warned. The most serious was **missing checks on which chain the signing wallet is connected to**. It also found **personal data about third parties** committed to the repository.
+The tools are static, client-side pages. They never ask for a private key: every transaction is signed in the user's own wallet. That keeps the attack surface small. Even so, the audit found several ways a user could lose funds or deploy an unusable profile without being warned. The most serious was **missing checks on which chain the signing wallet is connected to**, together with checks that stayed valid after the user changed network, inputs or account.
 
 | Severity | Count | Fixed | Open (recommendation only) |
 |---|---|---|---|
-| High | 3 | 3 | 0 |
+| High | 2 | 2 | 0 |
 | Medium | 7 | 7 | 0 |
 | Low | 8 | 7 | 1 |
-| Informational | 5 | 0 | 5 (documented / accepted) |
+| Informational | 6 | 2 | 4 (documented / accepted) |
 
 Severity scale: **High** means funds can be lost or sent to the wrong place, or personal data is exposed. **Medium** means the page gives a wrong or misleading security result, or there is a realistic injection or supply-chain vector. **Low** means a robustness or UX flaw with limited impact. **Informational** covers hardening advice and accepted design risks.
 
@@ -76,13 +77,6 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
   - Failing to read the wallet network is now blocking.
 - **Status:** ✅ Fixed
 
-### H-03 — Personal data of third parties committed in `up-multichain-deploy-v2.html`
-
-- **File:** `up-multichain-deploy-v2.html` (table `KNOWN_DEPLOYMENTS`)
-- **Impact:** The page hard-coded three real Universal Profiles. Each entry had a human label (`SimoneC`, `birra20venti`, `ChainIntegrate`), its controller EOA and its full deployment calldata. At least one entry belongs to a third party. Publishing it links a nickname to a profile address and to the EOA that fully controls it. That is personal data under GDPR (pseudonymous, but linkable). It also makes the controller a target for phishing and social engineering. The same page was published on the website (`chainintegrate.it`).
-- **Fix:** The table is removed. The local page now works like the public one: the user connects their UP, pastes their own calldata, and the page checks that the calldata really produces the connected address. The page was also brought to the same safety level as the public tool: chain checks, implementation-bytecode checks, a Key Manager address derived from the calldata, and a Deploy button that is never re-enabled after a send.
-- **Status:** ✅ Fixed in the working tree. ⚠️ **The data is still present in git history** (commits up to `f56dd29`) and possibly in deployed copies of the site. See [R-01](#5-residual-risks-and-recommendations).
-
 ### M-01 — DOM XSS through pasted calldata, expected address, RPC errors or wallet responses
 
 - **Files:** all tool pages
@@ -130,22 +124,21 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 - **Fix:** Added `integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM"`, `crossorigin="anonymous"` and `referrerpolicy="no-referrer"`. The hash was computed from the official npm tarball `ethers@6.13.4` (`dist/ethers.umd.min.js`), and the page test confirmed that the browser accepts it.
 - **Status:** ✅ Fixed
 
-### M-05 — `decrypt.js` shipped the owner's real backup salt and IV and asked users to edit the file with their password
+### M-05 — `decrypt.js` asked users to paste their password and encrypted secret into the source file
 
 - **File:** `decrypt.js`
-- **Impact:**
-  - **Privacy/opsec:** the salt and IV of the maintainer's own wallet backup were published. They are not enough to decrypt anything, but they identify a specific backup and remove two unknowns for anyone who later obtains the ciphertext.
-  - **Bug:** the comment said *"Salt and IV are already those of your backup"*, which is false for every other user, so decryption always failed for them.
-  - **Security:** users were told to paste their **password and encrypted secret into the source file**. That copy is easy to commit, sync or share by mistake.
+- **Impact:** Users were told to edit the script and paste their **backup password and encrypted secret** into it. An edited copy is easy to commit, sync to a cloud folder or share by mistake, and the password also ends up in editor history and backups.
+- **Note on salt and IV:** the script also embeds a salt and an IV. The maintainer confirmed that these are the **public values of the UP extension backup format**, published in LUKSO's repositories, and not secret. They are kept as defaults for convenience (press Enter to use them). If every backup shares the same salt and IV, the backup's security rests entirely on the strength of the password, so users should choose a strong one. That is a property of the extension's format, not of this repository.
 - **Fix:** The script was rewritten:
-  - it asks for salt, IV and secret interactively and reads the password without echoing it (TTY raw mode);
+  - it asks for the secret interactively, and for salt and IV with the public values as defaults;
+  - it reads the password without echoing it (TTY raw mode);
   - it validates base64 and lengths;
   - it never touches disk or the network;
   - it zeroes the key buffers after use;
   - all messages are in English.
 
   A `.gitignore` was added so backups, keys and `.env` files are not committed by accident.
-- **Status:** ✅ Fixed (tested with a generated AES-256-GCM/PBKDF2 vector through a pseudo-TTY; the password is not echoed). ⚠️ The old salt and IV remain in git history, see [R-01](#5-residual-risks-and-recommendations).
+- **Status:** ✅ Fixed (tested through a pseudo-TTY with generated AES-256-GCM/PBKDF2 vectors, both with explicit values and with the default salt/IV; the password is not echoed).
 
 ### M-06 — Calldata selector not validated
 
@@ -217,19 +210,22 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 ### I-01 — The guide instructs users to reveal and import the controller private key
 
 - **File:** `up-crosschain-guide.html`, steps 1 and 8
-- **Impact:** On chains other than LUKSO, only the original controller key can operate the profile. The address depends on the original calldata, so this is inherent to the approach. However, importing that key into a general-purpose wallet widens its exposure, and the **same key also controls the profile on LUKSO**.
-- **Recommendation:**
-  - Import the key into a dedicated browser profile or hardware-backed wallet.
-  - After deploying, use it once to add a new, separately generated controller on the new chain, then stop using the exported key there.
-  - Remove the key from the general-purpose wallet as soon as possible.
-- **Status:** ⏳ Accepted design risk (documented)
+- **Impact:** On chains other than LUKSO, only the original controller key can operate the profile. The address depends on the original calldata, so exporting the key is inherent to the approach and correctly documented. However, importing that key into a general-purpose wallet widens its exposure, and the **same key also controls the profile on LUKSO**. The original warning was a single generic sentence.
+- **Fix:** The warnings in steps 1 and 8 (EN and IT) were rewritten as explicit rules:
+  - the key is the profile, on LUKSO and on every chain, with no recovery;
+  - never type it into a website, these tools included;
+  - never send it to anyone, and support will never ask for it;
+  - no screenshots, notes, cloud storage or messages; use a password manager or offline storage only;
+  - use only a trusted device, without screen sharing, and clear the clipboard afterwards;
+  - if exposed, move assets and replace the controller on **every** chain;
+  - import into a dedicated wallet, check network, recipient and amount in the wallet popup, and remove the account when no longer needed.
+- **Status:** ✅ Mitigated (the export itself is an accepted design requirement)
 
 ### I-02 — Guide screenshots show real addresses
 
 - **Files:** `guide-assets/step1-tx-details.png`, `step-genesis-link.png`, `step-connect-up.png`, `step3-controllers.png`, `step4-controller-match.png`
-- **Impact:** The screenshots show the ChainIntegrate profile (already public as the donation address), its **controller EOA** `0x9C8F…5C9c`, the paying wallet `0x6c5d…15c9`, and the browser profile avatar. This is public on-chain data, but together it maps the organisation's operational wallets.
-- **Recommendation:** Blur or replace the controller, paying-wallet and avatar areas in the next revision of the screenshots.
-- **Status:** ⏳ Open (images not modified by this audit)
+- **Impact:** The screenshots show the ChainIntegrate profile, its controller EOA `0x9C8F…5C9c`, the paying wallet `0x6c5d…15c9` and the browser profile avatar. All the addresses belong to ChainIntegrate, which has chosen to be fully public about them, and they are public on-chain data anyway. The only side effect is that publishing the controller makes it a more obvious target for phishing attempts.
+- **Status:** ⏳ Accepted (deliberate choice of the maintainer)
 
 ### I-03 — No Content-Security-Policy
 
@@ -251,6 +247,13 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 - **Recommendation:** Use an organisation-owned channel, and state on the pages that support will never ask for a private key, seed phrase or backup password.
 - **Status:** ⏳ Open (informational)
 
+### I-06 — Local deploy page limited to a hard-coded list of profiles
+
+- **File:** `up-multichain-deploy-v2.html` (table `KNOWN_DEPLOYMENTS`)
+- **Impact:** The page only worked for three hard-coded profiles (`SimoneC`, `birra20venti`, `ChainIntegrate`), each with a label, its controller EOA and its full deployment calldata. The maintainer confirmed that all three belong to them and are public by choice, so there is no third-party privacy issue. The remaining drawbacks are that the page could not be used for any other profile, and that a label/address/controller mapping lived in page code.
+- **Fix:** The table is removed. The local page now works like the public one: the user connects their UP, pastes their calldata, and the page checks that it produces the connected address. The page also got the public tool's safety checks (see M-07).
+- **Status:** ✅ Fixed
+
 ---
 
 ## 4. Things that were checked and found correct
@@ -260,7 +263,7 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 - **Permissions data key.** `AddressPermissions:Permissions:<address>` prefix `0x4b80742de2bf82acb363` + `0000`, as in `LSP6Constants.sol`. Only the code comment describing how it is derived was wrong, and it has been corrected.
 - **Donation flow.** It uses only `window.lukso`, checks for chainId 42 before sending, and parses the amount with `parseEther`. No issues found.
 - **Log output.** All logs use `textContent`, so there is no injection through the log area.
-- **Secrets.** No private keys, seed phrases, passwords or API keys were found in the working tree or anywhere in git history. The deleted `guide-assets/service.txt` contained only a placeholder sentence.
+- **Secrets.** No private keys, seed phrases, passwords or API keys were found in the working tree or anywhere in git history. The salt and IV in `decrypt.js` are public values of the backup format (see M-05). The deleted `guide-assets/service.txt` contained only a placeholder sentence.
 
 ---
 
@@ -268,12 +271,10 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 
 | ID | Action | Why |
 |---|---|---|
-| R-01 | **Purge git history** of the old `up-multichain-deploy-v2.html` table and the old `decrypt.js` salt/IV (e.g. `git filter-repo`), then force-push. Invalidate any forks or clones and redeploy the website so the old files are gone from `chainintegrate.it`. | Removing data from `HEAD` does not remove it from history or from copies that are already published. Rewriting history is destructive and must be done by the repository owner, so this audit did not do it. |
-| R-02 | Ask the third party named in the old table whether they consent to having been published, and inform them of the removal. | GDPR transparency obligations. |
-| R-03 | Replace the screenshots listed in I-02. | Operational privacy. |
-| R-04 | Implement a CSP (I-03) and serve the site with `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` and `frame-ancestors 'none'`. | Defence in depth, anti-clickjacking. |
-| R-05 | Re-test all RPC endpoints (L-07), and whenever the ethers version is bumped, update the SRI hash (`openssl dgst -sha384 -binary ethers.umd.min.js \| openssl base64 -A`). | Otherwise a version bump breaks the pages or silently drops the integrity protection. |
-| R-06 | Consider moving the shared code (chain list, decoding, `checkChains`, `escapeHtml`) into one versioned JS file. | Six copies of the same logic had drifted apart. That drift caused several of the findings above. |
+| R-01 | Redeploy the website with the fixed pages. | The fixes only protect users once the published copies on `chainintegrate.it` are replaced. |
+| R-02 | Implement a CSP (I-03) and serve the site with `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` and `frame-ancestors 'none'`. | Defence in depth, anti-clickjacking. |
+| R-03 | Re-test all RPC endpoints (L-07), and whenever the ethers version is bumped, update the SRI hash (`openssl dgst -sha384 -binary ethers.umd.min.js \| openssl base64 -A`). | Otherwise a version bump breaks the pages or silently drops the integrity protection. |
+| R-04 | Consider moving the shared code (chain list, decoding, `checkChains`, `escapeHtml`) into one versioned JS file. | Six copies of the same logic had drifted apart. That drift caused several of the findings above. |
 
 ---
 
@@ -289,5 +290,5 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
   - Send page reads the Key Manager from `owner()` and enables Send only on the correct chain ✔
   - Verify-only and v2 pages complete their checks; the Test page applies the `?network=` preset ✔
   - No uncaught page errors ✔
-- **`decrypt.js`:** decrypted a freshly generated AES-256-GCM/PBKDF2-SHA256 vector through a pseudo-terminal; the password was not echoed.
+- **`decrypt.js`:** decrypted freshly generated AES-256-GCM/PBKDF2-SHA256 vectors through a pseudo-terminal, both with explicit salt/IV and with the defaults; the password was not echoed.
 - **Not tested:** real transactions on live networks, and the reachability of the public RPCs (network egress to them was not available in the audit environment).
