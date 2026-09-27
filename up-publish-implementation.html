@@ -90,6 +90,9 @@
   <label for="txHash" data-i18n="txHashLabel">Hash della transazione di creazione su LUKSO (facoltativo)</label>
   <input type="text" id="txHash" placeholder="0x...">
   <div class="note" style="margin-top:6px;" data-i18n="txHashNote"></div>
+  <label for="rawInput" data-i18n="rawInputLabel">Input data della transazione (avanzato, facoltativo)</label>
+  <textarea id="rawInput" placeholder="0x..."></textarea>
+  <div class="note" style="margin-top:6px;" data-i18n="rawInputNote"></div>
   <button id="loadBtn" class="secondary" data-i18n="loadBtn">Leggi il deploy originale da LUKSO</button>
   <div class="status-box" id="sourceStatus"><span class="empty" data-i18n="notLoaded">Non ancora letto.</span></div>
 </div>
@@ -168,6 +171,12 @@ const I18N = {
     implNotOnLukso: "Su LUKSO non c'è codice a questo indirizzo: non è un'implementazione pubblicata.",
     creationTxNotFound: "Transazione di creazione non trovata automaticamente: incolla il suo hash nel campo sopra e riprova.",
     txNotFound: "Transazione non trovata su LUKSO.",
+    invalidTxHash: "Hash della transazione non valido.",
+    rawInputLabel: "Input data della transazione (avanzato, facoltativo)",
+    rawInputNote: "Serve solo se la pagina non riesce a leggere la transazione né dall'RPC né dall'explorer: sull'explorer di LUKSO apri la transazione di creazione e copia il campo \"Raw input\" (inizia con 0x). È sicuro: la pagina verifica matematicamente che questi dati producano esattamente l'indirizzo dell'implementazione, e dati diversi vengono rifiutati.",
+    txFromExplorerLog: "L'RPC di LUKSO non conserva più questa transazione (storia vecchia non indicizzata): letta dall'explorer.",
+    txUnavailable: "Transazione non disponibile né dall'RPC di LUKSO (storia vecchia non indicizzata) né dall'explorer. Incolla l'input data nel campo avanzato qui sopra e riprova.",
+    rawInputInvalid: "L'input data incollato non è valido: deve essere esadecimale, iniziare con 0x e contenere salt e bytecode.",
     notViaFactory: (v) => `Questa implementazione non è stata creata tramite la Nick's factory (la transazione va a ${v.to}): il deploy non si può ripetere allo stesso indirizzo da questa pagina.`,
     addressMismatch: (v) => `La transazione indicata produce ${v.predicted}, non ${v.impl}: non è la transazione di creazione di questa implementazione.`,
     sourceOk: (v) => `✅ Deploy originale verificato: la transazione ${v.tx} alla Nick's factory produce esattamente ${v.impl}.`,
@@ -239,6 +248,12 @@ const I18N = {
     implNotOnLukso: "There is no code at this address on LUKSO: it is not a published implementation.",
     creationTxNotFound: "Creation transaction not found automatically: paste its hash in the field above and try again.",
     txNotFound: "Transaction not found on LUKSO.",
+    invalidTxHash: "Invalid transaction hash.",
+    rawInputLabel: "Transaction input data (advanced, optional)",
+    rawInputNote: "Only needed if the page cannot read the transaction from either the RPC or the explorer: on the LUKSO explorer open the creation transaction and copy the \"Raw input\" field (it starts with 0x). It is safe: the page mathematically checks that this data produces exactly the implementation address, and any other data is rejected.",
+    txFromExplorerLog: "The LUKSO RPC no longer keeps this transaction (old history not indexed): read from the explorer.",
+    txUnavailable: "Transaction not available from either the LUKSO RPC (old history not indexed) or the explorer. Paste the input data in the advanced field above and try again.",
+    rawInputInvalid: "The pasted input data is not valid: it must be hex, start with 0x and contain salt and bytecode.",
     notViaFactory: (v) => `This implementation was not created through Nick's factory (the transaction goes to ${v.to}): its deploy cannot be replayed at the same address from this page.`,
     addressMismatch: (v) => `The given transaction produces ${v.predicted}, not ${v.impl}: it is not this implementation's creation transaction.`,
     sourceOk: (v) => `✅ Original deploy verified: transaction ${v.tx} to Nick's factory produces exactly ${v.impl}.`,
@@ -303,7 +318,7 @@ $("langToggle").addEventListener("click", () => {
 // is salt (32 bytes) ++ init code, and it deploys with CREATE2(salt, init code).
 const NICK_FACTORY = "0x4e59b44847b379578588920cA78FbF26c0B4956C";
 const LUKSO_RPC = "https://rpc.mainnet.lukso.network";
-const LUKSO_EXPLORER_API = "https://explorer.execution.mainnet.lukso.network/api/v2/addresses/";
+const LUKSO_EXPLORER_API = "https://explorer.execution.mainnet.lukso.network/api/v2/";
 
 const CHAINS = [
   { key: "0g", name: "0G", chainId: 16661, rpc: "https://evmrpc.0g.ai", explorer: "https://chainscan.0g.ai/address/", currency: "0G" },
@@ -451,7 +466,7 @@ function resetSource() {
   $("sourceStatus").innerHTML = `<span class="empty">${t("notLoaded")}</span>`;
   invalidateCheck();
 }
-["implAddress", "txHash"].forEach(id => $(id).addEventListener("input", resetSource));
+["implAddress", "txHash", "rawInput"].forEach(id => $(id).addEventListener("input", resetSource));
 $("customRpc").addEventListener("input", invalidateCheck);
 networkSelectEl.addEventListener("change", invalidateCheck);
 
@@ -459,11 +474,28 @@ networkSelectEl.addEventListener("change", invalidateCheck);
 async function findCreationTx(impl) {
   // Blockscout API of the LUKSO explorer; best effort, the user can paste the hash instead.
   try {
-    const res = await fetch(LUKSO_EXPLORER_API + impl, { referrerPolicy: "no-referrer" });
+    const res = await fetch(LUKSO_EXPLORER_API + "addresses/" + impl, { referrerPolicy: "no-referrer" });
     if (!res.ok) return null;
     const j = await res.json();
     const h = j.creation_transaction_hash || j.creation_tx_hash;
     return typeof h === "string" && /^0x[0-9a-fA-F]{64}$/.test(h) ? h : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Public RPC nodes often keep the hash -> transaction index only for recent blocks (geth's
+// default is ~2.35M blocks), so old deploys are "not found" there. The explorer keeps the full
+// history. Its answer is untrusted, but it does not need to be trusted: the CREATE2 check below
+// accepts only the exact salt + init code that produce the implementation address.
+async function fetchTxFromExplorer(txHash) {
+  try {
+    const res = await fetch(LUKSO_EXPLORER_API + "transactions/" + txHash, { referrerPolicy: "no-referrer" });
+    if (!res.ok) return null;
+    const j = await res.json();
+    const data = j.raw_input || j.input;
+    if (typeof data !== "string" || !ethers.isHexString(data)) return null;
+    return { to: j.to && typeof j.to.hash === "string" ? j.to.hash : null, data };
   } catch (e) {
     return null;
   }
@@ -487,21 +519,40 @@ $("loadBtn").addEventListener("click", async () => {
     if (code === "0x") { showSourceError(t("implNotOnLukso")); return; }
 
     let txHash = $("txHash").value.trim();
-    if (!txHash) {
-      txHash = await findCreationTx(impl);
-      if (!txHash) { showSourceError(t("creationTxNotFound")); return; }
-      $("txHash").value = txHash;
-    }
-    if (!/^0x[0-9a-fA-F]{64}$/.test(txHash)) { showSourceError(t("txNotFound")); return; }
+    const rawInput = $("rawInput").value.trim();
+    let data, fromExplorer = false;
 
-    const tx = await lukso.getTransaction(txHash);
-    if (!tx) { showSourceError(t("txNotFound")); return; }
-    if (!tx.to || tx.to.toLowerCase() !== NICK_FACTORY.toLowerCase()) {
-      showSourceError(t("notViaFactory", { to: tx.to || "(contract creation)" }));
-      return;
+    if (rawInput) {
+      // Advanced fallback: the CREATE2 check below is what makes pasted data safe to use.
+      if (!ethers.isHexString(rawInput) || rawInput.length <= 2 + 64) { showSourceError(t("rawInputInvalid")); return; }
+      data = rawInput.toLowerCase();
+    } else {
+      if (!txHash) {
+        txHash = await findCreationTx(impl);
+        if (!txHash) { showSourceError(t("creationTxNotFound")); return; }
+        $("txHash").value = txHash;
+      }
+      if (!/^0x[0-9a-fA-F]{64}$/.test(txHash)) { showSourceError(t("invalidTxHash")); return; }
+
+      let to;
+      const tx = await lukso.getTransaction(txHash).catch(() => null);
+      if (tx) {
+        to = tx.to;
+        data = tx.data;
+      } else {
+        const fromApi = await fetchTxFromExplorer(txHash);
+        if (!fromApi) { showSourceError(t("txUnavailable")); return; }
+        to = fromApi.to;
+        data = fromApi.data;
+        fromExplorer = true;
+      }
+      if (!to || to.toLowerCase() !== NICK_FACTORY.toLowerCase()) {
+        showSourceError(t("notViaFactory", { to: to || "(contract creation)" }));
+        return;
+      }
+      if (data.length <= 2 + 64) { showSourceError(t("txNotFound")); return; }
     }
-    const data = tx.data;
-    if (data.length <= 2 + 64) { showSourceError(t("txNotFound")); return; }
+
     const salt = "0x" + data.slice(2, 66);
     const initCode = "0x" + data.slice(66);
     const predicted = ethers.getCreate2Address(NICK_FACTORY, salt, ethers.keccak256(initCode));
@@ -512,7 +563,8 @@ $("loadBtn").addEventListener("click", async () => {
 
     source = { impl, txHash, data, runtimeHash: ethers.keccak256(code), codeBytes: (code.length - 2) / 2 };
     $("sourceStatus").innerHTML =
-      `<span class="badge ok">OK</span> ${escapeHtml(t("sourceOk", { tx: txHash, impl }))}<br>` +
+      `<span class="badge ok">OK</span> ${escapeHtml(t("sourceOk", { tx: txHash || "(input data)", impl }))}<br>` +
+      (fromExplorer ? escapeHtml(t("txFromExplorerLog")) + "<br>" : "") +
       escapeHtml(t("sourceSize", { bytes: source.codeBytes }));
   } catch (e) {
     showSourceError(t("genericError", { err: e.shortMessage || e.message }));
