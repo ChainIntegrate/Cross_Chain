@@ -83,8 +83,8 @@
 </div>
 
 <div class="panel">
-  <h2 data-i18n="panel1Title">1 · Implementazione da pubblicare</h2>
-  <label for="implAddress" data-i18n="implLabel">Indirizzo dell'implementazione (come su LUKSO)</label>
+  <h2 data-i18n="panel1Title">1 · Contratto da pubblicare</h2>
+  <label for="implAddress" data-i18n="implLabel">Indirizzo del contratto (come su LUKSO)</label>
   <input type="text" id="implAddress" placeholder="0x...">
   <div class="chips" id="implChips"></div>
   <label for="txHash" data-i18n="txHashLabel">Hash della transazione di creazione su LUKSO (facoltativo)</label>
@@ -143,12 +143,13 @@ const I18N = {
     h1: "UP Pubblica Implementazione",
     subtitle: "Pubblica su un'altra rete un'implementazione LUKSO (LSP0 o Key Manager) che lì manca, allo stesso identico indirizzo che ha su LUKSO — così il tuo profilo rideployato non resta \"muto\".",
     langToggleBtn: "English",
+    customNetName: "Rete custom",
     panel0Title: "0 · Come funziona questa pagina",
     panel0Note: "Una Universal Profile è un proxy che delega tutto a un'<b>implementazione</b> (LSP0 per il profilo, LSP6 per il Key Manager). Profili creati con versioni diverse dei contratti puntano a implementazioni diverse: se quella del tuo profilo non esiste sulla rete di destinazione, il profilo lì sarebbe \"muto\". LUKSO ha pubblicato le implementazioni tramite la <b>Nick's factory</b> (<code>0x4e59b448…4956C</code>), un deployer deterministico presente allo stesso indirizzo su quasi tutte le reti EVM: ripetendo sulla rete di destinazione la <i>stessa identica</i> transazione, l'implementazione nasce allo <i>stesso identico</i> indirizzo. Questa pagina legge da LUKSO la transazione originale, verifica matematicamente che produca l'indirizzo atteso e la fa firmare al tuo wallet. Lo stesso vale per i contratti di infrastruttura usati dal deploy, come la factory LSP23 (<code>0x2300000A…</code>) o il post-deployment module: se LUKSO li ha pubblicati tramite la Nick's factory, questa pagina li pubblica allo stesso modo (altrimenti lo segnala). È un'operazione permissionless e innocua: chiunque può farla, non dà a nessuno alcun controllo su alcun profilo, e costa solo gas.",
-    panel1Title: "1 · Implementazione da pubblicare",
-    implLabel: "Indirizzo dell'implementazione (come su LUKSO)",
+    panel1Title: "1 · Contratto da pubblicare",
+    implLabel: "Indirizzo del contratto: implementazione o contratto di infrastruttura (come su LUKSO)",
     txHashLabel: "Hash della transazione di creazione su LUKSO (facoltativo)",
-    txHashNote: "Di solito viene trovato automaticamente. Se non succede: apri l'indirizzo dell'implementazione sull'explorer di LUKSO, scheda Details, e copia l'hash del link \"at txn\" nella riga Creator.",
+    txHashNote: "Di solito viene trovato automaticamente. Se non succede: apri l'indirizzo del contratto sull'explorer di LUKSO, scheda Details, e copia l'hash del link \"at txn\" nella riga Creator.",
     loadBtn: "Leggi il deploy originale da LUKSO",
     notLoaded: "Non ancora letto.",
     panel2Title: "2 · Wallet che paga la pubblicazione",
@@ -166,9 +167,9 @@ const I18N = {
     connectedBadge: "Connesso",
     connectionRejected: "Connessione rifiutata o fallita",
     noSignerFound: "Nessun wallet firmatario trovato",
-    invalidImpl: "Indirizzo dell'implementazione non valido.",
+    invalidImpl: "Indirizzo del contratto non valido.",
     loading: "Lettura da LUKSO in corso...",
-    implNotOnLukso: "Su LUKSO non c'è codice a questo indirizzo: non è un'implementazione pubblicata.",
+    implNotOnLukso: "Su LUKSO non c'è codice a questo indirizzo: non è un contratto pubblicato.",
     creationTxNotFound: "Transazione di creazione non trovata automaticamente: incolla il suo hash nel campo sopra e riprova.",
     txNotFound: "Transazione non trovata su LUKSO.",
     invalidTxHash: "Hash della transazione non valido.",
@@ -177,10 +178,10 @@ const I18N = {
     txFromExplorerLog: "L'RPC di LUKSO non conserva più questa transazione (storia vecchia non indicizzata): letta dall'explorer.",
     txUnavailable: "Transazione non disponibile né dall'RPC di LUKSO (storia vecchia non indicizzata) né dall'explorer. Incolla l'input data nel campo avanzato qui sopra e riprova.",
     rawInputInvalid: "L'input data incollato non è valido: deve essere esadecimale, iniziare con 0x e contenere salt e bytecode.",
-    notViaFactory: (v) => `Questa implementazione non è stata creata tramite la Nick's factory (la transazione va a ${v.to}): il deploy non si può ripetere allo stesso indirizzo da questa pagina.`,
-    addressMismatch: (v) => `La transazione indicata produce ${v.predicted}, non ${v.impl}: non è la transazione di creazione di questa implementazione.`,
+    notViaFactory: (v) => `Questo contratto non è stato creato tramite la Nick's factory (la transazione va a ${v.to}): il deploy non si può ripetere allo stesso indirizzo da questa pagina.`,
+    addressMismatch: (v) => `La transazione indicata produce ${v.predicted}, non ${v.impl}: non è la transazione di creazione di questo contratto.`,
     sourceOk: (v) => `✅ Deploy originale verificato: la transazione ${v.tx} alla Nick's factory produce esattamente ${v.impl}.`,
-    sourceSize: (v) => `Bytecode dell'implementazione su LUKSO: ${v.bytes} byte.`,
+    sourceSize: (v) => `Bytecode del contratto su LUKSO: ${v.bytes} byte.`,
     genericError: (v) => `Errore: ${v.err}`,
     staleCheckLog: "Dati, rete o wallet modificati dopo la verifica: premi di nuovo Verifica.",
 
@@ -193,23 +194,23 @@ const I18N = {
     chainsOk: (v) => `✅ Wallet firmatario e RPC sulla stessa rete (chainId ${v.chainId}).`,
     noFactory: "❌ BLOCCANTE — la Nick's factory non esiste su questa rete: non si può ottenere lo stesso indirizzo.",
     factoryOk: "✅ Nick's factory presente su questa rete.",
-    alreadyPublished: (v) => `✅ L'implementazione è già pubblicata su ${v.net} con lo stesso bytecode di LUKSO: non serve fare nulla.`,
+    alreadyPublished: (v) => `✅ Il contratto è già pubblicato su ${v.net} con lo stesso bytecode di LUKSO: non serve fare nulla.`,
     differentCode: "❌ BLOCCANTE — a questo indirizzo c'è già un contratto, ma con bytecode diverso da quello su LUKSO. Non procedere e indaga.",
-    freeOk: "✅ L'indirizzo è libero su questa rete: l'implementazione non è ancora pubblicata.",
+    freeOk: "✅ L'indirizzo è libero su questa rete: il contratto non è ancora pubblicato.",
     gasFail: (v) => `❌ BLOCCANTE — stima gas fallita: ${v.err}`,
     gasOk: (v) => `✅ Stima gas riuscita: ${v.gas} unità.`,
     noGasPrice: "❌ BLOCCANTE — l'RPC non ha restituito un prezzo del gas.",
     costLog: (v) => `Costo stimato (con margine): ${v.cost}`,
     insufficientBalance: (v) => `❌ BLOCCANTE — saldo insufficiente, mancano circa ${v.shortfall}.`,
     balanceOk: "✅ Saldo del wallet firmatario sufficiente.",
-    readyLog: "\nPronto. La pubblicazione è permissionless e non cambia nulla dei tuoi profili: crea solo il contratto di implementazione.",
+    readyLog: "\nPronto. La pubblicazione è permissionless e non cambia nulla dei tuoi profili: crea solo il contratto.",
     signerChanged: (v) => `❌ BLOCCANTE — l'account attivo nel wallet (${v.now}) non è quello verificato (${v.checked}). Rifai la verifica.`,
     sendingLog: "Invio transazione (conferma nel wallet)...",
     txHashLog: (v) => `Tx: ${v.hash}`,
     waitingLog: "In attesa di conferma...",
     txFailed: "❌ La transazione è stata inclusa ma è fallita. Nulla è stato pubblicato.",
     waitingIndexLog: (v) => `In attesa che l'RPC indicizzi il contratto (tentativo ${v.i}/${v.n})...`,
-    publishedOk: (v) => `✅✅ Implementazione pubblicata su ${v.net} a ${v.impl}, con bytecode identico a LUKSO.`,
+    publishedOk: (v) => `✅✅ Contratto pubblicato su ${v.net} a ${v.impl}, con bytecode identico a LUKSO.`,
     publishedMismatch: "❌ Dopo la conferma il bytecode all'indirizzo non corrisponde (o non è ancora indicizzato): ricontrolla tra qualche minuto con Verifica.",
     nextStepLog: "Ora puoi tornare alla pagina di verifica o di deploy del tuo profilo.",
 
@@ -220,12 +221,13 @@ const I18N = {
     h1: "UP Publish Implementation",
     subtitle: "Publish on another network a LUKSO implementation (LSP0 or Key Manager) that is missing there, at the exact same address it has on LUKSO — so your redeployed profile is not \"mute\".",
     langToggleBtn: "Italiano",
+    customNetName: "Custom network",
     panel0Title: "0 · How this page works",
     panel0Note: "A Universal Profile is a proxy that delegates everything to an <b>implementation</b> (LSP0 for the profile, LSP6 for the Key Manager). Profiles created with different contract versions point to different implementations: if your profile's one does not exist on the target network, the profile would be \"mute\" there. LUKSO published its implementations through <b>Nick's factory</b> (<code>0x4e59b448…4956C</code>), a deterministic deployer that lives at the same address on almost every EVM network: replaying the <i>exact same</i> transaction on the target network creates the implementation at the <i>exact same</i> address. This page reads the original transaction from LUKSO, mathematically checks that it produces the expected address, and has your wallet sign it. The same applies to the infrastructure contracts used by the deploy, such as the LSP23 factory (<code>0x2300000A…</code>) or the post-deployment module: if LUKSO published them through Nick's factory, this page publishes them the same way (otherwise it says so). It is permissionless and harmless: anyone can do it, it gives nobody any control over any profile, and it only costs gas.",
-    panel1Title: "1 · Implementation to publish",
-    implLabel: "Implementation address (as on LUKSO)",
+    panel1Title: "1 · Contract to publish",
+    implLabel: "Contract address: implementation or infrastructure contract (as on LUKSO)",
     txHashLabel: "Creation transaction hash on LUKSO (optional)",
-    txHashNote: "Usually found automatically. If not: open the implementation address on the LUKSO explorer, Details tab, and copy the hash of the \"at txn\" link in the Creator row.",
+    txHashNote: "Usually found automatically. If not: open the contract address on the LUKSO explorer, Details tab, and copy the hash of the \"at txn\" link in the Creator row.",
     loadBtn: "Read the original deploy from LUKSO",
     notLoaded: "Not read yet.",
     panel2Title: "2 · Wallet paying for the publication",
@@ -243,9 +245,9 @@ const I18N = {
     connectedBadge: "Connected",
     connectionRejected: "Connection rejected or failed",
     noSignerFound: "No signing wallet found",
-    invalidImpl: "Invalid implementation address.",
+    invalidImpl: "Invalid contract address.",
     loading: "Reading from LUKSO...",
-    implNotOnLukso: "There is no code at this address on LUKSO: it is not a published implementation.",
+    implNotOnLukso: "There is no code at this address on LUKSO: it is not a published contract.",
     creationTxNotFound: "Creation transaction not found automatically: paste its hash in the field above and try again.",
     txNotFound: "Transaction not found on LUKSO.",
     invalidTxHash: "Invalid transaction hash.",
@@ -254,10 +256,10 @@ const I18N = {
     txFromExplorerLog: "The LUKSO RPC no longer keeps this transaction (old history not indexed): read from the explorer.",
     txUnavailable: "Transaction not available from either the LUKSO RPC (old history not indexed) or the explorer. Paste the input data in the advanced field above and try again.",
     rawInputInvalid: "The pasted input data is not valid: it must be hex, start with 0x and contain salt and bytecode.",
-    notViaFactory: (v) => `This implementation was not created through Nick's factory (the transaction goes to ${v.to}): its deploy cannot be replayed at the same address from this page.`,
-    addressMismatch: (v) => `The given transaction produces ${v.predicted}, not ${v.impl}: it is not this implementation's creation transaction.`,
+    notViaFactory: (v) => `This contract was not created through Nick's factory (the transaction goes to ${v.to}): its deploy cannot be replayed at the same address from this page.`,
+    addressMismatch: (v) => `The given transaction produces ${v.predicted}, not ${v.impl}: it is not this contract's creation transaction.`,
     sourceOk: (v) => `✅ Original deploy verified: transaction ${v.tx} to Nick's factory produces exactly ${v.impl}.`,
-    sourceSize: (v) => `Implementation bytecode on LUKSO: ${v.bytes} bytes.`,
+    sourceSize: (v) => `Contract bytecode on LUKSO: ${v.bytes} bytes.`,
     genericError: (v) => `Error: ${v.err}`,
     staleCheckLog: "Data, network or wallet changed after verification: press Verify again.",
 
@@ -270,23 +272,23 @@ const I18N = {
     chainsOk: (v) => `✅ Signing wallet and RPC are on the same network (chainId ${v.chainId}).`,
     noFactory: "❌ BLOCKING — Nick's factory does not exist on this network: the same address cannot be obtained.",
     factoryOk: "✅ Nick's factory present on this network.",
-    alreadyPublished: (v) => `✅ The implementation is already published on ${v.net} with the same bytecode as on LUKSO: nothing to do.`,
+    alreadyPublished: (v) => `✅ The contract is already published on ${v.net} with the same bytecode as on LUKSO: nothing to do.`,
     differentCode: "❌ BLOCKING — there is already a contract at this address, but its bytecode differs from LUKSO's. Do not proceed; investigate.",
-    freeOk: "✅ The address is free on this network: the implementation is not published yet.",
+    freeOk: "✅ The address is free on this network: the contract is not published yet.",
     gasFail: (v) => `❌ BLOCKING — gas estimation failed: ${v.err}`,
     gasOk: (v) => `✅ Gas estimation succeeded: ${v.gas} units.`,
     noGasPrice: "❌ BLOCKING — the RPC did not return a gas price.",
     costLog: (v) => `Estimated cost (with margin): ${v.cost}`,
     insufficientBalance: (v) => `❌ BLOCKING — insufficient balance, about ${v.shortfall} missing.`,
     balanceOk: "✅ Signing wallet balance sufficient.",
-    readyLog: "\nReady. Publishing is permissionless and changes nothing in your profiles: it only creates the implementation contract.",
+    readyLog: "\nReady. Publishing is permissionless and changes nothing in your profiles: it only creates the contract.",
     signerChanged: (v) => `❌ BLOCKING — the active wallet account (${v.now}) is not the one that was verified (${v.checked}). Verify again.`,
     sendingLog: "Sending transaction (confirm in your wallet)...",
     txHashLog: (v) => `Tx: ${v.hash}`,
     waitingLog: "Waiting for confirmation...",
     txFailed: "❌ The transaction was included but failed. Nothing was published.",
     waitingIndexLog: (v) => `Waiting for the RPC to index the contract (attempt ${v.i}/${v.n})...`,
-    publishedOk: (v) => `✅✅ Implementation published on ${v.net} at ${v.impl}, with bytecode identical to LUKSO.`,
+    publishedOk: (v) => `✅✅ Contract published on ${v.net} at ${v.impl}, with bytecode identical to LUKSO.`,
     publishedMismatch: "❌ After confirmation the bytecode at the address does not match (or is not indexed yet): re-check in a few minutes with Verify.",
     nextStepLog: "You can now go back to the verify or deploy page for your profile.",
 
@@ -430,7 +432,7 @@ networkSelectEl.addEventListener("change", () => {
   $("customRpcWrap").style.display = networkSelectEl.value === "custom" ? "block" : "none";
 });
 function getNetwork() {
-  if (networkSelectEl.value === "custom") return { name: "Custom", chainId: null, rpc: $("customRpc").value.trim() };
+  if (networkSelectEl.value === "custom") return { name: t("customNetName"), chainId: null, rpc: $("customRpc").value.trim() };
   return CHAINS.find(c => c.key === networkSelectEl.value);
 }
 
@@ -611,6 +613,8 @@ $("connectSigner").addEventListener("click", async () => {
 // both must be the selected chain.
 async function checkChains(net, provider) {
   const rpcChainId = Number(await provider.send("eth_chainId", []));
+  // A custom RPC has no name in the chain list: label it with the chainId the RPC reports.
+  if (!net.chainId) net.name = `${t("customNetName")} (chainId ${rpcChainId})`;
   const expectedChainId = net.chainId || rpcChainId;
   if (rpcChainId !== expectedChainId) {
     return { ok: false, msg: t("rpcChainMismatch", { rpcChainId, netName: net.name, chainId: expectedChainId }) };

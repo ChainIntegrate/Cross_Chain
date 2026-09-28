@@ -147,6 +147,7 @@ const I18N = {
     h1: "UP Invia Fondi",
     subtitle: "Trasferisce il nativo della rete (ETH/altro) dalla UP a un altro indirizzo — firmato da MetaMask con il controller, tramite Key Manager → ERC725X.execute.",
     langToggleBtn: "English",
+    customNetName: "Rete custom",
 
     panel0Title: "0 · Come funziona questa pagina",
     panel0Note: "Si opera su una UP <b>già deployata</b> su una rete diversa da LUKSO — la UP stessa non firma questa transazione. Chi firma è il <b>wallet controller</b> (es. MetaMask) connesso alla rete di destinazione, con i permessi TRANSFERVALUE/CALL su quella UP. Per questo qui ci sono due collegamenti separati: (1) connetti la tua UP solo per leggerne comodamente l'indirizzo — nessuna firma qui; (2) connetti MetaMask (o un altro wallet) sulla <b>rete dove la UP è stata rideployata</b>, ed è quel wallet a firmare l'invio dei fondi.",
@@ -231,6 +232,7 @@ const I18N = {
     h1: "UP Send Funds",
     subtitle: "Transfers the network's native currency (ETH/other) from the UP to another address — signed by MetaMask with the controller, via Key Manager → ERC725X.execute.",
     langToggleBtn: "Italiano",
+    customNetName: "Custom network",
 
     panel0Title: "0 · How this page works",
     panel0Note: "This operates on a UP that is <b>already deployed</b> on a network other than LUKSO — the UP itself doesn't sign this transaction. The one signing is the <b>controller wallet</b> (e.g. MetaMask) connected to the destination network, with TRANSFERVALUE/CALL permissions on that UP. That's why there are two separate connections here: (1) connect your UP only to read its address conveniently — no signature here; (2) connect MetaMask (or another wallet) on the <b>network where the UP was redeployed</b>, and that wallet is the one signing the funds transfer.",
@@ -510,7 +512,7 @@ networkSelectEl.addEventListener("change", () => {
 });
 function getNetwork() {
   if (networkSelectEl.value === "custom") {
-    return { name: "Custom", rpc: $("customRpc").value.trim(), explorer: $("customExplorer").value.trim() || null };
+    return { name: t("customNetName"), rpc: $("customRpc").value.trim(), explorer: $("customExplorer").value.trim() || null };
   }
   return CHAINS.find(c => c.key === networkSelectEl.value);
 }
@@ -578,6 +580,8 @@ function watchSigner(p) {
 // wallet left on the wrong chain would move real funds there.
 async function checkChains(net, provider) {
   const rpcChainId = Number(await provider.send("eth_chainId", []));
+  // A custom RPC has no name in the chain list: label it with the chainId the RPC reports.
+  if (!net.chainId) net.name = `${t("customNetName")} (chainId ${rpcChainId})`;
   const expectedChainId = net.chainId || rpcChainId;
   if (rpcChainId !== expectedChainId) {
     return { ok: false, msg: t("rpcChainMismatchErr", { rpcChainId, netName: net.name, chainId: expectedChainId }) };

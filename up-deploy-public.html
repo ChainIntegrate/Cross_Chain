@@ -168,6 +168,7 @@ const I18N = {
     h1: "UP Deploy Cross-Chain",
     subtitle: "Rideploy della tua Universal Profile (LSP0 + Key Manager) allo stesso indirizzo su un'altra rete EVM, tramite LSP23LinkedContractsFactory — lo stesso meccanismo usato al momento della creazione originale. Nessuna chiave privata viene mai richiesta da questa pagina: firmi tu, dal tuo wallet.",
     langToggleBtn: "English",
+    customNetName: "Rete custom",
     panel0Title: "0 · Cos'è e cosa serve",
     panel0Note: "Questa pagina ripete, su un'altra rete, l'identica transazione di creazione della tua Universal Profile — per questo l'indirizzo risultante è lo stesso. Ti servono due cose: (1) l'estensione della Universal Profile installata e connessa con il profilo che vuoi replicare; (2) la <b>calldata di deploy originale</b> della tua UP (una lunga stringa esadecimale che inizia con <code>0x6a66a753...</code>), che puoi estrarre dal backup del tuo wallet. La pagina non firma nulla per conto tuo: chiama sempre il tuo wallet per la conferma.",
     panel1Title: "1 · Profilo da replicare",
@@ -299,6 +300,7 @@ const I18N = {
     h1: "UP Cross-Chain Deploy",
     subtitle: "Redeploy your Universal Profile (LSP0 + Key Manager) at the same address on another EVM network, via LSP23LinkedContractsFactory — the exact same mechanism used when it was originally created. This page never asks for a private key: you sign from your own wallet.",
     langToggleBtn: "Italiano",
+    customNetName: "Custom network",
     panel0Title: "0 · What this is and what you need",
     panel0Note: "This page repeats, on another network, the exact same transaction that created your Universal Profile — that's why the resulting address is identical. You need two things: (1) the Universal Profile browser extension, installed and connected with the profile you want to replicate; (2) the <b>original deployment calldata</b> of your UP (a long hex string starting with <code>0x6a66a753...</code>), which you can extract from your wallet's backup. This page never signs anything on your behalf: it always calls your wallet for confirmation.",
     panel1Title: "1 · Profile to replicate",
@@ -627,7 +629,7 @@ networkSelectEl.addEventListener("change", () => {
 function getNetwork() {
   const key = networkSelectEl.value;
   if (key === "custom") {
-    return { name: "Custom", rpc: $("customRpc").value.trim(), explorer: $("customExplorer").value.trim() || null };
+    return { name: t("customNetName"), rpc: $("customRpc").value.trim(), explorer: $("customExplorer").value.trim() || null };
   }
   return CHAINS.find(c => c.key === key);
 }
@@ -916,6 +918,8 @@ function watchSigner(p) {
 // both must be the chain the user selected, otherwise checks and deploy diverge silently.
 async function checkChains(net, provider) {
   const rpcChainId = Number(await provider.send("eth_chainId", []));
+  // A custom RPC has no name in the chain list: label it with the chainId the RPC reports.
+  if (!net.chainId) net.name = `${t("customNetName")} (chainId ${rpcChainId})`;
   const expectedChainId = net.chainId || rpcChainId;
   if (rpcChainId !== expectedChainId) {
     return { ok: false, msg: t("rpcChainMismatchErr", { rpcChainId, netName: net.name, chainId: expectedChainId }) };
