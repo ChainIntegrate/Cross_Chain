@@ -14,6 +14,13 @@ LUKSO published its implementations through Nick's deterministic deployment prox
 
 #### Implementations already published with this tool
 
+This table lists only **shared implementation contracts** (UniversalProfileInit, LSP6KeyManagerInit, …) that were missing on a chain and were published with `up-publish-implementation.html`. Every profile of that version points to them.
+
+**Do not add your own profile here.** Redeploying a profile with the Deploy tool creates a UP and a Key Manager that belong to you only: those addresses are not implementations. A row belongs here only if:
+- the address is an official LUKSO implementation, with the version listed in the [LUKSO documentation](https://docs.lukso.tech);
+- it was published through Nick's factory with this tool, with **one transaction per implementation**;
+- the bytecode on the target chain is identical to the one on LUKSO mainnet (the tool checks this).
+
 | Chain | Contract | Address | Transaction |
 |---|---|---|---|
 | Polygon | UniversalProfileInit v0.12.1 | [`0x52c90985AF970D4E0DC26Cb5D052505278aF32A9`](https://polygonscan.com/address/0x52c90985AF970D4E0DC26Cb5D052505278aF32A9) | [0x7bcf539c…48c2cf](https://polygonscan.com/tx/0x7bcf539c9ab67814df727e597e398c6e661ac06befbe63d8b30d7c08f148c2cf) |
