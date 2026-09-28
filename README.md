@@ -12,14 +12,11 @@ A UP is a proxy that delegates everything to an implementation contract (LSP0 fo
 
 LUKSO published its implementations through Nick's deterministic deployment proxy (`0x4e59b44847b379578588920cA78FbF26c0B4956C`), which lives at the same address on almost every EVM chain. Replaying the original transaction there creates the implementation at the same address. `up-publish-implementation.html` does this: it reads the original transaction from LUKSO, checks that it produces exactly the expected address, and has any wallet sign it. The operation is permissionless, gives nobody control over any profile, and only costs gas.
 
-#### Implementations already published with this tool
+#### Contracts published with this tool (frozen list)
 
-This table lists only **shared implementation contracts** (UniversalProfileInit, LSP6KeyManagerInit, …) that were missing on a chain and were published with `up-publish-implementation.html`. Every profile of that version points to them.
+The first missing contracts published with `up-publish-implementation.html`, all through Nick's factory with one transaction per contract, with bytecode identical to LUKSO mainnet.
 
-**Do not add your own profile here.** Redeploying a profile with the Deploy tool creates a UP and a Key Manager that belong to you only: those addresses are not implementations. A row belongs here only if:
-- the address is an official LUKSO implementation, with the version listed in the [LUKSO documentation](https://docs.lukso.tech);
-- it was published through Nick's factory with this tool, with **one transaction per implementation**;
-- the bytecode on the target chain is identical to the one on LUKSO mainnet (the tool checks this).
+**This list is frozen and will not be extended.** If you publish missing LUKSO contracts on another chain, report them to LUKSO (for example with an issue in [`lsp-smart-contracts`](https://github.com/lukso-network/lsp-smart-contracts)), not here. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 | Chain | Contract | Address | Transaction |
 |---|---|---|---|
@@ -50,6 +47,7 @@ The tools never ask for a private key. The calldata is public on-chain data, and
 | `banner.png`, `logo.png`, `favicon.ico` | Branding for the pages. |
 | `AUDIT.md` | Full security, privacy and bug audit report. |
 | `SECURITY.md` | How to report a vulnerability privately. |
+| `CONTRIBUTING.md` | What contributions are accepted, and how to propose them. |
 
 ## Usage
 
@@ -126,6 +124,10 @@ Main fixes from the 2026-09-27 audit:
 Follow-up on the same date: gas prices are now read directly from the RPC. Before, ethers called a third-party gas-station API on Polygon, and the checks failed when that service was unreachable (AUDIT.md L-09).
 
 Open items that need the maintainer to act (site redeploy, CSP, RPC refresh) are listed in [AUDIT.md §5](AUDIT.md#5-residual-risks-and-recommendations).
+
+## Contributing
+
+Bug reports and improvements to the tools are welcome. This repository does not add new chains: the tools already work on any EVM chain through "Custom RPC", and official support for a chain is LUKSO's responsibility. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening an issue or a pull request.
 
 ## License
 
