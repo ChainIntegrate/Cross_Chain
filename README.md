@@ -16,6 +16,10 @@ LUKSO published its implementations through Nick's deterministic deployment prox
 
 | Chain | Contract | Address | Transaction |
 |---|---|---|---|
+| Fuse | LSP23LinkedContractsFactory | [`0x2300000A84D25dF63081feAa37ba6b62C4c89a30`](https://explorer.fuse.io/address/0x2300000A84D25dF63081feAa37ba6b62C4c89a30) | [`0xdb03a728…4707790d`](https://explorer.fuse.io/tx/0xdb03a728f94fe69231978d433ee471efb79e2c9c33c3fd9ca4cb83314707790d) |
+| Fuse | UniversalProfileInitPostDeploymentModule | [`0x000000000066093407b6704B89793beFfD0D8F00`](https://explorer.fuse.io/address/0x000000000066093407b6704B89793beFfD0D8F00) | [`0xa3cf07be…6481c090`](https://explorer.fuse.io/tx/0xa3cf07be2afb20b956b782ed22ba8120792eececae8d1f22ce0ee63d6481c090) |
+| Fuse | UniversalProfileInit v0.14.0 | [`0x32717575dbA9D3d10490138f2928E6c11f5c8dDf`](https://explorer.fuse.io/address/0x32717575dbA9D3d10490138f2928E6c11f5c8dDf) | [`0xc50e7d96…78c5d5b4`](https://explorer.fuse.io/tx/0xc50e7d9657685d3c2efb73c7aca19c0511cf52f05fdcbbae5e488ccc78c5d5b4) |
+| Fuse | LSP6KeyManagerInit v0.14.0 | [`0x2Fe3AeD98684E7351aD2D408A43cE09a738BF8a4`](https://explorer.fuse.io/address/0x2Fe3AeD98684E7351aD2D408A43cE09a738BF8a4) | [`0xc50e7d96…78c5d5b4`](https://explorer.fuse.io/tx/0xc50e7d9657685d3c2efb73c7aca19c0511cf52f05fdcbbae5e488ccc78c5d5b4) |
 | Polygon | UniversalProfileInit v0.12.1 | [`0x52c90985AF970D4E0DC26Cb5D052505278aF32A9`](https://polygonscan.com/address/0x52c90985AF970D4E0DC26Cb5D052505278aF32A9) | [0x7bcf539c…48c2cf](https://polygonscan.com/tx/0x7bcf539c9ab67814df727e597e398c6e661ac06befbe63d8b30d7c08f148c2cf) |
 | Polygon | LSP6KeyManagerInit v0.12.1 | [`0xa75684d7D048704a2DB851D05Ba0c3cbe226264C`](https://polygonscan.com/address/0xa75684d7D048704a2DB851D05Ba0c3cbe226264C) | [0xb29fae94…83bce8](https://polygonscan.com/tx/0xb29fae94613fd890eef5e4be4b193615aec8795143aae774ea6e8d424383bce8) |
 
