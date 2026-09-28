@@ -168,13 +168,16 @@ const I18N = {
     kmDetail: (v) => `Key Manager: ${v.detail}.`,
     noContractAtAddr: "nessun contratto a questo indirizzo",
     diffBytecode: "bytecode diverso dall'atteso",
+    checkingInfraLog: "Controllo che i contratti di infrastruttura usati dalla calldata (factory LSP23 e post-deployment module) esistano su questa rete...",
+    infraOkLog: (v) => `✅ ${v.label} presente su questa rete (${v.addr}).`,
+    infraMissingWarn: (v) => `⚠️ ${v.label} (${v.addr}) non esiste su questa rete: finché manca, un deploy qui non può funzionare (non creerebbe nulla, oppure creerebbe una UP senza controller). Se LUKSO l'ha pubblicato tramite la Nick's factory, puoi pubblicarlo tu con il link qui sotto.`,
     checkingImplLog: "Controllo che le implementazioni referenziate dalla calldata abbiano bytecode su questa rete...",
     bothImplOk: (v) => `✅ Entrambe le implementazioni (LSP0 ${v.primary}, Key Manager ${v.secondary}) hanno bytecode su questa rete: un eventuale deploy sarebbe funzionante, non solo "presente".`,
     implWarnHeader: "⚠️ ATTENZIONE — anche se il proxy risultasse deployato all'indirizzo atteso, sarebbe \"muto\" su questa rete:",
     primaryImplMissing: (v) => `  l'implementazione LSP0 (${v.addr}) non ha bytecode qui — le chiamate alla UP andrebbero a vuoto senza errore.`,
     secondaryImplMissing: (v) => `  l'implementazione Key Manager (${v.addr}) non ha bytecode qui — le chiamate al Key Manager andrebbero a vuoto senza errore.`,
     genericErrorLog: (v) => `Errore: ${v.err}`,
-    publishLinkText: "→ Pubblica le implementazioni mancanti su questa rete",
+    publishLinkText: "→ Pubblica i contratti mancanti su questa rete",
     wrongSelectorErr: (v) => `la calldata non inizia con il selettore di deployERC1167Proxies (0x6a66a753), ma con ${v.sel}`,
     rpcChainMismatchErr: (v) => `❌ L'RPC risponde con chainId ${v.rpcChainId}, ma la rete selezionata è ${v.netName} (chainId ${v.chainId}): il risultato non sarebbe affidabile.`,
     invalidExpectedErr: "❌ L'indirizzo UP atteso non è un indirizzo valido.",
@@ -224,13 +227,16 @@ const I18N = {
     kmDetail: (v) => `Key Manager: ${v.detail}.`,
     noContractAtAddr: "no contract at this address",
     diffBytecode: "bytecode differs from expected",
+    checkingInfraLog: "Checking that the infrastructure contracts used by the calldata (LSP23 factory and post-deployment module) exist on this network...",
+    infraOkLog: (v) => `✅ ${v.label} present on this network (${v.addr}).`,
+    infraMissingWarn: (v) => `⚠️ ${v.label} (${v.addr}) does not exist on this network: while it is missing, a deploy here cannot work (it would create nothing, or a UP with no controller). If LUKSO published it through Nick's factory, you can publish it yourself with the link below.`,
     checkingImplLog: "Checking that the implementations referenced by the calldata have bytecode on this network...",
     bothImplOk: (v) => `✅ Both implementations (LSP0 ${v.primary}, Key Manager ${v.secondary}) have bytecode on this network: a deploy would actually work, not just be "present".`,
     implWarnHeader: "⚠️ WARNING — even if the proxy turned out to be deployed at the expected address, it would be \"mute\" on this network:",
     primaryImplMissing: (v) => `  the LSP0 implementation (${v.addr}) has no bytecode here — calls to the UP would silently do nothing.`,
     secondaryImplMissing: (v) => `  the Key Manager implementation (${v.addr}) has no bytecode here — calls to the Key Manager would silently do nothing.`,
     genericErrorLog: (v) => `Error: ${v.err}`,
-    publishLinkText: "→ Publish the missing implementations on this network",
+    publishLinkText: "→ Publish the missing contracts on this network",
     wrongSelectorErr: (v) => `the calldata does not start with the deployERC1167Proxies selector (0x6a66a753), but with ${v.sel}`,
     rpcChainMismatchErr: (v) => `❌ The RPC answers with chainId ${v.rpcChainId}, but the selected network is ${v.netName} (chainId ${v.chainId}): the result would not be reliable.`,
     invalidExpectedErr: "❌ The expected UP address is not a valid address.",
@@ -430,7 +436,7 @@ function decodeCalldata(calldataHex) {
   const initcodeHash = ethers.keccak256(minimalProxyInitcode(primary.impl));
   const predictedPrimary = ethers.getCreate2Address(FACTORY_ADDRESS, generatedSalt, initcodeHash);
   const predictedSecondary = computeKeyManagerAddress(predictedPrimary, secondary.impl);
-  return { primary, secondary, predictedPrimary, predictedSecondary };
+  return { primary, secondary, postDeploymentModule, predictedPrimary, predictedSecondary };
 }
 
 $("verifyBtn").addEventListener("click", async () => {
@@ -503,6 +509,21 @@ $("verifyBtn").addEventListener("click", async () => {
     // su questa rete. Se manca, il profilo è — o sarebbe — "muto": ogni delegatecall verso
     // un indirizzo senza codice ritorna successo senza fare nulla, quindi nessun errore visibile
     // a deploy avvenuto. Vale la pena segnalarlo sempre, non solo quando il proxy è già presente.
+    // Infrastructure used by a deploy: without the LSP23 factory nothing is created, and without the
+    // post-deployment module the UP would be created with no controller.
+    log(t("checkingInfraLog"), "line-dim");
+    const missingInfra = [];
+    const infra = [["LSP23LinkedContractsFactory", FACTORY_ADDRESS]];
+    if (BigInt(d.postDeploymentModule) !== 0n) infra.push(["Post-deployment module", d.postDeploymentModule]);
+    for (const [label, addr] of infra) {
+      if ((await provider.getCode(addr)) === "0x") {
+        log(t("infraMissingWarn", { label, addr }), "line-warn");
+        missingInfra.push(addr);
+      } else {
+        log(t("infraOkLog", { label, addr }), "line-ok");
+      }
+    }
+
     log(t("checkingImplLog"), "line-dim");
     const primaryImplCode = await provider.getCode(d.primary.impl);
     const secondaryImplCode = await provider.getCode(d.secondary.impl);
@@ -514,8 +535,9 @@ $("verifyBtn").addEventListener("click", async () => {
       log(t("implWarnHeader"), "line-warn");
       if (!primaryImplOk) log(t("primaryImplMissing", { addr: d.primary.impl }), "line-warn");
       if (!secondaryImplOk) log(t("secondaryImplMissing", { addr: d.secondary.impl }), "line-warn");
-      showPublishLink(net, [!primaryImplOk && d.primary.impl, !secondaryImplOk && d.secondary.impl].filter(Boolean));
     }
+    const missing = [...missingInfra, !primaryImplOk && d.primary.impl, !secondaryImplOk && d.secondary.impl].filter(Boolean);
+    if (missing.length) showPublishLink(net, missing);
   } catch (e) {
     log(t("genericErrorLog", { err: e.shortMessage || e.message }), "line-err");
   }

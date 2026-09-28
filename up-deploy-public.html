@@ -244,6 +244,9 @@ const I18N = {
     alreadyDeployedErr: (v) => `❌ BLOCCANTE — la UP risulta già deployata su questa rete (${v.addr}). Nessun nuovo deploy necessario.`,
     kmInconsistentErr: "❌ BLOCCANTE — il Key Manager risulta già presente a questo indirizzo su questa rete, ma la UP no: stato incoerente, non procedere senza indagare.",
     noContractOkLog: "✅ Nessun contratto presente agli indirizzi attesi su questa rete: il deploy può procedere.",
+    checkingInfraLog: "Controllo che i contratti di infrastruttura usati dalla calldata (factory LSP23 e post-deployment module) esistano su questa rete...",
+    infraOkLog: (v) => `✅ ${v.label} presente su questa rete (${v.addr}).`,
+    infraMissingErr: (v) => `❌ BLOCCANTE — ${v.label} (${v.addr}) non esiste su questa rete. Senza questo contratto il deploy non funziona: la transazione verrebbe "confermata" senza creare nulla, oppure creerebbe una UP senza controller, inutilizzabile per sempre a questo indirizzo. Se LUKSO l'ha pubblicato tramite la Nick's factory, puoi pubblicarlo tu con il link qui sotto.`,
     checkingImplLog: "Controllo che le implementazioni referenziate dalla calldata esistano davvero su questa rete...",
     implMissingErr: (v) => `❌ BLOCCANTE — l'implementazione ${v.label} (${v.addr}) referenziata dalla calldata non ha bytecode su questa rete. Il proxy si deployerebbe comunque, allo stesso indirizzo, ma ogni chiamata andrebbe a vuoto (delegatecall verso un indirizzo senza codice ritorna successo senza fare nulla): un profilo "muto", non un errore visibile. Non procedere finché l'implementazione non è pubblicata su questa rete (puoi farlo tu con il link qui sotto).`,
     implOkLog: (v) => `✅ Implementazione ${v.label} presente e con bytecode su questa rete (${v.addr}).`,
@@ -289,7 +292,7 @@ const I18N = {
     donateOkLog: "✅ Donazione in LYX inviata, grazie!",
     donateFailedLog: (v) => `❌ Errore durante l'invio: ${v.err}`,
     testLinkText: "→ Testa la UP appena deployata su questa rete",
-    publishLinkText: "→ Pubblica le implementazioni mancanti su questa rete",
+    publishLinkText: "→ Pubblica i contratti mancanti su questa rete",
   },
   en: {
     pageTitle: "UP Cross-Chain Deploy",
@@ -372,6 +375,9 @@ const I18N = {
     alreadyDeployedErr: (v) => `❌ BLOCKING — the UP already appears deployed on this network (${v.addr}). No new deploy needed.`,
     kmInconsistentErr: "❌ BLOCKING — the Key Manager already exists at this address on this network, but the UP doesn't: inconsistent state, do not proceed without investigating.",
     noContractOkLog: "✅ No contract present at the expected addresses on this network: the deploy can proceed.",
+    checkingInfraLog: "Checking that the infrastructure contracts used by the calldata (LSP23 factory and post-deployment module) exist on this network...",
+    infraOkLog: (v) => `✅ ${v.label} present on this network (${v.addr}).`,
+    infraMissingErr: (v) => `❌ BLOCKING — ${v.label} (${v.addr}) does not exist on this network. Without this contract the deploy cannot work: the transaction would be "confirmed" without creating anything, or it would create a UP with no controller, unusable forever at this address. If LUKSO published it through Nick's factory, you can publish it yourself with the link below.`,
     checkingImplLog: "Checking that the implementations referenced by the calldata actually exist on this network...",
     implMissingErr: (v) => `❌ BLOCKING — the ${v.label} implementation (${v.addr}) referenced by the calldata has no bytecode on this network. The proxy would still deploy at the same address, but every call would go nowhere (a delegatecall to an address with no code returns success while doing nothing): a "mute" profile, with no visible error. Do not proceed until the implementation is published on this network (you can do it yourself with the link below).`,
     implOkLog: (v) => `✅ ${v.label} implementation present and has bytecode on this network (${v.addr}).`,
@@ -417,7 +423,7 @@ const I18N = {
     donateOkLog: "✅ LYX donation sent, thank you!",
     donateFailedLog: (v) => `❌ Error while sending: ${v.err}`,
     testLinkText: "→ Test the UP you just deployed on this network",
-    publishLinkText: "→ Publish the missing implementations on this network",
+    publishLinkText: "→ Publish the missing contracts on this network",
   },
 };
 
@@ -989,18 +995,35 @@ $("checkBtn").addEventListener("click", async () => {
     // allo stesso indirizzo, ma ogni delegatecall verso un'implementazione senza bytecode
     // ritorna successo senza fare nulla: un profilo "muto", nessun errore visibile a deploy
     // avvenuto. Va intercettato qui, prima di firmare, non dopo.
+    // Infrastructure: the LSP23 factory receives the transaction, and the post-deployment module
+    // sets the controller permissions and hands UP ownership to the Key Manager. With no code at
+    // the factory the transaction "succeeds" doing nothing (any funding is lost); with no code at
+    // the module the UP is created owned by an empty address, with no controller, and occupies
+    // its address forever. Both must be blocked before signing.
+    log(t("checkingInfraLog"), "line-dim");
+    const missing = [];
+    const infra = [["LSP23LinkedContractsFactory", FACTORY_ADDRESS]];
+    if (BigInt(decoded.postDeploymentModule) !== 0n) infra.push(["Post-deployment module", decoded.postDeploymentModule]);
+    for (const [label, addr] of infra) {
+      if ((await provider.getCode(addr)) === "0x") {
+        log(t("infraMissingErr", { label, addr }), "line-err");
+        missing.push(addr);
+      } else {
+        log(t("infraOkLog", { label, addr }), "line-ok");
+      }
+    }
+
     log(t("checkingImplLog"), "line-dim");
-    const missingImpls = [];
     for (const [label, impl] of [["LSP0 (UniversalProfile)", decoded.primary.impl], ["Key Manager", decoded.secondary.impl]]) {
       if ((await provider.getCode(impl)) === "0x") {
         log(t("implMissingErr", { label, addr: impl }), "line-err");
-        missingImpls.push(impl);
+        missing.push(impl);
       } else {
         log(t("implOkLog", { label, addr: impl }), "line-ok");
       }
     }
-    if (missingImpls.length) {
-      showPublishLink(net, missingImpls);
+    if (missing.length) {
+      showPublishLink(net, missing);
       return;
     }
 
