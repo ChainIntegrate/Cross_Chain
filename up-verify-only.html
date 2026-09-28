@@ -130,6 +130,7 @@ const I18N = {
     h1: "UP Deploy — Sola Verifica",
     subtitle: "Controlla, senza firmare né spendere nulla, se una Universal Profile risulta correttamente deployata su una rete a partire dalla sua calldata originale. Solo lettura — nessuna firma richiesta.",
     langToggleBtn: "English",
+    customNetName: "Rete custom",
 
     panel0Title: "0 · Come funziona questa pagina",
     panel0Note: "Questa pagina non firma né invia mai nessuna transazione: interroga solo un RPC pubblico in lettura per dirti se, a partire da una certa calldata, esiste già un deploy valido su una data rete. Connettere la tua Universal Profile qui sotto è <b>facoltativo</b> — serve solo a comodità, per compilare automaticamente il campo \"Indirizzo UP atteso\" con il tuo indirizzo, invece di doverlo copiare a mano da un explorer o dall'estensione. Puoi anche lasciarlo vuoto, o inserire qualsiasi altro indirizzo, per controllare il deploy di un profilo diverso dal tuo.",
@@ -189,6 +190,7 @@ const I18N = {
     h1: "UP Deploy — Verify Only",
     subtitle: "Check, without signing or spending anything, whether a Universal Profile is correctly deployed on a network, starting from its original calldata. Read-only — no signature required.",
     langToggleBtn: "Italiano",
+    customNetName: "Custom network",
 
     panel0Title: "0 · How this page works",
     panel0Note: "This page never signs or sends any transaction: it only queries a public RPC in read mode, to tell you whether, starting from a given calldata, a valid deploy already exists on a given network. Connecting your Universal Profile below is <b>optional</b> — it's purely a convenience, to auto-fill the \"Expected UP address\" field with your address instead of copying it by hand from an explorer or the extension. You can also leave it blank, or enter any other address, to check the deploy of a profile that isn't yours.",
@@ -396,7 +398,7 @@ networkSelectEl.addEventListener("change", () => {
 });
 function getNetwork() {
   const key = networkSelectEl.value;
-  if (key === "custom") return { name: "Custom", rpc: $("customRpc").value.trim() };
+  if (key === "custom") return { name: t("customNetName"), rpc: $("customRpc").value.trim() };
   return CHAINS.find(c => c.key === key);
 }
 
@@ -466,13 +468,13 @@ $("verifyBtn").addEventListener("click", async () => {
     }
 
     const provider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
-    if (net.chainId) {
-      const rpcChainId = Number(await provider.send("eth_chainId", []));
-      if (rpcChainId !== net.chainId) {
-        log(t("rpcChainMismatchErr", { rpcChainId, netName: net.name, chainId: net.chainId }), "line-err");
-        return;
-      }
+    const rpcChainId = Number(await provider.send("eth_chainId", []));
+    if (net.chainId && rpcChainId !== net.chainId) {
+      log(t("rpcChainMismatchErr", { rpcChainId, netName: net.name, chainId: net.chainId }), "line-err");
+      return;
     }
+    // A custom RPC has no name in the chain list: label it with the chainId the RPC reports.
+    if (!net.chainId) net.name = `${t("customNetName")} (chainId ${rpcChainId})`;
 
     async function getCodeStable(address, attempts, delayMs) {
       let last = "0x";
