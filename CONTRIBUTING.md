@@ -29,7 +29,7 @@ Pull requests written with AI assistants are fine, but you are responsible for t
 
 ## Rules for the tool pages
 
-- **Static site, no build step.** Plain HTML and JavaScript served as files; no npm dependencies at runtime. The only external script is ethers, pinned with Subresource Integrity: if you change its version, update the `integrity` hash.
+- **Static site, no build step.** Plain HTML and JavaScript served as files; no npm dependencies at runtime. The only external script is ethers, pinned with Subresource Integrity: if you change its version, update the `integrity` hash. Other third-party code is allowed only as a pinned, prebuilt file in `vendor/`, with its versions, rebuild steps and SHA-256 documented in `vendor/README.md`.
 - **Two languages.** Every user-visible text exists in English and Italian.
 - **Untrusted data.** Anything that comes from users, wallets, RPCs or explorers must be escaped before it is written into the page (`escapeHtml`) or checked before it is trusted (for example the CREATE2 address check).
 - **Keep the safety checks.** Do not remove or weaken the existing checks: wallet/RPC/selected chain match, invalidation of a verification when inputs change, presence of factory, module and implementations, and bytecode verification after a deploy.

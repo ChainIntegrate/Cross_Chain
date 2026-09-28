@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>UP WalletConnect — Basenames demo — ChainIntegrate</title>
+<link rel="icon" href="favicon.ico">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="vendor/walletkit-1.6.0.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
+    --text: #e6e8ec; --text-dim: #9aa1ad;
+    --accent: #5b8cff; --ok: #3fbf6f; --warn: #e0a83c; --err: #e05a5a;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+         max-width: 760px; margin: 0 auto; padding: 32px 20px 80px; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .subtitle { color: var(--text-dim); font-size: 13px; margin-bottom: 28px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+  .panel h2 { font-size: 14px; margin: 0 0 14px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.03em; }
+  .note { font-size: 12.5px; color: var(--text-dim); line-height: 1.5; margin-bottom: 12px; }
+  label { display: block; font-size: 13px; color: var(--text-dim); margin: 14px 0 6px; }
+  label:first-child { margin-top: 0; }
+  select, input { width: 100%; background: #10131a; border: 1px solid var(--border); color: var(--text);
+                  border-radius: 6px; padding: 10px 12px; font-size: 14px; font-family: inherit; }
+  button { width: 100%; background: var(--accent); color: white; border: none; border-radius: 6px;
+           padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; }
+  button:disabled { background: #3a3f4b; cursor: not-allowed; }
+  button.danger { background: var(--err); }
+  .status-box { background: #10131a; border: 1px solid var(--border); border-radius: 6px; padding: 12px;
+                font-family: monospace; font-size: 12.5px; margin-top: 12px; }
+  .status-box .empty { color: var(--text-dim); }
+  #log { font-family: monospace; font-size: 12.5px; white-space: pre-wrap; word-break: break-all; line-height: 1.6; }
+  .line-ok { color: var(--ok); } .line-warn { color: var(--warn); } .line-err { color: var(--err); } .line-dim { color: var(--text-dim); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-family: monospace; }
+  .badge.ok { background: rgba(63,191,111,0.15); color: var(--ok); }
+  .badge.err { background: rgba(224,90,90,0.15); color: var(--err); }
+  .balance-big { font-size: 22px; font-weight: 600; margin-top: 4px; }
+  .brand-row { margin-bottom: 24px; }
+  .brand-logo { display: block; width: 100%; height: auto; border-radius: 10px; }
+  .top-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .lang-btn { width: auto; background: #2a2f3a; padding: 6px 14px; font-size: 12px; margin-top: 0; flex-shrink: 0; }
+  .site-footer { margin-top: 40px; padding: 18px 20px; background: #f5f6f8; border: 1px solid #e3e5ea; border-radius: 10px; color: #4b4f58; }
+  .footer-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .footer-logo { height: 48px; width: auto; flex-shrink: 0; }
+  .footer-text { font-size: 13px; line-height: 1.6; }
+  .footer-li { display: inline-flex; vertical-align: middle; margin: 0 2px; }
+  .site-footer a { color: #2563eb; text-decoration: none; font-weight: 600; }
+  .site-footer a:hover { text-decoration: underline; }
+  .kv { display: grid; grid-template-columns: 170px 1fr; gap: 6px 12px; font-size: 13px; margin-top: 10px; }
+  .kv .k { color: var(--text-dim); }
+  .kv .v { font-family: monospace; word-break: break-all; }
+  .check-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 13.5px; }
+  .check-row input { width: auto; }
+  .warn-box { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--warn); border-radius: 8px; background: rgba(224,168,60,0.08); font-size: 13px; line-height: 1.5; }
+  button.secondary { background: #2a2f3a; }
+</style>
+</head>
+<body>
+
+<div class="brand-row">
+  <img src="banner.png" alt="ChainIntegrate" class="brand-logo" onerror="this.style.display='none'">
+</div>
+
+<div class="top-row">
+  <div>
+    <h1 data-i18n="h1">UP WalletConnect — demo Basenames</h1>
+    <div class="subtitle" data-i18n="subtitle"></div>
+  </div>
+  <button class="lang-btn" id="langToggle" data-i18n="langToggleBtn">English</button>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel0Title">0 · Come funziona</h2>
+  <div class="note" data-i18n-html="panel0Note"></div>
+  <div class="warn-box" data-i18n-html="demoWarning"></div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel1Title">1 · La tua UP su Base</h2>
+  <button id="connectUp" class="secondary" data-i18n="connectUpBtn">Leggi l'indirizzo dall'estensione UP</button>
+  <label for="upAddress" data-i18n="upAddressLabel">Indirizzo della UP</label>
+  <input type="text" id="upAddress" placeholder="0x...">
+  <button id="checkUpBtn" data-i18n="checkUpBtn">Controlla la UP su Base</button>
+  <div class="status-box" id="upStatus"><span class="empty" data-i18n="notChecked">Non ancora controllata.</span></div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel2Title">2 · Wallet del controller (firma)</h2>
+  <div class="note" data-i18n="panel2Note"></div>
+  <button id="connectSigner" data-i18n="connectSignerBtn">Connetti MetaMask (controller)</button>
+  <div class="status-box" id="signerStatus"><span class="empty" data-i18n="notConnected">Non connesso.</span></div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel3Title">3 · Collega Basenames con WalletConnect</h2>
+  <div class="note" data-i18n-html="panel3Note"></div>
+  <label for="wcUri" data-i18n="wcUriLabel">Link WalletConnect (wc:...)</label>
+  <input type="text" id="wcUri" placeholder="wc:...">
+  <button id="pairBtn" data-i18n="pairBtn">Collega</button>
+  <div class="status-box" id="wcStatus"><span class="empty" data-i18n="wcIdle">Nessuna sessione.</span></div>
+  <button id="disconnectBtn" class="secondary" disabled data-i18n="disconnectBtn">Disconnetti tutte le sessioni</button>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel4Title">4 · Richiesta dalla dApp</h2>
+  <div class="check-row"><input type="checkbox" id="simulateOnly" checked><label for="simulateOnly" style="margin:0;" data-i18n="simulateOnlyLabel">Solo simulazione (non inviare nulla)</label></div>
+  <div class="note" style="margin-top:6px;" data-i18n="simulateOnlyNote"></div>
+  <div id="requestBox" class="status-box"><span class="empty" data-i18n="noRequest">Nessuna richiesta in attesa.</span></div>
+  <button id="sendBtn" class="danger" disabled data-i18n="sendBtn">Firma e invia (irreversibile)</button>
+  <button id="rejectBtn" class="secondary" disabled data-i18n="rejectBtn">Rifiuta la richiesta</button>
+  <div id="log" class="line-dim" style="margin-top:10px;"></div>
+</div>
+
+<div class="site-footer">
+  <div class="footer-row">
+    <img src="logo.png" alt="ChainIntegrate" class="footer-logo" onerror="this.style.display='none'">
+    <div class="footer-text" data-i18n-html="footerHtml"></div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+// ==================== CONFIG ====================
+// WalletConnect (Reown) Project ID, from cloud.reown.com. It is a public identifier, not a secret.
+const WALLETCONNECT_PROJECT_ID = "";
+
+const BASE = { name: "Base", chainId: 8453, rpc: "https://mainnet.base.org", explorer: "https://basescan.org/" };
+const CAIP_CHAIN = "eip155:8453";
+
+// Basenames contracts on Base mainnet, from the official repository (github.com/base-org/basenames,
+// README "Base Mainnet"). The page accepts transactions ONLY to these two controllers.
+const BASENAMES_TARGETS = {
+  "0xa7d2607c6bd39ae9521e514026cbb078405ab322": {
+    label: "UpgradeableRegistrarController",
+    abi: [
+      "function register((string name,address owner,uint256 duration,address resolver,bytes[] data,bool reverseRecord,uint256[] coinTypes,uint256 signatureExpiry,bytes signature) request) payable",
+      "function registerPrice(string name, uint256 duration) view returns (uint256)",
+      "function available(string name) view returns (bool)",
+    ],
+  },
+  "0x4ccb0bb02fcaba27e82a56646e81d8c5bc4119a5": {
+    label: "RegistrarController (legacy)",
+    abi: [
+      "function register((string name,address owner,uint256 duration,address resolver,bytes[] data,bool reverseRecord) request) payable",
+      "function registerPrice(string name, uint256 duration) view returns (uint256)",
+      "function available(string name) view returns (bool)",
+    ],
+  },
+};
+const BASE_REGISTRAR = "0x03c4738Ee98aE44591e1A4A4F3CaB6641d95DD9a"; // ERC-721 of the names (ownerOf)
+
+// ==================== I18N ====================
+let LANG = "it";
+const I18N = {
+  it: {
+    pageTitle: "UP WalletConnect — demo Basenames — ChainIntegrate",
+    h1: "UP WalletConnect — demo Basenames",
+    subtitle: "Usa la tua Universal Profile rideployata su Base come account su Basenames (base.org/names): la dApp vede l'indirizzo della UP, il tuo controller firma.",
+    langToggleBtn: "English",
+    panel0Title: "0 · Come funziona",
+    panel0Note: "Questa pagina fa da <b>ponte WalletConnect</b>: presenta a Basenames l'indirizzo della tua UP come account collegato. Quando il sito chiede di inviare la transazione di registrazione, la pagina la <b>incapsula</b> in <code>KeyManager.execute(UP.execute(...))</code> e la fa firmare al tuo controller in MetaMask. Così la chiamata arriva a Basenames con <code>msg.sender</code> = la tua UP, e il nome registrato appartiene alla UP. Il costo del nome esce dal <b>saldo della UP</b> su Base; il gas lo paga il controller.",
+    demoWarning: "<b>Demo sperimentale.</b> Accetta solo la rete Base e solo la registrazione di un nome su Basenames: ogni altra richiesta viene rifiutata. Le richieste di firma di messaggi vengono rifiutate: sul sito <b>non</b> attivare l'opzione del nome primario. Parti in modalità simulazione, poi prova l'invio vero con un account secondario e un nome economico.",
+    panel1Title: "1 · La tua UP su Base",
+    connectUpBtn: "Leggi l'indirizzo dall'estensione UP",
+    upAddressLabel: "Indirizzo della UP",
+    checkUpBtn: "Controlla la UP su Base",
+    notChecked: "Non ancora controllata.",
+    panel2Title: "2 · Wallet del controller (firma)",
+    panel2Note: "MetaMask con la chiave del controller della UP, connesso alla rete Base. Paga il gas delle transazioni: deve avere un po' di ETH su Base.",
+    connectSignerBtn: "Connetti MetaMask (controller)",
+    notConnected: "Non connesso.",
+    panel3Title: "3 · Collega Basenames con WalletConnect",
+    panel3Note: "Su <b>base.org/names</b> scegli di connetterti con <b>WalletConnect</b>, copia il link di connessione (il pulsante per copiare sotto il QR code, inizia con <code>wc:</code>) e incollalo qui. Tieni aperta questa pagina mentre usi il sito.",
+    wcUriLabel: "Link WalletConnect (wc:...)",
+    pairBtn: "Collega",
+    wcIdle: "Nessuna sessione.",
+    disconnectBtn: "Disconnetti tutte le sessioni",
+    panel4Title: "4 · Richiesta dalla dApp",
+    simulateOnlyLabel: "Solo simulazione (non inviare nulla)",
+    simulateOnlyNote: "Con la spunta, la pagina esegue tutti i controlli e simula la transazione su Base, poi risponde al sito che è una simulazione: non viene inviato nulla e non si spende nulla.",
+    noRequest: "Nessuna richiesta in attesa.",
+    sendBtn: "Firma e invia (irreversibile)",
+    rejectBtn: "Rifiuta la richiesta",
+
+    extNotFound: "Estensione Universal Profile non trovata.",
+    connectionRejected: "Connessione rifiutata o fallita.",
+    noSignerFound: "Nessun wallet firmatario trovato (es. MetaMask).",
+    invalidUp: "Indirizzo UP non valido.",
+    upNotDeployed: "❌ La UP non risulta deployata su Base: prima fai il deploy.",
+    upNotKm: "❌ L'owner della UP non è un Key Manager con codice su Base.",
+    upOk: (v) => `✅ UP deployata su Base. Key Manager: ${v.km}. Saldo della UP: ${v.bal} ETH.`,
+    checkUpFirst: "Controlla prima la UP su Base (pannello 1).",
+    rpcWrongChain: (v) => `❌ L'RPC di Base risponde con chainId ${v.id}, non 8453.`,
+    noProjectId: "Manca il Project ID di WalletConnect nella configurazione della pagina (WALLETCONNECT_PROJECT_ID).",
+    invalidUri: "Il link deve iniziare con wc:",
+    pairing: "Collegamento in corso... conferma sul sito se richiesto.",
+    proposalFrom: (v) => `Richiesta di connessione da: ${v.name} (${v.url}) — verifica: ${v.verify}`,
+    proposalNotBase: "⚠️ La richiesta non dichiara di provenire da base.org: controlla di essere sul sito giusto.",
+    proposalRejectedChains: (v) => `❌ Connessione rifiutata: il sito chiede reti non supportate (${v.err}). Questa demo supporta solo Base.`,
+    sessionActive: (v) => `✅ Sessione attiva con ${v.name} (${v.url}) — account presentato: ${v.acc} su Base.`,
+    sessionClosed: "Sessione chiusa.",
+    genericError: (v) => `Errore: ${v.err}`,
+
+    reqMethod: (v) => `Richiesta dal sito: ${v.method}`,
+    reqSignRejected: "Richiesta di firma rifiutata: questa demo non firma messaggi per la UP. Sul sito disattiva l'opzione del nome primario e riprova.",
+    reqUnsupported: (v) => `Metodo non supportato, rifiutato: ${v.method}`,
+    reqBusy: "C'è già una richiesta in attesa: la nuova viene rifiutata.",
+    reqWrongChain: (v) => `❌ Richiesta su una rete diversa da Base (${v.chain}): rifiutata.`,
+    reqWrongFrom: (v) => `❌ La transazione non parte dalla UP (from = ${v.from}): rifiutata.`,
+    reqWrongTarget: (v) => `❌ Destinatario non consentito (${v.to}): questa demo accetta solo la registrazione su Basenames. Rifiutata.`,
+    reqWrongMethod: "❌ La chiamata non è register(...) di Basenames: rifiutata.",
+    reqWrongOwner: (v) => `❌ Il nome verrebbe intestato a ${v.owner}, non alla tua UP: rifiutata.`,
+    kName: "Nome", kOwner: "Intestatario", kDuration: "Durata", kValue: "Pagamento (dalla UP)", kPrice: "Prezzo attuale",
+    kTarget: "Contratto", kPrimary: "Nome primario", kKm: "Firmato tramite", kSigner: "Firma (controller)",
+    yes: "sì", no: "no", days: "giorni",
+    notAvailable: "❌ Il nome non è disponibile.",
+    valueBelowPrice: "❌ Il pagamento indicato dal sito è inferiore al prezzo attuale.",
+    upNoFunds: (v) => `❌ La UP non ha abbastanza ETH su Base per pagare il nome: servono ${v.need}, ne ha ${v.have}. Manda ETH all'indirizzo della UP su Base.`,
+    chainsOk: "✅ Wallet del controller e RPC su Base.",
+    walletWrongChain: (v) => `❌ MetaMask è sulla rete con chainId ${v.id}: passa a Base (8453).`,
+    walletChainUnknown: "❌ Impossibile leggere la rete di MetaMask.",
+    connectSignerFirst: "Connetti prima MetaMask con il controller (pannello 2).",
+    simulating: "Simulazione su Base della transazione incapsulata...",
+    simOk: (v) => `✅ Simulazione riuscita: la UP registrerebbe il nome. Gas stimato: ${v.gas}.`,
+    simFail: (v) => `❌ La simulazione fallisce: ${v.err}. Probabile causa: permessi del controller, saldo o parametri. Niente viene inviato.`,
+    signerNoGas: (v) => `❌ Il controller non ha abbastanza ETH su Base per il gas: servono circa ${v.need}, ne ha ${v.have}.`,
+    simOnlyDone: "Modalità simulazione: niente inviato. Al sito è stato risposto che si tratta di una simulazione.",
+    readyToSend: "Pronto. Controlla i dati sopra, poi premi \"Firma e invia\" e conferma in MetaMask.",
+    signerChanged: "❌ L'account attivo in MetaMask non è quello verificato: riconnetti e ripeti.",
+    sending: "Invio della transazione incapsulata (conferma in MetaMask)...",
+    txSent: (v) => `Tx inviata: ${v.hash}`,
+    waiting: "In attesa di conferma su Base...",
+    txFailed: "❌ Transazione fallita.",
+    ownerOk: (v) => `✅✅ Nome registrato: ${v.name}.base.eth appartiene alla UP (${v.up}).`,
+    ownerMismatch: (v) => `⚠️ Transazione confermata, ma l'owner del nome risulta ${v.owner}. Controlla sull'explorer.`,
+    rejectedByUser: "Richiesta rifiutata.",
+
+    footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a>`,
+  },
+  en: {
+    pageTitle: "UP WalletConnect — Basenames demo — ChainIntegrate",
+    h1: "UP WalletConnect — Basenames demo",
+    subtitle: "Use your Universal Profile redeployed on Base as the account on Basenames (base.org/names): the dApp sees the UP address, your controller signs.",
+    langToggleBtn: "Italiano",
+    panel0Title: "0 · How it works",
+    panel0Note: "This page acts as a <b>WalletConnect bridge</b>: it presents your UP address to Basenames as the connected account. When the site asks to send the registration transaction, the page <b>wraps</b> it into <code>KeyManager.execute(UP.execute(...))</code> and has your controller sign it in MetaMask. The call therefore reaches Basenames with <code>msg.sender</code> = your UP, and the registered name belongs to the UP. The name's price is paid from the <b>UP's balance</b> on Base; the controller pays the gas.",
+    demoWarning: "<b>Experimental demo.</b> It only accepts the Base network and only the registration of a name on Basenames: every other request is rejected. Message-signing requests are rejected: on the site, do <b>not</b> enable the primary-name option. Start in simulation mode, then try a real send with a secondary account and a cheap name.",
+    panel1Title: "1 · Your UP on Base",
+    connectUpBtn: "Read the address from the UP extension",
+    upAddressLabel: "UP address",
+    checkUpBtn: "Check the UP on Base",
+    notChecked: "Not checked yet.",
+    panel2Title: "2 · Controller wallet (signing)",
+    panel2Note: "MetaMask with the UP controller's key, connected to Base. It pays the transaction gas: it needs a little ETH on Base.",
+    connectSignerBtn: "Connect MetaMask (controller)",
+    notConnected: "Not connected.",
+    panel3Title: "3 · Connect Basenames through WalletConnect",
+    panel3Note: "On <b>base.org/names</b> choose to connect with <b>WalletConnect</b>, copy the connection link (the copy button below the QR code, it starts with <code>wc:</code>) and paste it here. Keep this page open while you use the site.",
+    wcUriLabel: "WalletConnect link (wc:...)",
+    pairBtn: "Connect",
+    wcIdle: "No session.",
+    disconnectBtn: "Disconnect all sessions",
+    panel4Title: "4 · Request from the dApp",
+    simulateOnlyLabel: "Simulation only (send nothing)",
+    simulateOnlyNote: "When checked, the page runs every check and simulates the transaction on Base, then tells the site it was a simulation: nothing is sent and nothing is spent.",
+    noRequest: "No pending request.",
+    sendBtn: "Sign and send (irreversible)",
+    rejectBtn: "Reject the request",
+
+    extNotFound: "Universal Profile extension not found.",
+    connectionRejected: "Connection rejected or failed.",
+    noSignerFound: "No signing wallet found (e.g. MetaMask).",
+    invalidUp: "Invalid UP address.",
+    upNotDeployed: "❌ The UP is not deployed on Base: deploy it first.",
+    upNotKm: "❌ The UP owner is not a Key Manager with code on Base.",
+    upOk: (v) => `✅ UP deployed on Base. Key Manager: ${v.km}. UP balance: ${v.bal} ETH.`,
+    checkUpFirst: "Check the UP on Base first (panel 1).",
+    rpcWrongChain: (v) => `❌ The Base RPC answers with chainId ${v.id}, not 8453.`,
+    noProjectId: "The WalletConnect Project ID is missing from the page configuration (WALLETCONNECT_PROJECT_ID).",
+    invalidUri: "The link must start with wc:",
+    pairing: "Connecting... confirm on the site if asked.",
+    proposalFrom: (v) => `Connection request from: ${v.name} (${v.url}) — verification: ${v.verify}`,
+    proposalNotBase: "⚠️ The request does not claim to come from base.org: check that you are on the right site.",
+    proposalRejectedChains: (v) => `❌ Connection rejected: the site asks for unsupported networks (${v.err}). This demo only supports Base.`,
+    sessionActive: (v) => `✅ Session active with ${v.name} (${v.url}) — account presented: ${v.acc} on Base.`,
+    sessionClosed: "Session closed.",
+    genericError: (v) => `Error: ${v.err}`,
+
+    reqMethod: (v) => `Request from the site: ${v.method}`,
+    reqSignRejected: "Signing request rejected: this demo does not sign messages for the UP. On the site, disable the primary-name option and try again.",
+    reqUnsupported: (v) => `Unsupported method, rejected: ${v.method}`,
+    reqBusy: "A request is already pending: the new one is rejected.",
+    reqWrongChain: (v) => `❌ Request on a network other than Base (${v.chain}): rejected.`,
+    reqWrongFrom: (v) => `❌ The transaction does not come from the UP (from = ${v.from}): rejected.`,
+    reqWrongTarget: (v) => `❌ Recipient not allowed (${v.to}): this demo only accepts Basenames registrations. Rejected.`,
+    reqWrongMethod: "❌ The call is not Basenames register(...): rejected.",
+    reqWrongOwner: (v) => `❌ The name would be owned by ${v.owner}, not by your UP: rejected.`,
+    kName: "Name", kOwner: "Owner", kDuration: "Duration", kValue: "Payment (from the UP)", kPrice: "Current price",
+    kTarget: "Contract", kPrimary: "Primary name", kKm: "Signed through", kSigner: "Signer (controller)",
+    yes: "yes", no: "no", days: "days",
+    notAvailable: "❌ The name is not available.",
+    valueBelowPrice: "❌ The payment set by the site is below the current price.",
+    upNoFunds: (v) => `❌ The UP does not have enough ETH on Base to pay for the name: ${v.need} needed, it has ${v.have}. Send ETH to the UP address on Base.`,
+    chainsOk: "✅ Controller wallet and RPC on Base.",
+    walletWrongChain: (v) => `❌ MetaMask is on chainId ${v.id}: switch to Base (8453).`,
+    walletChainUnknown: "❌ Could not read MetaMask's network.",
+    connectSignerFirst: "Connect MetaMask with the controller first (panel 2).",
+    simulating: "Simulating the wrapped transaction on Base...",
+    simOk: (v) => `✅ Simulation succeeded: the UP would register the name. Estimated gas: ${v.gas}.`,
+    simFail: (v) => `❌ The simulation fails: ${v.err}. Likely cause: controller permissions, balance or parameters. Nothing is sent.`,
+    signerNoGas: (v) => `❌ The controller does not have enough ETH on Base for gas: about ${v.need} needed, it has ${v.have}.`,
+    simOnlyDone: "Simulation mode: nothing sent. The site was told this was a simulation.",
+    readyToSend: "Ready. Check the data above, then press \"Sign and send\" and confirm in MetaMask.",
+    signerChanged: "❌ The active MetaMask account is not the one that was checked: reconnect and try again.",
+    sending: "Sending the wrapped transaction (confirm in MetaMask)...",
+    txSent: (v) => `Tx sent: ${v.hash}`,
+    waiting: "Waiting for confirmation on Base...",
+    txFailed: "❌ Transaction failed.",
+    ownerOk: (v) => `✅✅ Name registered: ${v.name}.base.eth belongs to the UP (${v.up}).`,
+    ownerMismatch: (v) => `⚠️ Transaction confirmed, but the name owner is ${v.owner}. Check on the explorer.`,
+    rejectedByUser: "Request rejected.",
+
+    footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a>`,
+  },
+};
+
+function t(key, vars) {
+  const entry = I18N[LANG][key];
+  return typeof entry === "function" ? entry(vars || {}) : entry;
+}
+function applyI18n() {
+  document.documentElement.lang = LANG;
+  document.title = t("pageTitle");
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.getAttribute("data-i18n")); });
+  document.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.getAttribute("data-i18n-html")); });
+}
+$("langToggle").addEventListener("click", () => { LANG = LANG === "it" ? "en" : "it"; applyI18n(); });
+
+// ==================== HELPERS ====================
+// All data coming from the dApp, wallets or RPCs is written with textContent, never innerHTML.
+function setStatus(id, text, cls) {
+  const el = $(id);
+  el.textContent = "";
+  const span = document.createElement("span");
+  if (cls) span.className = cls;
+  span.textContent = text;
+  el.appendChild(span);
+}
+function log(msg, cls) {
+  const l = document.createElement("div");
+  if (cls) l.className = cls;
+  l.textContent = msg;
+  $("log").appendChild(l);
+}
+function renderKv(rows) {
+  const box = $("requestBox");
+  box.textContent = "";
+  const grid = document.createElement("div");
+  grid.className = "kv";
+  for (const [k, v] of rows) {
+    const kd = document.createElement("div"); kd.className = "k"; kd.textContent = k;
+    const vd = document.createElement("div"); vd.className = "v"; vd.textContent = v;
+    grid.appendChild(kd); grid.appendChild(vd);
+  }
+  box.appendChild(grid);
+}
+const rpc = new ethers.JsonRpcProvider(BASE.rpc, BASE.chainId, { staticNetwork: true, batchMaxCount: 1 });
+
+// Upper bound of the gas price, read straight from the RPC (2 * baseFee + priority fee).
+async function estimateMaxGasPrice() {
+  const gasPrice = BigInt(await rpc.send("eth_gasPrice", []));
+  const block = await rpc.send("eth_getBlockByNumber", ["latest", false]);
+  if (!block || !block.baseFeePerGas) return gasPrice;
+  const baseFee = BigInt(block.baseFeePerGas);
+  const tip = gasPrice > baseFee ? gasPrice - baseFee : 0n;
+  return 2n * baseFee + tip;
+}
+
+// ==================== 1. UP ====================
+let upAddress = null, kmAddress = null;
+
+$("connectUp").addEventListener("click", async () => {
+  if (!window.lukso) { setStatus("upStatus", t("extNotFound"), "line-err"); return; }
+  try {
+    const accounts = await window.lukso.request({ method: "eth_requestAccounts" });
+    $("upAddress").value = accounts[0];
+    resetUp();
+  } catch (e) {
+    setStatus("upStatus", t("connectionRejected"), "line-err");
+  }
+});
+function resetUp() { upAddress = null; kmAddress = null; setStatus("upStatus", t("notChecked"), "empty"); }
+$("upAddress").addEventListener("input", resetUp);
+
+$("checkUpBtn").addEventListener("click", async () => {
+  resetUp();
+  const raw = $("upAddress").value.trim();
+  if (!ethers.isAddress(raw)) { setStatus("upStatus", t("invalidUp"), "line-err"); return; }
+  const up = ethers.getAddress(raw);
+  try {
+    const rpcChainId = Number(await rpc.send("eth_chainId", []));
+    if (rpcChainId !== BASE.chainId) { setStatus("upStatus", t("rpcWrongChain", { id: rpcChainId }), "line-err"); return; }
+    if ((await rpc.getCode(up)) === "0x") { setStatus("upStatus", t("upNotDeployed"), "line-err"); return; }
+    const km = ethers.getAddress(await new ethers.Contract(up, ["function owner() view returns (address)"], rpc).owner());
+    if ((await rpc.getCode(km)) === "0x") { setStatus("upStatus", t("upNotKm"), "line-err"); return; }
+    const bal = await rpc.getBalance(up);
+    upAddress = up; kmAddress = km;
+    setStatus("upStatus", t("upOk", { km, bal: ethers.formatEther(bal) }), "line-ok");
+  } catch (e) {
+    setStatus("upStatus", t("genericError", { err: e.shortMessage || e.message }), "line-err");
+  }
+});
+
+// ==================== 2. Controller wallet ====================
+let signerProvider = null, signerAddress = null;
+const discoveredProviders = [];
+window.addEventListener("eip6963:announceProvider", (e) => discoveredProviders.push(e.detail));
+window.dispatchEvent(new Event("eip6963:requestProvider"));
+
+$("connectSigner").addEventListener("click", async () => {
+  let candidate = discoveredProviders.find(p => !/lukso|universal profile/i.test(p.info.name))?.provider;
+  if (!candidate && window.ethereum && window.ethereum !== window.lukso) candidate = window.ethereum;
+  if (!candidate) { setStatus("signerStatus", t("noSignerFound"), "line-err"); return; }
+  try {
+    const accounts = await candidate.request({ method: "eth_requestAccounts" });
+    signerAddress = accounts[0];
+    signerProvider = candidate;
+    let chainLabel = "";
+    try { chainLabel = ` · chainId ${parseInt(await candidate.request({ method: "eth_chainId" }), 16)}`; } catch (e) { /* shown without chain */ }
+    setStatus("signerStatus", signerAddress + chainLabel, "line-ok");
+  } catch (e) {
+    setStatus("signerStatus", t("connectionRejected"), "line-err");
+  }
+});
+
+async function walletOnBase() {
+  try {
+    const id = parseInt(await signerProvider.request({ method: "eth_chainId" }), 16);
+    return id === BASE.chainId ? { ok: true } : { ok: false, msg: t("walletWrongChain", { id }) };
+  } catch (e) {
+    return { ok: false, msg: t("walletChainUnknown") };
+  }
+}
+
+// ==================== 3. WalletConnect ====================
+let walletKit = null;
+let pending = null; // { topic, id, tx, wrapped, gasLimit, label, name }
+
+async function getWalletKit() {
+  if (walletKit) return walletKit;
+  if (!WALLETCONNECT_PROJECT_ID) throw new Error(t("noProjectId"));
+  const { Core, WalletKit } = window.WalletKitBundle;
+  const core = new Core({ projectId: WALLETCONNECT_PROJECT_ID });
+  walletKit = await WalletKit.init({
+    core,
+    metadata: {
+      name: "ChainIntegrate UP bridge (demo)",
+      description: "Universal Profile bridge for Basenames on Base",
+      url: location.origin,
+      icons: [location.origin + "/favicon.ico"],
+    },
+  });
+  walletKit.on("session_proposal", onSessionProposal);
+  walletKit.on("session_request", onSessionRequest);
+  walletKit.on("session_delete", () => { showSessions(); log(t("sessionClosed"), "line-dim"); });
+  showSessions();
+  return walletKit;
+}
+
+function showSessions() {
+  const sessions = walletKit ? Object.values(walletKit.getActiveSessions()) : [];
+  $("disconnectBtn").disabled = sessions.length === 0;
+  if (!sessions.length) { setStatus("wcStatus", t("wcIdle"), "empty"); return; }
+  const s = sessions[sessions.length - 1];
+  const acc = (s.namespaces.eip155?.accounts?.[0] || "").split(":").pop();
+  setStatus("wcStatus", t("sessionActive", { name: s.peer.metadata.name, url: s.peer.metadata.url, acc }), "line-ok");
+}
+
+$("pairBtn").addEventListener("click", async () => {
+  const uri = $("wcUri").value.trim();
+  if (!upAddress) { setStatus("wcStatus", t("checkUpFirst"), "line-err"); return; }
+  if (!uri.startsWith("wc:")) { setStatus("wcStatus", t("invalidUri"), "line-err"); return; }
+  try {
+    const kit = await getWalletKit();
+    setStatus("wcStatus", t("pairing"), "empty");
+    await kit.pair({ uri });
+    $("wcUri").value = "";
+  } catch (e) {
+    setStatus("wcStatus", t("genericError", { err: e.message }), "line-err");
+  }
+});
+
+$("disconnectBtn").addEventListener("click", async () => {
+  if (!walletKit) return;
+  const { getSdkError } = window.WalletKitBundle;
+  for (const s of Object.values(walletKit.getActiveSessions())) {
+    try { await walletKit.disconnectSession({ topic: s.topic, reason: getSdkError("USER_DISCONNECTED") }); } catch (e) { /* already gone */ }
+  }
+  showSessions();
+});
+
+async function onSessionProposal({ id, params, verifyContext }) {
+  const { buildApprovedNamespaces, getSdkError } = window.WalletKitBundle;
+  const meta = params.proposer.metadata || {};
+  const verify = verifyContext?.verified?.validation || "UNKNOWN";
+  log(t("proposalFrom", { name: meta.name, url: meta.url, verify }), "line-dim");
+  if (!/^https:\/\/(www\.)?base\.org(\/|$)/.test(meta.url || "")) log(t("proposalNotBase"), "line-warn");
+  if (!upAddress) {
+    await walletKit.rejectSession({ id, reason: getSdkError("USER_REJECTED") });
+    setStatus("wcStatus", t("checkUpFirst"), "line-err");
+    return;
+  }
+  try {
+    // The UP address is the account presented to the dApp, on Base only.
+    const namespaces = buildApprovedNamespaces({
+      proposal: params,
+      supportedNamespaces: {
+        eip155: {
+          chains: [CAIP_CHAIN],
+          methods: ["eth_sendTransaction", "personal_sign", "eth_signTypedData_v4", "eth_signTypedData", "eth_sign", "wallet_switchEthereumChain"],
+          events: ["accountsChanged", "chainChanged"],
+          accounts: [`${CAIP_CHAIN}:${upAddress}`],
+        },
+      },
+    });
+    await walletKit.approveSession({ id, namespaces });
+    showSessions();
+  } catch (e) {
+    log(t("proposalRejectedChains", { err: e.message }), "line-err");
+    try { await walletKit.rejectSession({ id, reason: getSdkError("UNSUPPORTED_CHAINS") }); } catch (e2) { /* ignore */ }
+  }
+}
+
+// ==================== 4. Requests ====================
+async function respondResult(topic, id, result) {
+  await walletKit.respondSessionRequest({ topic, response: { id, jsonrpc: "2.0", result } });
+}
+async function respondError(topic, id, message, code = 5000) {
+  await walletKit.respondSessionRequest({ topic, response: { id, jsonrpc: "2.0", error: { code, message } } });
+}
+function clearPending(msg) {
+  pending = null;
+  $("sendBtn").disabled = true;
+  $("rejectBtn").disabled = true;
+  if (msg) setStatus("requestBox", msg, "empty");
+}
+
+async function onSessionRequest(event) {
+  const { topic, id, params } = event;
+  const { request, chainId } = params;
+  log(t("reqMethod", { method: request.method }), "line-dim");
+
+  if (["personal_sign", "eth_sign", "eth_signTypedData", "eth_signTypedData_v4"].includes(request.method)) {
+    log(t("reqSignRejected"), "line-warn");
+    return respondError(topic, id, "User rejected: this bridge does not sign messages", 5000);
+  }
+  if (request.method === "wallet_switchEthereumChain") {
+    const wanted = parseInt(request.params?.[0]?.chainId, 16);
+    return wanted === BASE.chainId ? respondResult(topic, id, null) : respondError(topic, id, "Only Base is supported", 4902);
+  }
+  if (request.method !== "eth_sendTransaction") {
+    log(t("reqUnsupported", { method: request.method }), "line-warn");
+    return respondError(topic, id, `Unsupported method: ${request.method}`, 4200);
+  }
+  if (pending) {
+    log(t("reqBusy"), "line-warn");
+    return respondError(topic, id, "Another request is pending", 5000);
+  }
+  await handleSendTransaction(topic, id, chainId, request.params?.[0] || {});
+}
+
+async function handleSendTransaction(topic, id, chainId, tx) {
+  const reject = async (msg) => { log(msg, "line-err"); await respondError(topic, id, "Rejected by the UP bridge", 5000); };
+  $("log").textContent = "";
+
+  if (chainId !== CAIP_CHAIN) return reject(t("reqWrongChain", { chain: chainId }));
+  if (!upAddress || !kmAddress) return reject(t("checkUpFirst"));
+  if (!tx.from || tx.from.toLowerCase() !== upAddress.toLowerCase()) return reject(t("reqWrongFrom", { from: tx.from }));
+  const to = (tx.to || "").toLowerCase();
+  const target = BASENAMES_TARGETS[to];
+  if (!target) return reject(t("reqWrongTarget", { to: tx.to }));
+
+  const iface = new ethers.Interface(target.abi);
+  let decoded;
+  try {
+    decoded = iface.parseTransaction({ data: tx.data || "0x", value: tx.value || 0 });
+  } catch (e) { decoded = null; }
+  if (!decoded || decoded.name !== "register") return reject(t("reqWrongMethod"));
+
+  const req = decoded.args[0];
+  if (req.owner.toLowerCase() !== upAddress.toLowerCase()) return reject(t("reqWrongOwner", { owner: req.owner }));
+
+  const value = BigInt(tx.value || 0);
+  const controller = new ethers.Contract(tx.to, iface, rpc);
+  try {
+    const [price, available, upBal] = await Promise.all([
+      controller.registerPrice(req.name, req.duration),
+      controller.available(req.name),
+      rpc.getBalance(upAddress),
+    ]);
+    renderKv([
+      [t("kName"), `${req.name}.base.eth`],
+      [t("kOwner"), req.owner],
+      [t("kDuration"), `${(Number(req.duration) / 86400).toFixed(0)} ${t("days")}`],
+      [t("kValue"), `${ethers.formatEther(value)} ETH`],
+      [t("kPrice"), `${ethers.formatEther(price)} ETH`],
+      [t("kPrimary"), req.reverseRecord ? t("yes") : t("no")],
+      [t("kTarget"), `${target.label} ${ethers.getAddress(tx.to)}`],
+      [t("kKm"), kmAddress],
+      [t("kSigner"), signerAddress || "—"],
+    ]);
+    if (!available) return reject(t("notAvailable"));
+    if (value < price) return reject(t("valueBelowPrice"));
+    if (upBal < value) return reject(t("upNoFunds", { need: ethers.formatEther(value), have: ethers.formatEther(upBal) }));
+
+    if (!signerAddress) return reject(t("connectSignerFirst"));
+    const chains = await walletOnBase();
+    if (!chains.ok) return reject(chains.msg);
+    log(t("chainsOk"), "line-ok");
+
+    // Wrap: the controller calls KeyManager.execute(UP.execute(CALL, controller, value, data)),
+    // so Basenames sees msg.sender = UP and the payment comes from the UP's balance.
+    const upIface = new ethers.Interface(["function execute(uint256 operationType, address target, uint256 value, bytes data) payable returns (bytes)"]);
+    const kmIface = new ethers.Interface(["function execute(bytes payload) payable returns (bytes)"]);
+    const inner = upIface.encodeFunctionData("execute", [0, ethers.getAddress(tx.to), value, tx.data]);
+    const wrapped = kmIface.encodeFunctionData("execute", [inner]);
+
+    log(t("simulating"), "line-dim");
+    let gas;
+    try {
+      await rpc.call({ from: signerAddress, to: kmAddress, data: wrapped });
+      gas = await rpc.estimateGas({ from: signerAddress, to: kmAddress, data: wrapped });
+    } catch (e) {
+      return reject(t("simFail", { err: e.shortMessage || e.reason || e.message }));
+    }
+    log(t("simOk", { gas: gas.toString() }), "line-ok");
+
+    const gasLimit = gas + gas / 4n;
+    const need = gasLimit * (await estimateMaxGasPrice());
+    const signerBal = await rpc.getBalance(signerAddress);
+    if (signerBal < need) return reject(t("signerNoGas", { need: ethers.formatEther(need), have: ethers.formatEther(signerBal) }));
+
+    if ($("simulateOnly").checked) {
+      log(t("simOnlyDone"), "line-warn");
+      await respondError(topic, id, "Simulation only: transaction not sent", 5000);
+      return;
+    }
+
+    pending = { topic, id, wrapped, gasLimit, name: req.name, signer: signerAddress };
+    $("sendBtn").disabled = false;
+    $("rejectBtn").disabled = false;
+    log(t("readyToSend"), "line-warn");
+  } catch (e) {
+    return reject(t("genericError", { err: e.shortMessage || e.message }));
+  }
+}
+
+$("rejectBtn").addEventListener("click", async () => {
+  if (!pending) return;
+  const { topic, id } = pending;
+  clearPending(t("noRequest"));
+  log(t("rejectedByUser"), "line-dim");
+  await respondError(topic, id, "User rejected", 5000);
+});
+
+$("sendBtn").addEventListener("click", async () => {
+  if (!pending) return;
+  const p = pending;
+  $("sendBtn").disabled = true;
+  $("rejectBtn").disabled = true;
+  try {
+    const chains = await walletOnBase();
+    if (!chains.ok) { log(chains.msg, "line-err"); await respondError(p.topic, p.id, "Wrong network", 5000); return clearPending(); }
+    const signer = await new ethers.BrowserProvider(signerProvider).getSigner();
+    if (signer.address.toLowerCase() !== p.signer.toLowerCase()) {
+      log(t("signerChanged"), "line-err");
+      await respondError(p.topic, p.id, "Signer changed", 5000);
+      return clearPending();
+    }
+    log(t("sending"), "line-dim");
+    const sent = await signer.sendTransaction({ to: kmAddress, data: p.wrapped, gasLimit: p.gasLimit });
+    log(t("txSent", { hash: sent.hash }), "line-dim");
+    log(BASE.explorer + "tx/" + sent.hash, "line-dim");
+    // The dApp tracks the transaction by its hash; the transaction is the wrapped one.
+    await respondResult(p.topic, p.id, sent.hash);
+    clearPending();
+
+    log(t("waiting"), "line-dim");
+    const receipt = await sent.wait();
+    if (!receipt || receipt.status !== 1) { log(t("txFailed"), "line-err"); return; }
+    const tokenId = BigInt(ethers.id(p.name));
+    const owner = await new ethers.Contract(BASE_REGISTRAR, ["function ownerOf(uint256) view returns (address)"], rpc).ownerOf(tokenId);
+    if (owner.toLowerCase() === upAddress.toLowerCase()) log(t("ownerOk", { name: p.name, up: upAddress }), "line-ok");
+    else log(t("ownerMismatch", { owner }), "line-warn");
+  } catch (e) {
+    log(t("genericError", { err: e.shortMessage || e.message }), "line-err");
+    if (pending) { try { await respondError(p.topic, p.id, "Send failed", 5000); } catch (e2) { /* ignore */ } clearPending(); }
+  }
+});
+
+applyI18n();
+</script>
+
+</body>
+</html>
