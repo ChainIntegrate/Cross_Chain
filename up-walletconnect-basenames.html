@@ -77,7 +77,8 @@
 <div class="panel">
   <h2 data-i18n="panel0Title">0 · Come funziona</h2>
   <div class="note" data-i18n-html="panel0Note"></div>
-  <div class="warn-box" data-i18n-html="demoWarning"></div>
+  <div class="warn-box" style="border-color: var(--err); background: rgba(224,90,90,0.08);" data-i18n-html="demoWarning"></div>
+  <div class="check-row"><input type="checkbox" id="ackRisk"><label for="ackRisk" style="margin:0; color: var(--text);" data-i18n="ackLabel">Ho letto e accetto</label></div>
 </div>
 
 <div class="panel">
@@ -165,7 +166,9 @@ const I18N = {
     langToggleBtn: "English",
     panel0Title: "0 · Come funziona",
     panel0Note: "Questa pagina fa da <b>ponte WalletConnect</b>: presenta a Basenames l'indirizzo della tua UP come account collegato. Quando il sito chiede di inviare la transazione di registrazione, la pagina la <b>incapsula</b> in <code>KeyManager.execute(UP.execute(...))</code> e la fa firmare al tuo controller in MetaMask. Così la chiamata arriva a Basenames con <code>msg.sender</code> = la tua UP, e il nome registrato appartiene alla UP. Il costo del nome esce dal <b>saldo della UP</b> su Base; il gas lo paga il controller.",
-    demoWarning: "<b>Demo sperimentale.</b> Accetta solo la rete Base e solo la registrazione di un nome su Basenames: ogni altra richiesta viene rifiutata. Le richieste di firma di messaggi vengono rifiutate: sul sito <b>non</b> attivare l'opzione del nome primario. Parti in modalità simulazione, poi prova l'invio vero con un account secondario e un nome economico.",
+    demoWarning: "<b>⚠️ Leggi prima di usare questa pagina</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Demo sperimentale, non sottoposta ad audit.</b> Serve a verificare un concetto tecnico, non è un prodotto. Può contenere errori.</li><li><b>Transazioni reali e irreversibili</b> sulla rete Base: puoi perdere i fondi usati. Nessuno può annullare una transazione confermata.</li><li><b>Usala solo con un account di prova</b> e con importi minimi. Parti sempre in modalità simulazione.</li><li><b>Nessuna garanzia.</b> Il software è fornito \"così com'è\" (licenza MIT): lo usi a tuo rischio. ChainIntegrate non risponde di perdite o danni.</li><li><b>Nessuna affiliazione</b> con Coinbase, Base, Basenames, WalletConnect/Reown o LUKSO. I nomi sono citati solo per descrivere la compatibilità.</li><li><b>Questa pagina non chiede mai chiavi private</b> né seed phrase: firmi tutto nel tuo wallet. Controlla sempre rete, destinatario e importo nel popup di MetaMask.</li><li><b>Privacy:</b> la connessione WalletConnect passa dai server di Reown, che vedono i metadati della sessione (indirizzi, rete). Le verifiche usano l'RPC pubblico di Base.</li><li>Non è una consulenza finanziaria né un invito a registrare nomi o acquistare token.</li></ul><div style=\"margin-top:8px;\">Accetta solo la rete Base e solo la registrazione di un nome su Basenames: ogni altra richiesta viene rifiutata. Le richieste di firma di messaggi vengono rifiutate: sul sito <b>non</b> attivare l'opzione del nome primario.</div>",
+    ackLabel: "Ho letto e accetto: uso questa demo a mio rischio, con un account di prova.",
+    ackRequired: "Prima accetta le condizioni nel pannello 0.",
     panel1Title: "1 · La tua UP su Base",
     connectUpBtn: "Leggi l'indirizzo dall'estensione UP",
     upAddressLabel: "Indirizzo della UP",
@@ -250,7 +253,9 @@ const I18N = {
     langToggleBtn: "Italiano",
     panel0Title: "0 · How it works",
     panel0Note: "This page acts as a <b>WalletConnect bridge</b>: it presents your UP address to Basenames as the connected account. When the site asks to send the registration transaction, the page <b>wraps</b> it into <code>KeyManager.execute(UP.execute(...))</code> and has your controller sign it in MetaMask. The call therefore reaches Basenames with <code>msg.sender</code> = your UP, and the registered name belongs to the UP. The name's price is paid from the <b>UP's balance</b> on Base; the controller pays the gas.",
-    demoWarning: "<b>Experimental demo.</b> It only accepts the Base network and only the registration of a name on Basenames: every other request is rejected. Message-signing requests are rejected: on the site, do <b>not</b> enable the primary-name option. Start in simulation mode, then try a real send with a secondary account and a cheap name.",
+    demoWarning: "<b>⚠️ Read before using this page</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Experimental demo, not audited.</b> It is meant to test a technical concept, not a product. It may contain bugs.</li><li><b>Real, irreversible transactions</b> on the Base network: you can lose the funds you use. Nobody can undo a confirmed transaction.</li><li><b>Only use it with a test account</b> and minimal amounts. Always start in simulation mode.</li><li><b>No warranty.</b> The software is provided \"as is\" (MIT license): you use it at your own risk. ChainIntegrate is not liable for any loss or damage.</li><li><b>No affiliation</b> with Coinbase, Base, Basenames, WalletConnect/Reown or LUKSO. The names are mentioned only to describe compatibility.</li><li><b>This page never asks for private keys</b> or seed phrases: you sign everything in your own wallet. Always check network, recipient and amount in the MetaMask popup.</li><li><b>Privacy:</b> the WalletConnect connection goes through Reown's servers, which see the session metadata (addresses, network). Checks use Base's public RPC.</li><li>This is not financial advice, nor an invitation to register names or buy tokens.</li></ul><div style=\"margin-top:8px;\">It only accepts the Base network and only the registration of a name on Basenames: every other request is rejected. Message-signing requests are rejected: on the site, do <b>not</b> enable the primary-name option.</div>",
+    ackLabel: "I have read and accept: I use this demo at my own risk, with a test account.",
+    ackRequired: "Accept the conditions in panel 0 first.",
     panel1Title: "1 · Your UP on Base",
     connectUpBtn: "Read the address from the UP extension",
     upAddressLabel: "UP address",
@@ -482,8 +487,12 @@ function showSessions() {
   setStatus("wcStatus", t("sessionActive", { name: s.peer.metadata.name, url: s.peer.metadata.url, acc }), "line-ok");
 }
 
+// Nothing connects or sends until the disclaimer has been accepted.
+const riskAccepted = () => $("ackRisk").checked;
+
 $("pairBtn").addEventListener("click", async () => {
   const uri = $("wcUri").value.trim();
+  if (!riskAccepted()) { setStatus("wcStatus", t("ackRequired"), "line-err"); return; }
   if (!upAddress) { setStatus("wcStatus", t("checkUpFirst"), "line-err"); return; }
   if (!uri.startsWith("wc:")) { setStatus("wcStatus", t("invalidUri"), "line-err"); return; }
   try {
@@ -511,7 +520,7 @@ async function onSessionProposal({ id, params, verifyContext }) {
   const verify = verifyContext?.verified?.validation || "UNKNOWN";
   log(t("proposalFrom", { name: meta.name, url: meta.url, verify }), "line-dim");
   if (!/^https:\/\/(www\.)?base\.org(\/|$)/.test(meta.url || "")) log(t("proposalNotBase"), "line-warn");
-  if (!upAddress) {
+  if (!upAddress || !riskAccepted()) {
     await walletKit.rejectSession({ id, reason: getSdkError("USER_REJECTED") });
     setStatus("wcStatus", t("checkUpFirst"), "line-err");
     return;
@@ -579,6 +588,7 @@ async function handleSendTransaction(topic, id, chainId, tx) {
   const reject = async (msg) => { log(msg, "line-err"); await respondError(topic, id, "Rejected by the UP bridge", 5000); };
   $("log").textContent = "";
 
+  if (!riskAccepted()) return reject(t("ackRequired"));
   if (chainId !== CAIP_CHAIN) return reject(t("reqWrongChain", { chain: chainId }));
   if (!upAddress || !kmAddress) return reject(t("checkUpFirst"));
   if (!tx.from || tx.from.toLowerCase() !== upAddress.toLowerCase()) return reject(t("reqWrongFrom", { from: tx.from }));
@@ -671,6 +681,7 @@ $("rejectBtn").addEventListener("click", async () => {
 
 $("sendBtn").addEventListener("click", async () => {
   if (!pending) return;
+  if (!riskAccepted()) { log(t("ackRequired"), "line-err"); return; }
   const p = pending;
   $("sendBtn").disabled = true;
   $("rejectBtn").disabled = true;
