@@ -54,6 +54,8 @@
   .check-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 13.5px; }
   .check-row input { width: auto; }
   .warn-box { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--err); border-radius: 8px; background: rgba(224,90,90,0.08); font-size: 13px; line-height: 1.5; }
+  .link-btn { display: block; text-align: center; background: var(--accent); color: white; border-radius: 6px; padding: 12px; font-size: 14px; font-weight: 600; text-decoration: none; margin-top: 12px; }
+  .link-btn[hidden] { display: none; }
   .plan { font-family: monospace; font-size: 12.5px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
   @media (max-width: 560px) { .kv { grid-template-columns: 1fr; } }
 </style>
@@ -109,7 +111,7 @@
 <div class="panel">
   <h2 data-i18n="panel4Title">4 · Azioni</h2>
   <div class="note" data-i18n-html="panel4Note"></div>
-  <button id="publishBtn" disabled data-i18n="publishBtn">Pubblica l'estensione su questa rete</button>
+  <a id="publishLink" class="link-btn" hidden target="_blank" rel="noopener" data-i18n="publishLinkText">Pubblica l'estensione su questa rete (pagina di pubblicazione) →</a>
   <button id="prepareBtn" disabled data-i18n="prepareBtn">Prepara e simula l'abilitazione</button>
   <div class="status-box plan" id="planBox"><span class="empty" data-i18n="noPlan">Nessuna operazione preparata.</span></div>
   <div class="check-row" id="replaceRow" style="display:none;"><input type="checkbox" id="ackReplace"><label for="ackReplace" style="margin:0; color: var(--warn);" data-i18n="ackReplaceLabel">Ho capito che sostituisco le estensioni esistenti indicate sopra</label></div>
@@ -203,8 +205,6 @@ const CHAINS = [
 // deployment proxy with salt 0: same address on every chain. contracts/NFTReceiverExtension.json holds
 // the same values.
 const NICK_FACTORY = "0x4e59b44847b379578588920cA78FbF26c0B4956C";
-const EXT_SALT = "0x0000000000000000000000000000000000000000000000000000000000000000";
-const EXT_INIT_CODE = "0x608060405234801561001057600080fd5b506103c2806100206000396000f3fe608060405234801561001057600080fd5b506004361061004c5760003560e01c806301ffc9a714610051578063150b7a0214610079578063bc197c81146100b1578063f23a6e61146100d3575b600080fd5b61006461005f366004610145565b6100f3565b60405190151581526020015b60405180910390f35b6100986100873660046101db565b630a85bd0160e11b95945050505050565b6040516001600160e01b03199091168152602001610070565b6100986100bf36600461028f565b63bc197c8160e01b98975050505050505050565b6100986100e136600461034a565b63f23a6e6160e01b9695505050505050565b60006301ffc9a760e01b6001600160e01b0319831614806101245750630a85bd0160e11b6001600160e01b03198316145b8061013f5750630271189760e51b6001600160e01b03198316145b92915050565b60006020828403121561015757600080fd5b81356001600160e01b03198116811461016f57600080fd5b9392505050565b80356001600160a01b038116811461018d57600080fd5b919050565b60008083601f8401126101a457600080fd5b50813567ffffffffffffffff8111156101bc57600080fd5b6020830191508360208285010111156101d457600080fd5b9250929050565b6000806000806000608086880312156101f357600080fd5b6101fc86610176565b945061020a60208701610176565b935060408601359250606086013567ffffffffffffffff81111561022d57600080fd5b61023988828901610192565b969995985093965092949392505050565b60008083601f84011261025c57600080fd5b50813567ffffffffffffffff81111561027457600080fd5b6020830191508360208260051b85010111156101d457600080fd5b60008060008060008060008060a0898b0312156102ab57600080fd5b6102b489610176565b97506102c260208a01610176565b9650604089013567ffffffffffffffff808211156102df57600080fd5b6102eb8c838d0161024a565b909850965060608b013591508082111561030457600080fd5b6103108c838d0161024a565b909650945060808b013591508082111561032957600080fd5b506103368b828c01610192565b999c989b5096995094979396929594505050565b60008060008060008060a0878903121561036357600080fd5b61036c87610176565b955061037a60208801610176565b94506040870135935060608701359250608087013567ffffffffffffffff8111156103a457600080fd5b6103b089828a01610192565b979a969950949750929593949250505056";
 const EXT_RUNTIME_HASH = "0xed365f94b64256c4c81311071c739de4a006d09676dc9e2bd5cd49b346ddb955";
 const EXT_ADDRESS = "0x7F68e74483867058C806218aa05aB5527984C03e";
 
@@ -255,7 +255,7 @@ const I18N = {
     subtitle: "Permetti alla tua Universal Profile di ricevere NFT ERC-721 ed ERC-1155 su una rete dove l'hai rideployata (per esempio acquisti su OpenSea).",
     langToggleBtn: "English",
     panel0Title: "0 · Come funziona",
-    panel0Note: "Quando un NFT standard viene consegnato con un \"trasferimento sicuro\", il contratto del token chiede al destinatario se sa riceverlo. Una UP risponde solo tramite un'<b>estensione</b> (LSP17) registrata nei suoi dati; le UP rideployate di solito non ne hanno, e gli acquisti falliscono (\"il wallet non può ricevere\").<br><br>Questa pagina: <b>(1)</b> se serve, pubblica sulla rete l'estensione <code>NFTReceiverExtension</code>, un contratto minimo senza proprietario, dati o fondi, sempre allo stesso indirizzo su ogni rete; <b>(2)</b> la registra sulla UP con <b>una sola transazione atomica</b> del Key Manager: concede al controller il permesso di aggiungere estensioni, registra l'estensione, e riporta i permessi del controller <b>esattamente</b> a quelli di prima. Se una parte fallisce, non cambia niente. Prima di firmare vedi l'elenco delle operazioni e il risultato della simulazione.",
+    panel0Note: "Quando un NFT standard viene consegnato con un \"trasferimento sicuro\", il contratto del token chiede al destinatario se sa riceverlo. Una UP risponde solo tramite un'<b>estensione</b> (LSP17) registrata nei suoi dati; le UP rideployate di solito non ne hanno, e gli acquisti falliscono (\"il wallet non può ricevere\").<br><br>Questa pagina: <b>(1)</b> se serve, ti porta alla pagina di pubblicazione per pubblicare sulla rete l'estensione <code>NFTReceiverExtension</code>, un contratto minimo senza proprietario, dati o fondi, sempre allo stesso indirizzo su ogni rete; <b>(2)</b> la registra sulla UP con <b>una sola transazione atomica</b> del Key Manager: concede al controller il permesso di aggiungere estensioni, registra l'estensione, e riporta i permessi del controller <b>esattamente</b> a quelli di prima. Se una parte fallisce, non cambia niente. Prima di firmare vedi l'elenco delle operazioni e il risultato della simulazione.",
     disclaimer: "<b>⚠️ Leggi prima di usare questa pagina</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Strumento sperimentale, non sottoposto ad audit esterno.</b> Transazioni reali e irreversibili.</li><li><b>Modifica la configurazione della UP su questa rete:</b> aggiunge le chiavi di estensione per ricevere NFT (su altre reti va ripetuta). I permessi del controller restano uguali a prima.</li><li><b>L'estensione</b> risponde solo alle chiamate di ricezione NFT e a <code>supportsInterface</code>: viene chiamata dalla UP con una chiamata normale, quindi non può leggere né modificare dati o fondi della UP. Sorgente, bytecode e istruzioni per verificarlo sono nella cartella <code>contracts/</code> del repository.</li><li><b>Ricevere NFT</b> significa anche poter ricevere NFT indesiderati (spam): non dare mai approvazioni o firme per NFT che non conosci.</li><li><b>Nessuna garanzia.</b> Software \"così com'è\" (licenza MIT): lo usi a tuo rischio. ChainIntegrate non risponde di perdite o danni. Nessuna affiliazione con LUKSO o altri.</li><li><b>Questa pagina non chiede mai chiavi private</b>: firmi tutto in MetaMask.</li></ul>",
     ackLabel: "Ho letto e accetto: uso questo strumento a mio rischio.",
     ackRequired: "Prima accetta le condizioni nel pannello 0.",
@@ -273,8 +273,8 @@ const I18N = {
     checkIdle: "La verifica parte da sola quando rete, UP e MetaMask sono impostati.",
     recheckBtn: "Ricontrolla",
     panel4Title: "4 · Azioni",
-    panel4Note: "Se l'estensione non esiste ancora su questa rete, pubblicala (chiunque può farlo, costa solo gas, non dà controllo su nessuna UP). Poi prepara l'abilitazione: la pagina mostra ogni operazione e la simula; solo dopo puoi firmare.",
-    publishBtn: "Pubblica l'estensione su questa rete",
+    panel4Note: "Se l'estensione non esiste ancora su questa rete, la pagina ti dà il link alla <b>pagina di pubblicazione</b>: lì chiunque può pubblicarla, con qualsiasi wallet e senza UP; costa solo gas e non dà controllo su nessuna UP. Poi, qui, con il controller della UP prepari l'abilitazione: la pagina mostra ogni operazione e la simula; solo dopo puoi firmare.",
+    publishLinkText: "Pubblica l'estensione su questa rete (pagina di pubblicazione) →",
     prepareBtn: "Prepara e simula l'abilitazione",
     noPlan: "Nessuna operazione preparata.",
     ackReplaceLabel: "Ho capito che sostituisco le estensioni esistenti indicate sopra",
@@ -305,11 +305,12 @@ const I18N = {
     hookEmpty: (v) => `${v.name}: da aggiungere`,
     hookOther: (v) => `${v.name}: ⚠️ c'è un'altra estensione (${v.ext}), verrebbe sostituita`,
     verdictDone: "✅ La UP può già ricevere NFT ERC-721 ed ERC-1155 su questa rete. Non serve fare altro.",
-    verdictNeedPublish: "Pubblica prima l'estensione su questa rete (pannello 4).",
+    verdictNeedPublish: "L'estensione non è ancora pubblicata su questa rete: pubblicala prima con la pagina di pubblicazione (link nel pannello 4), con qualsiasi wallet. Poi torna qui e premi \"Ricontrolla\".",
     verdictReady: "✅ Pronto: prepara e simula l'abilitazione (pannello 4).",
     verdictNoEdit: (v) => `❌ Al controller mancano i permessi ${v.missing} e non ha EDITPERMISSIONS per concederseli: serve un controller con più permessi.`,
     verdictFail: "❌ Verifica non superata: correggi il punto in rosso qui sopra.",
     verdictMissing: "Completa i campi mancanti: la verifica ripartirà da sola.",
+    verdictUpForEnable: "Per abilitare la ricezione NFT su una UP, inserisci l'indirizzo della UP e connetti il suo controller.",
     checkRunning: "Verifica in corso...",
 
     extNotFound: "Estensione Universal Profile non trovata.",
@@ -317,14 +318,9 @@ const I18N = {
     noSignerFound: "Nessun wallet firmatario trovato (es. MetaMask).",
     genericError: (v) => `Errore: ${v.err}`,
     checkFirst: "La verifica del pannello 3 non è verde: aggiornala prima di continuare.",
-    publishing: "Pubblicazione dell'estensione tramite la factory deterministica (conferma in MetaMask)...",
-    publishSim: "Simulazione della pubblicazione...",
-    publishSimFail: (v) => `❌ La simulazione della pubblicazione fallisce: ${v.err}.`,
     txSent: (v) => `Tx inviata: ${v.hash}`,
     waiting: "In attesa di conferma...",
     txFailed: "❌ Transazione fallita on-chain.",
-    publishOk: "✅ Estensione pubblicata e codice verificato.",
-    publishBadCode: "❌ Dopo la pubblicazione il codice all'indirizzo non corrisponde: non usarla e segnala il problema.",
     planTitle: (v) => `Operazioni in UNA transazione, firmata dal controller ${v.signer} e inviata al Key Manager ${v.km}:`,
     planGrant: (v) => `1. Concede temporaneamente al controller: ${v.bits} (permessi ${v.from} → ${v.to})`,
     planSet: (v) => `${v.n}. Registra l'estensione ${v.ext} sulla UP per: ${v.names}`,
@@ -352,7 +348,7 @@ const I18N = {
     subtitle: "Let your Universal Profile receive ERC-721 and ERC-1155 NFTs on a network where you redeployed it (for example purchases on OpenSea).",
     langToggleBtn: "Italiano",
     panel0Title: "0 · How it works",
-    panel0Note: "When a standard NFT is delivered with a \"safe transfer\", the token contract asks the recipient whether it can receive it. A UP answers only through an <b>extension</b> (LSP17) registered in its data; redeployed UPs usually have none, so purchases fail (\"wallet cannot receive\").<br><br>This page: <b>(1)</b> if needed, publishes on the network the <code>NFTReceiverExtension</code>, a minimal contract with no owner, data or funds, always at the same address on every network; <b>(2)</b> registers it on the UP with <b>a single atomic Key Manager transaction</b>: it grants the controller the permission to add extensions, registers the extension, and sets the controller's permissions back to <b>exactly</b> what they were. If any part fails, nothing changes. Before signing you see the list of operations and the simulation result.",
+    panel0Note: "When a standard NFT is delivered with a \"safe transfer\", the token contract asks the recipient whether it can receive it. A UP answers only through an <b>extension</b> (LSP17) registered in its data; redeployed UPs usually have none, so purchases fail (\"wallet cannot receive\").<br><br>This page: <b>(1)</b> if needed, takes you to the publishing page to publish on the network the <code>NFTReceiverExtension</code>, a minimal contract with no owner, data or funds, always at the same address on every network; <b>(2)</b> registers it on the UP with <b>a single atomic Key Manager transaction</b>: it grants the controller the permission to add extensions, registers the extension, and sets the controller's permissions back to <b>exactly</b> what they were. If any part fails, nothing changes. Before signing you see the list of operations and the simulation result.",
     disclaimer: "<b>⚠️ Read before using this page</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Experimental tool, not externally audited.</b> Real, irreversible transactions.</li><li><b>It changes the UP's configuration on this network:</b> it adds the extension keys to receive NFTs (repeat it on other networks). The controller's permissions stay the same as before.</li><li><b>The extension</b> answers only NFT-reception calls and <code>supportsInterface</code>: the UP calls it with a normal call, so it cannot read or change the UP's data or funds. Source, bytecode and verification steps are in the repository's <code>contracts/</code> folder.</li><li><b>Receiving NFTs</b> also means being able to receive unwanted NFTs (spam): never give approvals or signatures for NFTs you do not know.</li><li><b>No warranty.</b> Software \"as is\" (MIT license): you use it at your own risk. ChainIntegrate is not liable for any loss or damage. No affiliation with LUKSO or others.</li><li><b>This page never asks for private keys</b>: you sign everything in MetaMask.</li></ul>",
     ackLabel: "I have read and accept: I use this tool at my own risk.",
     ackRequired: "Accept the conditions in panel 0 first.",
@@ -370,8 +366,8 @@ const I18N = {
     checkIdle: "The check starts by itself once network, UP and MetaMask are set.",
     recheckBtn: "Check again",
     panel4Title: "4 · Actions",
-    panel4Note: "If the extension does not exist on this network yet, publish it (anyone can, it only costs gas and gives no control over any UP). Then prepare the enabling: the page shows every operation and simulates it; only then can you sign.",
-    publishBtn: "Publish the extension on this network",
+    panel4Note: "If the extension does not exist on this network yet, the page gives you the link to the <b>publishing page</b>: there anyone can publish it, with any wallet and without a UP; it only costs gas and gives no control over any UP. Then, here, with the UP's controller you prepare the enabling: the page shows every operation and simulates it; only then can you sign.",
+    publishLinkText: "Publish the extension on this network (publishing page) →",
     prepareBtn: "Prepare and simulate the enabling",
     noPlan: "No operation prepared.",
     ackReplaceLabel: "I understand that I am replacing the existing extensions listed above",
@@ -402,11 +398,12 @@ const I18N = {
     hookEmpty: (v) => `${v.name}: to add`,
     hookOther: (v) => `${v.name}: ⚠️ another extension is set (${v.ext}), it would be replaced`,
     verdictDone: "✅ The UP can already receive ERC-721 and ERC-1155 NFTs on this network. Nothing else to do.",
-    verdictNeedPublish: "Publish the extension on this network first (panel 4).",
+    verdictNeedPublish: "The extension is not published on this network yet: publish it first with the publishing page (link in panel 4), with any wallet. Then come back and press \"Check again\".",
     verdictReady: "✅ Ready: prepare and simulate the enabling (panel 4).",
     verdictNoEdit: (v) => `❌ The controller lacks ${v.missing} and does not have EDITPERMISSIONS to grant them: a controller with more permissions is needed.`,
     verdictFail: "❌ Check failed: fix the item in red above.",
     verdictMissing: "Fill in the missing fields: the check will start again by itself.",
+    verdictUpForEnable: "To enable NFT reception on a UP, enter the UP address and connect its controller.",
     checkRunning: "Checking...",
 
     extNotFound: "Universal Profile extension not found.",
@@ -414,14 +411,9 @@ const I18N = {
     noSignerFound: "No signing wallet found (e.g. MetaMask).",
     genericError: (v) => `Error: ${v.err}`,
     checkFirst: "The check in panel 3 is not green: update it before continuing.",
-    publishing: "Publishing the extension through the deterministic factory (confirm in MetaMask)...",
-    publishSim: "Simulating the publication...",
-    publishSimFail: (v) => `❌ The publication simulation fails: ${v.err}.`,
     txSent: (v) => `Tx sent: ${v.hash}`,
     waiting: "Waiting for confirmation...",
     txFailed: "❌ Transaction failed on-chain.",
-    publishOk: "✅ Extension published and code verified.",
-    publishBadCode: "❌ After publishing, the code at the address does not match: do not use it and report the problem.",
     planTitle: (v) => `Operations in ONE transaction, signed by the controller ${v.signer} and sent to the Key Manager ${v.km}:`,
     planGrant: (v) => `1. Temporarily grants the controller: ${v.bits} (permissions ${v.from} → ${v.to})`,
     planSet: (v) => `${v.n}. Registers the extension ${v.ext} on the UP for: ${v.names}`,
@@ -601,9 +593,9 @@ async function computeCheck() {
   const step = (key, text, cls) => res.steps.push([key, text, cls]);
   const net = getNetwork();
   const rawUp = $("upAddress").value.trim();
-  if (!net || !net.rpc || !ethers.isAddress(rawUp) || !signerProvider || !signerAddress) {
+  // Network and wallet are enough to publish the extension; the UP is needed only to enable it.
+  if (!net || !net.rpc || !signerProvider || !signerAddress) {
     res.missing = true;
-    step("cUp", ethers.isAddress(rawUp) ? ethers.getAddress(rawUp) : ["upMissing"], ethers.isAddress(rawUp) ? "" : "err");
     step("cWallet", signerAddress || ["walletMissing"], signerAddress ? "" : "err");
     return res;
   }
@@ -628,6 +620,28 @@ async function computeCheck() {
   if (walletId !== chainId) { step("cWallet", ["walletWrong", { addr: signerAddress, id: walletId, exp: chainId }], "err"); return res; }
   step("cWallet", ["walletOk", { addr: signerAddress, id: walletId }], "ok");
 
+  // The extension: code at the deterministic address must be exactly the expected runtime.
+  const extCode = await provider.getCode(EXT_ADDRESS);
+  let extState;
+  if (extCode === "0x") extState = "missing";
+  else if (ethers.keccak256(extCode) === EXT_RUNTIME_HASH) extState = "ok";
+  else extState = "wrong";
+  step("cExt", extState === "ok" ? ["extOk", { addr: EXT_ADDRESS }] : extState === "missing" ? ["extMissing", { addr: EXT_ADDRESS }] : ["extWrongCode", { addr: EXT_ADDRESS }],
+    extState === "ok" ? "ok" : extState === "missing" ? "warn" : "err");
+  let factoryOk = true;
+  if (extState === "missing") {
+    factoryOk = (await provider.getCode(NICK_FACTORY)) !== "0x";
+    step("cFactory", factoryOk ? ["factoryOk"] : ["factoryMissing"], factoryOk ? "ok" : "err");
+  }
+  // Publishing is permissionless: any wallet on this network can do it, no UP or controller needed.
+  res.pub = { net, chainId, provider, signer: signerAddress, extState, factoryOk };
+  if (extState === "wrong") return res;
+  if (!ethers.isAddress(rawUp)) {
+    res.upMissing = true;
+    step("cUp", ["upMissing"], "warn");
+    return res;
+  }
+
   try {
     const up = ethers.getAddress(rawUp);
     if ((await provider.getCode(up)) === "0x") { step("cUp", ["upNotDeployed"], "err"); return res; }
@@ -642,21 +656,6 @@ async function computeCheck() {
     const perms = permRaw && permRaw !== "0x" ? BigInt(permRaw) : 0n;
     if (perms === 0n) { step("cPerms", ["permsNone"], "err"); return res; }
     step("cPerms", ["permsList", { hex: "0x" + perms.toString(16).padStart(6, "0"), names: permNames(perms) }], "");
-
-    // The extension: code at the deterministic address must be exactly the expected runtime.
-    const extCode = await provider.getCode(EXT_ADDRESS);
-    let extState;
-    if (extCode === "0x") extState = "missing";
-    else if (ethers.keccak256(extCode) === EXT_RUNTIME_HASH) extState = "ok";
-    else extState = "wrong";
-    step("cExt", extState === "ok" ? ["extOk", { addr: EXT_ADDRESS }] : extState === "missing" ? ["extMissing", { addr: EXT_ADDRESS }] : ["extWrongCode", { addr: EXT_ADDRESS }],
-      extState === "ok" ? "ok" : extState === "missing" ? "warn" : "err");
-    let factoryOk = true;
-    if (extState === "missing") {
-      factoryOk = (await provider.getCode(NICK_FACTORY)) !== "0x";
-      step("cFactory", factoryOk ? ["factoryOk"] : ["factoryMissing"], factoryOk ? "ok" : "err");
-    }
-    if (extState === "wrong") return res;
 
     // Current value of the four LSP17 keys.
     const values = await upC.getDataBatch(HOOKS.map(h => LSP17_KEY(h.sel)));
@@ -700,8 +699,13 @@ function renderCheck(res) {
   }
   box.appendChild(grid);
   const verdict = res.verdict.map(([v, cls]) => [tr(v), cls]);
+  const needPublish = res.pub && res.pub.extState === "missing" && res.pub.factoryOk;
   if (res.missing) verdict.push([t("verdictMissing"), "line-dim"]);
-  else if (!res.ok && !res.verdict.length) verdict.push([t("verdictFail"), "line-err"]);
+  else if (res.upMissing) verdict.push([t(needPublish ? "verdictNeedPublish" : "verdictUpForEnable"), needPublish ? "line-warn" : "line-dim"]);
+  else if (!res.ok && !res.verdict.length) {
+    verdict.push([t("verdictFail"), "line-err"]);
+    if (needPublish) verdict.push([t("verdictNeedPublish"), "line-warn"]);
+  }
   for (const [text, cls] of verdict) {
     const d = document.createElement("div"); d.className = "verdict " + cls; d.textContent = text; box.appendChild(d);
   }
@@ -709,7 +713,15 @@ function renderCheck(res) {
 
 function updateButtons() {
   const ready = !!check && riskAccepted();
-  $("publishBtn").disabled = !(ready && check.extState === "missing");
+  // Publishing is done on the publishing page (any wallet, no UP): link to it, preset on this network.
+  const pub = lastCheck && lastCheck.pub;
+  const showLink = !!(pub && pub.extState === "missing" && pub.factoryOk);
+  $("publishLink").hidden = !showLink;
+  if (showLink) {
+    const q = new URLSearchParams({ impl: EXT_ADDRESS });
+    if (pub.net.key && pub.net.key !== "custom") q.set("network", pub.net.key);
+    $("publishLink").href = "up-publish-implementation.html?" + q.toString();
+  }
   $("prepareBtn").disabled = !(ready && !check.done && check.extState === "ok");
   $("enableBtn").disabled = !(ready && plan);
 }
@@ -726,47 +738,6 @@ async function freshCheck() {
   const res = await runCheck();
   return res && res.ok ? res : null;
 }
-
-// ==================== 4. Publish the extension ====================
-$("publishBtn").addEventListener("click", async () => {
-  if (!riskAccepted()) { log(t("ackRequired"), "line-err"); return; }
-  logSeparator();
-  const c = await freshCheck();
-  if (!c || c.extState !== "missing") { log(t("checkFirst"), "line-err"); return; }
-  $("publishBtn").disabled = true;
-  try {
-    const data = ethers.concat([EXT_SALT, EXT_INIT_CODE]);
-    log(t("publishSim"), "line-dim");
-    let gas;
-    try {
-      const out = await c.provider.call({ from: c.signer, to: NICK_FACTORY, data });
-      if (!out || ethers.getAddress(ethers.dataSlice(out, 0, 20)) !== ethers.getAddress(EXT_ADDRESS)) throw new Error(`factory returned ${out}`);
-      gas = await c.provider.estimateGas({ from: c.signer, to: NICK_FACTORY, data });
-    } catch (e) { log(t("publishSimFail", { err: revertReason(e) }), "line-err"); return; }
-    log(t("simOk", { gas: gas.toString() }), "line-ok");
-    log(t("publishing"), "line-dim");
-    const signer = await new ethers.BrowserProvider(signerProvider).getSigner();
-    if (signer.address.toLowerCase() !== c.signer.toLowerCase()) { log(t("stale"), "line-err"); return; }
-    const sent = await signer.sendTransaction({ to: NICK_FACTORY, data, gasLimit: gas + gas / 4n });
-    log(t("txSent", { hash: sent.hash }), "line-dim");
-    if (c.net.explorer) log(c.net.explorer + sent.hash, "line-dim");
-    log(t("waiting"), "line-dim");
-    const receipt = await c.provider.waitForTransaction(sent.hash);
-    if (!receipt || receipt.status !== 1) { log(t("txFailed"), "line-err"); return; }
-    // A load-balanced RPC may answer from a node that has not seen the block yet: retry a few times.
-    let verified = false;
-    for (let i = 0; i < 6 && !verified; i++) {
-      if (i) await new Promise(r => setTimeout(r, 1500));
-      const code = await c.provider.getCode(EXT_ADDRESS, receipt.blockNumber);
-      verified = code !== "0x" && ethers.keccak256(code) === EXT_RUNTIME_HASH;
-    }
-    log(verified ? t("publishOk") : t("publishBadCode"), verified ? "line-ok" : "line-err");
-  } catch (e) {
-    log(t("genericError", { err: e.shortMessage || e.message }), "line-err");
-  } finally {
-    scheduleCheck(0);
-  }
-});
 
 // ==================== 4. Enable: one atomic executeBatch ====================
 function buildPayloads(c) {
