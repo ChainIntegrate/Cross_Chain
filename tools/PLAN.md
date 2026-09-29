@@ -44,6 +44,18 @@ Last update: 2026-09-29.
 4. Repeat on Polygon if needed.
 
 ### 2.2 EURe test: Polygon → Base, delivered to the maintainer's historical wallet
+**Done on 2026-09-29.** Jumper (LI.FI) through the UP Wallet on Polygon, delivered to the historical wallet on Base, then the approval revoked. The flow was:
+1. `approve(Permit2, unlimited)` on EURe (tx `0x65f4…7e30`);
+2. a Permit2 `PermitTransferFrom` signature for the exact amount, spender LI.FI Permit2 Proxy `0x89c6…f818`, accepted by the UP through ERC-1271;
+3. the bridge transaction (tx `0xc9d6…6a83`);
+4. the revoke on revoke.cash, `approve(Permit2, 0)` (tx `0xf105…27b5`).
+
+Lessons:
+- Jumper always asks for an unlimited Permit2 approval; revoke it after use.
+- A bridge transaction can need about 1.8 M gas, so keep about 1–2 POL on the controller.
+- After a failed attempt, do not use Jumper's "Try again": disconnect, reconnect and start from "Review bridge".
+
+The notes below are kept for reference.
 - **Route 1 (chosen first): Jumper (LI.FI) through the UP Wallet on Polygon**, destination "send to a different wallet" = the historical wallet on Base.
   1. With "Simulation only": check the approval (EURe, spender LI.FI Diamond, **exact** amount, not unlimited).
   2. Send the approval for real, since the bridge simulation needs it.
