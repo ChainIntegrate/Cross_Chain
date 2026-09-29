@@ -14,7 +14,7 @@ Last update: 2026-09-29.
 | Deploy, Verify, Test, Send, Publish implementation | Stable. Audited (AUDIT.md rev. 1–3). |
 | `up-wallet.html` — UP Wallet | Experimental. Tested live on Base and Polygon (OpenSea sign-in, EURe swap, LI.FI, Basenames). Audited (AUDIT.md §7). |
 | `up-walletconnect-basenames.html` | Experimental demo, superseded by the UP Wallet (AUDIT R-07: decide whether to keep it). |
-| `up-nft-receiver.html` + `contracts/NFTReceiverExtension.sol` | PR #33, **not merged yet**. Tested on a local chain with LUKSO UP/LSP6 0.12.1 and 0.14.0; reviewed by the maintainer (keys, bits, restore, no side calls). |
+| `up-nft-receiver.html` + `contracts/NFTReceiverExtension.sol` | Experimental, merged (PR #33, #36). Tested on a local chain with LUKSO UP/LSP6 0.12.1 and 0.14.0 and on Base mainnet. The page only enables the extension; publishing it on a new chain is done in `up-publish-implementation.html` (shortcut chip), with any wallet. |
 
 ### Decisions already taken (do not reopen without a reason)
 - **Language:** code, comments, commits and docs in English; chat in Italian.
@@ -34,7 +34,7 @@ Last update: 2026-09-29.
 
 ## 2. Next steps
 
-### 2.1 Right after merging PR #33 (NFT reception)
+### 2.1 NFT reception (PR #33, #36)
 **Base: done on 2026-09-29.**
 - The extension was published and enabled on the ChainIntegrate UP (`0x328A…317b`); one of the transactions is `0xf77455eb…7553`.
 - The page's final check reported the NFT keys set and the controller's permissions unchanged.
@@ -44,7 +44,7 @@ Last update: 2026-09-29.
 - **LUKSO: published only, NOT enabled, on 2026-09-29** (tx `0xd00aa669…aa99`). The original UP on LUKSO does not need it, because LSP8 NFTs arrive without it. It is published there so the address is the same across the whole ecosystem.
 - **Source verified** on Basescan, Polygonscan and the LUKSO explorer (Blockscout) for `0x7F68e74483867058C806218aa05aB5527984C03e`, using `contracts/NFTReceiverExtension.input.json` (Standard-JSON input, solc v0.8.24+commit.e11b9ed9, MIT). Do not upload `NFTReceiverExtension.json`: it is the summary file, and explorers reject it with `Unknown key "abi"`.
 - **Next:**
-  - open a feature request on `lukso-network/lsp-smart-contracts` for an official cross-chain ERC-721/ERC-1155 receiver extension (final text in the chat of 2026-09-29), pointing to `contracts/` as a reference implementation, verified on Basescan and Polygonscan;
+  - **feature request opened on 2026-09-29:** https://github.com/lukso-network/lsp-smart-contracts/issues/1152 (official cross-chain ERC-721/ERC-1155 receiver extension; points to `contracts/`, the three verified explorers, the publishing page and the NFT page). Follow the replies; if LUKSO publishes an official extension, switch the NFT page and the UP Wallet to its address and say so in the README;
   - optional: teach the UP Wallet to decode Seaport orders (what is received, by whom, what is paid, to whom).
 
 1. `git pull` on the server.
