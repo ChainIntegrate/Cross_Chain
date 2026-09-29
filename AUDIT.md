@@ -301,7 +301,7 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 | R-02 | Implement a CSP (I-03) and serve the site with `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` and `frame-ancestors 'none'`. | Defence in depth, anti-clickjacking. |
 | R-03 | Re-test all RPC endpoints (L-07), and whenever the ethers version is bumped, update the SRI hash (`openssl dgst -sha384 -binary ethers.umd.min.js \| openssl base64 -A`). | Otherwise a version bump breaks the pages or silently drops the integrity protection. |
 | R-04 | Consider moving the shared code (chain list, decoding, `checkChains`, `escapeHtml`) into one versioned JS file. | Six copies of the same logic had drifted apart. That drift caused several of the findings above. A shared `chains.js` is in progress (PR #21); `up-wallet.html` holds a seventh copy of the chain list until then. |
-| R-05 | Let redeployed profiles receive ERC-721 / ERC-1155 safe transfers with a minimal, stateless LSP17 extension published at the same address on every chain (I-12). | Marketplace purchases fail today; the proposal is ready and awaits approval. |
+| R-05 | ~~Let redeployed profiles receive ERC-721 / ERC-1155 safe transfers with a minimal, stateless LSP17 extension published at the same address on every chain (I-12).~~ ✅ Done with `up-nft-receiver.html` (one atomic `executeBatch`; controller permissions restored byte for byte) and `contracts/NFTReceiverExtension.sol` (reproducible bytecode, see `contracts/README.md`). Tested on a local chain with LUKSO UP/LSP6 0.12.1 and 0.14.0; not yet on mainnet. | Marketplace purchases failed on redeployed profiles. |
 | R-06 | Review `up-wallet.html` again (ideally with a second reviewer) before removing the "experimental" label, and after any change to its rejection rules, decoding or signing flow. | It is the only page that signs and sends arbitrary requests from third-party sites. |
 | R-07 | Decide whether to keep `up-walletconnect-basenames.html`: `up-wallet.html` covers the same case with more checks. | Two bridges double the code to maintain; the demo is now only an example. |
 
@@ -415,7 +415,7 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 
 - **Impact:** Safe NFT transfers call `onERC721Received` / `onERC1155Received` on the recipient. LSP0 answers them only through an LSP17 extension and otherwise reverts (`NoExtensionFoundForFunctionSelector`). Redeployed profiles usually have none, so marketplace purchases fail ("wallet cannot receive"), as seen on OpenSea during the live tests.
 - **Mitigation:** the compatibility check shows, per standard, whether the UP can receive NFTs and why not (no extension, or an extension without code on that network).
-- **Status:** ⏳ Planned (R-05)
+- **Status:** ✅ Addressed by `up-nft-receiver.html` and `contracts/NFTReceiverExtension.sol` (see R-05). The fix is opt-in per UP and per network.
 
 #### I-13 — The vendored WalletKit bundle runs with full access to the page
 
