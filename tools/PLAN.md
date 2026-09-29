@@ -74,7 +74,7 @@ The notes below are kept for reference.
   3. Simulate the bridge transaction and compare the amount received on Base with the fees.
   4. Send only if the fees are acceptable. Check that the Base EURe address is the official Monerium one.
 - **Route 2 (fallback):** send EURe from the UP to the historical wallet **on Polygon** (plain transfer), then bridge with the Monerium app from the historical wallet. Only the historical wallet must be linked to the Monerium profile, on both networks; the UP does not.
-- **Possible small feature:** ERC-20 transfers in the Send page (`up-invia-fondi.html`), so a plain token transfer does not need an external dApp.
+- **Done (2026-09-29):** the Send page (`up-invia-fondi.html`) now transfers ERC-20 tokens and NFTs (ERC-721, ERC-1155, LSP7/LSP8) as well as native currency, so a plain token or NFT transfer does not need an external dApp.
 
 ### 2.3 Gas monitoring by email (to build)
 - **What:** a small read-only script on the VPS, run hourly by cron. It needs no private key.

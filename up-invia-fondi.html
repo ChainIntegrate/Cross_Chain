@@ -5,16 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <title data-i18n="pageTitle">UP Invia Fondi — ChainIntegrate</title>
-<meta name="description" content="Invia fondi dalla tua Universal Profile rideployata su una nuova rete.">
+<meta name="description" content="Invia valuta nativa, token e NFT dalla tua Universal Profile rideployata su una nuova rete.">
 <link rel="icon" href="favicon.ico">
 <meta property="og:type" content="website">
 <meta property="og:title" content="UP Invia Fondi — ChainIntegrate">
-<meta property="og:description" content="Invia fondi dalla tua Universal Profile rideployata su una nuova rete.">
+<meta property="og:description" content="Invia valuta nativa, token e NFT dalla tua Universal Profile rideployata su una nuova rete.">
 <meta property="og:image" content="https://crosschain-lukso.chainintegrate.it/banner.png">
 <meta property="og:url" content="https://crosschain-lukso.chainintegrate.it/up-invia-fondi.html">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="UP Invia Fondi — ChainIntegrate">
-<meta name="twitter:description" content="Invia fondi dalla tua Universal Profile rideployata su una nuova rete.">
+<meta name="twitter:description" content="Invia valuta nativa, token e NFT dalla tua Universal Profile rideployata su una nuova rete.">
 <meta name="twitter:image" content="https://crosschain-lukso.chainintegrate.it/banner.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
@@ -52,6 +52,12 @@
   .brand-logo { display: block; width: 100%; height: auto; border-radius: 10px; }
   .top-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
   .lang-btn { width: auto; background: #2a2f3a; padding: 6px 14px; font-size: 12px; margin-top: 0; flex-shrink: 0; }
+  [hidden] { display: none !important; }
+  button.secondary { background: #2a2f3a; }
+  .amount-row { display: flex; gap: 8px; align-items: stretch; }
+  .amount-row button { width: auto; margin-top: 0; padding: 0 16px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip { width: auto; margin-top: 0; padding: 4px 10px; font-size: 12px; font-weight: 500; font-family: monospace; background: #2a2f3a; }
   .site-footer { margin-top: 40px; padding: 18px 20px; background: #f5f6f8; border: 1px solid #e3e5ea; border-radius: 10px; color: #4b4f58; }
   .footer-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
   .footer-logo { height: 48px; width: auto; flex-shrink: 0; }
@@ -70,7 +76,7 @@
 <div class="top-row">
   <div>
     <h1 data-i18n="h1">UP Invia Fondi</h1>
-    <div class="subtitle" data-i18n="subtitle">Trasferisce il nativo della rete (ETH/altro) dalla UP a un altro indirizzo — firmato da MetaMask con il controller, tramite Key Manager → ERC725X.execute.</div>
+    <div class="subtitle" data-i18n="subtitle"></div>
   </div>
   <button class="lang-btn" id="langToggle" data-i18n="langToggleBtn">English</button>
 </div>
@@ -115,11 +121,33 @@
 </div>
 
 <div class="panel">
-  <h2 data-i18n="panel4Title">4 · Destinazione e importo</h2>
+  <h2 data-i18n="panel4Title">4 · Cosa inviare, destinazione e importo</h2>
+  <label data-i18n="assetKindLabel">Cosa inviare</label>
+  <select id="assetKind">
+    <option value="native" data-i18n="assetNativeOpt">Valuta nativa della rete (ETH, POL, …)</option>
+    <option value="token" data-i18n="assetTokenOpt">Token o NFT (indirizzo del contratto)</option>
+  </select>
+  <div id="tokenWrap" hidden>
+    <label data-i18n="tokenAddressLabel">Indirizzo del contratto (token o collezione NFT)</label>
+    <input type="text" id="tokenAddress" placeholder="0x...">
+    <div class="note" style="margin-top:8px;" data-i18n="tokenAddressNote"></div>
+    <button id="detectBtn" type="button" class="secondary" data-i18n="detectBtn">Leggi il contratto</button>
+    <div class="status-box" id="assetStatus"><span class="empty" data-i18n="assetNotRead">Contratto non ancora letto.</span></div>
+    <div id="tokenIdWrap" hidden>
+      <label data-i18n="tokenIdLabel">ID del token (NFT)</label>
+      <input type="text" id="tokenId" placeholder="1">
+      <div id="ownedIds" class="chips"></div>
+    </div>
+  </div>
   <label data-i18n="recipientLabel">Indirizzo destinatario</label>
   <input type="text" id="recipient" placeholder="0x...">
-  <label data-i18n="amountLabel">Importo (nativo della rete, es. ETH)</label>
-  <input type="text" id="amount" placeholder="0.001">
+  <div id="amountWrap">
+    <label id="amountLabel">Importo</label>
+    <div class="amount-row">
+      <input type="text" id="amount" placeholder="0.001">
+      <button id="maxBtn" type="button" class="secondary" data-i18n="maxBtn">Tutto</button>
+    </div>
+  </div>
   <button id="checkBtn" data-i18n="checkBtn">Verifica</button>
   <button id="sendBtn" class="danger" disabled data-i18n="sendBtn">Invia (irreversibile)</button>
   <div id="log" class="line-dim" style="margin-top:10px;"><span data-i18n="logInitial">In attesa dei collegamenti sopra.</span></div>
@@ -145,12 +173,12 @@ const I18N = {
   it: {
     pageTitle: "UP Invia Fondi — ChainIntegrate",
     h1: "UP Invia Fondi",
-    subtitle: "Trasferisce il nativo della rete (ETH/altro) dalla UP a un altro indirizzo — firmato da MetaMask con il controller, tramite Key Manager → ERC725X.execute.",
+    subtitle: "Trasferisce dalla UP a un altro indirizzo quello che possiede: valuta nativa, token ERC-20 e NFT (ERC-721, ERC-1155, e LSP7/LSP8) — firmato da MetaMask con il controller, tramite Key Manager → ERC725X.execute.",
     langToggleBtn: "English",
     customNetName: "Rete custom",
 
     panel0Title: "0 · Come funziona questa pagina",
-    panel0Note: "Si opera su una UP <b>già deployata</b> su una rete diversa da LUKSO — la UP stessa non firma questa transazione. Chi firma è il <b>wallet controller</b> (es. MetaMask) connesso alla rete di destinazione, con i permessi TRANSFERVALUE/CALL su quella UP. Per questo qui ci sono due collegamenti separati: (1) connetti la tua UP solo per leggerne comodamente l'indirizzo — nessuna firma qui; (2) connetti MetaMask (o un altro wallet) sulla <b>rete dove la UP è stata rideployata</b>, ed è quel wallet a firmare l'invio dei fondi.",
+    panel0Note: "Si opera su una UP <b>già deployata</b> su una rete diversa da LUKSO — la UP stessa non firma questa transazione. Chi firma è il <b>wallet controller</b> (es. MetaMask) connesso alla rete di destinazione, con i permessi TRANSFERVALUE (valuta nativa) e CALL (token e NFT) su quella UP. Per questo qui ci sono due collegamenti separati: (1) connetti la tua UP solo per leggerne comodamente l'indirizzo — nessuna firma qui; (2) connetti MetaMask (o un altro wallet) sulla <b>rete dove la UP è stata rideployata</b>, ed è quel wallet a firmare l'invio dei fondi.",
 
     panel1Title: "1 · Profilo (la UP da cui inviare)",
     connectUpBtn: "Connetti la tua Universal Profile",
@@ -170,12 +198,64 @@ const I18N = {
     customExplorerLabel: "Explorer URL custom (opzionale)",
     balanceNotChecked: "Saldo UP non ancora controllato.",
 
-    panel4Title: "4 · Destinazione e importo",
+    panel4Title: "4 · Cosa inviare, destinazione e importo",
     recipientLabel: "Indirizzo destinatario",
-    amountLabel: "Importo (nativo della rete, es. ETH)",
     checkBtn: "Verifica",
     sendBtn: "Invia (irreversibile)",
     logInitial: "In attesa dei collegamenti sopra.",
+
+    assetKindLabel: "Cosa inviare",
+    assetNativeOpt: "Valuta nativa della rete (ETH, POL, …)",
+    assetTokenOpt: "Token o NFT (indirizzo del contratto)",
+    tokenAddressLabel: "Indirizzo del contratto (token o collezione NFT)",
+    tokenAddressNote: "Lo trovi sull'explorer della rete, nella pagina della UP (scheda token o NFT), oppure sul marketplace. La pagina legge dal contratto di che tipo è: ERC-20, ERC-721, ERC-1155, LSP7 o LSP8.",
+    detectBtn: "Leggi il contratto",
+    assetNotRead: "Contratto non ancora letto.",
+    assetReading: "Lettura del contratto...",
+    assetReadErr: (v) => `Errore nella lettura del contratto: ${v.err}`,
+    assetNoCode: "❌ BLOCCANTE — a questo indirizzo non c'è un contratto su questa rete.",
+    assetUnknown: "❌ BLOCCANTE — il contratto non risulta un token ERC-20, ERC-721, ERC-1155, LSP7 o LSP8.",
+    tokenIdLabel: "ID del token (NFT)",
+    erc1155BalanceHint: "Inserisci l'ID del token: il saldo della UP per quell'ID viene letto alla verifica (o con \"Tutto\").",
+    nftOwnedCount: (v) => `NFT di questa collezione posseduti dalla UP: ${v.n}`,
+    noOwnedIds: "La UP non possiede token di questa collezione.",
+    ownedIdsAll: "ID posseduti dalla UP (clicca per sceglierlo):",
+    ownedIdsSome: `Primi ID posseduti dalla UP (clicca per sceglierlo):`,
+    idsNotListed: "Il contratto non permette di elencare gli ID posseduti: inserisci l'ID a mano (lo trovi sull'explorer o sul marketplace).",
+    amountNativeLabel: "Importo (valuta nativa della rete, es. ETH)",
+    amountTokenLabel: (v) => `Importo (in ${v.symbol})`,
+    amountCopiesLabel: "Quantità (copie di questo ID)",
+    amountLabelGeneric: "Importo",
+    maxBtn: "Tutto",
+    maxNeedsDataLog: "Per \"Tutto\" servono l'indirizzo della UP e la rete.",
+    invalidTokenAddrErr: "❌ BLOCCANTE — indirizzo del contratto non valido.",
+    invalidTokenIdErr: "❌ BLOCCANTE — ID del token mancante o non valido.",
+    readAssetFirstErr: "Leggi prima il contratto.",
+    invalidCopiesErr: "❌ BLOCCANTE — la quantità deve essere un numero intero maggiore di zero.",
+    recipientIsTokenErr: "❌ BLOCCANTE — il destinatario è il contratto del token stesso: il token andrebbe perso.",
+    recipientContractWarn: "⚠️ Il destinatario è un contratto, non un normale wallet: assicurati che possa gestire quello che riceve (per esempio un'altra UP o un indirizzo di deposito di un exchange che supporta questa rete).",
+    assetLog: (v) => `Contratto: ${v.title} — ${v.addr}`,
+    tokenIdLog: (v) => `ID del token: ${v.id}`,
+    tokenBalanceLog: (v) => `Saldo della UP: ${v.balance} ${v.symbol}`,
+    insufficientTokenErr: (v) => `❌ BLOCCANTE — la UP non ha abbastanza ${v.symbol} (ha ${v.have}, servono ${v.need}).`,
+    copiesBalanceLog: (v) => `Copie dell'ID ${v.id} possedute dalla UP: ${v.n}`,
+    insufficientCopiesErr: (v) => `❌ BLOCCANTE — la UP ha ${v.have} copie dell'ID ${v.id}, ne servono ${v.need}.`,
+    notOwnerErr: (v) => `❌ BLOCCANTE — l'NFT con ID ${v.id} non appartiene alla UP (proprietario attuale: ${v.owner}).`,
+    nftOwnedOkLog: "✅ La UP possiede quello che vuoi inviare.",
+    safeTransferNote: "Trasferimento \"safe\": se il destinatario è un contratto che non accetta NFT, la transazione fallisce invece di perdere l'NFT. La simulazione qui sotto lo verifica.",
+    lspForceNote: "Destinatario senza codice (wallet normale): il trasferimento LSP usa force = true, necessario per gli indirizzi senza Universal Receiver.",
+    lspNoForceNote: "Destinatario contratto: il trasferimento LSP usa force = false, quindi riesce solo se il destinatario implementa LSP1 (per esempio una UP). La simulazione qui sotto lo verifica.",
+    assetNativeLog: (v) => `${v.amount} di valuta nativa`,
+    assetTokenLog: (v) => `${v.amount} ${v.symbol}`,
+    assetNftLog: (v) => `NFT ${v.title}, ID ${v.id}`,
+    assetCopiesLog: (v) => `${v.n} copie di ${v.title}, ID ${v.id}`,
+    tokenSimFailErr: (v) => `❌ BLOCCANTE — la simulazione del trasferimento è fallita. Cause possibili: il controller non ha il permesso CALL (o le Allowed Calls non includono questo contratto), oppure il contratto o il destinatario rifiutano il trasferimento. Dettaglio: ${v.err}`,
+    nftRecipientHint: "Il destinatario è un contratto e probabilmente non accetta questo NFT. Se è una Universal Profile su una rete diversa da LUKSO, abilita prima la ricezione degli NFT con la pagina up-nft-receiver.html.",
+    summaryLog: (v) => `\nRiepilogo: la UP invierà ${v.what} a ${v.to}.`,
+    postNftOk: "✅ Verificato: l'NFT ora appartiene al destinatario.",
+    postNftWarn: (v) => `⚠️ Il proprietario letto dopo l'invio è ${v.owner}: controlla sull'explorer (il nodo RPC potrebbe essere indietro di qualche blocco).`,
+    postTokenBalance: (v) => `Saldo della UP dopo l'invio: ${v.balance} ${v.symbol}`,
+    postCopiesBalance: (v) => `Copie rimaste alla UP per questo ID: ${v.n}`,
 
     extNotFound: "Estensione Universal Profile non trovata in questo browser",
     connectedBadge: "Connesso",
@@ -194,7 +274,6 @@ const I18N = {
     upLog: (v) => `UP: ${v.addr}`,
     netLog: (v) => `Rete: ${v.name}`,
     recipientLog: (v) => `Destinatario: ${v.addr}`,
-    amountLog: (v) => `Importo: ${v.amount}`,
     signerLog: (v) => `Wallet firmatario (controller): ${v.addr}`,
     permCheckNote: "Nota: la validità dei permessi del controller viene verificata sotto tramite la stima del gas — se il wallet connesso non ha i permessi giusti sulla UP, la stima fallirà.",
     kmLog: (v) => `Key Manager: ${v.addr}`,
@@ -207,7 +286,7 @@ const I18N = {
     gasCostLog: (v) => `Costo gas stimato (a carico del firmatario, NON della UP): ${v.cost} (con margine)`,
     insufficientGasErr: (v) => `❌ BLOCCANTE — il controller (${v.addr}) non ha abbastanza ${v.currency} su ${v.net} per pagare la commissione: mancano circa ${v.shortfall}. La commissione la paga il controller, non la UP: anche se la UP ha fondi, manda un po' di ${v.currency} all'indirizzo del controller e riprova.`,
     signerGasOkLog: "✅ Il wallet firmatario ha gas sufficiente.",
-    readyWarnLog: "\nPronto. Controlla ancora una volta destinatario e importo prima di premere Invia — è irreversibile.",
+    readyWarnLog: "Pronto. Controlla ancora una volta il riepilogo (cosa, quanto, a chi) prima di premere Invia — è irreversibile.",
     verifyErrorLog: (v) => `Errore durante la verifica: ${v.err}`,
     sendingTxLog: "Invio transazione (conferma nel wallet)...",
     txHashLog: (v) => `Tx: ${v.hash}`,
@@ -230,12 +309,12 @@ const I18N = {
   en: {
     pageTitle: "UP Send Funds — ChainIntegrate",
     h1: "UP Send Funds",
-    subtitle: "Transfers the network's native currency (ETH/other) from the UP to another address — signed by MetaMask with the controller, via Key Manager → ERC725X.execute.",
+    subtitle: "Transfers what the UP holds to another address: native currency, ERC-20 tokens and NFTs (ERC-721, ERC-1155, and LSP7/LSP8) — signed by MetaMask with the controller, via Key Manager → ERC725X.execute.",
     langToggleBtn: "Italiano",
     customNetName: "Custom network",
 
     panel0Title: "0 · How this page works",
-    panel0Note: "This operates on a UP that is <b>already deployed</b> on a network other than LUKSO — the UP itself doesn't sign this transaction. The one signing is the <b>controller wallet</b> (e.g. MetaMask) connected to the destination network, with TRANSFERVALUE/CALL permissions on that UP. That's why there are two separate connections here: (1) connect your UP only to read its address conveniently — no signature here; (2) connect MetaMask (or another wallet) on the <b>network where the UP was redeployed</b>, and that wallet is the one signing the funds transfer.",
+    panel0Note: "This operates on a UP that is <b>already deployed</b> on a network other than LUKSO — the UP itself doesn't sign this transaction. The one signing is the <b>controller wallet</b> (e.g. MetaMask) connected to the destination network, with the TRANSFERVALUE (native currency) and CALL (tokens and NFTs) permissions on that UP. That's why there are two separate connections here: (1) connect your UP only to read its address conveniently — no signature here; (2) connect MetaMask (or another wallet) on the <b>network where the UP was redeployed</b>, and that wallet is the one signing the funds transfer.",
 
     panel1Title: "1 · Profile (the UP to send from)",
     connectUpBtn: "Connect your Universal Profile",
@@ -255,12 +334,64 @@ const I18N = {
     customExplorerLabel: "Custom explorer URL (optional)",
     balanceNotChecked: "UP balance not checked yet.",
 
-    panel4Title: "4 · Destination and amount",
+    panel4Title: "4 · What to send, destination and amount",
     recipientLabel: "Recipient address",
-    amountLabel: "Amount (network native currency, e.g. ETH)",
     checkBtn: "Check",
     sendBtn: "Send (irreversible)",
     logInitial: "Waiting for the connections above.",
+
+    assetKindLabel: "What to send",
+    assetNativeOpt: "The network's native currency (ETH, POL, …)",
+    assetTokenOpt: "Token or NFT (contract address)",
+    tokenAddressLabel: "Contract address (token or NFT collection)",
+    tokenAddressNote: "You can find it on the network's explorer, on the UP's page (tokens or NFTs tab), or on the marketplace. The page reads from the contract what type it is: ERC-20, ERC-721, ERC-1155, LSP7 or LSP8.",
+    detectBtn: "Read the contract",
+    assetNotRead: "Contract not read yet.",
+    assetReading: "Reading the contract...",
+    assetReadErr: (v) => `Error reading the contract: ${v.err}`,
+    assetNoCode: "❌ BLOCKING — there is no contract at this address on this network.",
+    assetUnknown: "❌ BLOCKING — the contract is not an ERC-20, ERC-721, ERC-1155, LSP7 or LSP8 token.",
+    tokenIdLabel: "Token ID (NFT)",
+    erc1155BalanceHint: "Enter the token ID: the UP's balance for that ID is read at the check (or with \"All\").",
+    nftOwnedCount: (v) => `NFTs of this collection held by the UP: ${v.n}`,
+    noOwnedIds: "The UP holds no tokens of this collection.",
+    ownedIdsAll: "IDs held by the UP (click to pick one):",
+    ownedIdsSome: "First IDs held by the UP (click to pick one):",
+    idsNotListed: "The contract cannot list the IDs it holds: enter the ID by hand (you can find it on the explorer or the marketplace).",
+    amountNativeLabel: "Amount (network native currency, e.g. ETH)",
+    amountTokenLabel: (v) => `Amount (in ${v.symbol})`,
+    amountCopiesLabel: "Quantity (copies of this ID)",
+    amountLabelGeneric: "Amount",
+    maxBtn: "All",
+    maxNeedsDataLog: "\"All\" needs the UP address and the network.",
+    invalidTokenAddrErr: "❌ BLOCKING — invalid contract address.",
+    invalidTokenIdErr: "❌ BLOCKING — token ID missing or invalid.",
+    readAssetFirstErr: "Read the contract first.",
+    invalidCopiesErr: "❌ BLOCKING — the quantity must be a whole number greater than zero.",
+    recipientIsTokenErr: "❌ BLOCKING — the recipient is the token contract itself: the token would be lost.",
+    recipientContractWarn: "⚠️ The recipient is a contract, not a regular wallet: make sure it can handle what it receives (for example another UP, or an exchange deposit address that supports this network).",
+    assetLog: (v) => `Contract: ${v.title} — ${v.addr}`,
+    tokenIdLog: (v) => `Token ID: ${v.id}`,
+    tokenBalanceLog: (v) => `UP balance: ${v.balance} ${v.symbol}`,
+    insufficientTokenErr: (v) => `❌ BLOCKING — the UP doesn't have enough ${v.symbol} (has ${v.have}, needs ${v.need}).`,
+    copiesBalanceLog: (v) => `Copies of ID ${v.id} held by the UP: ${v.n}`,
+    insufficientCopiesErr: (v) => `❌ BLOCKING — the UP holds ${v.have} copies of ID ${v.id}, ${v.need} needed.`,
+    notOwnerErr: (v) => `❌ BLOCKING — the NFT with ID ${v.id} does not belong to the UP (current owner: ${v.owner}).`,
+    nftOwnedOkLog: "✅ The UP holds what you want to send.",
+    safeTransferNote: "\"Safe\" transfer: if the recipient is a contract that does not accept NFTs, the transaction fails instead of losing the NFT. The simulation below checks it.",
+    lspForceNote: "Recipient without code (regular wallet): the LSP transfer uses force = true, required for addresses without a Universal Receiver.",
+    lspNoForceNote: "Recipient is a contract: the LSP transfer uses force = false, so it only succeeds if the recipient implements LSP1 (for example a UP). The simulation below checks it.",
+    assetNativeLog: (v) => `${v.amount} of native currency`,
+    assetTokenLog: (v) => `${v.amount} ${v.symbol}`,
+    assetNftLog: (v) => `NFT ${v.title}, ID ${v.id}`,
+    assetCopiesLog: (v) => `${v.n} copies of ${v.title}, ID ${v.id}`,
+    tokenSimFailErr: (v) => `❌ BLOCKING — the transfer simulation failed. Possible causes: the controller lacks the CALL permission (or its Allowed Calls do not include this contract), or the contract or the recipient rejects the transfer. Details: ${v.err}`,
+    nftRecipientHint: "The recipient is a contract and probably does not accept this NFT. If it is a Universal Profile on a network other than LUKSO, first enable NFT reception with the up-nft-receiver.html page.",
+    summaryLog: (v) => `\nSummary: the UP will send ${v.what} to ${v.to}.`,
+    postNftOk: "✅ Verified: the NFT now belongs to the recipient.",
+    postNftWarn: (v) => `⚠️ The owner read after sending is ${v.owner}: check on the explorer (the RPC node may be a few blocks behind).`,
+    postTokenBalance: (v) => `UP balance after sending: ${v.balance} ${v.symbol}`,
+    postCopiesBalance: (v) => `Copies left to the UP for this ID: ${v.n}`,
 
     extNotFound: "Universal Profile extension not found in this browser",
     connectedBadge: "Connected",
@@ -279,7 +410,6 @@ const I18N = {
     upLog: (v) => `UP: ${v.addr}`,
     netLog: (v) => `Network: ${v.name}`,
     recipientLog: (v) => `Recipient: ${v.addr}`,
-    amountLog: (v) => `Amount: ${v.amount}`,
     signerLog: (v) => `Signing wallet (controller): ${v.addr}`,
     permCheckNote: "Note: the controller's permissions are verified below via the gas estimate — if the connected wallet doesn't have the right permissions on the UP, the estimate will fail.",
     kmLog: (v) => `Key Manager: ${v.addr}`,
@@ -292,7 +422,7 @@ const I18N = {
     gasCostLog: (v) => `Estimated gas cost (paid by the signer, NOT by the UP): ${v.cost} (with margin)`,
     insufficientGasErr: (v) => `❌ BLOCKING — the controller (${v.addr}) does not have enough ${v.currency} on ${v.net} to pay the fee: about ${v.shortfall} missing. The fee is paid by the controller, not by the UP: even if the UP has funds, send some ${v.currency} to the controller address and try again.`,
     signerGasOkLog: "✅ The signing wallet has enough gas.",
-    readyWarnLog: "\nReady. Double-check recipient and amount before pressing Send — it's irreversible.",
+    readyWarnLog: "Ready. Double-check the summary (what, how much, to whom) before pressing Send — it's irreversible.",
     verifyErrorLog: (v) => `Error during verification: ${v.err}`,
     sendingTxLog: "Sending transaction (confirm in your wallet)...",
     txHashLog: (v) => `Tx: ${v.hash}`,
@@ -333,6 +463,7 @@ applyI18n();
 $("langToggle").addEventListener("click", () => {
   LANG = LANG === "it" ? "en" : "it";
   applyI18n();
+  renderAssetStatus();
 });
 
 // ==================== APP ====================
@@ -543,7 +674,243 @@ async function checkBalance() {
   }
 }
 
-// --- 4. Verifica e invio ---
+// --- 4. What to send ---
+// Native currency, or any token/NFT the UP holds: ERC-20, ERC-721, ERC-1155, and LSP7/LSP8.
+// The contract type is read from the chain (ERC-165), never assumed.
+const IFACE_IDS = {
+  erc721: "0x80ac58cd", erc1155: "0xd9b67a26", erc721Enumerable: "0x780e9d63",
+  // LSP7 / LSP8 interface IDs across @lukso/lsp-smart-contracts releases (0.8 → 0.17).
+  lsp7: ["0x05519512", "0xc52d6008", "0xb3c4928f", "0xdaa746b7"],
+  lsp8: ["0x1ae9ba1f", "0x3a271706", "0xecad9f75", "0x30dc5278"],
+};
+const tokenIface = new ethers.Interface([
+  "function supportsInterface(bytes4) view returns (bool)",
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)",
+  "function balanceOf(address) view returns (uint256)",
+  "function balanceOf(address,uint256) view returns (uint256)",
+  "function ownerOf(uint256) view returns (address)",
+  "function tokenOfOwnerByIndex(address,uint256) view returns (uint256)",
+  "function getData(bytes32) view returns (bytes)",
+  "function tokenOwnerOf(bytes32) view returns (address)",
+  "function tokenIdsOf(address) view returns (bytes32[])",
+  "function transfer(address,uint256) returns (bool)",
+  "function safeTransferFrom(address,address,uint256)",
+  "function safeTransferFrom(address,address,uint256,uint256,bytes)",
+  "function transfer(address,address,uint256,bool,bytes)",
+  "function transfer(address,address,bytes32,bool,bytes)",
+]);
+const LSP4_NAME_KEY = ethers.id("LSP4TokenName");
+const LSP4_SYMBOL_KEY = ethers.id("LSP4TokenSymbol");
+const MAX_LISTED_IDS = 50;
+const NFT_KINDS = ["erc721", "erc1155", "lsp8"];
+const KIND_LABEL = { erc20: "ERC-20", erc721: "ERC-721", erc1155: "ERC-1155", lsp7: "LSP7", lsp8: "LSP8" };
+
+async function readCall(provider, to, fn, args) {
+  const data = tokenIface.encodeFunctionData(fn, args);
+  const raw = await provider.call({ to, data });
+  return tokenIface.decodeFunctionResult(fn, raw);
+}
+async function tryRead(provider, to, fn, args) {
+  try { return (await readCall(provider, to, fn, args))[0]; } catch (e) { return null; }
+}
+// Strict ERC-165: the answer must be exactly one 32-byte word equal to 1. A contract with a
+// permissive fallback must not be mistaken for an NFT collection.
+async function supportsIface(provider, to, id) {
+  try {
+    const raw = await provider.call({ to, data: tokenIface.encodeFunctionData("supportsInterface", [id]) });
+    return ethers.dataLength(raw) === 32 && BigInt(raw) === 1n;
+  } catch (e) { return false; }
+}
+async function supportsAny(provider, to, ids) {
+  for (const id of ids) if (await supportsIface(provider, to, id)) return true;
+  return false;
+}
+async function readLsp4Text(provider, to, key) {
+  const v = await tryRead(provider, to, "getData", [key]);
+  if (!v || v === "0x") return null;
+  try { return ethers.toUtf8String(v); } catch (e) { return null; }
+}
+
+// Reads what the contract is and what the UP holds of it.
+async function detectAsset(provider, address, upAddress) {
+  if ((await provider.getCode(address)) === "0x") return { kind: "nocode", address };
+  const a = { address: ethers.getAddress(address) };
+  if (await supportsAny(provider, address, IFACE_IDS.lsp8)) a.kind = "lsp8";
+  else if (await supportsAny(provider, address, IFACE_IDS.lsp7)) a.kind = "lsp7";
+  else if (await supportsIface(provider, address, IFACE_IDS.erc1155)) a.kind = "erc1155";
+  else if (await supportsIface(provider, address, IFACE_IDS.erc721)) a.kind = "erc721";
+  else {
+    const dec = await tryRead(provider, address, "decimals", []);
+    const bal = await tryRead(provider, address, "balanceOf(address)", [upAddress]);
+    if (dec === null || bal === null) return { kind: "unknown", address };
+    a.kind = "erc20";
+  }
+  if (a.kind === "lsp7" || a.kind === "lsp8") {
+    a.name = await readLsp4Text(provider, address, LSP4_NAME_KEY);
+    a.symbol = await readLsp4Text(provider, address, LSP4_SYMBOL_KEY);
+  } else {
+    a.name = await tryRead(provider, address, "name", []);
+    a.symbol = await tryRead(provider, address, "symbol", []);
+  }
+  a.decimals = (a.kind === "erc20" || a.kind === "lsp7") ? Number(await tryRead(provider, address, "decimals", []) ?? 0) : 0;
+  if (a.kind !== "erc1155") a.balance = await tryRead(provider, address, "balanceOf(address)", [upAddress]);
+  // Token IDs the UP owns, when the contract can list them.
+  a.ownedIds = null;
+  if (a.kind === "lsp8") {
+    const ids = await tryRead(provider, address, "tokenIdsOf", [upAddress]);
+    if (ids) a.ownedIds = Array.from(ids);
+  } else if (a.kind === "erc721" && a.balance !== null && await supportsIface(provider, address, IFACE_IDS.erc721Enumerable)) {
+    a.ownedIds = [];
+    const n = a.balance > BigInt(MAX_LISTED_IDS) ? MAX_LISTED_IDS : Number(a.balance);
+    for (let i = 0; i < n; i++) {
+      const id = await tryRead(provider, address, "tokenOfOwnerByIndex", [upAddress, i]);
+      if (id === null) break;
+      a.ownedIds.push(id);
+    }
+  }
+  return a;
+}
+
+// Token IDs: ERC-721/1155 take a uint256 (decimal or 0x hex); LSP8 takes a bytes32.
+function parseTokenId(kind, str) {
+  const s = (str || "").trim();
+  if (!s) return null;
+  try {
+    if (kind === "lsp8") {
+      if (/^0x[0-9a-fA-F]{64}$/.test(s)) return s.toLowerCase();
+      const n = BigInt(s);
+      return n < 0n ? null : ethers.zeroPadValue(ethers.toBeHex(n), 32);
+    }
+    const n = BigInt(s);
+    return n < 0n || n >= 2n ** 256n ? null : n;
+  } catch (e) { return null; }
+}
+function tokenIdText(kind, id) {
+  if (kind === "lsp8") { const n = BigInt(id); return n < 2n ** 53n ? n.toString() : id; }
+  return id.toString();
+}
+function assetTitle(a) {
+  const parts = [KIND_LABEL[a.kind]];
+  if (a.name) parts.push(a.name);
+  if (a.symbol) parts.push(`(${a.symbol})`);
+  return parts.join(" ");
+}
+
+let detectedAsset = null;   // result of "Read the contract", for the UI only
+let detectRequestId = 0;
+
+function renderAssetStatus() {
+  const box = $("assetStatus");
+  const a = detectedAsset;
+  $("ownedIds").innerHTML = "";
+  if (!a) { box.innerHTML = `<span class="empty">${escapeHtml(t("assetNotRead"))}</span>`; }
+  else if (a.error) { box.innerHTML = `<span class="badge err">${escapeHtml(a.error)}</span>`; }
+  else if (a.kind === "nocode") { box.innerHTML = `<span class="badge err">${escapeHtml(t("assetNoCode"))}</span>`; }
+  else if (a.kind === "unknown") { box.innerHTML = `<span class="badge err">${escapeHtml(t("assetUnknown"))}</span>`; }
+  else {
+    const label = [a.name, a.symbol ? `(${a.symbol})` : ""].filter(Boolean).join(" ") || a.address;
+    let html = `<span class="badge ok">${escapeHtml(KIND_LABEL[a.kind])}</span> ${escapeHtml(label)}`;
+    if (a.kind === "erc20" || a.kind === "lsp7") {
+      if (a.balance !== null) html += `<div class="balance-big">${escapeHtml(ethers.formatUnits(a.balance, a.decimals))} ${escapeHtml(a.symbol || "")}</div>`;
+    } else if (a.kind === "erc1155") {
+      html += `<div>${escapeHtml(t("erc1155BalanceHint"))}</div>`;
+    } else if (a.balance !== null) {
+      html += `<div>${escapeHtml(t("nftOwnedCount", { n: a.balance.toString() }))}</div>`;
+    }
+    if (a.ownedIds) {
+      if (!a.ownedIds.length) html += `<div>${escapeHtml(t("noOwnedIds"))}</div>`;
+      else html += `<div>${escapeHtml(t(a.ownedIds.length > MAX_LISTED_IDS || (a.balance !== null && a.balance > BigInt(a.ownedIds.length)) ? "ownedIdsSome" : "ownedIdsAll"))}</div>`;
+      a.ownedIds.slice(0, MAX_LISTED_IDS).forEach(id => {
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "chip";
+        const txt = tokenIdText(a.kind, id);
+        b.textContent = txt.length > 20 ? txt.slice(0, 10) + "…" + txt.slice(-6) : txt;
+        b.title = txt;
+        b.addEventListener("click", () => { $("tokenId").value = txt; invalidateCheck(); });
+        $("ownedIds").appendChild(b);
+      });
+    } else if (a.kind === "erc721" || a.kind === "erc1155") {
+      html += `<div>${escapeHtml(t("idsNotListed"))}</div>`;
+    }
+    box.innerHTML = html;
+  }
+  updateAssetFields();
+}
+
+// Which fields are shown depends on what is being sent.
+function currentKind() {
+  if ($("assetKind").value === "native") return "native";
+  return detectedAsset && KIND_LABEL[detectedAsset.kind] ? detectedAsset.kind : null;
+}
+function updateAssetFields() {
+  const isToken = $("assetKind").value === "token";
+  $("tokenWrap").hidden = !isToken;
+  const kind = currentKind();
+  $("tokenIdWrap").hidden = !(isToken && NFT_KINDS.includes(kind));
+  $("amountWrap").hidden = isToken && (kind === "erc721" || kind === "lsp8");
+  let label;
+  if (kind === "native") label = t("amountNativeLabel");
+  else if (kind === "erc20" || kind === "lsp7") label = t("amountTokenLabel", { symbol: detectedAsset.symbol || KIND_LABEL[kind] });
+  else if (kind === "erc1155") label = t("amountCopiesLabel");
+  else label = t("amountLabelGeneric");
+  $("amountLabel").textContent = label;
+}
+
+async function readAssetForUi() {
+  const requestId = ++detectRequestId;
+  const net = getNetwork();
+  const up = currentProfile().address;
+  const addr = $("tokenAddress").value.trim();
+  const fail = (msg) => { if (requestId === detectRequestId) { detectedAsset = { error: msg }; renderAssetStatus(); } };
+  if (!ethers.isAddress(addr)) return fail(t("invalidTokenAddrErr"));
+  if (!ethers.isAddress(up)) return fail(t("missingAddrErr"));
+  if (!net || !net.rpc) return fail(t("missingRpcLog"));
+  $("assetStatus").innerHTML = `<span class="empty">${escapeHtml(t("assetReading"))}</span>`;
+  try {
+    const provider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
+    const a = await detectAsset(provider, addr, up);
+    if (requestId !== detectRequestId) return;
+    detectedAsset = a;
+    renderAssetStatus();
+  } catch (e) {
+    fail(t("assetReadErr", { err: e.shortMessage || e.message }));
+  }
+}
+
+$("assetKind").addEventListener("change", () => { invalidateCheck(); updateAssetFields(); });
+$("detectBtn").addEventListener("click", readAssetForUi);
+$("tokenAddress").addEventListener("input", () => { detectRequestId++; detectedAsset = null; renderAssetStatus(); });
+$("tokenAddress").addEventListener("change", readAssetForUi);
+
+// "All": the whole balance. The controller pays the gas, not the UP, so the native balance can
+// be sent in full.
+$("maxBtn").addEventListener("click", async () => {
+  const net = getNetwork();
+  const up = currentProfile().address;
+  if (!net || !net.rpc || !ethers.isAddress(up)) { log(t("maxNeedsDataLog"), "line-warn"); return; }
+  try {
+    const provider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
+    const kind = currentKind();
+    let v = null;
+    if (kind === "native") v = ethers.formatEther(await provider.getBalance(up));
+    else if (kind === "erc20" || kind === "lsp7") {
+      const bal = (await readCall(provider, detectedAsset.address, "balanceOf(address)", [up]))[0];
+      v = ethers.formatUnits(bal, detectedAsset.decimals);
+    } else if (kind === "erc1155") {
+      const id = parseTokenId(kind, $("tokenId").value);
+      if (id === null) { log(t("invalidTokenIdErr"), "line-warn"); return; }
+      v = (await readCall(provider, detectedAsset.address, "balanceOf(address,uint256)", [up, id]))[0].toString();
+    } else { log(t("readAssetFirstErr"), "line-warn"); return; }
+    $("amount").value = v;
+    invalidateCheck();
+  } catch (e) {
+    log(t("balanceReadErr", { err: e.shortMessage || e.message }), "line-err");
+  }
+});
+
+// --- 5. Check and send ---
 // The Key Manager is read from the UP itself (LSP0 owner()), not recomputed from a fixed
 // implementation address: this works whatever Key Manager version the profile was created
 // with, and follows any later ownership change.
@@ -554,9 +921,9 @@ async function readKeyManager(provider, upAddress) {
 
 let lastCheckOk = false;
 let lastKeyManager = null;
-let lastValueWei = null;
-let lastRecipient = null;
-let checkedContext = null; // { rpc, chainId, signer, up } snapshot of a successful Check
+let lastExecuteCalldata = null;
+let lastPlan = null;       // what was checked, for the verification after sending
+let checkedContext = null; // { rpc, chainId, signer } snapshot of a successful Check
 
 function invalidateCheck() {
   if (lastCheckOk) log(t("staleCheckLog"), "line-warn");
@@ -564,8 +931,10 @@ function invalidateCheck() {
   checkedContext = null;
   $("sendBtn").disabled = true;
 }
-["profileAddress", "recipient", "amount", "customRpc"].forEach(id => $(id).addEventListener("input", invalidateCheck));
+["profileAddress", "recipient", "amount", "customRpc", "tokenAddress", "tokenId"].forEach(id => $(id).addEventListener("input", invalidateCheck));
 networkSelectEl.addEventListener("change", invalidateCheck);
+networkSelectEl.addEventListener("change", () => { if ($("assetKind").value === "token" && detectedAsset) readAssetForUi(); });
+$("profileAddress").addEventListener("change", () => { if ($("assetKind").value === "token" && detectedAsset) readAssetForUi(); });
 
 let watchedSigner = null;
 function watchSigner(p) {
@@ -598,6 +967,105 @@ async function checkChains(net, provider) {
   return { ok: true, chainId: expectedChainId };
 }
 
+// Reads what the UP holds right now and returns the call the UP must make, or an error.
+async function planTransfer(provider, up, recipient, recipientIsContract) {
+  const kind = $("assetKind").value;
+  const amountStr = $("amount").value.trim();
+  if (kind === "native") {
+    if (!amountStr || isNaN(Number(amountStr)) || Number(amountStr) <= 0) return { err: t("invalidAmountErr") };
+    let value;
+    try { value = ethers.parseEther(amountStr); } catch (e) { return { err: t("invalidAmountErr") }; }
+    const bal = await provider.getBalance(up);
+    log(t("upBalanceLog", { balance: ethers.formatEther(bal) }), "line-dim");
+    if (bal < value) return { err: t("insufficientUpFundsErr", { have: ethers.formatEther(bal), need: amountStr }) };
+    log(t("upFundsOkLog"), "line-ok");
+    if (recipientIsContract) log(t("recipientContractWarn"), "line-warn");
+    return { kind, to: recipient, value, data: "0x", describe: t("assetNativeLog", { amount: amountStr }) };
+  }
+
+  const tokenAddr = $("tokenAddress").value.trim();
+  if (!ethers.isAddress(tokenAddr)) return { err: t("invalidTokenAddrErr") };
+  if (tokenAddr.toLowerCase() === recipient.toLowerCase()) return { err: t("recipientIsTokenErr") };
+  // Always re-read from the chain: the check never trusts what the page showed earlier.
+  const a = await detectAsset(provider, tokenAddr, up);
+  if (a.kind === "nocode") return { err: t("assetNoCode") };
+  if (a.kind === "unknown") return { err: t("assetUnknown") };
+  detectedAsset = a; renderAssetStatus();
+  log(t("assetLog", { title: assetTitle(a), addr: a.address }), "line-dim");
+  const force = !recipientIsContract;
+  const base = { kind: a.kind, asset: a, to: a.address, value: 0n };
+
+  if (a.kind === "erc20" || a.kind === "lsp7") {
+    let amount;
+    try { amount = ethers.parseUnits(amountStr, a.decimals); } catch (e) { return { err: t("invalidAmountErr") }; }
+    if (amount <= 0n) return { err: t("invalidAmountErr") };
+    const bal = (await readCall(provider, a.address, "balanceOf(address)", [up]))[0];
+    const sym = a.symbol || KIND_LABEL[a.kind];
+    log(t("tokenBalanceLog", { balance: ethers.formatUnits(bal, a.decimals), symbol: sym }), "line-dim");
+    if (bal < amount) return { err: t("insufficientTokenErr", { have: ethers.formatUnits(bal, a.decimals), need: amountStr, symbol: sym }) };
+    log(t("upFundsOkLog"), "line-ok");
+    let data;
+    if (a.kind === "erc20") {
+      data = tokenIface.encodeFunctionData("transfer(address,uint256)", [recipient, amount]);
+      if (recipientIsContract) log(t("recipientContractWarn"), "line-warn");
+    } else {
+      data = tokenIface.encodeFunctionData("transfer(address,address,uint256,bool,bytes)", [up, recipient, amount, force, "0x"]);
+      log(t(force ? "lspForceNote" : "lspNoForceNote"), "line-dim");
+    }
+    return { ...base, data, amount, balanceBefore: bal, describe: t("assetTokenLog", { amount: amountStr, symbol: sym }) };
+  }
+
+  const tokenId = parseTokenId(a.kind, $("tokenId").value);
+  if (tokenId === null) return { err: t("invalidTokenIdErr") };
+  const idText = tokenIdText(a.kind, tokenId);
+  log(t("tokenIdLog", { id: idText }), "line-dim");
+
+  if (a.kind === "erc721" || a.kind === "lsp8") {
+    const owner = a.kind === "erc721"
+      ? await tryRead(provider, a.address, "ownerOf", [tokenId])
+      : await tryRead(provider, a.address, "tokenOwnerOf", [tokenId]);
+    if (!owner || owner.toLowerCase() !== up.toLowerCase()) return { err: t("notOwnerErr", { id: idText, owner: owner || "—" }) };
+    log(t("nftOwnedOkLog"), "line-ok");
+    const data = a.kind === "erc721"
+      ? tokenIface.encodeFunctionData("safeTransferFrom(address,address,uint256)", [up, recipient, tokenId])
+      : tokenIface.encodeFunctionData("transfer(address,address,bytes32,bool,bytes)", [up, recipient, tokenId, force, "0x"]);
+    log(t(a.kind === "erc721" ? "safeTransferNote" : (force ? "lspForceNote" : "lspNoForceNote")), "line-dim");
+    return { ...base, data, tokenId, describe: t("assetNftLog", { title: assetTitle(a), id: idText }) };
+  }
+
+  // ERC-1155
+  let amount;
+  try { amount = BigInt(amountStr); } catch (e) { return { err: t("invalidCopiesErr") }; }
+  if (amount <= 0n) return { err: t("invalidCopiesErr") };
+  const bal = (await readCall(provider, a.address, "balanceOf(address,uint256)", [up, tokenId]))[0];
+  log(t("copiesBalanceLog", { n: bal.toString(), id: idText }), "line-dim");
+  if (bal < amount) return { err: t("insufficientCopiesErr", { have: bal.toString(), need: amount.toString(), id: idText }) };
+  log(t("nftOwnedOkLog"), "line-ok");
+  log(t("safeTransferNote"), "line-dim");
+  const data = tokenIface.encodeFunctionData("safeTransferFrom(address,address,uint256,uint256,bytes)", [up, recipient, tokenId, amount, "0x"]);
+  return { ...base, data, tokenId, amount, balanceBefore: bal, describe: t("assetCopiesLog", { title: assetTitle(a), id: idText, n: amount.toString() }) };
+}
+
+// After the transaction: read the chain again and say what changed.
+async function verifyAfterSend(provider, plan, up, recipient) {
+  try {
+    if (plan.kind === "erc721" || plan.kind === "lsp8") {
+      const owner = plan.kind === "erc721"
+        ? await tryRead(provider, plan.to, "ownerOf", [plan.tokenId])
+        : await tryRead(provider, plan.to, "tokenOwnerOf", [plan.tokenId]);
+      if (owner && owner.toLowerCase() === recipient.toLowerCase()) log(t("postNftOk"), "line-ok");
+      else log(t("postNftWarn", { owner: owner || "—" }), "line-warn");
+    } else if (plan.kind === "erc20" || plan.kind === "lsp7") {
+      const bal = (await readCall(provider, plan.to, "balanceOf(address)", [up]))[0];
+      const sym = plan.asset.symbol || KIND_LABEL[plan.kind];
+      log(t("postTokenBalance", { balance: ethers.formatUnits(bal, plan.asset.decimals), symbol: sym }), bal === plan.balanceBefore - plan.amount ? "line-ok" : "line-warn");
+    } else if (plan.kind === "erc1155") {
+      const bal = (await readCall(provider, plan.to, "balanceOf(address,uint256)", [up, plan.tokenId]))[0];
+      log(t("postCopiesBalance", { n: bal.toString() }), bal === plan.balanceBefore - plan.amount ? "line-ok" : "line-warn");
+    }
+  } catch (e) { /* the transfer is confirmed; this is only an extra reading */ }
+}
+
 $("checkBtn").addEventListener("click", async () => {
   $("log").innerHTML = "";
   lastCheckOk = false;
@@ -606,7 +1074,6 @@ $("checkBtn").addEventListener("click", async () => {
   const profile = currentProfile();
   const net = getNetwork();
   const recipient = $("recipient").value.trim();
-  const amountStr = $("amount").value.trim();
 
   if (!profile.address || !ethers.isAddress(profile.address)) { log(t("missingAddrErr"), "line-err"); return; }
   if (!signerAddress) { log(t("connectSignerFirstLog"), "line-err"); return; }
@@ -614,14 +1081,11 @@ $("checkBtn").addEventListener("click", async () => {
   if (!ethers.isAddress(recipient)) { log(t("invalidRecipientErr"), "line-err"); return; }
   if (BigInt(recipient) === 0n) { log(t("recipientZeroErr"), "line-err"); return; }
   if (recipient.toLowerCase() === profile.address.toLowerCase()) { log(t("recipientIsSelfErr"), "line-err"); return; }
-  if (!amountStr || isNaN(Number(amountStr)) || Number(amountStr) <= 0) { log(t("invalidAmountErr"), "line-err"); return; }
 
   try {
-    const valueWei = ethers.parseEther(amountStr);
     log(t("upLog", { addr: profile.address }), "line-dim");
     log(t("netLog", { name: net.name }), "line-dim");
     log(t("recipientLog", { addr: recipient }), "line-dim");
-    log(t("amountLog", { amount: amountStr }), "line-dim");
     log(t("signerLog", { addr: signerAddress }), "line-dim");
     log(t("permCheckNote"), "line-dim");
 
@@ -643,24 +1107,22 @@ $("checkBtn").addEventListener("click", async () => {
       return;
     }
 
-    const upBalance = await provider.getBalance(profile.address);
-    log(t("upBalanceLog", { balance: ethers.formatEther(upBalance) }), "line-dim");
-    if (upBalance < valueWei) {
-      log(t("insufficientUpFundsErr", { have: ethers.formatEther(upBalance), need: amountStr }), "line-err");
-      return;
-    }
-    log(t("upFundsOkLog"), "line-ok");
+    const recipientIsContract = (await provider.getCode(recipient)) !== "0x";
+    const plan = await planTransfer(provider, profile.address, recipient, recipientIsContract);
+    if (plan.err) { log(plan.err, "line-err"); return; }
 
-    // Costruzione calldata: UP.execute(0, recipient, value, "0x") wrappato in KeyManager.execute(bytes)
+    // UP.execute(CALL, to, value, data) wrapped in KeyManager.execute(bytes)
     const upIface = new ethers.Interface(["function execute(uint256,address,uint256,bytes)"]);
-    const innerCalldata = upIface.encodeFunctionData("execute", [0, recipient, valueWei, "0x"]);
+    const innerCalldata = upIface.encodeFunctionData("execute", [0, plan.to, plan.value, plan.data]);
     const kmIface = new ethers.Interface(["function execute(bytes) returns (bytes)"]);
     const executeCalldata = kmIface.encodeFunctionData("execute", [innerCalldata]);
 
     const gasEstimate = await provider.estimateGas({
       to: keyManagerAddress, data: executeCalldata, from: signerAddress
     }).catch(e => {
-      log(t("gasFailErr", { err: e.shortMessage || e.message }), "line-err");
+      const err = e.shortMessage || e.message;
+      log(t(plan.kind === "native" ? "gasFailErr" : "tokenSimFailErr", { err }), "line-err");
+      if (NFT_KINDS.includes(plan.kind) && recipientIsContract) log(t("nftRecipientHint"), "line-warn");
       throw e;
     });
     log(t("permsOkLog", { gas: gasEstimate.toString() }), "line-ok");
@@ -678,10 +1140,11 @@ $("checkBtn").addEventListener("click", async () => {
     }
     log(t("signerGasOkLog"), "line-ok");
 
+    log(t("summaryLog", { what: plan.describe, to: recipient }), "line-warn");
     lastCheckOk = true;
     lastKeyManager = keyManagerAddress;
-    lastValueWei = valueWei;
-    lastRecipient = recipient;
+    lastExecuteCalldata = executeCalldata;
+    lastPlan = { ...plan, up: profile.address, recipient };
     checkedContext = { rpc: net.rpc, chainId: chains.chainId, signer: signerAddress };
     $("sendBtn").disabled = false;
     log(t("readyWarnLog"), "line-warn");
@@ -695,6 +1158,7 @@ $("sendBtn").addEventListener("click", async () => {
   $("sendBtn").disabled = true;
   const net = getNetwork();
   if (!net || net.rpc !== checkedContext.rpc) { invalidateCheck(); log(t("staleCheckLog"), "line-err"); return; }
+  const plan = lastPlan;
 
   try {
     // Re-check the wallet network right before signing: it may have changed since Check.
@@ -704,11 +1168,6 @@ $("sendBtn").addEventListener("click", async () => {
       return;
     }
 
-    const upIface = new ethers.Interface(["function execute(uint256,address,uint256,bytes)"]);
-    const innerCalldata = upIface.encodeFunctionData("execute", [0, lastRecipient, lastValueWei, "0x"]);
-    const kmIface = new ethers.Interface(["function execute(bytes) returns (bytes)"]);
-    const executeCalldata = kmIface.encodeFunctionData("execute", [innerCalldata]);
-
     const browserProvider = new ethers.BrowserProvider(signerProvider);
     const signerObj = await browserProvider.getSigner();
     if (signerObj.address.toLowerCase() !== checkedContext.signer.toLowerCase()) {
@@ -717,7 +1176,7 @@ $("sendBtn").addEventListener("click", async () => {
     }
 
     log(t("sendingTxLog"), "line-dim");
-    const tx = await signerObj.sendTransaction({ to: lastKeyManager, data: executeCalldata });
+    const tx = await signerObj.sendTransaction({ to: lastKeyManager, data: lastExecuteCalldata });
     log(t("txHashLog", { hash: tx.hash }), "line-dim");
     if (net.explorer) log(net.explorer + tx.hash, "line-dim");
 
@@ -725,7 +1184,10 @@ $("sendBtn").addEventListener("click", async () => {
     await tx.wait();
     log(t("transferConfirmedLog"), "line-ok");
 
+    const provider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
+    await verifyAfterSend(provider, plan, plan.up, plan.recipient);
     checkBalance();
+    if (plan.kind !== "native") readAssetForUi();
   } catch (e) {
     log(t("sendErrorLog", { err: e.shortMessage || e.message }), "line-err");
   } finally {
@@ -733,6 +1195,7 @@ $("sendBtn").addEventListener("click", async () => {
     checkedContext = null;
   }
 });
+updateAssetFields();
 </script>
 
 </body>
