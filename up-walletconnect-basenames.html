@@ -228,8 +228,9 @@ const I18N = {
     signOpaque: "⚠️ Il contenuto NON è leggibile: è un hash o dati binari. Non puoi sapere cosa autorizzi. Se non sai esattamente a cosa serve, rifiuta.",
     signPermit: "⚠️⚠️ Questo messaggio sembra un PERMESSO A SPENDERE TOKEN (Permit/Permit2): chi lo riceve può spostare token della UP senza altre conferme. Firma solo se sai esattamente perché.",
     signReplay: "ℹ️ Se questo controller governa anche altre UP, la firma vale anche per quelle.",
-    signNoPermission: "❌ Il controller non ha il permesso SIGN su questa UP: la UP non riconoscerebbe la firma. Rifiutata.",
-    signPermOk: "✅ Il controller ha il permesso SIGN sulla UP.",
+    signNotController: (v) => `❌ Su Base, l'account ${v.signer} in MetaMask non ha nessun permesso sulla UP ${v.up}: non è un suo controller. Controlla di aver importato in MetaMask la chiave del controller di QUESTA UP. Rifiutata.`,
+    signNoPermission: (v) => `❌ Il controller ha permessi ${v.perms} su questa UP, ma non SIGN (0x200000): la UP non riconoscerebbe la firma. Rifiutata.`,
+    signPermOk: (v) => `✅ Il controller ha il permesso SIGN sulla UP (permessi ${v.perms}).`,
     signReady: "Pronto. Leggi il contenuto sopra: se non capisci cosa stai firmando, premi \"Rifiuta\". Altrimenti premi \"Firma il messaggio\" e controlla lo stesso contenuto in MetaMask.",
     signing: "Firma in corso con il controller (conferma in MetaMask)...",
     signRecovered: (v) => `Firma ricevuta. Firmatario ricavato dalla firma: ${v.addr}.`,
@@ -337,8 +338,9 @@ const I18N = {
     signOpaque: "⚠️ The content is NOT readable: it is a hash or binary data. You cannot know what you are authorising. Unless you know exactly what it is for, reject it.",
     signPermit: "⚠️⚠️ This message looks like a PERMISSION TO SPEND TOKENS (Permit/Permit2): whoever receives it can move the UP's tokens without further confirmation. Only sign if you know exactly why.",
     signReplay: "ℹ️ If this controller also governs other UPs, the signature is valid for them too.",
-    signNoPermission: "❌ The controller does not have the SIGN permission on this UP: the UP would not recognise the signature. Rejected.",
-    signPermOk: "✅ The controller has the SIGN permission on the UP.",
+    signNotController: (v) => `❌ On Base, the MetaMask account ${v.signer} has no permission at all on the UP ${v.up}: it is not one of its controllers. Check that you imported into MetaMask the controller key of THIS UP. Rejected.`,
+    signNoPermission: (v) => `❌ The controller has permissions ${v.perms} on this UP, but not SIGN (0x200000): the UP would not recognise the signature. Rejected.`,
+    signPermOk: (v) => `✅ The controller has the SIGN permission on the UP (permissions ${v.perms}).`,
     signReady: "Ready. Read the content above: if you do not understand what you are signing, press \"Reject\". Otherwise press \"Sign the message\" and check the same content in MetaMask.",
     signing: "Signing with the controller (confirm in MetaMask)...",
     signRecovered: (v) => `Signature received. Signer recovered from the signature: ${v.addr}.`,
@@ -835,8 +837,10 @@ async function handleSignRequest(topic, id, chainId, request, verifyContext) {
     const key = PERM_PREFIX + signerAddress.slice(2).toLowerCase();
     const raw = await new ethers.Contract(upAddress, ["function getData(bytes32) view returns (bytes)"], rpc).getData(key);
     const perms = raw && raw !== "0x" ? BigInt(raw) : 0n;
-    if ((perms & PERMISSION_SIGN) === 0n) return reject(t("signNoPermission"));
-    log(t("signPermOk"), "line-ok");
+    const permsHex = "0x" + perms.toString(16).padStart(6, "0");
+    if (perms === 0n) return reject(t("signNotController", { signer: signerAddress, up: upAddress }));
+    if ((perms & PERMISSION_SIGN) === 0n) return reject(t("signNoPermission", { perms: permsHex }));
+    log(t("signPermOk", { perms: permsHex }), "line-ok");
   } catch (e) {
     return reject(t("genericError", { err: e.shortMessage || e.message }));
   }
