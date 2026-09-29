@@ -124,6 +124,7 @@
   <div class="step-num">2</div>
   <div class="step-body">
     <h3>Find your UP's original creation transaction</h3>
+    <div class="note ok"><b>Usually you can skip steps 2 and 3.</b> When you connect your UP in the Deploy tool (step 4), it fetches the deployment calldata from the LUKSO explorer by itself and checks that it produces exactly your UP's address. Follow these two steps only if the automatic fetch fails, or if you want to check the data by hand.</div>
     <p>Open your UP's address on the <a href="https://explorer.execution.mainnet.lukso.network" target="_blank" rel="noopener noreferrer">LUKSO mainnet explorer</a>, on its <b>Details</b> tab. Find the <b>Creator</b> row — it shows the creator's address <i>"at txn"</i> followed by a transaction hash. Click that transaction hash link: it takes you straight to the creation transaction.</p>
     <img class="shot" src="guide-assets/step-genesis-link.png" alt="Contract details page with the Creator row showing 'at txn' followed by the creation transaction hash link">
     <div class="shot-caption">On the Details tab, the "at txn" link next to Creator is the shortcut straight to the creation transaction — no need to scroll through the transaction list.</div>
@@ -159,7 +160,7 @@
   <div class="step-num">5</div>
   <div class="step-body">
     <h3>Decode it and identify the controller</h3>
-    <p>Paste the calldata you copied in step 3 into the same page. It will show you the address this calldata predicts for your UP on any chain, and — critically — it will decode and display <i>every controller</i> named in the calldata, including which one gets <code>ALL_PERMISSIONS</code>.</p>
+    <p>The calldata is filled in automatically after you connect (otherwise, paste the one you copied in step 3). It will show you the address this calldata predicts for your UP on any chain, and — critically — it will decode and display <i>every controller</i> named in the calldata, including which one gets <code>ALL_PERMISSIONS</code>.</p>
     <img class="shot" src="guide-assets/step3-controllers.png" alt="Deploy tool showing the decoded controllers, one flagged as system infrastructure and one with ALL_PERMISSIONS">
     <div class="shot-caption">The tool separates known system infrastructure (green) from the actual controller with <code>ALL_PERMISSIONS</code> (red) — that second one is what you need to hold the key for.</div>
     <div class="note">Compare the predicted address to your actual UP address on LUKSO. They must match exactly before you go any further. If they don't, something is wrong with the calldata you copied — stop and re-check step 3.</div>
@@ -294,6 +295,7 @@
   <div class="step-num">2</div>
   <div class="step-body">
     <h3>Trova la transazione di creazione originale della tua UP</h3>
+    <div class="note ok"><b>Di solito puoi saltare i passi 2 e 3.</b> Quando connetti la tua UP nella pagina di Deploy (passo 4), la pagina recupera da sola la calldata di deploy dall'explorer di LUKSO e controlla che produca esattamente l'indirizzo della tua UP. Segui questi due passi solo se il recupero automatico non riesce, o se vuoi controllare i dati a mano.</div>
     <p>Apri l'indirizzo della tua UP sull'<a href="https://explorer.execution.mainnet.lukso.network" target="_blank" rel="noopener noreferrer">explorer di LUKSO mainnet</a>, nella scheda <b>Details</b>. Trova la riga <b>Creator</b> — mostra l'indirizzo del creatore <i>"at txn"</i> seguito da un hash di transazione. Clicca su quel link dell'hash: ti porta direttamente alla transazione di creazione.</p>
     <img class="shot" src="guide-assets/step-genesis-link.png" alt="Pagina dei dettagli del contratto con la riga Creator che mostra 'at txn' seguito dal link all'hash della transazione di creazione">
     <div class="shot-caption">Nella scheda Details, il link "at txn" accanto a Creator è la scorciatoia diretta alla transazione di creazione — non serve scorrere l'elenco delle transazioni.</div>
@@ -329,7 +331,7 @@
   <div class="step-num">5</div>
   <div class="step-body">
     <h3>Decodificala e identifica il controller</h3>
-    <p>Incolla la calldata copiata al passo 3 nella stessa pagina. Ti mostrerà l'indirizzo che questa calldata predice per la tua UP su qualsiasi rete e — punto cruciale — decodificherà e mostrerà <i>ogni controller</i> nominato nella calldata, incluso chi riceve <code>ALL_PERMISSIONS</code>.</p>
+    <p>La calldata viene compilata in automatico dopo la connessione (altrimenti incolla quella copiata al passo 3). Ti mostrerà l'indirizzo che questa calldata predice per la tua UP su qualsiasi rete e — punto cruciale — decodificherà e mostrerà <i>ogni controller</i> nominato nella calldata, incluso chi riceve <code>ALL_PERMISSIONS</code>.</p>
     <img class="shot" src="guide-assets/step3-controllers.png" alt="Pagina di Deploy con i controller decodificati, uno segnato come infrastruttura di sistema e uno con ALL_PERMISSIONS">
     <div class="shot-caption">Lo strumento separa l'infrastruttura di sistema nota (verde) dal vero controller con <code>ALL_PERMISSIONS</code> (rosso) — di quest'ultimo devi possedere la chiave.</div>
     <div class="note">Confronta l'indirizzo predetto con l'indirizzo reale della tua UP su LUKSO. Devono coincidere esattamente prima di andare oltre. Se non coincidono, c'è qualcosa che non va nella calldata copiata — fermati e ricontrolla il passo 3.</div>
