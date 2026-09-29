@@ -38,6 +38,7 @@
   .status-box .empty { color: var(--text-dim); }
   #log { font-family: monospace; font-size: 12.5px; white-space: pre-wrap; word-break: break-all; line-height: 1.6; }
   .line-ok { color: var(--ok); } .line-warn { color: var(--warn); } .line-err { color: var(--err); } .line-dim { color: var(--text-dim); }
+  .line-compare { color: var(--warn); font-weight: 700; border: 1px solid var(--warn); border-radius: 6px; padding: 8px 10px; margin: 6px 0; }
   .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-family: monospace; }
   .badge.ok { background: rgba(63,191,111,0.15); color: var(--ok); }
   .badge.err { background: rgba(224,90,90,0.15); color: var(--err); }
@@ -231,7 +232,8 @@ const I18N = {
     signNotController: (v) => `❌ Su Base, l'account ${v.signer} in MetaMask non ha nessun permesso sulla UP ${v.up}: non è un suo controller. Controlla di aver importato in MetaMask la chiave del controller di QUESTA UP. Rifiutata.`,
     signNoPermission: (v) => `❌ Il controller ha permessi ${v.perms} su questa UP, ma non SIGN (0x200000): la UP non riconoscerebbe la firma. Rifiutata.`,
     signPermOk: (v) => `✅ Il controller ha il permesso SIGN sulla UP (permessi ${v.perms}).`,
-    signReady: "Pronto. Leggi il contenuto sopra: se non capisci cosa stai firmando, premi \"Rifiuta\". Altrimenti premi \"Firma il messaggio\" e controlla lo stesso contenuto in MetaMask.",
+    signCompare: (v) => `👉 DA CONTROLLARE IN METAMASK: il messaggio che MetaMask ti chiede di firmare deve essere esattamente questo: ${v.c}\nSe è diverso, rifiuta in MetaMask.`,
+    signReady: "Pronto. Leggi il contenuto sopra: se non capisci cosa stai firmando, premi \"Rifiuta\". Altrimenti premi \"Firma il messaggio\" e confronta il messaggio in MetaMask con quello nel riquadro qui sopra.",
     signing: "Firma in corso con il controller (conferma in MetaMask)...",
     signRecovered: (v) => `Firma ricevuta. Firmatario ricavato dalla firma: ${v.addr}.`,
     signWrongSigner: "❌ La firma non è del controller verificato: non viene inviata al sito.",
@@ -239,7 +241,7 @@ const I18N = {
     signValid: "✅ La UP su Base riconosce la firma come propria. Firma inviata al sito.",
     signInvalid: (v) => `❌ La UP su Base NON riconosce la firma (risposta ${v.r}): non viene inviata al sito.`,
     kMethod: "Metodo", kSite: "Sito", kVerify: "Verifica dominio", kAccount: "Account (UP)", kContentType: "Tipo di contenuto",
-    kContent: "Contenuto da firmare", kHash: "Hash verificato dalla UP", kDomain: "Dominio (EIP-712)", kPrimaryType: "Tipo di messaggio",
+    kContent: "Contenuto da firmare (deve coincidere con MetaMask)", kHash: "Hash verificato dalla UP", kDomain: "Dominio (EIP-712)", kPrimaryType: "Tipo di messaggio",
     ctText: "testo leggibile", ctOpaque: "dati non leggibili (hash o binario)", ctTyped: "dati strutturati EIP-712",
     reqUnsupported: (v) => `Metodo non supportato, rifiutato: ${v.method}`,
     reqBusy: "C'è già una richiesta in attesa: la nuova viene rifiutata.",
@@ -341,7 +343,8 @@ const I18N = {
     signNotController: (v) => `❌ On Base, the MetaMask account ${v.signer} has no permission at all on the UP ${v.up}: it is not one of its controllers. Check that you imported into MetaMask the controller key of THIS UP. Rejected.`,
     signNoPermission: (v) => `❌ The controller has permissions ${v.perms} on this UP, but not SIGN (0x200000): the UP would not recognise the signature. Rejected.`,
     signPermOk: (v) => `✅ The controller has the SIGN permission on the UP (permissions ${v.perms}).`,
-    signReady: "Ready. Read the content above: if you do not understand what you are signing, press \"Reject\". Otherwise press \"Sign the message\" and check the same content in MetaMask.",
+    signCompare: (v) => `👉 CHECK IN METAMASK: the message MetaMask asks you to sign must be exactly this: ${v.c}\nIf it is different, reject it in MetaMask.`,
+    signReady: "Ready. Read the content above: if you do not understand what you are signing, press \"Reject\". Otherwise press \"Sign the message\" and compare the message in MetaMask with the one in the box above.",
     signing: "Signing with the controller (confirm in MetaMask)...",
     signRecovered: (v) => `Signature received. Signer recovered from the signature: ${v.addr}.`,
     signWrongSigner: "❌ The signature is not from the verified controller: it is not sent to the site.",
@@ -349,7 +352,7 @@ const I18N = {
     signValid: "✅ The UP on Base recognises the signature as its own. Signature sent to the site.",
     signInvalid: (v) => `❌ The UP on Base does NOT recognise the signature (answer ${v.r}): it is not sent to the site.`,
     kMethod: "Method", kSite: "Site", kVerify: "Domain verification", kAccount: "Account (UP)", kContentType: "Content type",
-    kContent: "Content to sign", kHash: "Hash checked by the UP", kDomain: "Domain (EIP-712)", kPrimaryType: "Message type",
+    kContent: "Content to sign (must match MetaMask)", kHash: "Hash checked by the UP", kDomain: "Domain (EIP-712)", kPrimaryType: "Message type",
     ctText: "readable text", ctOpaque: "unreadable data (hash or binary)", ctTyped: "EIP-712 structured data",
     reqUnsupported: (v) => `Unsupported method, rejected: ${v.method}`,
     reqBusy: "A request is already pending: the new one is rejected.",
@@ -413,6 +416,13 @@ function log(msg, cls) {
   const l = document.createElement("div");
   if (cls) l.className = cls;
   l.textContent = msg;
+  $("log").appendChild(l);
+}
+// The log keeps the history of the session: each request starts with a separator.
+function logSeparator() {
+  const l = document.createElement("div");
+  l.className = "line-dim";
+  l.textContent = `—— ${new Date().toLocaleTimeString()} ——`;
   $("log").appendChild(l);
 }
 function renderKv(rows) {
@@ -650,7 +660,7 @@ async function onSessionRequest(event) {
 
 async function handleSendTransaction(topic, id, chainId, tx) {
   const reject = async (msg) => { log(msg, "line-err"); await respondError(topic, id, "Rejected by the UP bridge", 5000); };
-  $("log").textContent = "";
+  logSeparator();
 
   if (!riskAccepted()) return reject(t("ackRequired"));
   if (chainId !== CAIP_CHAIN) return reject(t("reqWrongChain", { chain: chainId }));
@@ -758,7 +768,7 @@ function readableText(bytes) {
 
 async function handleSignRequest(topic, id, chainId, request, verifyContext) {
   const reject = async (msg) => { log(msg, "line-err"); await respondError(topic, id, "Rejected by the UP bridge", 5000); };
-  $("log").textContent = "";
+  logSeparator();
   log(t("reqMethod", { method: request.method }), "line-dim");
 
   if (!riskAccepted()) return reject(t("ackRequired"));
@@ -774,7 +784,7 @@ async function handleSignRequest(topic, id, chainId, request, verifyContext) {
   // Step 2: decode what the site wants signed and compute the hash the UP will check.
   const p = request.params || [];
   const up = upAddress.toLowerCase();
-  let account, hash, rows = [], warnings = [], walletParams;
+  let account, hash, rows = [], warnings = [], walletParams, compare;
   try {
     if (request.method === "personal_sign") {
       // Standard order is [message, address]; some dApps swap it.
@@ -788,7 +798,8 @@ async function handleSignRequest(topic, id, chainId, request, verifyContext) {
       hash = ethers.hashMessage(bytes);
       walletParams = [ethers.hexlify(bytes), null];
       rows.push([t("kContentType"), text !== null ? t("ctText") : t("ctOpaque")]);
-      rows.push([t("kContent"), text !== null ? text : ethers.hexlify(bytes), true]);
+      compare = text !== null ? text : ethers.hexlify(bytes);
+      rows.push([t("kContent"), compare, true]);
       if (text === null) warnings.push(t("signOpaque"));
     } else {
       account = p[0];
@@ -807,6 +818,7 @@ async function handleSignRequest(topic, id, chainId, request, verifyContext) {
       rows.push([t("kDomain"), JSON.stringify(domain, null, 2), true]);
       rows.push([t("kPrimaryType"), String(data.primaryType || "—")]);
       rows.push([t("kContent"), JSON.stringify(data.message, null, 2), true]);
+      compare = `${data.primaryType || "?"} · ${domain.name || "?"} · verifyingContract ${domain.verifyingContract || "—"} · chainId ${domain.chainId ?? "—"}`;
       const vc = String(domain.verifyingContract || "").toLowerCase();
       if (/permit/i.test(String(data.primaryType || "")) || vc === PERMIT2 || /permit2/i.test(String(domain.name || ""))) warnings.push(t("signPermit"));
     }
@@ -848,6 +860,7 @@ async function handleSignRequest(topic, id, chainId, request, verifyContext) {
   pending = { kind: "sign", topic, id, method: request.method, walletParams, hash, signer: signerAddress };
   $("signBtn").disabled = false;
   $("rejectBtn").disabled = false;
+  log(t("signCompare", { c: compare }), "line-compare");
   log(t("signReady"), "line-warn");
 }
 
