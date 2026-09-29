@@ -90,6 +90,8 @@
   <input type="text" id="expectedAddress" placeholder="0x...">
   <label data-i18n="calldataLabel">Calldata di deploy originale (0x6a66a753...)</label>
   <textarea id="calldataInput" placeholder="0x6a66a753..."></textarea>
+  <button id="fetchCalldataBtn" class="secondary" data-i18n="fetchCalldataBtn">Recupera la calldata da LUKSO</button>
+  <div class="note" id="fetchStatus" style="margin-top:8px;"></div>
 </div>
 
 <div class="panel">
@@ -141,6 +143,14 @@ const I18N = {
     connectUpNote: "Serve solo per compilare comodamente il campo sotto con il tuo indirizzo — nessuna firma o transazione viene fatta a questo punto. Puoi anche inserire qualsiasi indirizzo a mano, senza connettere nulla.",
     expectedAddressLabel: "Indirizzo UP atteso",
     calldataLabel: "Calldata di deploy originale (0x6a66a753...)",
+    fetchCalldataBtn: "Recupera la calldata da LUKSO",
+    fetchNeedAddress: "Inserisci prima un indirizzo UP valido.",
+    fetchRunning: "Cerco la transazione di creazione della UP sull'explorer di LUKSO...",
+    fetchOk: "✅ Calldata recuperata dall'explorer di LUKSO e verificata: produce esattamente l'indirizzo della UP.",
+    fetchNoCreationTx: "l'explorer non indica una transazione di creazione per questo indirizzo",
+    fetchNotFound: "nella transazione di creazione non c'è una chiamata deployERC1167Proxies alla factory LSP23",
+    fetchNoMatch: "nessuna calldata trovata produce l'indirizzo di questa UP",
+    fetchFailed: (v) => `Recupero automatico non riuscito: ${v.err}. Puoi copiare la calldata a mano (guida, passi 2–3).`,
 
     panel2Title: "2 · Rete da controllare",
     networkFilterPlaceholder: "Filtra per nome...",
@@ -201,6 +211,14 @@ const I18N = {
     connectUpNote: "Only used to conveniently fill the field below with your address — no signature or transaction happens at this point. You can also enter any address manually, without connecting anything.",
     expectedAddressLabel: "Expected UP address",
     calldataLabel: "Original deploy calldata (0x6a66a753...)",
+    fetchCalldataBtn: "Fetch the calldata from LUKSO",
+    fetchNeedAddress: "Enter a valid UP address first.",
+    fetchRunning: "Looking up the UP's creation transaction on the LUKSO explorer...",
+    fetchOk: "✅ Calldata fetched from the LUKSO explorer and verified: it produces exactly the UP address.",
+    fetchNoCreationTx: "the explorer reports no creation transaction for this address",
+    fetchNotFound: "the creation transaction contains no deployERC1167Proxies call to the LSP23 factory",
+    fetchNoMatch: "none of the calldata found produces this UP's address",
+    fetchFailed: (v) => `Automatic fetch failed: ${v.err}. You can copy the calldata by hand (guide, steps 2–3).`,
 
     panel2Title: "2 · Network to check",
     networkFilterPlaceholder: "Filter by name...",
@@ -371,6 +389,7 @@ $("connectUp").addEventListener("click", async () => {
     const upAddress = accounts[0];
     $("expectedAddress").value = ethers.getAddress(upAddress);
     $("upStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${escapeHtml(upAddress)}`;
+    if (!$("calldataInput").value.trim()) autoFetchCalldata();
   } catch (e) {
     $("upStatus").innerHTML = `<span class="badge err">${t("connectionRejected")}</span>`;
   }
@@ -440,6 +459,58 @@ function decodeCalldata(calldataHex) {
   const predictedSecondary = computeKeyManagerAddress(predictedPrimary, secondary.impl);
   return { primary, secondary, postDeploymentModule, predictedPrimary, predictedSecondary };
 }
+
+// ==================== Calldata from the LUKSO explorer ====================
+// Finds the UP's creation transaction on the LUKSO explorer and extracts the LSP23
+// deployERC1167Proxies calldata: from the transaction input when it was sent straight to the
+// factory, otherwise from its raw trace (profiles created through a relayer or another contract).
+// The result is untrusted: it is used only if it predicts exactly the UP address.
+const LUKSO_EXPLORER_API = "https://explorer.execution.mainnet.lukso.network/api/v2/";
+const LSP23_FACTORY = "0x2300000a84d25df63081feaa37ba6b62c4c89a30";
+async function explorerGet(path) {
+  const res = await fetch(LUKSO_EXPLORER_API + path, { referrerPolicy: "no-referrer" });
+  if (!res.ok) throw new Error(`explorer HTTP ${res.status}`);
+  return res.json();
+}
+const isDeployCall = (to, input) =>
+  typeof input === "string" && input.toLowerCase().startsWith("0x6a66a753") && String(to || "").toLowerCase() === LSP23_FACTORY;
+async function fetchDeployCalldatas(upAddress) {
+  const addr = await explorerGet("addresses/" + upAddress);
+  const txHash = addr.creation_transaction_hash || addr.creation_tx_hash;
+  if (!txHash) throw new Error(t("fetchNoCreationTx"));
+  const tx = await explorerGet("transactions/" + txHash);
+  const input = tx.raw_input || tx.input;
+  if (isDeployCall(tx.to && tx.to.hash, input)) return [input];
+  const trace = await explorerGet("transactions/" + txHash + "/raw-trace");
+  const found = (Array.isArray(trace) ? trace : [])
+    .map(c => c.action || c)
+    .filter(a => isDeployCall(a.to, a.input))
+    .map(a => a.input);
+  if (!found.length) throw new Error(t("fetchNotFound"));
+  return found;
+}
+function setFetchStatus(text, cls) {
+  const el = $("fetchStatus");
+  el.className = "note " + (cls || "");
+  el.textContent = text;
+}
+
+async function autoFetchCalldata() {
+  const raw = $("expectedAddress").value.trim();
+  if (!ethers.isAddress(raw)) { setFetchStatus(t("fetchNeedAddress"), "line-err"); return; }
+  const up = ethers.getAddress(raw);
+  setFetchStatus(t("fetchRunning"), "line-dim");
+  try {
+    const candidates = await fetchDeployCalldatas(up);
+    const match = candidates.find(c => { try { return decodeCalldata(c).predictedPrimary.toLowerCase() === up.toLowerCase(); } catch (e) { return false; } });
+    if (!match) throw new Error(t("fetchNoMatch"));
+    $("calldataInput").value = match;
+    setFetchStatus(t("fetchOk"), "line-ok");
+  } catch (e) {
+    setFetchStatus(t("fetchFailed", { err: e.message }), "line-err");
+  }
+}
+$("fetchCalldataBtn").addEventListener("click", autoFetchCalldata);
 
 $("verifyBtn").addEventListener("click", async () => {
   $("log").innerHTML = "";

@@ -101,6 +101,8 @@
 
   <label data-i18n="label2">Calldata di deploy originale (0x6a66a753...)</label>
   <textarea id="calldataInput" data-i18n-placeholder="placeholderCalldata" placeholder="0x6a66a753..."></textarea>
+  <button id="fetchCalldataBtn" class="secondary" disabled data-i18n="fetchCalldataBtn">Recupera la calldata da LUKSO</button>
+  <div class="note" id="fetchStatus" style="margin-top:8px;"></div>
   <button id="decodeBtn" class="secondary" disabled data-i18n="decodeBtn">Decodifica calldata</button>
 
   <div class="status-box" id="decodeStatus" style="margin-top:14px;"><span class="empty" data-i18n="notDecodedYet">Non ancora decodificato.</span></div>
@@ -170,7 +172,7 @@ const I18N = {
     langToggleBtn: "English",
     customNetName: "Rete custom",
     panel0Title: "0 · Cos'è e cosa serve",
-    panel0Note: "Questa pagina ripete, su un'altra rete, l'identica transazione di creazione della tua Universal Profile — per questo l'indirizzo risultante è lo stesso. Ti servono due cose: (1) l'estensione della Universal Profile installata e connessa con il profilo che vuoi replicare; (2) la <b>calldata di deploy originale</b> della tua UP (una lunga stringa esadecimale che inizia con <code>0x6a66a753...</code>), che puoi estrarre dal backup del tuo wallet. La pagina non firma nulla per conto tuo: chiama sempre il tuo wallet per la conferma.",
+    panel0Note: "Questa pagina ripete, su un'altra rete, l'identica transazione di creazione della tua Universal Profile — per questo l'indirizzo risultante è lo stesso. Ti servono due cose: (1) l'estensione della Universal Profile installata e connessa con il profilo che vuoi replicare; (2) la <b>calldata di deploy originale</b> della tua UP (una lunga stringa esadecimale che inizia con <code>0x6a66a753...</code>), che la pagina recupera in automatico dall'explorer di LUKSO appena connetti la UP (oppure puoi copiarla a mano, vedi la guida). La pagina non firma nulla per conto tuo: chiama sempre il tuo wallet per la conferma.",
     panel1Title: "1 · Profilo da replicare",
     connectUpBtn: "Connetti la tua Universal Profile",
     connectUpRequiredNote: "Decodifica e verifica sono disponibili solo dopo aver connesso qui la tua Universal Profile. Non è una firma né un controllo crittografico — nessuna transazione viene fatta a questo punto — è solo un promemoria che questa pagina è pensata per rideployare il tuo profilo, non quello di qualcun altro.",
@@ -178,6 +180,14 @@ const I18N = {
     label1: "Indirizzo UP atteso su questa rete (compilato automaticamente se connesso sopra)",
     placeholderAddr: "0x...",
     label2: "Calldata di deploy originale (0x6a66a753...)",
+    fetchCalldataBtn: "Recupera la calldata da LUKSO",
+    fetchNeedAddress: "Inserisci prima un indirizzo UP valido.",
+    fetchRunning: "Cerco la transazione di creazione della UP sull'explorer di LUKSO...",
+    fetchOk: "✅ Calldata recuperata dall'explorer di LUKSO e verificata: produce esattamente l'indirizzo della UP.",
+    fetchNoCreationTx: "l'explorer non indica una transazione di creazione per questo indirizzo",
+    fetchNotFound: "nella transazione di creazione non c'è una chiamata deployERC1167Proxies alla factory LSP23",
+    fetchNoMatch: "nessuna calldata trovata produce l'indirizzo di questa UP",
+    fetchFailed: (v) => `Recupero automatico non riuscito: ${v.err}. Puoi copiare la calldata a mano (guida, passi 2–3).`,
     placeholderCalldata: "0x6a66a753...",
     decodeBtn: "Decodifica calldata",
     notDecodedYet: "Non ancora decodificato.",
@@ -302,7 +312,7 @@ const I18N = {
     langToggleBtn: "Italiano",
     customNetName: "Custom network",
     panel0Title: "0 · What this is and what you need",
-    panel0Note: "This page repeats, on another network, the exact same transaction that created your Universal Profile — that's why the resulting address is identical. You need two things: (1) the Universal Profile browser extension, installed and connected with the profile you want to replicate; (2) the <b>original deployment calldata</b> of your UP (a long hex string starting with <code>0x6a66a753...</code>), which you can extract from your wallet's backup. This page never signs anything on your behalf: it always calls your wallet for confirmation.",
+    panel0Note: "This page repeats, on another network, the exact same transaction that created your Universal Profile — that's why the resulting address is identical. You need two things: (1) the Universal Profile browser extension, installed and connected with the profile you want to replicate; (2) the <b>original deployment calldata</b> of your UP (a long hex string starting with <code>0x6a66a753...</code>), which the page fetches automatically from the LUKSO explorer as soon as you connect your UP (or you can copy it by hand, see the guide). This page never signs anything on your behalf: it always calls your wallet for confirmation.",
     panel1Title: "1 · Profile to replicate",
     connectUpBtn: "Connect your Universal Profile",
     connectUpRequiredNote: "Decoding and verification are only available after you connect your Universal Profile here. This is not a signature or a cryptographic check — no transaction happens at this point — it's just a reminder that this page is meant to redeploy your own profile, not someone else's.",
@@ -310,6 +320,14 @@ const I18N = {
     label1: "Expected UP address on this network (auto-filled if connected above)",
     placeholderAddr: "0x...",
     label2: "Original deployment calldata (0x6a66a753...)",
+    fetchCalldataBtn: "Fetch the calldata from LUKSO",
+    fetchNeedAddress: "Enter a valid UP address first.",
+    fetchRunning: "Looking up the UP's creation transaction on the LUKSO explorer...",
+    fetchOk: "✅ Calldata fetched from the LUKSO explorer and verified: it produces exactly the UP address.",
+    fetchNoCreationTx: "the explorer reports no creation transaction for this address",
+    fetchNotFound: "the creation transaction contains no deployERC1167Proxies call to the LSP23 factory",
+    fetchNoMatch: "none of the calldata found produces this UP's address",
+    fetchFailed: (v) => `Automatic fetch failed: ${v.err}. You can copy the calldata by hand (guide, steps 2–3).`,
     placeholderCalldata: "0x6a66a753...",
     decodeBtn: "Decode calldata",
     notDecodedYet: "Not decoded yet.",
@@ -650,11 +668,66 @@ $("connectUp").addEventListener("click", async () => {
     $("upStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${escapeHtml(upAddress)}`;
     $("expectedAddress").value = ethers.getAddress(upAddress);
     $("decodeBtn").disabled = false;
+    $("fetchCalldataBtn").disabled = false;
     $("checkBtn").disabled = false;
+    if (!$("calldataInput").value.trim()) autoFetchCalldata();
   } catch (e) {
     $("upStatus").innerHTML = `<span class="badge err">${t("connectionRejected")}</span>`;
   }
 });
+
+// ==================== Calldata from the LUKSO explorer ====================
+// Finds the UP's creation transaction on the LUKSO explorer and extracts the LSP23
+// deployERC1167Proxies calldata: from the transaction input when it was sent straight to the
+// factory, otherwise from its raw trace (profiles created through a relayer or another contract).
+// The result is untrusted: it is used only if it predicts exactly the UP address.
+const LUKSO_EXPLORER_API = "https://explorer.execution.mainnet.lukso.network/api/v2/";
+const LSP23_FACTORY = "0x2300000a84d25df63081feaa37ba6b62c4c89a30";
+async function explorerGet(path) {
+  const res = await fetch(LUKSO_EXPLORER_API + path, { referrerPolicy: "no-referrer" });
+  if (!res.ok) throw new Error(`explorer HTTP ${res.status}`);
+  return res.json();
+}
+const isDeployCall = (to, input) =>
+  typeof input === "string" && input.toLowerCase().startsWith("0x6a66a753") && String(to || "").toLowerCase() === LSP23_FACTORY;
+async function fetchDeployCalldatas(upAddress) {
+  const addr = await explorerGet("addresses/" + upAddress);
+  const txHash = addr.creation_transaction_hash || addr.creation_tx_hash;
+  if (!txHash) throw new Error(t("fetchNoCreationTx"));
+  const tx = await explorerGet("transactions/" + txHash);
+  const input = tx.raw_input || tx.input;
+  if (isDeployCall(tx.to && tx.to.hash, input)) return [input];
+  const trace = await explorerGet("transactions/" + txHash + "/raw-trace");
+  const found = (Array.isArray(trace) ? trace : [])
+    .map(c => c.action || c)
+    .filter(a => isDeployCall(a.to, a.input))
+    .map(a => a.input);
+  if (!found.length) throw new Error(t("fetchNotFound"));
+  return found;
+}
+function setFetchStatus(text, cls) {
+  const el = $("fetchStatus");
+  el.className = "note " + (cls || "");
+  el.textContent = text;
+}
+
+async function autoFetchCalldata() {
+  const up = $("expectedAddress").value.trim();
+  if (!ethers.isAddress(up)) { setFetchStatus(t("fetchNeedAddress"), "line-err"); return; }
+  setFetchStatus(t("fetchRunning"), "line-dim");
+  try {
+    const candidates = await fetchDeployCalldatas(up);
+    const match = candidates.find(c => { try { return decodeCalldata(c, up).addressMatches === true; } catch (e) { return false; } });
+    if (!match) throw new Error(t("fetchNoMatch"));
+    $("calldataInput").value = match;
+    invalidateCheck();
+    runDecode();
+    setFetchStatus(t("fetchOk"), "line-ok");
+  } catch (e) {
+    setFetchStatus(t("fetchFailed", { err: e.message }), "line-err");
+  }
+}
+$("fetchCalldataBtn").addEventListener("click", autoFetchCalldata);
 
 // Init code EIP-1167 completo: usato SOLO per calcolare l'hash che entra nella formula CREATE2.
 // Include il preambolo "3d602d80600a3d3981f3" che al deploy copia il resto e lo restituisce.
