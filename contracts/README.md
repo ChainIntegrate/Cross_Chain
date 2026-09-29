@@ -24,6 +24,15 @@ It is published through Nick's deterministic deployment proxy, with a fixed salt
 
 `NFTReceiverExtension.json` holds these values, the full init and runtime code and the ABI. `NFTReceiverExtension.input.json` is the exact solc standard-JSON input.
 
+### Where it is published
+
+Published and source-verified on LUKSO mainnet, Base and Polygon, at the same address:
+- [LUKSO explorer](https://explorer.execution.mainnet.lukso.network/address/0x7F68e74483867058C806218aa05aB5527984C03e)
+- [Basescan](https://basescan.org/address/0x7F68e74483867058C806218aa05aB5527984C03e#code)
+- [Polygonscan](https://polygonscan.com/address/0x7F68e74483867058C806218aa05aB5527984C03e#code)
+
+To verify the source on another explorer, upload `NFTReceiverExtension.input.json` as "Solidity (Standard-JSON input)" with compiler v0.8.24+commit.e11b9ed9. Do not upload `NFTReceiverExtension.json`: it is the summary file, and explorers reject it with `Unknown key "abi"`.
+
 ### How to verify
 
 1. **Reproduce the bytecode:**
