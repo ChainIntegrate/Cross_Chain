@@ -9,6 +9,8 @@
 <link rel="icon" href="favicon.ico">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="vendor/walletkit-1.6.0.min.js"></script>
+<!-- Site configuration, created on the server from config.example.js (not in the repository). -->
+<script src="config.js"></script>
 <style>
   :root {
     --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
@@ -128,8 +130,10 @@
 const $ = (id) => document.getElementById(id);
 
 // ==================== CONFIG ====================
-// WalletConnect (Reown) Project ID, from cloud.reown.com. It is a public identifier, not a secret.
-const WALLETCONNECT_PROJECT_ID = "";
+// WalletConnect (Reown) Project ID, from cloud.reown.com. It is read from config.js, which exists only
+// on the server (see config.example.js). It is a public identifier, not a secret: the browser has to
+// send it to the relay anyway. Its protection is the "allowed domains" list in the Reown dashboard.
+const WALLETCONNECT_PROJECT_ID = (window.CROSSCHAIN_CONFIG && window.CROSSCHAIN_CONFIG.walletConnectProjectId) || "";
 
 const BASE = { name: "Base", chainId: 8453, rpc: "https://mainnet.base.org", explorer: "https://basescan.org/" };
 const CAIP_CHAIN = "eip155:8453";
@@ -200,7 +204,7 @@ const I18N = {
     upOk: (v) => `✅ UP deployata su Base. Key Manager: ${v.km}. Saldo della UP: ${v.bal} ETH.`,
     checkUpFirst: "Controlla prima la UP su Base (pannello 1).",
     rpcWrongChain: (v) => `❌ L'RPC di Base risponde con chainId ${v.id}, non 8453.`,
-    noProjectId: "Manca il Project ID di WalletConnect nella configurazione della pagina (WALLETCONNECT_PROJECT_ID).",
+    noProjectId: "Manca il Project ID di WalletConnect: sul server va creato il file config.js (vedi config.example.js).",
     invalidUri: "Il link deve iniziare con wc:",
     pairing: "Collegamento in corso... conferma sul sito se richiesto.",
     proposalFrom: (v) => `Richiesta di connessione da: ${v.name} (${v.url}) — verifica: ${v.verify}`,
@@ -287,7 +291,7 @@ const I18N = {
     upOk: (v) => `✅ UP deployed on Base. Key Manager: ${v.km}. UP balance: ${v.bal} ETH.`,
     checkUpFirst: "Check the UP on Base first (panel 1).",
     rpcWrongChain: (v) => `❌ The Base RPC answers with chainId ${v.id}, not 8453.`,
-    noProjectId: "The WalletConnect Project ID is missing from the page configuration (WALLETCONNECT_PROJECT_ID).",
+    noProjectId: "The WalletConnect Project ID is missing: create config.js on the server (see config.example.js).",
     invalidUri: "The link must start with wc:",
     pairing: "Connecting... confirm on the site if asked.",
     proposalFrom: (v) => `Connection request from: ${v.name} (${v.url}) — verification: ${v.verify}`,

@@ -42,7 +42,7 @@ The tools never ask for a private key. The calldata is public on-chain data, and
 | `up-publish-implementation.html` | **Publish implementation.** Publishes on the target chain a LUKSO implementation (LSP0 or Key Manager) that is missing there, at the same address, by replaying LUKSO's original deploy through Nick's factory. The Verify and Deploy pages link to it when an implementation is missing. |
 | `up-multichain-deploy-v2.html` | **Deprecated — do not use.** Initial test page of the deploy flow, used on `localhost` before the public tools went online. Kept for reference only: all its actions are disabled, it shows a warning banner and is marked `noindex`. Use `up-deploy-public.html`. |
 | `up-crosschain-guide.html` | **Step-by-step guide (EN/IT)**: how the address is derived, how to find your calldata, how to check the controller, and how to deploy and operate. |
-| `up-walletconnect-basenames.html` | **Experimental demo.** A WalletConnect bridge that lets a UP redeployed on Base act as the account on Basenames (base.org/names): the dApp sees the UP address, and the registration transaction is wrapped into `KeyManager.execute(UP.execute(...))` and signed by the controller, so the name is owned by the UP. It only accepts Base and Basenames registrations, rejects message-signing requests, and has a simulation-only mode. Needs a WalletConnect (Reown) Project ID in the page configuration. |
+| `up-walletconnect-basenames.html` | **Experimental demo.** A WalletConnect bridge that lets a UP redeployed on Base act as the account on Basenames (base.org/names): the dApp sees the UP address, and the registration transaction is wrapped into `KeyManager.execute(UP.execute(...))` and signed by the controller, so the name is owned by the UP. It only accepts Base and Basenames registrations, rejects message-signing requests, and has a simulation-only mode. Needs a WalletConnect (Reown) Project ID in `config.js` on the server (see `config.example.js`). |
 | `tools/decrypt.js` | **Advanced, offline only — not published on the website.** Node.js helper that decrypts a secret from a UP browser-extension backup (AES-256-GCM, PBKDF2-SHA256). See [tools/README.md](tools/README.md). |
 | `guide-assets/` | Screenshots used by the guide. |
 | `banner.png`, `logo.png`, `favicon.ico` | Branding for the pages. |
@@ -82,6 +82,8 @@ mv .git /var/www/repos/crosschain-lukso.git && echo "gitdir: /var/www/repos/cros
 `/var/www/repos` is not the root of any site, so it is not reachable from the web. Always run `git pull` as the deploy user (`ubuntu`), never with `sudo`: root-owned files would break the next pull.
 
 After that, `git pull` works exactly as before. The root `.htaccess` stays in the repository as an extra safety net for hosts that do apply it (Apache).
+
+**Site configuration.** Some pages read their settings from `config.js`, which is not in the repository. Create it once on the server, in the site folder, by copying `config.example.js` and filling in the values; `git pull` leaves it untouched. Its values are not secret (the browser receives them): protect the WalletConnect Project ID with the allowed-domains list in the Reown dashboard.
 
 **Check after every deploy.** Each of these URLs must return *404 Not Found*; `/.git` may return the one-line `gitdir:` file, which contains only a path and no repository data:
 
