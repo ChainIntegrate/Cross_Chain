@@ -416,6 +416,13 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 - **Impact:** Safe NFT transfers call `onERC721Received` / `onERC1155Received` on the recipient. LSP0 answers them only through an LSP17 extension and otherwise reverts (`NoExtensionFoundForFunctionSelector`). Redeployed profiles usually have none, so marketplace purchases fail ("wallet cannot receive"), as seen on OpenSea during the live tests.
 - **Mitigation:** the compatibility check shows, per standard, whether the UP can receive NFTs and why not (no extension, or an extension without code on that network).
 - **Status:** ✅ Addressed by `up-nft-receiver.html` and `contracts/NFTReceiverExtension.sol` (see R-05). The fix is opt-in per UP and per network.
+- **Review of the fix (maintainer's audit of PR #33):**
+  - **Data keys.** Each key is `bytes10(keccak256("LSP17Extension"))` + `0x0000` + the selector left-aligned in 20 bytes, as in `LSP2Utils.generateMappingKey(bytes10, bytes20)`. Each value is exactly 20 bytes, the extension address; the 21-byte "forward value" form is not used.
+  - **Permission bits.** The temporary grant adds only `ADDEXTENSIONS` (`0x08`) and/or `CHANGEEXTENSIONS` (`0x10`), and only the bits the controller lacks.
+  - **Restore.** The restore writes back the exact 32 bytes read from the UP, not a recomputed value.
+  - **No side calls.** The batch holds only `setData`, `setDataBatch` and `setData`, each executed by the Key Manager on the linked UP with no value. In LSP0/LSP6 0.12.1 and 0.14 this makes no external call while the permission is elevated.
+  - **How it was checked.** The page's own batch-building code was executed and every payload decoded, across four scenarios; all 32 checks pass.
+- **Residual risk (low).** The permission bytes are read right before sending. If, between that read and the block that includes the transaction, **another** controller changes this controller's permissions, the restore step writes the older value and silently undoes that change. The grant step is computed from the same read, so it has the same window. This needs two controllers acting on the same UP within seconds, and a client-side page cannot close the window. Mitigation: do not change a controller's permissions from elsewhere while this page's transaction is pending; afterwards, the page's final check compares the controller's permissions with the original value and reports any mismatch.
 
 #### I-13 — The vendored WalletKit bundle runs with full access to the page
 
