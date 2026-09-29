@@ -24,6 +24,7 @@ Thanks for your interest! This repository contains a small set of browser tools 
 2. **Small and focused.** One topic per PR; refactors separate from behaviour changes.
 3. **Explain and test.** Describe what changes and why, and list how you tested every page you touched (chain, wallet, result).
 4. **Be patient.** This is maintained in spare time: a review can take a few days.
+5. **Keep it up to date.** If `main` changes while your PR is open, update your branch from `main` and resolve any conflicts yourself. The maintainer reviews and merges, but does not fix contributors' branches.
 
 Pull requests written with AI assistants are fine, but you are responsible for them: read and test the code before submitting.
 
