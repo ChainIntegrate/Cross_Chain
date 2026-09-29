@@ -92,17 +92,17 @@
 </div>
 
 <div class="panel">
-  <h2 data-i18n="panel2Title">2 · La tua UP</h2>
+  <h2 data-i18n="panel2Title">2 · La tua UP (serve solo per abilitare)</h2>
   <button id="connectUp" class="secondary" data-i18n="connectUpBtn">Leggi l'indirizzo dall'estensione UP</button>
   <label for="upAddress" data-i18n="upAddressLabel">Indirizzo della UP</label>
   <input type="text" id="upAddress" placeholder="0x...">
 </div>
 
 <div class="panel">
-  <h2 data-i18n="panel3Title">3 · Controller (MetaMask) e verifica</h2>
+  <h2 data-i18n="panel3Title">3 · Wallet (MetaMask) e verifica</h2>
   <div class="note" data-i18n="panel3Note"></div>
-  <button id="connectSigner" data-i18n="connectSignerBtn">Connetti MetaMask (controller)</button>
-  <div class="status-box" id="checkBox"><span class="empty" data-i18n="checkIdle">La verifica parte da sola quando rete, UP e MetaMask sono impostati.</span></div>
+  <button id="connectSigner" data-i18n="connectSignerBtn">Connetti MetaMask</button>
+  <div class="status-box" id="checkBox"><span class="empty" data-i18n="checkIdle">La verifica parte da sola quando rete e MetaMask sono impostati (la UP serve solo per abilitare).</span></div>
   <button id="recheckBtn" class="secondary" data-i18n="recheckBtn">Ricontrolla</button>
 </div>
 
@@ -264,16 +264,16 @@ const I18N = {
     customRpcLabel: "RPC URL custom",
     customExplorerLabel: "Explorer URL custom (opzionale)",
     customNetName: "Rete custom",
-    panel2Title: "2 · La tua UP",
+    panel2Title: "2 · La tua UP (serve solo per abilitare)",
     connectUpBtn: "Leggi l'indirizzo dall'estensione UP",
     upAddressLabel: "Indirizzo della UP",
-    panel3Title: "3 · Controller (MetaMask) e verifica",
-    panel3Note: "MetaMask con la chiave del controller della UP, sulla rete scelta. Paga il gas. La verifica parte da sola e si ripete se cambi rete, UP, account o rete in MetaMask.",
-    connectSignerBtn: "Connetti MetaMask (controller)",
-    checkIdle: "La verifica parte da sola quando rete, UP e MetaMask sono impostati.",
+    panel3Title: "3 · Wallet (MetaMask) e verifica",
+    panel3Note: "MetaMask sulla rete scelta; paga il gas. Per pubblicare l'estensione va bene qualsiasi account; per abilitarla su una UP serve la chiave del suo controller. La verifica parte da sola e si ripete se cambi rete, UP, account o rete in MetaMask.",
+    connectSignerBtn: "Connetti MetaMask",
+    checkIdle: "La verifica parte da sola quando rete e MetaMask sono impostati (la UP serve solo per abilitare).",
     recheckBtn: "Ricontrolla",
     panel4Title: "4 · Azioni",
-    panel4Note: "Se l'estensione non esiste ancora su questa rete, pubblicala (chiunque può farlo, costa solo gas, non dà controllo su nessuna UP). Poi prepara l'abilitazione: la pagina mostra ogni operazione e la simula; solo dopo puoi firmare.",
+    panel4Note: "Se l'estensione non esiste ancora su questa rete, pubblicala: chiunque può farlo con qualsiasi wallet, anche senza UP; costa solo gas e non dà controllo su nessuna UP. Poi, con il controller della UP, prepara l'abilitazione: la pagina mostra ogni operazione e la simula; solo dopo puoi firmare.",
     publishBtn: "Pubblica l'estensione su questa rete",
     prepareBtn: "Prepara e simula l'abilitazione",
     noPlan: "Nessuna operazione preparata.",
@@ -310,6 +310,9 @@ const I18N = {
     verdictNoEdit: (v) => `❌ Al controller mancano i permessi ${v.missing} e non ha EDITPERMISSIONS per concederseli: serve un controller con più permessi.`,
     verdictFail: "❌ Verifica non superata: correggi il punto in rosso qui sopra.",
     verdictMissing: "Completa i campi mancanti: la verifica ripartirà da sola.",
+    verdictPublishNoUp: "Puoi pubblicare l'estensione su questa rete con questo wallet: non serve una UP né essere controller. Per abilitarla su una UP, inserisci l'indirizzo della UP e connetti il suo controller.",
+    verdictUpForEnable: "Per abilitare la ricezione NFT su una UP, inserisci l'indirizzo della UP e connetti il suo controller.",
+    verdictPublishAnyone: "La pubblicazione dell'estensione non richiede di essere controller: puoi farla comunque con questo wallet.",
     checkRunning: "Verifica in corso...",
 
     extNotFound: "Estensione Universal Profile non trovata.",
@@ -361,16 +364,16 @@ const I18N = {
     customRpcLabel: "Custom RPC URL",
     customExplorerLabel: "Custom explorer URL (optional)",
     customNetName: "Custom network",
-    panel2Title: "2 · Your UP",
+    panel2Title: "2 · Your UP (needed only to enable)",
     connectUpBtn: "Read the address from the UP extension",
     upAddressLabel: "UP address",
-    panel3Title: "3 · Controller (MetaMask) and check",
-    panel3Note: "MetaMask with the UP controller's key, on the chosen network. It pays the gas. The check starts by itself and runs again if you change network, UP, account or MetaMask's network.",
-    connectSignerBtn: "Connect MetaMask (controller)",
-    checkIdle: "The check starts by itself once network, UP and MetaMask are set.",
+    panel3Title: "3 · Wallet (MetaMask) and check",
+    panel3Note: "MetaMask on the chosen network; it pays the gas. Any account can publish the extension; enabling it on a UP needs that UP's controller key. The check starts by itself and runs again if you change network, UP, account or MetaMask's network.",
+    connectSignerBtn: "Connect MetaMask",
+    checkIdle: "The check starts by itself once network and MetaMask are set (the UP is needed only to enable).",
     recheckBtn: "Check again",
     panel4Title: "4 · Actions",
-    panel4Note: "If the extension does not exist on this network yet, publish it (anyone can, it only costs gas and gives no control over any UP). Then prepare the enabling: the page shows every operation and simulates it; only then can you sign.",
+    panel4Note: "If the extension does not exist on this network yet, publish it: anyone can, with any wallet and without a UP; it only costs gas and gives no control over any UP. Then, with the UP's controller, prepare the enabling: the page shows every operation and simulates it; only then can you sign.",
     publishBtn: "Publish the extension on this network",
     prepareBtn: "Prepare and simulate the enabling",
     noPlan: "No operation prepared.",
@@ -407,6 +410,9 @@ const I18N = {
     verdictNoEdit: (v) => `❌ The controller lacks ${v.missing} and does not have EDITPERMISSIONS to grant them: a controller with more permissions is needed.`,
     verdictFail: "❌ Check failed: fix the item in red above.",
     verdictMissing: "Fill in the missing fields: the check will start again by itself.",
+    verdictPublishNoUp: "You can publish the extension on this network with this wallet: no UP or controller needed. To enable it on a UP, enter the UP address and connect its controller.",
+    verdictUpForEnable: "To enable NFT reception on a UP, enter the UP address and connect its controller.",
+    verdictPublishAnyone: "Publishing the extension does not require being a controller: you can still do it with this wallet.",
     checkRunning: "Checking...",
 
     extNotFound: "Universal Profile extension not found.",
@@ -601,9 +607,9 @@ async function computeCheck() {
   const step = (key, text, cls) => res.steps.push([key, text, cls]);
   const net = getNetwork();
   const rawUp = $("upAddress").value.trim();
-  if (!net || !net.rpc || !ethers.isAddress(rawUp) || !signerProvider || !signerAddress) {
+  // Network and wallet are enough to publish the extension; the UP is needed only to enable it.
+  if (!net || !net.rpc || !signerProvider || !signerAddress) {
     res.missing = true;
-    step("cUp", ethers.isAddress(rawUp) ? ethers.getAddress(rawUp) : ["upMissing"], ethers.isAddress(rawUp) ? "" : "err");
     step("cWallet", signerAddress || ["walletMissing"], signerAddress ? "" : "err");
     return res;
   }
@@ -628,6 +634,28 @@ async function computeCheck() {
   if (walletId !== chainId) { step("cWallet", ["walletWrong", { addr: signerAddress, id: walletId, exp: chainId }], "err"); return res; }
   step("cWallet", ["walletOk", { addr: signerAddress, id: walletId }], "ok");
 
+  // The extension: code at the deterministic address must be exactly the expected runtime.
+  const extCode = await provider.getCode(EXT_ADDRESS);
+  let extState;
+  if (extCode === "0x") extState = "missing";
+  else if (ethers.keccak256(extCode) === EXT_RUNTIME_HASH) extState = "ok";
+  else extState = "wrong";
+  step("cExt", extState === "ok" ? ["extOk", { addr: EXT_ADDRESS }] : extState === "missing" ? ["extMissing", { addr: EXT_ADDRESS }] : ["extWrongCode", { addr: EXT_ADDRESS }],
+    extState === "ok" ? "ok" : extState === "missing" ? "warn" : "err");
+  let factoryOk = true;
+  if (extState === "missing") {
+    factoryOk = (await provider.getCode(NICK_FACTORY)) !== "0x";
+    step("cFactory", factoryOk ? ["factoryOk"] : ["factoryMissing"], factoryOk ? "ok" : "err");
+  }
+  // Publishing is permissionless: any wallet on this network can do it, no UP or controller needed.
+  res.pub = { net, chainId, provider, signer: signerAddress, extState, factoryOk };
+  if (extState === "wrong") return res;
+  if (!ethers.isAddress(rawUp)) {
+    res.upMissing = true;
+    step("cUp", ["upMissing"], "warn");
+    return res;
+  }
+
   try {
     const up = ethers.getAddress(rawUp);
     if ((await provider.getCode(up)) === "0x") { step("cUp", ["upNotDeployed"], "err"); return res; }
@@ -642,21 +670,6 @@ async function computeCheck() {
     const perms = permRaw && permRaw !== "0x" ? BigInt(permRaw) : 0n;
     if (perms === 0n) { step("cPerms", ["permsNone"], "err"); return res; }
     step("cPerms", ["permsList", { hex: "0x" + perms.toString(16).padStart(6, "0"), names: permNames(perms) }], "");
-
-    // The extension: code at the deterministic address must be exactly the expected runtime.
-    const extCode = await provider.getCode(EXT_ADDRESS);
-    let extState;
-    if (extCode === "0x") extState = "missing";
-    else if (ethers.keccak256(extCode) === EXT_RUNTIME_HASH) extState = "ok";
-    else extState = "wrong";
-    step("cExt", extState === "ok" ? ["extOk", { addr: EXT_ADDRESS }] : extState === "missing" ? ["extMissing", { addr: EXT_ADDRESS }] : ["extWrongCode", { addr: EXT_ADDRESS }],
-      extState === "ok" ? "ok" : extState === "missing" ? "warn" : "err");
-    let factoryOk = true;
-    if (extState === "missing") {
-      factoryOk = (await provider.getCode(NICK_FACTORY)) !== "0x";
-      step("cFactory", factoryOk ? ["factoryOk"] : ["factoryMissing"], factoryOk ? "ok" : "err");
-    }
-    if (extState === "wrong") return res;
 
     // Current value of the four LSP17 keys.
     const values = await upC.getDataBatch(HOOKS.map(h => LSP17_KEY(h.sel)));
@@ -700,8 +713,13 @@ function renderCheck(res) {
   }
   box.appendChild(grid);
   const verdict = res.verdict.map(([v, cls]) => [tr(v), cls]);
+  const canPublish = res.pub && res.pub.extState === "missing" && res.pub.factoryOk;
   if (res.missing) verdict.push([t("verdictMissing"), "line-dim"]);
-  else if (!res.ok && !res.verdict.length) verdict.push([t("verdictFail"), "line-err"]);
+  else if (res.upMissing) verdict.push([t(canPublish ? "verdictPublishNoUp" : "verdictUpForEnable"), canPublish ? "line-warn" : "line-dim"]);
+  else if (!res.ok && !res.verdict.length) {
+    verdict.push([t("verdictFail"), "line-err"]);
+    if (canPublish) verdict.push([t("verdictPublishAnyone"), "line-dim"]);
+  }
   for (const [text, cls] of verdict) {
     const d = document.createElement("div"); d.className = "verdict " + cls; d.textContent = text; box.appendChild(d);
   }
@@ -709,7 +727,9 @@ function renderCheck(res) {
 
 function updateButtons() {
   const ready = !!check && riskAccepted();
-  $("publishBtn").disabled = !(ready && check.extState === "missing");
+  // Publishing needs only the network and a wallet on it (lastCheck.pub), not a UP or a controller.
+  const pub = lastCheck && lastCheck.pub;
+  $("publishBtn").disabled = !(riskAccepted() && pub && pub.extState === "missing" && pub.factoryOk);
   $("prepareBtn").disabled = !(ready && !check.done && check.extState === "ok");
   $("enableBtn").disabled = !(ready && plan);
 }
@@ -731,8 +751,10 @@ async function freshCheck() {
 $("publishBtn").addEventListener("click", async () => {
   if (!riskAccepted()) { log(t("ackRequired"), "line-err"); return; }
   logSeparator();
-  const c = await freshCheck();
-  if (!c || c.extState !== "missing") { log(t("checkFirst"), "line-err"); return; }
+  clearTimeout(checkTimer);
+  const res = await runCheck();
+  const c = res && res.pub;
+  if (!c || c.extState !== "missing" || !c.factoryOk) { log(t("checkFirst"), "line-err"); return; }
   $("publishBtn").disabled = true;
   try {
     const data = ethers.concat([EXT_SALT, EXT_INIT_CODE]);
