@@ -60,6 +60,7 @@
   .check-row input { width: auto; }
   .warn-box { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--warn); border-radius: 8px; background: rgba(224,168,60,0.08); font-size: 13px; line-height: 1.5; }
   button.secondary { background: #2a2f3a; }
+  .kv pre { margin: 0; white-space: pre-wrap; word-break: break-all; font-size: 12px; max-height: 320px; overflow: auto; }
 </style>
 </head>
 <body>
@@ -115,6 +116,7 @@
   <div class="note" style="margin-top:6px;" data-i18n="simulateOnlyNote"></div>
   <div id="requestBox" class="status-box"><span class="empty" data-i18n="noRequest">Nessuna richiesta in attesa.</span></div>
   <button id="sendBtn" class="danger" disabled data-i18n="sendBtn">Firma e invia (irreversibile)</button>
+  <button id="signBtn" class="danger" disabled data-i18n="signBtn">Firma il messaggio per la UP</button>
   <button id="rejectBtn" class="secondary" disabled data-i18n="rejectBtn">Rifiuta la richiesta</button>
   <div id="log" class="line-dim" style="margin-top:10px;"></div>
 </div>
@@ -169,8 +171,8 @@ const I18N = {
     subtitle: "Usa la tua Universal Profile rideployata su Base come account su Basenames (base.org/names): la dApp vede l'indirizzo della UP, il tuo controller firma.",
     langToggleBtn: "English",
     panel0Title: "0 · Come funziona",
-    panel0Note: "Questa pagina fa da <b>ponte WalletConnect</b>: presenta a Basenames l'indirizzo della tua UP come account collegato. Quando il sito chiede di inviare la transazione di registrazione, la pagina la <b>incapsula</b> in <code>KeyManager.execute(UP.execute(...))</code> e la fa firmare al tuo controller in MetaMask. Così la chiamata arriva a Basenames con <code>msg.sender</code> = la tua UP, e il nome registrato appartiene alla UP. Il costo del nome esce dal <b>saldo della UP</b> su Base; il gas lo paga il controller.",
-    demoWarning: "<b>⚠️ Leggi prima di usare questa pagina</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Demo sperimentale, non sottoposta ad audit.</b> Serve a verificare un concetto tecnico, non è un prodotto. Può contenere errori.</li><li><b>Transazioni reali e irreversibili</b> sulla rete Base: puoi perdere i fondi usati. Nessuno può annullare una transazione confermata.</li><li><b>Usala solo con un account di prova</b> e con importi minimi. Parti sempre in modalità simulazione.</li><li><b>Nessuna garanzia.</b> Il software è fornito \"così com'è\" (licenza MIT): lo usi a tuo rischio. ChainIntegrate non risponde di perdite o danni.</li><li><b>Nessuna affiliazione</b> con Coinbase, Base, Basenames, WalletConnect/Reown o LUKSO. I nomi sono citati solo per descrivere la compatibilità.</li><li><b>Questa pagina non chiede mai chiavi private</b> né seed phrase: firmi tutto nel tuo wallet. Controlla sempre rete, destinatario e importo nel popup di MetaMask.</li><li><b>Privacy:</b> la connessione WalletConnect passa dai server di Reown, che vedono i metadati della sessione (indirizzi, rete). Le verifiche usano l'RPC pubblico di Base.</li><li>Non è una consulenza finanziaria né un invito a registrare nomi o acquistare token.</li></ul><div style=\"margin-top:8px;\">Accetta solo la rete Base e solo la registrazione di un nome su Basenames: ogni altra richiesta viene rifiutata. Le richieste di firma di messaggi vengono rifiutate: sul sito <b>non</b> attivare l'opzione del nome primario.</div>",
+    panel0Note: "Questa pagina fa da <b>ponte WalletConnect</b>: presenta a Basenames l'indirizzo della tua UP come account collegato. Quando il sito chiede di inviare la transazione di registrazione, la pagina la <b>incapsula</b> in <code>KeyManager.execute(UP.execute(...))</code> e la fa firmare al tuo controller in MetaMask. Così la chiamata arriva a Basenames con <code>msg.sender</code> = la tua UP, e il nome registrato appartiene alla UP. Il costo del nome esce dal <b>saldo della UP</b> su Base; il gas lo paga il controller. Se il sito chiede di <b>firmare un messaggio</b> a nome della UP, la pagina ti mostra il contenuto: se confermi, lo firma il controller in MetaMask e la UP lo riconosce come proprio (standard ERC-1271, serve il permesso SIGN). Prima di restituire la firma al sito, la pagina chiede alla UP su Base se la considera valida.",
+    demoWarning: "<b>⚠️ Leggi prima di usare questa pagina</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Demo sperimentale, non sottoposta ad audit.</b> Serve a verificare un concetto tecnico, non è un prodotto. Può contenere errori.</li><li><b>Transazioni reali e irreversibili</b> sulla rete Base: puoi perdere i fondi usati. Nessuno può annullare una transazione confermata.</li><li><b>Usala solo con un account di prova</b> e con importi minimi. Parti sempre in modalità simulazione.</li><li><b>Nessuna garanzia.</b> Il software è fornito \"così com'è\" (licenza MIT): lo usi a tuo rischio. ChainIntegrate non risponde di perdite o danni.</li><li><b>Nessuna affiliazione</b> con Coinbase, Base, Basenames, WalletConnect/Reown o LUKSO. I nomi sono citati solo per descrivere la compatibilità.</li><li><b>Questa pagina non chiede mai chiavi private</b> né seed phrase: firmi tutto nel tuo wallet. Controlla sempre rete, destinatario e importo nel popup di MetaMask.</li><li><b>Privacy:</b> la connessione WalletConnect passa dai server di Reown, che vedono i metadati della sessione (indirizzi, rete). Le verifiche usano l'RPC pubblico di Base.</li><li><b>Firme di messaggi.</b> Una firma può autorizzare azioni anche senza una transazione: accessi, ordini, permessi a spendere token. La pagina ti mostra tutto quello che il sito chiede di firmare e l'esito di ogni controllo, ma <b>non può sapere a cosa servirà la firma</b>. Se il contenuto non è leggibile (per esempio un hash) o non capisci cosa stai autorizzando, <b>rifiuta</b>. ChainIntegrate non si assume alcuna responsabilità per firme di contenuto poco chiaro né per l'uso che il sito ne fa.</li><li><b>Da cosa dipende la sicurezza:</b> dall'architettura (la firma avviene sempre nel tuo wallet, i permessi li decide il Key Manager della UP) e dai servizi usati (la verifica del dominio di WalletConnect/Reown). La pagina mostra l'esito di queste verifiche ma non può garantirle.</li><li><b>Un controller per ogni UP.</b> Se lo stesso controller governa più UP, una firma valida per questa UP vale anche per le altre.</li><li>Non è una consulenza finanziaria né un invito a registrare nomi o acquistare token.</li></ul><div style=\"margin-top:8px;\">Transazioni: solo rete Base e solo registrazione di un nome su Basenames, ogni altra richiesta viene rifiutata. Firme: <code>personal_sign</code> ed <code>eth_signTypedData_v4</code> vengono mostrate e richiedono la tua conferma esplicita; <code>eth_sign</code> e i formati di firma vecchi vengono sempre rifiutati.</div>",
     ackLabel: "Ho letto e accetto: uso questa demo a mio rischio, con un account di prova.",
     ackRequired: "Prima accetta le condizioni nel pannello 0.",
     panel1Title: "1 · La tua UP su Base",
@@ -190,9 +192,10 @@ const I18N = {
     disconnectBtn: "Disconnetti tutte le sessioni",
     panel4Title: "4 · Richiesta dalla dApp",
     simulateOnlyLabel: "Solo simulazione (non inviare nulla)",
-    simulateOnlyNote: "Con la spunta, la pagina esegue tutti i controlli e simula la transazione su Base, poi risponde al sito che è una simulazione: non viene inviato nulla e non si spende nulla.",
+    simulateOnlyNote: "Con la spunta, la pagina esegue tutti i controlli e simula la transazione su Base, poi risponde al sito che è una simulazione: non viene inviato nulla e non si spende nulla. Vale per le transazioni: le richieste di firma non si possono simulare, vengono sempre mostrate e firmate solo se premi \"Firma il messaggio\".",
     noRequest: "Nessuna richiesta in attesa.",
     sendBtn: "Firma e invia (irreversibile)",
+    signBtn: "Firma il messaggio per la UP",
     rejectBtn: "Rifiuta la richiesta",
 
     extNotFound: "Estensione Universal Profile non trovata.",
@@ -215,7 +218,28 @@ const I18N = {
     genericError: (v) => `Errore: ${v.err}`,
 
     reqMethod: (v) => `Richiesta dal sito: ${v.method}`,
-    reqSignRejected: "Richiesta di firma rifiutata: questa demo non firma messaggi per la UP. Sul sito disattiva l'opzione del nome primario e riprova.",
+    signLegacyRejected: (v) => `❌ ${v.method} rifiutato: questo formato può autorizzare qualsiasi cosa, anche una transazione, e non viene mai firmato.`,
+    signWrongAccount: (v) => `❌ La firma è chiesta per ${v.acc}, non per la tua UP: rifiutata.`,
+    signBadData: (v) => `❌ Dati da firmare non validi: ${v.err}. Rifiutata.`,
+    signWrongDomainChain: (v) => `❌ Il messaggio è per la rete con chainId ${v.id}, non per Base: rifiutata.`,
+    verifyBad: (v) => `❌ WalletConnect segnala il sito come non affidabile (${v.v}): richiesta rifiutata.`,
+    verifyWarn: (v) => `⚠️ Verifica del dominio WalletConnect: ${v.v}. Non è confermato che la richiesta venga dal sito dichiarato.`,
+    verifyOk: "✅ Verifica del dominio WalletConnect: VALID.",
+    signOpaque: "⚠️ Il contenuto NON è leggibile: è un hash o dati binari. Non puoi sapere cosa autorizzi. Se non sai esattamente a cosa serve, rifiuta.",
+    signPermit: "⚠️⚠️ Questo messaggio sembra un PERMESSO A SPENDERE TOKEN (Permit/Permit2): chi lo riceve può spostare token della UP senza altre conferme. Firma solo se sai esattamente perché.",
+    signReplay: "ℹ️ Se questo controller governa anche altre UP, la firma vale anche per quelle.",
+    signNoPermission: "❌ Il controller non ha il permesso SIGN su questa UP: la UP non riconoscerebbe la firma. Rifiutata.",
+    signPermOk: "✅ Il controller ha il permesso SIGN sulla UP.",
+    signReady: "Pronto. Leggi il contenuto sopra: se non capisci cosa stai firmando, premi \"Rifiuta\". Altrimenti premi \"Firma il messaggio\" e controlla lo stesso contenuto in MetaMask.",
+    signing: "Firma in corso con il controller (conferma in MetaMask)...",
+    signRecovered: (v) => `Firma ricevuta. Firmatario ricavato dalla firma: ${v.addr}.`,
+    signWrongSigner: "❌ La firma non è del controller verificato: non viene inviata al sito.",
+    signCheckingUp: "Verifica su Base: la UP riconosce la firma? (isValidSignature)",
+    signValid: "✅ La UP su Base riconosce la firma come propria. Firma inviata al sito.",
+    signInvalid: (v) => `❌ La UP su Base NON riconosce la firma (risposta ${v.r}): non viene inviata al sito.`,
+    kMethod: "Metodo", kSite: "Sito", kVerify: "Verifica dominio", kAccount: "Account (UP)", kContentType: "Tipo di contenuto",
+    kContent: "Contenuto da firmare", kHash: "Hash verificato dalla UP", kDomain: "Dominio (EIP-712)", kPrimaryType: "Tipo di messaggio",
+    ctText: "testo leggibile", ctOpaque: "dati non leggibili (hash o binario)", ctTyped: "dati strutturati EIP-712",
     reqUnsupported: (v) => `Metodo non supportato, rifiutato: ${v.method}`,
     reqBusy: "C'è già una richiesta in attesa: la nuova viene rifiutata.",
     reqWrongChain: (v) => `❌ Richiesta su una rete diversa da Base (${v.chain}): rifiutata.`,
@@ -238,7 +262,7 @@ const I18N = {
     simFail: (v) => `❌ La simulazione fallisce: ${v.err}. Probabile causa: permessi del controller, saldo o parametri. Niente viene inviato.`,
     signerNoGas: (v) => `❌ Il controller non ha abbastanza ETH su Base per il gas: servono circa ${v.need}, ne ha ${v.have}.`,
     simOnlyDone: "Modalità simulazione: niente inviato. Al sito è stato risposto che si tratta di una simulazione.",
-    readyToSend: "Pronto. Controlla i dati sopra, poi premi \"Firma e invia\" e conferma in MetaMask.",
+    readyToSend: "Pronto. Controlla i dati sopra, poi premi \"Firma e invia\" e conferma in MetaMask. In MetaMask vedrai come destinatario il Key Manager della UP: è corretto, è l'incapsulamento.",
     signerChanged: "❌ L'account attivo in MetaMask non è quello verificato: riconnetti e ripeti.",
     sending: "Invio della transazione incapsulata (conferma in MetaMask)...",
     txSent: (v) => `Tx inviata: ${v.hash}`,
@@ -256,8 +280,8 @@ const I18N = {
     subtitle: "Use your Universal Profile redeployed on Base as the account on Basenames (base.org/names): the dApp sees the UP address, your controller signs.",
     langToggleBtn: "Italiano",
     panel0Title: "0 · How it works",
-    panel0Note: "This page acts as a <b>WalletConnect bridge</b>: it presents your UP address to Basenames as the connected account. When the site asks to send the registration transaction, the page <b>wraps</b> it into <code>KeyManager.execute(UP.execute(...))</code> and has your controller sign it in MetaMask. The call therefore reaches Basenames with <code>msg.sender</code> = your UP, and the registered name belongs to the UP. The name's price is paid from the <b>UP's balance</b> on Base; the controller pays the gas.",
-    demoWarning: "<b>⚠️ Read before using this page</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Experimental demo, not audited.</b> It is meant to test a technical concept, not a product. It may contain bugs.</li><li><b>Real, irreversible transactions</b> on the Base network: you can lose the funds you use. Nobody can undo a confirmed transaction.</li><li><b>Only use it with a test account</b> and minimal amounts. Always start in simulation mode.</li><li><b>No warranty.</b> The software is provided \"as is\" (MIT license): you use it at your own risk. ChainIntegrate is not liable for any loss or damage.</li><li><b>No affiliation</b> with Coinbase, Base, Basenames, WalletConnect/Reown or LUKSO. The names are mentioned only to describe compatibility.</li><li><b>This page never asks for private keys</b> or seed phrases: you sign everything in your own wallet. Always check network, recipient and amount in the MetaMask popup.</li><li><b>Privacy:</b> the WalletConnect connection goes through Reown's servers, which see the session metadata (addresses, network). Checks use Base's public RPC.</li><li>This is not financial advice, nor an invitation to register names or buy tokens.</li></ul><div style=\"margin-top:8px;\">It only accepts the Base network and only the registration of a name on Basenames: every other request is rejected. Message-signing requests are rejected: on the site, do <b>not</b> enable the primary-name option.</div>",
+    panel0Note: "This page acts as a <b>WalletConnect bridge</b>: it presents your UP address to Basenames as the connected account. When the site asks to send the registration transaction, the page <b>wraps</b> it into <code>KeyManager.execute(UP.execute(...))</code> and has your controller sign it in MetaMask. The call therefore reaches Basenames with <code>msg.sender</code> = your UP, and the registered name belongs to the UP. The name's price is paid from the <b>UP's balance</b> on Base; the controller pays the gas. If the site asks to <b>sign a message</b> on behalf of the UP, the page shows you its content: if you confirm, the controller signs it in MetaMask and the UP recognises it as its own (ERC-1271 standard, the SIGN permission is needed). Before returning the signature to the site, the page asks the UP on Base whether it considers it valid.",
+    demoWarning: "<b>⚠️ Read before using this page</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Experimental demo, not audited.</b> It is meant to test a technical concept, not a product. It may contain bugs.</li><li><b>Real, irreversible transactions</b> on the Base network: you can lose the funds you use. Nobody can undo a confirmed transaction.</li><li><b>Only use it with a test account</b> and minimal amounts. Always start in simulation mode.</li><li><b>No warranty.</b> The software is provided \"as is\" (MIT license): you use it at your own risk. ChainIntegrate is not liable for any loss or damage.</li><li><b>No affiliation</b> with Coinbase, Base, Basenames, WalletConnect/Reown or LUKSO. The names are mentioned only to describe compatibility.</li><li><b>This page never asks for private keys</b> or seed phrases: you sign everything in your own wallet. Always check network, recipient and amount in the MetaMask popup.</li><li><b>Privacy:</b> the WalletConnect connection goes through Reown's servers, which see the session metadata (addresses, network). Checks use Base's public RPC.</li><li><b>Message signatures.</b> A signature can authorise actions even without a transaction: logins, orders, permissions to spend tokens. The page shows you everything the site asks you to sign and the result of every check, but it <b>cannot know what the signature will be used for</b>. If the content is not readable (for example a hash) or you do not understand what you are authorising, <b>reject it</b>. ChainIntegrate takes no responsibility for signatures of unclear content, nor for what the site does with them.</li><li><b>What security relies on:</b> the architecture (signing always happens in your own wallet, permissions are enforced by the UP's Key Manager) and the services used (WalletConnect/Reown domain verification). The page shows the result of these checks but cannot guarantee them.</li><li><b>One controller per UP.</b> If the same controller governs several UPs, a signature valid for this UP is valid for the others too.</li><li>This is not financial advice, nor an invitation to register names or buy tokens.</li></ul><div style=\"margin-top:8px;\">Transactions: Base only and Basenames name registration only, every other request is rejected. Signatures: <code>personal_sign</code> and <code>eth_signTypedData_v4</code> are shown and need your explicit confirmation; <code>eth_sign</code> and legacy signature formats are always rejected.</div>",
     ackLabel: "I have read and accept: I use this demo at my own risk, with a test account.",
     ackRequired: "Accept the conditions in panel 0 first.",
     panel1Title: "1 · Your UP on Base",
@@ -277,9 +301,10 @@ const I18N = {
     disconnectBtn: "Disconnect all sessions",
     panel4Title: "4 · Request from the dApp",
     simulateOnlyLabel: "Simulation only (send nothing)",
-    simulateOnlyNote: "When checked, the page runs every check and simulates the transaction on Base, then tells the site it was a simulation: nothing is sent and nothing is spent.",
+    simulateOnlyNote: "When checked, the page runs every check and simulates the transaction on Base, then tells the site it was a simulation: nothing is sent and nothing is spent. This applies to transactions: signature requests cannot be simulated, they are always shown and signed only if you press \"Sign the message\".",
     noRequest: "No pending request.",
     sendBtn: "Sign and send (irreversible)",
+    signBtn: "Sign the message for the UP",
     rejectBtn: "Reject the request",
 
     extNotFound: "Universal Profile extension not found.",
@@ -302,7 +327,28 @@ const I18N = {
     genericError: (v) => `Error: ${v.err}`,
 
     reqMethod: (v) => `Request from the site: ${v.method}`,
-    reqSignRejected: "Signing request rejected: this demo does not sign messages for the UP. On the site, disable the primary-name option and try again.",
+    signLegacyRejected: (v) => `❌ ${v.method} rejected: this format can authorise anything, even a transaction, and is never signed.`,
+    signWrongAccount: (v) => `❌ The signature is requested for ${v.acc}, not for your UP: rejected.`,
+    signBadData: (v) => `❌ Invalid data to sign: ${v.err}. Rejected.`,
+    signWrongDomainChain: (v) => `❌ The message is for chainId ${v.id}, not for Base: rejected.`,
+    verifyBad: (v) => `❌ WalletConnect flags the site as untrusted (${v.v}): request rejected.`,
+    verifyWarn: (v) => `⚠️ WalletConnect domain verification: ${v.v}. It is not confirmed that the request comes from the declared site.`,
+    verifyOk: "✅ WalletConnect domain verification: VALID.",
+    signOpaque: "⚠️ The content is NOT readable: it is a hash or binary data. You cannot know what you are authorising. Unless you know exactly what it is for, reject it.",
+    signPermit: "⚠️⚠️ This message looks like a PERMISSION TO SPEND TOKENS (Permit/Permit2): whoever receives it can move the UP's tokens without further confirmation. Only sign if you know exactly why.",
+    signReplay: "ℹ️ If this controller also governs other UPs, the signature is valid for them too.",
+    signNoPermission: "❌ The controller does not have the SIGN permission on this UP: the UP would not recognise the signature. Rejected.",
+    signPermOk: "✅ The controller has the SIGN permission on the UP.",
+    signReady: "Ready. Read the content above: if you do not understand what you are signing, press \"Reject\". Otherwise press \"Sign the message\" and check the same content in MetaMask.",
+    signing: "Signing with the controller (confirm in MetaMask)...",
+    signRecovered: (v) => `Signature received. Signer recovered from the signature: ${v.addr}.`,
+    signWrongSigner: "❌ The signature is not from the verified controller: it is not sent to the site.",
+    signCheckingUp: "Checking on Base: does the UP recognise the signature? (isValidSignature)",
+    signValid: "✅ The UP on Base recognises the signature as its own. Signature sent to the site.",
+    signInvalid: (v) => `❌ The UP on Base does NOT recognise the signature (answer ${v.r}): it is not sent to the site.`,
+    kMethod: "Method", kSite: "Site", kVerify: "Domain verification", kAccount: "Account (UP)", kContentType: "Content type",
+    kContent: "Content to sign", kHash: "Hash checked by the UP", kDomain: "Domain (EIP-712)", kPrimaryType: "Message type",
+    ctText: "readable text", ctOpaque: "unreadable data (hash or binary)", ctTyped: "EIP-712 structured data",
     reqUnsupported: (v) => `Unsupported method, rejected: ${v.method}`,
     reqBusy: "A request is already pending: the new one is rejected.",
     reqWrongChain: (v) => `❌ Request on a network other than Base (${v.chain}): rejected.`,
@@ -325,7 +371,7 @@ const I18N = {
     simFail: (v) => `❌ The simulation fails: ${v.err}. Likely cause: controller permissions, balance or parameters. Nothing is sent.`,
     signerNoGas: (v) => `❌ The controller does not have enough ETH on Base for gas: about ${v.need} needed, it has ${v.have}.`,
     simOnlyDone: "Simulation mode: nothing sent. The site was told this was a simulation.",
-    readyToSend: "Ready. Check the data above, then press \"Sign and send\" and confirm in MetaMask.",
+    readyToSend: "Ready. Check the data above, then press \"Sign and send\" and confirm in MetaMask. MetaMask will show the UP's Key Manager as the recipient: that is correct, it is the wrapping.",
     signerChanged: "❌ The active MetaMask account is not the one that was checked: reconnect and try again.",
     sending: "Sending the wrapped transaction (confirm in MetaMask)...",
     txSent: (v) => `Tx sent: ${v.hash}`,
@@ -372,9 +418,11 @@ function renderKv(rows) {
   box.textContent = "";
   const grid = document.createElement("div");
   grid.className = "kv";
-  for (const [k, v] of rows) {
+  for (const [k, v, asBlock] of rows) {
     const kd = document.createElement("div"); kd.className = "k"; kd.textContent = k;
-    const vd = document.createElement("div"); vd.className = "v"; vd.textContent = v;
+    const vd = document.createElement("div"); vd.className = "v";
+    if (asBlock) { const pre = document.createElement("pre"); pre.textContent = v; vd.appendChild(pre); }
+    else vd.textContent = v;
     grid.appendChild(kd); grid.appendChild(vd);
   }
   box.appendChild(grid);
@@ -459,7 +507,7 @@ async function walletOnBase() {
 
 // ==================== 3. WalletConnect ====================
 let walletKit = null;
-let pending = null; // { topic, id, tx, wrapped, gasLimit, label, name }
+let pending = null; // { kind: "tx" | "sign", topic, id, ... }
 
 async function getWalletKit() {
   if (walletKit) return walletKit;
@@ -560,18 +608,28 @@ async function respondError(topic, id, message, code = 5000) {
 function clearPending(msg) {
   pending = null;
   $("sendBtn").disabled = true;
+  $("signBtn").disabled = true;
   $("rejectBtn").disabled = true;
   if (msg) setStatus("requestBox", msg, "empty");
 }
 
 async function onSessionRequest(event) {
-  const { topic, id, params } = event;
+  const { topic, id, params, verifyContext } = event;
   const { request, chainId } = params;
   log(t("reqMethod", { method: request.method }), "line-dim");
 
-  if (["personal_sign", "eth_sign", "eth_signTypedData", "eth_signTypedData_v4"].includes(request.method)) {
-    log(t("reqSignRejected"), "line-warn");
-    return respondError(topic, id, "User rejected: this bridge does not sign messages", 5000);
+  // eth_sign signs a raw hash (it can authorise anything, even a transaction); eth_signTypedData
+  // (v1/v3) are legacy formats. They are never signed.
+  if (["eth_sign", "eth_signTypedData", "eth_signTypedData_v3"].includes(request.method)) {
+    log(t("signLegacyRejected", { method: request.method }), "line-err");
+    return respondError(topic, id, `Rejected: ${request.method} is never signed by this bridge`, 5000);
+  }
+  if (request.method === "personal_sign" || request.method === "eth_signTypedData_v4") {
+    if (pending) {
+      log(t("reqBusy"), "line-warn");
+      return respondError(topic, id, "Another request is pending", 5000);
+    }
+    return handleSignRequest(topic, id, chainId, request, verifyContext);
   }
   if (request.method === "wallet_switchEthereumChain") {
     const wanted = parseInt(request.params?.[0]?.chainId, 16);
@@ -666,7 +724,7 @@ async function handleSendTransaction(topic, id, chainId, tx) {
       return;
     }
 
-    pending = { topic, id, wrapped, gasLimit, name: req.name, signer: signerAddress };
+    pending = { kind: "tx", topic, id, wrapped, gasLimit, name: req.name, signer: signerAddress };
     $("sendBtn").disabled = false;
     $("rejectBtn").disabled = false;
     log(t("readyToSend"), "line-warn");
@@ -674,6 +732,162 @@ async function handleSendTransaction(topic, id, chainId, tx) {
     return reject(t("genericError", { err: e.shortMessage || e.message }));
   }
 }
+
+// ==================== 4b. Message signatures (ERC-1271) ====================
+// The controller signs; the UP validates the signature through its Key Manager
+// (LSP6 isValidSignature: the recovered signer must have the SIGN permission).
+const ERC1271_MAGIC = "0x1626ba7e";
+const PERMIT2 = "0x000000000022d473030f116ddee9f6b43ac78ba3";
+const PERM_PREFIX = "0x4b80742de2bf82acb3630000"; // LSP6 AddressPermissions:Permissions:<address>
+const PERMISSION_SIGN = 1n << 21n;
+
+function sessionPeer(topic) {
+  const s = walletKit?.getActiveSessions?.()[topic];
+  return s ? `${s.peer.metadata.name} (${s.peer.metadata.url})` : "—";
+}
+
+// Returns the message as readable text, or null when it is a hash or binary data.
+function readableText(bytes) {
+  if (!bytes.length) return null;
+  let text;
+  try { text = new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch (e) { return null; }
+  return /^[\P{C}\n\r\t]*$/u.test(text) ? text : null;
+}
+
+async function handleSignRequest(topic, id, chainId, request, verifyContext) {
+  const reject = async (msg) => { log(msg, "line-err"); await respondError(topic, id, "Rejected by the UP bridge", 5000); };
+  $("log").textContent = "";
+  log(t("reqMethod", { method: request.method }), "line-dim");
+
+  if (!riskAccepted()) return reject(t("ackRequired"));
+  if (chainId !== CAIP_CHAIN) return reject(t("reqWrongChain", { chain: chainId }));
+  if (!upAddress || !kmAddress) return reject(t("checkUpFirst"));
+
+  // Step 1: domain verification by WalletConnect/Reown.
+  const verified = verifyContext?.verified || {};
+  const validation = verified.validation || "UNKNOWN";
+  if (verified.isScam || validation === "INVALID") return reject(t("verifyBad", { v: verified.isScam ? "SCAM" : validation }));
+  if (validation === "VALID") log(t("verifyOk"), "line-ok"); else log(t("verifyWarn", { v: validation }), "line-warn");
+
+  // Step 2: decode what the site wants signed and compute the hash the UP will check.
+  const p = request.params || [];
+  const up = upAddress.toLowerCase();
+  let account, hash, rows = [], warnings = [], walletParams;
+  try {
+    if (request.method === "personal_sign") {
+      // Standard order is [message, address]; some dApps swap it.
+      const [a, b] = p;
+      const swapped = typeof a === "string" && a.toLowerCase() === up && !(typeof b === "string" && b.toLowerCase() === up);
+      const message = swapped ? b : a;
+      account = swapped ? a : b;
+      if (typeof message !== "string") throw new Error("missing message");
+      const bytes = ethers.isHexString(message) ? ethers.getBytes(message) : ethers.toUtf8Bytes(message);
+      const text = readableText(bytes);
+      hash = ethers.hashMessage(bytes);
+      walletParams = [ethers.hexlify(bytes), null];
+      rows.push([t("kContentType"), text !== null ? t("ctText") : t("ctOpaque")]);
+      rows.push([t("kContent"), text !== null ? text : ethers.hexlify(bytes), true]);
+      if (text === null) warnings.push(t("signOpaque"));
+    } else {
+      account = p[0];
+      const raw = p[1];
+      const data = typeof raw === "string" ? JSON.parse(raw) : raw;
+      if (!data || typeof data !== "object" || !data.types || !data.message) throw new Error("missing types or message");
+      const domain = data.domain || {};
+      if (domain.chainId !== undefined && domain.chainId !== null && Number(domain.chainId) !== BASE.chainId) {
+        return reject(t("signWrongDomainChain", { id: String(domain.chainId) }));
+      }
+      const types = { ...data.types };
+      delete types.EIP712Domain;
+      hash = ethers.TypedDataEncoder.hash(domain, types, data.message);
+      walletParams = [null, typeof raw === "string" ? raw : JSON.stringify(raw)];
+      rows.push([t("kContentType"), t("ctTyped")]);
+      rows.push([t("kDomain"), JSON.stringify(domain, null, 2), true]);
+      rows.push([t("kPrimaryType"), String(data.primaryType || "—")]);
+      rows.push([t("kContent"), JSON.stringify(data.message, null, 2), true]);
+      const vc = String(domain.verifyingContract || "").toLowerCase();
+      if (/permit/i.test(String(data.primaryType || "")) || vc === PERMIT2 || /permit2/i.test(String(domain.name || ""))) warnings.push(t("signPermit"));
+    }
+  } catch (e) {
+    return reject(t("signBadData", { err: e.shortMessage || e.message }));
+  }
+  if (typeof account !== "string" || account.toLowerCase() !== up) return reject(t("signWrongAccount", { acc: String(account) }));
+
+  renderKv([
+    [t("kMethod"), request.method],
+    [t("kSite"), sessionPeer(topic)],
+    [t("kVerify"), validation],
+    [t("kAccount"), upAddress],
+    [t("kSigner"), signerAddress || "—"],
+    [t("kKm"), kmAddress],
+    ...rows,
+    [t("kHash"), hash],
+  ]);
+  for (const w of warnings) log(w, "line-warn");
+  log(t("signReplay"), "line-dim");
+
+  // Step 3: the controller must be connected, on Base, and hold the SIGN permission on the UP.
+  if (!signerAddress) return reject(t("connectSignerFirst"));
+  const chains = await walletOnBase();
+  if (!chains.ok) return reject(chains.msg);
+  log(t("chainsOk"), "line-ok");
+  try {
+    const key = PERM_PREFIX + signerAddress.slice(2).toLowerCase();
+    const raw = await new ethers.Contract(upAddress, ["function getData(bytes32) view returns (bytes)"], rpc).getData(key);
+    const perms = raw && raw !== "0x" ? BigInt(raw) : 0n;
+    if ((perms & PERMISSION_SIGN) === 0n) return reject(t("signNoPermission"));
+    log(t("signPermOk"), "line-ok");
+  } catch (e) {
+    return reject(t("genericError", { err: e.shortMessage || e.message }));
+  }
+
+  pending = { kind: "sign", topic, id, method: request.method, walletParams, hash, signer: signerAddress };
+  $("signBtn").disabled = false;
+  $("rejectBtn").disabled = false;
+  log(t("signReady"), "line-warn");
+}
+
+$("signBtn").addEventListener("click", async () => {
+  if (!pending || pending.kind !== "sign") return;
+  if (!riskAccepted()) { log(t("ackRequired"), "line-err"); return; }
+  const p = pending;
+  $("signBtn").disabled = true;
+  $("rejectBtn").disabled = true;
+  const fail = async (msg, reason) => { log(msg, "line-err"); try { await respondError(p.topic, p.id, reason, 5000); } catch (e) { /* ignore */ } clearPending(); };
+  try {
+    const chains = await walletOnBase();
+    if (!chains.ok) return fail(chains.msg, "Wrong network");
+    const accounts = await signerProvider.request({ method: "eth_accounts" });
+    if (!accounts?.[0] || accounts[0].toLowerCase() !== p.signer.toLowerCase()) return fail(t("signerChanged"), "Signer changed");
+
+    // Step 4: the controller signs in MetaMask the same content shown above.
+    log(t("signing"), "line-dim");
+    const signature = p.method === "personal_sign"
+      ? await signerProvider.request({ method: "personal_sign", params: [p.walletParams[0], p.signer] })
+      : await signerProvider.request({ method: "eth_signTypedData_v4", params: [p.signer, p.walletParams[1]] });
+
+    // Step 5: the signature must come from the controller...
+    const recovered = ethers.recoverAddress(p.hash, signature);
+    log(t("signRecovered", { addr: recovered }), "line-dim");
+    if (recovered.toLowerCase() !== p.signer.toLowerCase()) return fail(t("signWrongSigner"), "Signature check failed");
+
+    // ...and the UP on Base must accept it (ERC-1271), otherwise it is useless to the site.
+    log(t("signCheckingUp"), "line-dim");
+    let answer;
+    try {
+      answer = await new ethers.Contract(upAddress, ["function isValidSignature(bytes32,bytes) view returns (bytes4)"], rpc).isValidSignature(p.hash, signature);
+    } catch (e) {
+      answer = "revert";
+    }
+    if (String(answer).toLowerCase() !== ERC1271_MAGIC) return fail(t("signInvalid", { r: String(answer) }), "Signature not accepted by the UP");
+
+    await respondResult(p.topic, p.id, signature);
+    log(t("signValid"), "line-ok");
+    clearPending();
+  } catch (e) {
+    await fail(t("genericError", { err: e.shortMessage || e.message }), "Signing failed");
+  }
+});
 
 $("rejectBtn").addEventListener("click", async () => {
   if (!pending) return;
@@ -684,7 +898,7 @@ $("rejectBtn").addEventListener("click", async () => {
 });
 
 $("sendBtn").addEventListener("click", async () => {
-  if (!pending) return;
+  if (!pending || pending.kind !== "tx") return;
   if (!riskAccepted()) { log(t("ackRequired"), "line-err"); return; }
   const p = pending;
   $("sendBtn").disabled = true;
