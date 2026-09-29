@@ -387,7 +387,9 @@ const I18N = {
     readyToSend: "Pronto. Controlla i dati sopra, poi premi \"Firma e invia\". In MetaMask vedrai come destinatario il Key Manager della UP e nessun valore: è corretto, è l'incapsulamento (il valore esce dalla UP).",
     signerChanged: "❌ L'account attivo in MetaMask non è quello verificato: rifiutata.",
     sending: "Invio della transazione incapsulata (conferma in MetaMask)...",
+    txSummary: (v) => `Riepilogo: verso ${v.to} · valore dalla UP: ${v.value} · operazione: ${v.op}`,
     txSent: (v) => `Tx inviata: ${v.hash}`,
+    txSentSummary: (v) => `Inviata: la UP paga ${v.value} a ${v.to} (più il gas, pagato dal controller).`,
     waiting: "In attesa di conferma...",
     txOk: "✅✅ Transazione confermata.",
     txFailed: "❌ Transazione fallita on-chain.",
@@ -537,7 +539,9 @@ const I18N = {
     readyToSend: "Ready. Check the data above, then press \"Sign and send\". MetaMask will show the UP's Key Manager as the recipient and no value: that is correct, it is the wrapping (the value comes from the UP).",
     signerChanged: "❌ The active MetaMask account is not the verified one: rejected.",
     sending: "Sending the wrapped transaction (confirm in MetaMask)...",
+    txSummary: (v) => `Summary: to ${v.to} · value from the UP: ${v.value} · operation: ${v.op}`,
     txSent: (v) => `Tx sent: ${v.hash}`,
+    txSentSummary: (v) => `Sent: the UP pays ${v.value} to ${v.to} (plus gas, paid by the controller).`,
     waiting: "Waiting for confirmation...",
     txOk: "✅✅ Transaction confirmed.",
     txFailed: "❌ Transaction failed on-chain.",
@@ -1036,29 +1040,37 @@ function simError(e) {
   return e?.shortMessage || e?.reason || e?.message || String(e);
 }
 
+// Fills rows/warnings for the request box and returns a one-line label of the operation for the log.
 async function describeCall(c, to, value, data, rows, warnings) {
   const cur = c.net.currency || "";
   const toCode = await c.provider.getCode(to);
   rows.push([t("kTo"), `${to} (${toCode === "0x" ? t("toEoa") : t("toContract")})`, {}]);
   rows.push([t("kValue"), `${ethers.formatEther(value)} ${cur}`, { cls: value > 0n ? "warn" : "" }]);
   if (data === "0x") {
-    rows.push([t("kCall"), t("nativeTransfer", { amount: ethers.formatEther(value), cur, to }), {}]);
-    return;
+    const op = t("nativeTransfer", { amount: ethers.formatEther(value), cur, to });
+    rows.push([t("kCall"), op, {}]);
+    return op;
   }
   if (toCode === "0x") warnings.push([t("warnEoaData"), "line-warn"]);
   let parsed = null;
   try { parsed = KNOWN_IFACE.parseTransaction({ data, value }); } catch (e) { parsed = null; }
   if (!parsed) {
-    rows.push([t("kCall"), t("unknownCall", { sel: data.slice(0, 10) }), { cls: "warn" }]);
+    const op = t("unknownCall", { sel: data.slice(0, 10) });
+    rows.push([t("kCall"), op, { cls: "warn" }]);
     rows.push([t("kRaw"), data, { block: true }]);
     warnings.push([t("warnUnknownCall"), "line-warn"]);
-    return;
+    return op;
   }
   // Token metadata read from the chain, when the target exposes it.
-  let symbol = "", decimals = null;
+  // ERC-721 is detected through ERC-165, because approve/transferFrom share their selectors with ERC-20.
+  let symbol = "", decimals = null, is721 = false;
   try {
-    const tok = new ethers.Contract(to, ["function symbol() view returns (string)", "function decimals() view returns (uint8)"], c.provider);
-    [symbol, decimals] = await Promise.all([tok.symbol().catch(() => ""), tok.decimals().then(Number).catch(() => null)]);
+    const tok = new ethers.Contract(to, ["function symbol() view returns (string)", "function decimals() view returns (uint8)", "function supportsInterface(bytes4) view returns (bool)"], c.provider);
+    [symbol, decimals, is721] = await Promise.all([
+      tok.symbol().catch(() => ""),
+      tok.decimals().then(Number).catch(() => null),
+      tok.supportsInterface("0x80ac58cd").catch(() => false),
+    ]);
   } catch (e) { /* not a token */ }
   const amount = (x) => decimals !== null ? `${ethers.formatUnits(x, decimals)} ${symbol}`.trim() : `${x.toString()} ${symbol}`.trim();
   const args = parsed.fragment.inputs.map((inp, i) => `${inp.name || "arg" + i}: ${String(parsed.args[i])}`);
@@ -1068,7 +1080,10 @@ async function describeCall(c, to, value, data, rows, warnings) {
   const sig = parsed.signature;
   const a = parsed.args;
   const huge = (x, bits = 256) => x >= (1n << BigInt(bits - 1));
-  if (sig === "approve(address,uint256)" || sig === "increaseAllowance(address,uint256)") {
+  if (is721 && sig === "approve(address,uint256)") {
+    if (a[0] === ethers.ZeroAddress) warnings.push([t("infoRevoke"), "line-dim"]);
+    else warnings.push([t("warnApproval", { who: a[0], what: `NFT id ${a[1]}` }), "line-danger"]);
+  } else if (sig === "approve(address,uint256)" || sig === "increaseAllowance(address,uint256)") {
     if (a[1] === 0n && sig.startsWith("approve")) warnings.push([t("infoRevoke"), "line-dim"]);
     else warnings.push([t("warnApproval", { who: a[0], what: huge(a[1]) ? t("warnUnlimited") : amount(a[1]) }), "line-danger"]);
   } else if (sig === "approve(address,address,uint160,uint48)") {
@@ -1084,10 +1099,11 @@ async function describeCall(c, to, value, data, rows, warnings) {
   } else if (parsed.name === "transfer" || parsed.name === "transferFrom" || parsed.name === "safeTransferFrom") {
     let what;
     if (sig === "safeTransferFrom(address,address,uint256,uint256,bytes)") what = `${a[3]} × id ${a[2]}`;
-    else if (parsed.fragment.inputs[2].type === "bytes32" || /^safeTransferFrom\(address,address,uint256(,bytes)?\)$/.test(sig)) what = `NFT ${a[2]}`;
+    else if (is721 || parsed.fragment.inputs[2].type === "bytes32" || /^safeTransferFrom\(address,address,uint256(,bytes)?\)$/.test(sig)) what = `NFT id ${a[2]}`;
     else what = amount(a[2]);
     warnings.push([t("infoTransfer", { what, to: a[1] }), "line-warn"]);
   }
+  return `${parsed.name}(${parsed.fragment.inputs.map(i => i.type).join(",")})`;
 }
 
 async function handleSendTransaction(topic, id, c, tx, validation, reject) {
@@ -1111,7 +1127,10 @@ async function handleSendTransaction(topic, id, c, tx, validation, reject) {
       [t("kFrom"), c.up, {}],
     ];
     const warnings = [];
-    await describeCall(c, to, value, data, rows, warnings);
+    const op = await describeCall(c, to, value, data, rows, warnings);
+    const valueText = `${ethers.formatEther(value)} ${cur}`.trim();
+    // The request box is replaced by the next request: the log keeps what was asked.
+    log(t("txSummary", { to, value: valueText, op }), "line-compare");
     rows.push([t("kKm"), c.km, {}], [t("kSigner"), c.signer, {}]);
     renderKv("requestBox", rows);
     for (const [w, cls] of warnings) log(w, cls);
@@ -1142,7 +1161,7 @@ async function handleSendTransaction(topic, id, c, tx, validation, reject) {
       log(t("simOnlyDone"), "line-warn");
       return respondError(topic, id, "Simulation only: transaction not sent", 5000);
     }
-    pending = { kind: "tx", topic, id, wrapped, gasLimit, c };
+    pending = { kind: "tx", topic, id, wrapped, gasLimit, c, to, valueText };
     $("sendBtn").disabled = false;
     $("rejectBtn").disabled = false;
     log(t("readyToSend"), "line-warn");
@@ -1167,6 +1186,7 @@ $("sendBtn").addEventListener("click", async () => {
     log(t("sending"), "line-dim");
     const sent = await signer.sendTransaction({ to: p.c.km, data: p.wrapped, gasLimit: p.gasLimit });
     log(t("txSent", { hash: sent.hash }), "line-dim");
+    log(t("txSentSummary", { value: p.valueText, to: p.to }), "line-dim");
     if (p.c.net.explorer) log(p.c.net.explorer + sent.hash, "line-dim");
     // The dApp tracks the transaction by its hash; the transaction is the wrapped one.
     await respondResult(p.topic, p.id, sent.hash);
