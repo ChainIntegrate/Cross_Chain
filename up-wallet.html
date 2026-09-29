@@ -268,6 +268,7 @@ const KNOWN_CONTRACTS = {
   "0x00000000000000adc04c56bf30ac9d3c0aaf14dc": { name: "Seaport 1.5 (OpenSea)", role: "roleMarket" },
   "0x0000000000000068f116a894984e2db1123eb395": { name: "Seaport 1.6 (OpenSea)", role: "roleMarket" },
   "0x1231deb6f5749ef6ce6943a275a1d3e7486f4eae": { name: "LI.FI Diamond", role: "roleSwapBridge" },
+  "0x89c6340b1a1f4b25d36cd8b063d49045caf3f818": { name: "LI.FI Permit2 Proxy", role: "roleLifiPermit2" },
   "0x0000000000001ff3684f28c67538d4d072c22734": { name: "0x AllowanceHolder", role: "roleSwap" },
 };
 // "0x… (Name)" when the address is a known contract with code on this network, else the bare address.
@@ -350,8 +351,9 @@ const I18N = {
     signBtn: "Firma il messaggio per la UP",
     rejectBtn: "Rifiuta la richiesta",
     modalSub: "Leggi tutto prima di decidere: controlli, avvisi e dettagli della richiesta. Niente parte senza il tuo clic e la conferma in MetaMask. La richiesta resta anche nello storico della pagina.",
+    knownSpender: (v) => `ℹ️ Il permesso è per un contratto noto: ${v.addr} (${v.name} — ${v.role}). Controlla comunque token, importo e scadenza.`,
     knownContract: (v) => `ℹ️ Destinatario noto: ${v.name} — ${v.role}. Il nome dice chi riceve la chiamata, non cosa fa: controlla importi e rete sul sito.`,
-    roleSwapBridge: "aggregatore di swap e bridge tra reti", roleSwap: "contratto degli swap dell'API 0x", roleMarket: "marketplace di OpenSea", rolePermit2: "gestore delle approvazioni di token",
+    roleSwapBridge: "aggregatore di swap e bridge tra reti", roleSwap: "contratto degli swap dell'API 0x", roleMarket: "marketplace di OpenSea", rolePermit2: "gestore delle approvazioni di token", roleLifiPermit2: "contratto di LI.FI che usa le firme Permit2 per swap e bridge",
     actionTitleTx: (v) => `Transazione in attesa della tua decisione — ${v.site}`,
     actionTitleSign: (v) => `Firma in attesa della tua decisione — ${v.site}`,
 
@@ -513,8 +515,9 @@ const I18N = {
     signBtn: "Sign the message for the UP",
     rejectBtn: "Reject the request",
     modalSub: "Read everything before deciding: checks, warnings and request details. Nothing happens without your click and your confirmation in MetaMask. The request also stays in the page's history.",
+    knownSpender: (v) => `ℹ️ The permission is for a known contract: ${v.addr} (${v.name} — ${v.role}). Still check token, amount and deadline.`,
     knownContract: (v) => `ℹ️ Known recipient: ${v.name} — ${v.role}. The name says who receives the call, not what it does: check amounts and network on the site.`,
-    roleSwapBridge: "swap and cross-chain bridge aggregator", roleSwap: "0x API swap contract", roleMarket: "OpenSea marketplace", rolePermit2: "token approval manager",
+    roleSwapBridge: "swap and cross-chain bridge aggregator", roleSwap: "0x API swap contract", roleMarket: "OpenSea marketplace", rolePermit2: "token approval manager", roleLifiPermit2: "LI.FI contract that uses Permit2 signatures for swaps and bridges",
     actionTitleTx: (v) => `Transaction waiting for your decision — ${v.site}`,
     actionTitleSign: (v) => `Signature waiting for your decision — ${v.site}`,
 
@@ -1374,7 +1377,15 @@ async function handleSignRequest(topic, id, c, request, validation, reject) {
       rows.push([t("kContent"), JSON.stringify(data.message, null, 2), { block: true }]);
       const vc = String(domain.verifyingContract || "").toLowerCase();
       const pt = String(data.primaryType || "");
-      if (/permit/i.test(pt) || vc === PERMIT2 || /permit2/i.test(String(domain.name || ""))) warnings.push([t("signPermit"), "line-danger"]);
+      if (/permit/i.test(pt) || vc === PERMIT2 || /permit2/i.test(String(domain.name || ""))) {
+        warnings.push([t("signPermit"), "line-danger"]);
+        // Name the spender when it is a known contract with code on this network.
+        const spender = data.message?.spender || data.message?.details?.spender;
+        if (typeof spender === "string" && ethers.isAddress(spender)) {
+          const known = KNOWN_CONTRACTS[spender.toLowerCase()];
+          if (known && (await c.provider.getCode(spender)) !== "0x") warnings.push([t("knownSpender", { addr: ethers.getAddress(spender), name: known.name, role: t(known.role) }), "line-dim"]);
+        }
+      }
       else if (/order/i.test(pt)) warnings.push([t("signOrder"), "line-danger"]);
     }
   } catch (e) {

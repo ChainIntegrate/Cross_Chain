@@ -398,7 +398,7 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 #### I-09 — Decoding covers only common calls; opaque content cannot be interpreted
 
 - **Impact:** ERC-20/721/1155 transfers and approvals, Permit2 `approve` and LSP7/LSP8 calls are decoded, with strong warnings on approvals (including "unlimited"). Router calls (swaps, bridges, marketplaces), batched calls and `personal_sign` requests over a hash cannot be interpreted: an approval hidden inside them is not detected.
-- **Mitigation:** such requests carry an explicit "not recognised / not readable" warning, raw data is shown, five well-known contracts are named when they have code on the chosen network (Permit2, Seaport 1.5/1.6, LI.FI Diamond, 0x AllowanceHolder) with the note that a name says who receives the call, not what it does. The disclaimer states that ChainIntegrate takes no responsibility for requests approved on unclear content.
+- **Mitigation:** such requests carry an explicit "not recognised / not readable" warning, raw data is shown, six well-known contracts are named when they have code on the chosen network (Permit2, Seaport 1.5/1.6, LI.FI Diamond, LI.FI Permit2 Proxy, 0x AllowanceHolder), also as the spender of a Permit2 signature with the note that a name says who receives the call, not what it does. The disclaimer states that ChainIntegrate takes no responsibility for requests approved on unclear content.
 - **Status:** ⏳ Accepted (inherent to a generic wallet)
 
 #### I-10 — Site identity relies on Reown Verify
