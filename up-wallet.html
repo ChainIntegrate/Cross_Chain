@@ -60,6 +60,18 @@
   .verdict { margin-top: 12px; font-weight: 700; }
   .check-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 13.5px; }
   .check-row input { width: auto; }
+  /* Pending request: summary and buttons stay at the bottom of the screen, whatever the scroll. */
+  .action-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: none;
+                background: var(--panel); border-top: 2px solid var(--warn); box-shadow: 0 -6px 18px rgba(0,0,0,0.45); padding: 12px 16px; }
+  .action-bar.show { display: block; }
+  body.has-action { padding-bottom: 190px; }
+  .action-inner { max-width: 760px; margin: 0 auto; }
+  .action-title { font-size: 13px; font-weight: 700; color: var(--warn); }
+  .action-summary { font-family: monospace; font-size: 12px; margin: 6px 0 4px; max-height: 64px; overflow: auto; white-space: pre-wrap; word-break: break-all; }
+  .action-link { background: none; border: none; color: var(--accent); width: auto; padding: 0; margin: 0; font-size: 12px; font-weight: 600; text-decoration: underline; }
+  .action-buttons { display: flex; gap: 8px; }
+  .action-buttons button { margin-top: 8px; }
+  .action-buttons button[hidden] { display: none; }
   .warn-box { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--err); border-radius: 8px; background: rgba(224,90,90,0.08); font-size: 13px; line-height: 1.5; }
   @media (max-width: 560px) { .kv { grid-template-columns: 1fr; } }
 </style>
@@ -128,10 +140,20 @@
   <div class="check-row"><input type="checkbox" id="simulateOnly" checked><label for="simulateOnly" style="margin:0;" data-i18n="simulateOnlyLabel">Solo simulazione (non inviare nulla)</label></div>
   <div class="note" style="margin-top:6px;" data-i18n="simulateOnlyNote"></div>
   <div id="requestBox" class="status-box"><span class="empty" data-i18n="noRequest">Nessuna richiesta in attesa.</span></div>
-  <button id="sendBtn" class="danger" disabled data-i18n="sendBtn">Firma e invia la transazione (irreversibile)</button>
-  <button id="signBtn" class="danger" disabled data-i18n="signBtn">Firma il messaggio per la UP</button>
-  <button id="rejectBtn" class="secondary" disabled data-i18n="rejectBtn">Rifiuta la richiesta</button>
   <div id="log" class="line-dim" style="margin-top:10px;"></div>
+</div>
+
+<div class="action-bar" id="actionBar" role="region" aria-live="polite">
+  <div class="action-inner">
+    <div class="action-title" id="actionTitle"></div>
+    <div class="action-summary" id="actionSummary"></div>
+    <button class="action-link" id="actionDetails" data-i18n="actionDetails">Vedi i dettagli della richiesta</button>
+    <div class="action-buttons">
+      <button id="sendBtn" class="danger" disabled hidden data-i18n="sendBtn">Firma e invia la transazione (irreversibile)</button>
+      <button id="signBtn" class="danger" disabled hidden data-i18n="signBtn">Firma il messaggio per la UP</button>
+      <button id="rejectBtn" class="secondary" disabled data-i18n="rejectBtn">Rifiuta la richiesta</button>
+    </div>
+  </div>
 </div>
 
 <div class="site-footer">
@@ -304,6 +326,9 @@ const I18N = {
     sendBtn: "Firma e invia la transazione (irreversibile)",
     signBtn: "Firma il messaggio per la UP",
     rejectBtn: "Rifiuta la richiesta",
+    actionDetails: "Vedi i dettagli della richiesta",
+    actionTitleTx: (v) => `Transazione in attesa della tua decisione — ${v.site}`,
+    actionTitleSign: (v) => `Firma in attesa della tua decisione — ${v.site}`,
 
     // compliance
     cNetwork: "Rete", cRpc: "RPC", cWallet: "MetaMask", cUp: "UP", cKm: "Key Manager", cPerms: "Permessi del controller",
@@ -459,6 +484,9 @@ const I18N = {
     sendBtn: "Sign and send the transaction (irreversible)",
     signBtn: "Sign the message for the UP",
     rejectBtn: "Reject the request",
+    actionDetails: "See the request details",
+    actionTitleTx: (v) => `Transaction waiting for your decision — ${v.site}`,
+    actionTitleSign: (v) => `Signature waiting for your decision — ${v.site}`,
 
     cNetwork: "Network", cRpc: "RPC", cWallet: "MetaMask", cUp: "UP", cKm: "Key Manager", cPerms: "Controller permissions",
     cCanCall: "Contract calls", cCanValue: "Sending value", cCanSign: "Message signatures", cNft721: "Receiving ERC-721 NFTs", cNft1155: "Receiving ERC-1155 NFTs", cUpBal: "UP balance", cGasBal: "Controller balance (gas)",
@@ -978,8 +1006,23 @@ function clearPending(msg) {
   $("sendBtn").disabled = true;
   $("signBtn").disabled = true;
   $("rejectBtn").disabled = true;
+  $("actionBar").classList.remove("show");
+  document.body.classList.remove("has-action");
   if (msg) setStatus("requestBox", msg, "empty");
 }
+// Shows the fixed bar at the bottom of the screen with the pending request and its buttons.
+function showActionBar(kind, title, summary) {
+  $("actionTitle").textContent = title;
+  $("actionSummary").textContent = summary;
+  $("sendBtn").hidden = kind !== "tx";
+  $("signBtn").hidden = kind !== "sign";
+  $("sendBtn").disabled = kind !== "tx";
+  $("signBtn").disabled = kind !== "sign";
+  $("rejectBtn").disabled = false;
+  $("actionBar").classList.add("show");
+  document.body.classList.add("has-action");
+}
+$("actionDetails").addEventListener("click", () => $("requestBox").scrollIntoView({ behavior: "smooth", block: "start" }));
 function sessionPeer(topic) {
   const s = walletKit?.getActiveSessions?.()[topic];
   return s ? `${s.peer.metadata.name} (${s.peer.metadata.url})` : "—";
@@ -1162,8 +1205,7 @@ async function handleSendTransaction(topic, id, c, tx, validation, reject) {
       return respondError(topic, id, "Simulation only: transaction not sent", 5000);
     }
     pending = { kind: "tx", topic, id, wrapped, gasLimit, c, to, valueText };
-    $("sendBtn").disabled = false;
-    $("rejectBtn").disabled = false;
+    showActionBar("tx", t("actionTitleTx", { site: sessionPeer(topic) }), t("txSummary", { to, value: valueText, op }));
     log(t("readyToSend"), "line-warn");
   } catch (e) {
     return reject(t("genericError", { err: e.shortMessage || e.message }));
@@ -1287,8 +1329,7 @@ async function handleSignRequest(topic, id, c, request, validation, reject) {
   log(t("signCompare", { c: compare }), "line-compare");
 
   pending = { kind: "sign", topic, id, method: request.method, walletParams, hash, c };
-  $("signBtn").disabled = false;
-  $("rejectBtn").disabled = false;
+  showActionBar("sign", t("actionTitleSign", { site: sessionPeer(topic) }), `${request.method}: ${compare}`);
   log(t("signReady"), "line-warn");
 }
 
