@@ -628,6 +628,7 @@ function clearPending(msg) {
 async function onSessionRequest(event) {
   const { topic, id, params, verifyContext } = event;
   const { request, chainId } = params;
+  logSeparator();
   log(t("reqMethod", { method: request.method }), "line-dim");
 
   // eth_sign signs a raw hash (it can authorise anything, even a transaction); eth_signTypedData
@@ -660,7 +661,6 @@ async function onSessionRequest(event) {
 
 async function handleSendTransaction(topic, id, chainId, tx) {
   const reject = async (msg) => { log(msg, "line-err"); await respondError(topic, id, "Rejected by the UP bridge", 5000); };
-  logSeparator();
 
   if (!riskAccepted()) return reject(t("ackRequired"));
   if (chainId !== CAIP_CHAIN) return reject(t("reqWrongChain", { chain: chainId }));
@@ -768,8 +768,6 @@ function readableText(bytes) {
 
 async function handleSignRequest(topic, id, chainId, request, verifyContext) {
   const reject = async (msg) => { log(msg, "line-err"); await respondError(topic, id, "Rejected by the UP bridge", 5000); };
-  logSeparator();
-  log(t("reqMethod", { method: request.method }), "line-dim");
 
   if (!riskAccepted()) return reject(t("ackRequired"));
   if (chainId !== CAIP_CHAIN) return reject(t("reqWrongChain", { chain: chainId }));
