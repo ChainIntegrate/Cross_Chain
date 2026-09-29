@@ -10,7 +10,7 @@
 - The UP calls it with a plain `CALL` (never `DELEGATECALL`), so it cannot read or change the UP's data or balance.
 
 **Same address on every chain**
-It is published through Nick's deterministic deployment proxy, with a fixed salt and fixed compiler settings. Anyone can publish it on a new chain, from any account and without owning a UP (it only costs gas); it always lands at the same address with the same code. `up-nft-receiver.html` does it with any connected wallet.
+It is published through Nick's deterministic deployment proxy, with a fixed salt and fixed compiler settings. Anyone can publish it on a new chain, from any account and without owning a UP (it only costs gas); it always lands at the same address with the same code. `up-publish-implementation.html` does it with any wallet (shortcut "NFT reception extension"): it reads the original deploy from LUKSO, checks that it produces this address, and replays it.
 
 | | |
 |---|---|
