@@ -35,6 +35,12 @@ Last update: 2026-09-29.
 ## 2. Next steps
 
 ### 2.1 Right after merging PR #33 (NFT reception)
+**Base: done on 2026-09-29.**
+- The extension was published and enabled on the ChainIntegrate UP (`0x328A…317b`); one of the transactions is `0xf77455eb…7553`.
+- The page's final check reported the NFT keys set and the controller's permissions unchanged.
+- The publisher address does not matter: the extension has no owner, and its address depends only on factory, salt and bytecode.
+- Still to do: buy a cheap NFT on OpenSea (Base) with the UP, then record the result here and in AUDIT I-12 ("verified on mainnet").
+
 1. `git pull` on the server.
 2. On Base, with the ChainIntegrate UP (`0x328A…317b`) and its controller:
    1. publish the extension (once per network);
