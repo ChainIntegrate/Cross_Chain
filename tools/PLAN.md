@@ -39,7 +39,10 @@ Last update: 2026-09-29.
 - The extension was published and enabled on the ChainIntegrate UP (`0x328A…317b`); one of the transactions is `0xf77455eb…7553`.
 - The page's final check reported the NFT keys set and the controller's permissions unchanged.
 - The publisher address does not matter: the extension has no owner, and its address depends only on factory, salt and bytecode.
-- Still to do: buy a cheap NFT on OpenSea (Base) with the UP, then record the result here and in AUDIT I-12 ("verified on mainnet").
+- **Verified on mainnet:** the UP bought an ERC-1155 on OpenSea on Base. The transaction was Seaport 1.6 `fulfillAdvancedOrder`, recipient the UP, 0.00088209 ETH paid from the UP. The token is BasePaint `0xBa5e05cb…dcAc83`, id 665, and it was received by the UP through the extension. The simulation had already succeeded, which it could not do before the extension. Basescan labels the UP with its Basenames primary name.
+- **Next:**
+  - optional: open a feature request on `lukso-network/lsp-smart-contracts` for an official cross-chain ERC-721/ERC-1155 receiver extension (draft in the chat of 2026-09-29), pointing to `contracts/` as a reference implementation;
+  - optional: teach the UP Wallet to decode Seaport orders (what is received, by whom, what is paid, to whom).
 
 1. `git pull` on the server.
 2. On Base, with the ChainIntegrate UP (`0x328A…317b`) and its controller:
