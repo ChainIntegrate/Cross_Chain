@@ -222,6 +222,7 @@ const I18N = {
     signLegacyRejected: (v) => `❌ ${v.method} rifiutato: questo formato può autorizzare qualsiasi cosa, anche una transazione, e non viene mai firmato.`,
     signWrongAccount: (v) => `❌ La firma è chiesta per ${v.acc}, non per la tua UP: rifiutata.`,
     signBadData: (v) => `❌ Dati da firmare non validi: ${v.err}. Rifiutata.`,
+    signNoChain: "⚠️ Il messaggio non indica la rete (chainId): la firma può valere su ogni rete dove esiste questa UP.",
     signWrongDomainChain: (v) => `❌ Il messaggio è per la rete con chainId ${v.id}, non per Base: rifiutata.`,
     verifyBad: (v) => `❌ WalletConnect segnala il sito come non affidabile (${v.v}): richiesta rifiutata.`,
     verifyWarn: (v) => `⚠️ Verifica del dominio WalletConnect: ${v.v}. Non è confermato che la richiesta venga dal sito dichiarato.`,
@@ -269,6 +270,8 @@ const I18N = {
     signerChanged: "❌ L'account attivo in MetaMask non è quello verificato: riconnetti e ripeti.",
     sending: "Invio della transazione incapsulata (conferma in MetaMask)...",
     txSent: (v) => `Tx inviata: ${v.hash}`,
+    txNotDelivered: (v) => `⚠️ La transazione È STATA INVIATA (hash sopra), ma la dApp non ha ricevuto la risposta (${v.err}): la sessione era chiusa o scaduta. NON ripeterla: controlla l'esito sull'explorer.`,
+    invalidValue: "❌ Valore della transazione non valido: rifiutata.",
     waiting: "In attesa di conferma su Base...",
     txFailed: "❌ Transazione fallita.",
     ownerOk: (v) => `✅✅ Nome registrato: ${v.name}.base.eth appartiene alla UP (${v.up}).`,
@@ -333,6 +336,7 @@ const I18N = {
     signLegacyRejected: (v) => `❌ ${v.method} rejected: this format can authorise anything, even a transaction, and is never signed.`,
     signWrongAccount: (v) => `❌ The signature is requested for ${v.acc}, not for your UP: rejected.`,
     signBadData: (v) => `❌ Invalid data to sign: ${v.err}. Rejected.`,
+    signNoChain: "⚠️ The message does not state a network (chainId): the signature may be valid on every network where this UP exists.",
     signWrongDomainChain: (v) => `❌ The message is for chainId ${v.id}, not for Base: rejected.`,
     verifyBad: (v) => `❌ WalletConnect flags the site as untrusted (${v.v}): request rejected.`,
     verifyWarn: (v) => `⚠️ WalletConnect domain verification: ${v.v}. It is not confirmed that the request comes from the declared site.`,
@@ -380,6 +384,8 @@ const I18N = {
     signerChanged: "❌ The active MetaMask account is not the one that was checked: reconnect and try again.",
     sending: "Sending the wrapped transaction (confirm in MetaMask)...",
     txSent: (v) => `Tx sent: ${v.hash}`,
+    txNotDelivered: (v) => `⚠️ The transaction WAS SENT (hash above), but the dApp did not receive the answer (${v.err}): the session was closed or expired. Do NOT repeat it: check the outcome on the explorer.`,
+    invalidValue: "❌ Invalid transaction value: rejected.",
     waiting: "Waiting for confirmation on Base...",
     txFailed: "❌ Transaction failed.",
     ownerOk: (v) => `✅✅ Name registered: ${v.name}.base.eth belongs to the UP (${v.up}).`,
@@ -680,7 +686,9 @@ async function handleSendTransaction(topic, id, chainId, tx) {
   const req = decoded.args[0];
   if (req.owner.toLowerCase() !== upAddress.toLowerCase()) return reject(t("reqWrongOwner", { owner: req.owner }));
 
-  const value = BigInt(tx.value || 0);
+  let value;
+  try { value = BigInt(tx.value || 0); } catch (e) { value = -1n; }
+  if (value < 0n) return reject(t("invalidValue"));
   const controller = new ethers.Contract(tx.to, iface, rpc);
   try {
     const [price, available, upBal] = await Promise.all([
@@ -808,6 +816,8 @@ async function handleSignRequest(topic, id, chainId, request, verifyContext) {
       if (domain.chainId !== undefined && domain.chainId !== null && Number(domain.chainId) !== BASE.chainId) {
         return reject(t("signWrongDomainChain", { id: String(domain.chainId) }));
       }
+      // Without a chainId the signature is not bound to a network: it may be valid wherever the UP exists.
+      if (domain.chainId === undefined || domain.chainId === null) warnings.push(t("signNoChain"));
       const types = { ...data.types };
       delete types.EIP712Domain;
       hash = ethers.TypedDataEncoder.hash(domain, types, data.message);
@@ -931,9 +941,11 @@ $("sendBtn").addEventListener("click", async () => {
     const sent = await signer.sendTransaction({ to: kmAddress, data: p.wrapped, gasLimit: p.gasLimit });
     log(t("txSent", { hash: sent.hash }), "line-dim");
     log(BASE.explorer + "tx/" + sent.hash, "line-dim");
-    // The dApp tracks the transaction by its hash; the transaction is the wrapped one.
-    await respondResult(p.topic, p.id, sent.hash);
+    // From here the transaction exists on-chain: never report it as failed or ask to repeat it.
     clearPending();
+    // The dApp tracks the transaction by its hash; the transaction is the wrapped one.
+    try { await respondResult(p.topic, p.id, sent.hash); }
+    catch (e) { log(t("txNotDelivered", { err: e.message || String(e) }), "line-err"); }
 
     log(t("waiting"), "line-dim");
     const receipt = await sent.wait();

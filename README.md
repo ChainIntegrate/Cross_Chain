@@ -112,6 +112,7 @@ After that, `git pull` works exactly as before. The root `.htaccess` stays in th
 | Date | Scope | Result | Report |
 |---|---|---|---|
 | 2026-09-27 | Whole repository and git history (commit `f56dd29`) | 2 High, 8 Medium, 9 Low, 6 Informational. All High and Medium findings are fixed. | [AUDIT.md](AUDIT.md) |
+| 2026-09-29 | WalletConnect pages: `up-wallet.html`, `up-walletconnect-basenames.html`, vendored WalletKit (commit `47642bc`) | 1 Medium, 3 Low (all fixed), 7 Informational (accepted or planned). Tested live on Base and Polygon. | [AUDIT.md §7](AUDIT.md#7-rev-4--walletconnect-pages-up-wallet-and-basenames-demo) |
 
 Main fixes from the 2026-09-27 audit:
 
@@ -126,6 +127,13 @@ Main fixes from the 2026-09-27 audit:
 - Much more explicit private-key handling rules in the guide (steps 1 and 8).
 
 Follow-up on the same date: gas prices are now read directly from the RPC. Before, ethers called a third-party gas-station API on Polygon, and the checks failed when that service was unreachable (AUDIT.md L-09).
+
+Main fixes from the 2026-09-29 review of the WalletConnect pages:
+
+- A transaction already broadcast is never reported as failed: if the answer to the dApp fails (expired session), the page says the transaction was sent and must not be repeated.
+- Malformed transaction values are rejected instead of leaving the dApp waiting.
+- EIP-712 messages without a chainId get a warning (the signature would be valid on every network where the UP exists).
+- Sessions restored from a previous visit for another UP or network are closed.
 
 Open items that need the maintainer to act (site redeploy, CSP, RPC refresh) are listed in [AUDIT.md §5](AUDIT.md#5-residual-risks-and-recommendations).
 
