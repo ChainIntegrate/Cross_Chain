@@ -232,6 +232,10 @@ const PRIVILEGED = P.CHANGEOWNER | P.ADDCONTROLLER | P.EDITPERMISSIONS | P.SUPER
 const PERM_PREFIX = "0x4b80742de2bf82acb3630000"; // LSP6 AddressPermissions:Permissions:<address>
 const ERC1271_MAGIC = "0x1626ba7e";
 const PERMIT2 = "0x000000000022d473030f116ddee9f6b43ac78ba3";
+// LSP17 extension data key: bytes10 prefix + 0x0000 + function selector + zero padding.
+const LSP17_KEY = (selector) => "0xcee78b4094da860110960000" + selector.slice(2) + "00".repeat(16);
+// Receiver hooks called by "safe" ERC-721 / ERC-1155 transfers: a UP answers them only through an LSP17 extension.
+const NFT_HOOKS = { erc721: ["0x150b7a02"], erc1155: ["0xf23a6e61", "0xbc197c81"] };
 
 // Calls the page can decode. Anything else is shown as raw data with a warning.
 const KNOWN_IFACE = new ethers.Interface([
@@ -303,7 +307,7 @@ const I18N = {
 
     // compliance
     cNetwork: "Rete", cRpc: "RPC", cWallet: "MetaMask", cUp: "UP", cKm: "Key Manager", cPerms: "Permessi del controller",
-    cCanCall: "Chiamate a contratti", cCanValue: "Invio di valore", cCanSign: "Firme di messaggi", cUpBal: "Saldo della UP", cGasBal: "Saldo del controller (gas)",
+    cCanCall: "Chiamate a contratti", cCanValue: "Invio di valore", cCanSign: "Firme di messaggi", cNft721: "Ricezione NFT ERC-721", cNft1155: "Ricezione NFT ERC-1155", cUpBal: "Saldo della UP", cGasBal: "Saldo del controller (gas)",
     full: "sì", limited: "solo verso le AllowedCalls", none: "no",
     rpcOk: (v) => `✅ chainId ${v.id}`,
     rpcWrong: (v) => `❌ l'RPC risponde con chainId ${v.id}, atteso ${v.exp}`,
@@ -319,6 +323,9 @@ const I18N = {
     kmOk: (v) => `✅ ${v.addr}`,
     permsNone: "❌ nessuno: questo account non è un controller della UP. Controlla di aver importato in MetaMask la chiave del controller di QUESTA UP.",
     permsList: (v) => `${v.hex} · ${v.names}`,
+    nftYes: (v) => `sì (estensione ${v.ext})`,
+    nftNoExt: "no: la UP non ha un'estensione per ricevere questi NFT. Gli acquisti e i trasferimenti \"sicuri\" verso la UP falliranno (per esempio su OpenSea). Token ERC-20 e moneta della rete funzionano.",
+    nftNoCode: (v) => `no: l'estensione registrata (${v.ext}) non ha codice su questa rete. Gli acquisti e i trasferimenti \"sicuri\" verso la UP falliranno.`,
     gasLow: (v) => `⚠️ ${v.bal}: senza moneta della rete il controller non può pagare il gas`,
     verdictOk: "✅ UP e controller compatibili su questa rete: puoi collegare una dApp.",
     verdictPrivileged: "ℹ️ Questo controller ha anche permessi di amministrazione della UP (controller e permessi): proteggi bene la sua chiave.",
@@ -452,7 +459,7 @@ const I18N = {
     rejectBtn: "Reject the request",
 
     cNetwork: "Network", cRpc: "RPC", cWallet: "MetaMask", cUp: "UP", cKm: "Key Manager", cPerms: "Controller permissions",
-    cCanCall: "Contract calls", cCanValue: "Sending value", cCanSign: "Message signatures", cUpBal: "UP balance", cGasBal: "Controller balance (gas)",
+    cCanCall: "Contract calls", cCanValue: "Sending value", cCanSign: "Message signatures", cNft721: "Receiving ERC-721 NFTs", cNft1155: "Receiving ERC-1155 NFTs", cUpBal: "UP balance", cGasBal: "Controller balance (gas)",
     full: "yes", limited: "only to the AllowedCalls", none: "no",
     rpcOk: (v) => `✅ chainId ${v.id}`,
     rpcWrong: (v) => `❌ the RPC answers with chainId ${v.id}, expected ${v.exp}`,
@@ -468,6 +475,9 @@ const I18N = {
     kmOk: (v) => `✅ ${v.addr}`,
     permsNone: "❌ none: this account is not a controller of the UP. Check that you imported into MetaMask the controller key of THIS UP.",
     permsList: (v) => `${v.hex} · ${v.names}`,
+    nftYes: (v) => `yes (extension ${v.ext})`,
+    nftNoExt: "no: the UP has no extension to receive these NFTs. Purchases and \"safe\" transfers to the UP will fail (for example on OpenSea). ERC-20 tokens and the network's coin work.",
+    nftNoCode: (v) => `no: the registered extension (${v.ext}) has no code on this network. Purchases and \"safe\" transfers to the UP will fail.`,
     gasLow: (v) => `⚠️ ${v.bal}: without the network's coin the controller cannot pay for gas`,
     verdictOk: "✅ UP and controller are compatible on this network: you can connect a dApp.",
     verdictPrivileged: "ℹ️ This controller also has admin permissions on the UP (controllers and permissions): protect its key well.",
@@ -787,6 +797,21 @@ async function computeCompliance() {
     step("cCanCall", [canCall], cls(canCall));
     step("cCanValue", [canValue], cls(canValue));
     step("cCanSign", [canSign], cls(canSign));
+
+    // Can the UP receive NFTs sent with safeTransferFrom? Informational: it does not block the bridge.
+    const upData = new ethers.Contract(up, ["function getData(bytes32) view returns (bytes)"], provider);
+    const hookStatus = async (selectors) => {
+      for (const sel of selectors) {
+        const v = await upData.getData(LSP17_KEY(sel));
+        if (!v || ethers.dataLength(v) < 20) return { ok: false, text: ["nftNoExt"] };
+        const ext = ethers.getAddress(ethers.dataSlice(v, 0, 20));
+        if ((await provider.getCode(ext)) === "0x") return { ok: false, text: ["nftNoCode", { ext }] };
+        if (sel === selectors[selectors.length - 1]) return { ok: true, text: ["nftYes", { ext }] };
+      }
+    };
+    const [h721, h1155] = await Promise.all([hookStatus(NFT_HOOKS.erc721), hookStatus(NFT_HOOKS.erc1155)]);
+    step("cNft721", h721.text, h721.ok ? "ok" : "warn");
+    step("cNft1155", h1155.text, h1155.ok ? "ok" : "warn");
 
     const cur = net.currency || "";
     const [upBal, gasBal] = await Promise.all([provider.getBalance(up), provider.getBalance(signerAddress)]);
