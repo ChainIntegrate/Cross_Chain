@@ -60,18 +60,19 @@
   .verdict { margin-top: 12px; font-weight: 700; }
   .check-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 13.5px; }
   .check-row input { width: auto; }
-  /* Pending request: summary and buttons stay at the bottom of the screen, whatever the scroll. */
-  .action-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: none;
-                background: var(--panel); border-top: 2px solid var(--warn); box-shadow: 0 -6px 18px rgba(0,0,0,0.45); padding: 12px 16px; }
-  .action-bar.show { display: block; }
-  body.has-action { padding-bottom: 190px; }
-  .action-inner { max-width: 760px; margin: 0 auto; }
-  .action-title { font-size: 13px; font-weight: 700; color: var(--warn); }
-  .action-summary { font-family: monospace; font-size: 12px; margin: 6px 0 4px; max-height: 64px; overflow: auto; white-space: pre-wrap; word-break: break-all; }
-  .action-link { background: none; border: none; color: var(--accent); width: auto; padding: 0; margin: 0; font-size: 12px; font-weight: 600; text-decoration: underline; }
-  .action-buttons { display: flex; gap: 8px; }
-  .action-buttons button { margin-top: 8px; }
-  .action-buttons button[hidden] { display: none; }
+  /* Pending request: a modal window with everything needed to decide, and the buttons. */
+  .modal-backdrop { position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,0.72); display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .modal-backdrop[hidden] { display: none; }
+  .modal { background: var(--panel); border: 2px solid var(--warn); border-radius: 12px; width: min(720px, 100%); max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
+  .modal-head { padding: 16px 18px 10px; border-bottom: 1px solid var(--border); }
+  .modal-title { font-size: 16px; font-weight: 700; color: var(--warn); }
+  .modal-sub { font-size: 12.5px; color: var(--text-dim); margin-top: 4px; line-height: 1.5; }
+  .modal-body { padding: 12px 18px; overflow: auto; flex: 1; }
+  .modal-notes { font-family: monospace; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  .modal-foot { padding: 12px 18px 16px; border-top: 1px solid var(--border); display: flex; gap: 10px; }
+  .modal-foot button { margin-top: 0; }
+  .modal-foot button[hidden] { display: none; }
+  body.modal-open { overflow: hidden; }
   .warn-box { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--err); border-radius: 8px; background: rgba(224,90,90,0.08); font-size: 13px; line-height: 1.5; }
   @media (max-width: 560px) { .kv { grid-template-columns: 1fr; } }
 </style>
@@ -143,12 +144,17 @@
   <div id="log" class="line-dim" style="margin-top:10px;"></div>
 </div>
 
-<div class="action-bar" id="actionBar" role="region" aria-live="polite">
-  <div class="action-inner">
-    <div class="action-title" id="actionTitle"></div>
-    <div class="action-summary" id="actionSummary"></div>
-    <button class="action-link" id="actionDetails" data-i18n="actionDetails">Vedi i dettagli della richiesta</button>
-    <div class="action-buttons">
+<div class="modal-backdrop" id="requestModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-head">
+      <div class="modal-title" id="modalTitle"></div>
+      <div class="modal-sub" data-i18n="modalSub">Leggi tutto prima di decidere.</div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-notes" id="modalNotes"></div>
+      <div id="modalDetails"></div>
+    </div>
+    <div class="modal-foot">
       <button id="sendBtn" class="danger" disabled hidden data-i18n="sendBtn">Firma e invia la transazione (irreversibile)</button>
       <button id="signBtn" class="danger" disabled hidden data-i18n="signBtn">Firma il messaggio per la UP</button>
       <button id="rejectBtn" class="secondary" disabled data-i18n="rejectBtn">Rifiuta la richiesta</button>
@@ -254,6 +260,23 @@ const PRIVILEGED = P.CHANGEOWNER | P.ADDCONTROLLER | P.EDITPERMISSIONS | P.SUPER
 const PERM_PREFIX = "0x4b80742de2bf82acb3630000"; // LSP6 AddressPermissions:Permissions:<address>
 const ERC1271_MAGIC = "0x1626ba7e";
 const PERMIT2 = "0x000000000022d473030f116ddee9f6b43ac78ba3";
+// Contracts deployed at the same address on every chain where they exist, checked on the block
+// explorers and in each project's own documentation. Only used as a label, and only when the address
+// has code on the chosen network: the name says who receives the call, not what the call does.
+const KNOWN_CONTRACTS = {
+  "0x000000000022d473030f116ddee9f6b43ac78ba3": { name: "Permit2 (Uniswap)", role: "rolePermit2" },
+  "0x00000000000000adc04c56bf30ac9d3c0aaf14dc": { name: "Seaport 1.5 (OpenSea)", role: "roleMarket" },
+  "0x0000000000000068f116a894984e2db1123eb395": { name: "Seaport 1.6 (OpenSea)", role: "roleMarket" },
+  "0x1231deb6f5749ef6ce6943a275a1d3e7486f4eae": { name: "LI.FI Diamond", role: "roleSwapBridge" },
+  "0x0000000000001ff3684f28c67538d4d072c22734": { name: "0x AllowanceHolder", role: "roleSwap" },
+};
+// "0x… (Name)" when the address is a known contract with code on this network, else the bare address.
+async function labelAddress(provider, addr) {
+  const k = KNOWN_CONTRACTS[String(addr).toLowerCase()];
+  if (!k) return String(addr);
+  try { return (await provider.getCode(addr)) !== "0x" ? `${addr} (${k.name})` : String(addr); } catch (e) { return String(addr); }
+}
+
 // LSP17 extension data key: bytes10 prefix + 0x0000 + function selector + zero padding.
 const LSP17_KEY = (selector) => "0xcee78b4094da860110960000" + selector.slice(2) + "00".repeat(16);
 // Receiver hooks called by "safe" ERC-721 / ERC-1155 transfers: a UP answers them only through an LSP17 extension.
@@ -326,7 +349,9 @@ const I18N = {
     sendBtn: "Firma e invia la transazione (irreversibile)",
     signBtn: "Firma il messaggio per la UP",
     rejectBtn: "Rifiuta la richiesta",
-    actionDetails: "Vedi i dettagli della richiesta",
+    modalSub: "Leggi tutto prima di decidere: controlli, avvisi e dettagli della richiesta. Niente parte senza il tuo clic e la conferma in MetaMask. La richiesta resta anche nello storico della pagina.",
+    knownContract: (v) => `ℹ️ Destinatario noto: ${v.name} — ${v.role}. Il nome dice chi riceve la chiamata, non cosa fa: controlla importi e rete sul sito.`,
+    roleSwapBridge: "aggregatore di swap e bridge tra reti", roleSwap: "contratto degli swap dell'API 0x", roleMarket: "marketplace di OpenSea", rolePermit2: "gestore delle approvazioni di token",
     actionTitleTx: (v) => `Transazione in attesa della tua decisione — ${v.site}`,
     actionTitleSign: (v) => `Firma in attesa della tua decisione — ${v.site}`,
 
@@ -484,7 +509,9 @@ const I18N = {
     sendBtn: "Sign and send the transaction (irreversible)",
     signBtn: "Sign the message for the UP",
     rejectBtn: "Reject the request",
-    actionDetails: "See the request details",
+    modalSub: "Read everything before deciding: checks, warnings and request details. Nothing happens without your click and your confirmation in MetaMask. The request also stays in the page's history.",
+    knownContract: (v) => `ℹ️ Known recipient: ${v.name} — ${v.role}. The name says who receives the call, not what it does: check amounts and network on the site.`,
+    roleSwapBridge: "swap and cross-chain bridge aggregator", roleSwap: "0x API swap contract", roleMarket: "OpenSea marketplace", rolePermit2: "token approval manager",
     actionTitleTx: (v) => `Transaction waiting for your decision — ${v.site}`,
     actionTitleSign: (v) => `Signature waiting for your decision — ${v.site}`,
 
@@ -627,14 +654,23 @@ function setStatus(id, text, cls) {
   span.textContent = text;
   el.appendChild(span);
 }
+// Lines logged since the last separator: the current request's checks, shown again in the modal.
+let requestNotes = [];
 function log(msg, cls) {
   const l = document.createElement("div");
   if (cls) l.className = cls;
   l.textContent = msg;
   $("log").appendChild(l);
+  requestNotes.push([msg, cls]);
+  if (!$("requestModal").hidden) {
+    $("modalNotes").appendChild(l.cloneNode(true));
+    // Follow the progress only after a button was pressed; before that the window stays at the top.
+    if ($("requestModal").dataset.busy === "1") $("modalNotes").lastChild.scrollIntoView({ block: "nearest" });
+  }
 }
 // The log keeps the history of the session: each request starts with a separator.
 function logSeparator() {
+  requestNotes = [];
   const l = document.createElement("div");
   l.className = "line-dim";
   l.textContent = `—— ${new Date().toLocaleTimeString()} ——`;
@@ -1006,23 +1042,32 @@ function clearPending(msg) {
   $("sendBtn").disabled = true;
   $("signBtn").disabled = true;
   $("rejectBtn").disabled = true;
-  $("actionBar").classList.remove("show");
-  document.body.classList.remove("has-action");
+  $("requestModal").hidden = true;
+  $("requestModal").dataset.busy = "";
+  document.body.classList.remove("modal-open");
   if (msg) setStatus("requestBox", msg, "empty");
 }
-// Shows the fixed bar at the bottom of the screen with the pending request and its buttons.
-function showActionBar(kind, title, summary) {
-  $("actionTitle").textContent = title;
-  $("actionSummary").textContent = summary;
+// Opens the modal with the checks of this request, its details and the buttons.
+function showRequestModal(kind, title, rows) {
+  $("modalTitle").textContent = title;
+  const notes = $("modalNotes");
+  notes.textContent = "";
+  for (const [msg, cls] of requestNotes) {
+    const d = document.createElement("div");
+    if (cls) d.className = cls;
+    d.textContent = msg;
+    notes.appendChild(d);
+  }
+  renderKv("modalDetails", rows);
   $("sendBtn").hidden = kind !== "tx";
   $("signBtn").hidden = kind !== "sign";
   $("sendBtn").disabled = kind !== "tx";
   $("signBtn").disabled = kind !== "sign";
   $("rejectBtn").disabled = false;
-  $("actionBar").classList.add("show");
-  document.body.classList.add("has-action");
+  $("requestModal").hidden = false;
+  document.body.classList.add("modal-open");
+  $("requestModal").querySelector(".modal-body").scrollTop = 0;
 }
-$("actionDetails").addEventListener("click", () => $("requestBox").scrollIntoView({ behavior: "smooth", block: "start" }));
 function sessionPeer(topic) {
   const s = walletKit?.getActiveSessions?.()[topic];
   return s ? `${s.peer.metadata.name} (${s.peer.metadata.url})` : "—";
@@ -1087,7 +1132,9 @@ function simError(e) {
 async function describeCall(c, to, value, data, rows, warnings) {
   const cur = c.net.currency || "";
   const toCode = await c.provider.getCode(to);
-  rows.push([t("kTo"), `${to} (${toCode === "0x" ? t("toEoa") : t("toContract")})`, {}]);
+  const known = toCode !== "0x" ? KNOWN_CONTRACTS[to.toLowerCase()] : null;
+  rows.push([t("kTo"), `${to} (${toCode === "0x" ? t("toEoa") : t("toContract")}${known ? " · " + known.name : ""})`, {}]);
+  if (known) warnings.push([t("knownContract", { name: known.name, role: t(known.role) }), "line-dim"]);
   rows.push([t("kValue"), `${ethers.formatEther(value)} ${cur}`, { cls: value > 0n ? "warn" : "" }]);
   if (data === "0x") {
     const op = t("nativeTransfer", { amount: ethers.formatEther(value), cur, to });
@@ -1125,18 +1172,18 @@ async function describeCall(c, to, value, data, rows, warnings) {
   const huge = (x, bits = 256) => x >= (1n << BigInt(bits - 1));
   if (is721 && sig === "approve(address,uint256)") {
     if (a[0] === ethers.ZeroAddress) warnings.push([t("infoRevoke"), "line-dim"]);
-    else warnings.push([t("warnApproval", { who: a[0], what: `NFT id ${a[1]}` }), "line-danger"]);
+    else warnings.push([t("warnApproval", { who: await labelAddress(c.provider, a[0]), what: `NFT id ${a[1]}` }), "line-danger"]);
   } else if (sig === "approve(address,uint256)" || sig === "increaseAllowance(address,uint256)") {
     if (a[1] === 0n && sig.startsWith("approve")) warnings.push([t("infoRevoke"), "line-dim"]);
-    else warnings.push([t("warnApproval", { who: a[0], what: huge(a[1]) ? t("warnUnlimited") : amount(a[1]) }), "line-danger"]);
+    else warnings.push([t("warnApproval", { who: await labelAddress(c.provider, a[0]), what: huge(a[1]) ? t("warnUnlimited") : amount(a[1]) }), "line-danger"]);
   } else if (sig === "approve(address,address,uint160,uint48)") {
-    warnings.push([t("warnApproval", { who: a[1], what: huge(a[2], 160) ? t("warnUnlimited") : `${a[2].toString()} (token ${a[0]})` }), "line-danger"]);
+    warnings.push([t("warnApproval", { who: await labelAddress(c.provider, a[1]), what: huge(a[2], 160) ? t("warnUnlimited") : `${a[2].toString()} (token ${a[0]})` }), "line-danger"]);
   } else if (sig === "setApprovalForAll(address,bool)") {
-    if (a[1]) warnings.push([t("warnApproval", { who: a[0], what: t("warnApprovalAll") }), "line-danger"]);
+    if (a[1]) warnings.push([t("warnApproval", { who: await labelAddress(c.provider, a[0]), what: t("warnApprovalAll") }), "line-danger"]);
     else warnings.push([t("infoRevoke"), "line-dim"]);
   } else if (parsed.name === "authorizeOperator") {
     const what = typeof a[1] === "bigint" ? (huge(a[1]) ? t("warnUnlimited") : amount(a[1])) : `NFT ${a[1]}`;
-    warnings.push([t("warnApproval", { who: a[0], what }), "line-danger"]);
+    warnings.push([t("warnApproval", { who: await labelAddress(c.provider, a[0]), what }), "line-danger"]);
   } else if (sig === "transfer(address,uint256)") {
     warnings.push([t("infoTransfer", { what: amount(a[1]), to: a[0] }), "line-warn"]);
   } else if (parsed.name === "transfer" || parsed.name === "transferFrom" || parsed.name === "safeTransferFrom") {
@@ -1173,7 +1220,8 @@ async function handleSendTransaction(topic, id, c, tx, validation, reject) {
     const op = await describeCall(c, to, value, data, rows, warnings);
     const valueText = `${ethers.formatEther(value)} ${cur}`.trim();
     // The request box is replaced by the next request: the log keeps what was asked.
-    log(t("txSummary", { to, value: valueText, op }), "line-compare");
+    const toLabel = await labelAddress(c.provider, to);
+    log(t("txSummary", { to: toLabel, value: valueText, op }), "line-compare");
     rows.push([t("kKm"), c.km, {}], [t("kSigner"), c.signer, {}]);
     renderKv("requestBox", rows);
     for (const [w, cls] of warnings) log(w, cls);
@@ -1204,9 +1252,9 @@ async function handleSendTransaction(topic, id, c, tx, validation, reject) {
       log(t("simOnlyDone"), "line-warn");
       return respondError(topic, id, "Simulation only: transaction not sent", 5000);
     }
-    pending = { kind: "tx", topic, id, wrapped, gasLimit, c, to, valueText };
-    showActionBar("tx", t("actionTitleTx", { site: sessionPeer(topic) }), t("txSummary", { to, value: valueText, op }));
+    pending = { kind: "tx", topic, id, wrapped, gasLimit, c, to: toLabel, valueText };
     log(t("readyToSend"), "line-warn");
+    showRequestModal("tx", t("actionTitleTx", { site: sessionPeer(topic) }), rows);
   } catch (e) {
     return reject(t("genericError", { err: e.shortMessage || e.message }));
   }
@@ -1218,6 +1266,7 @@ $("sendBtn").addEventListener("click", async () => {
   const p = pending;
   $("sendBtn").disabled = true;
   $("rejectBtn").disabled = true;
+  $("requestModal").dataset.busy = "1";
   const fail = async (msg, reason) => { log(msg, "line-err"); try { await respondError(p.topic, p.id, reason, 5000); } catch (e) { /* ignore */ } clearPending(); };
   try {
     const c = await freshCompliance();
@@ -1313,7 +1362,7 @@ async function handleSignRequest(topic, id, c, request, validation, reject) {
   }
   if (typeof account !== "string" || account.toLowerCase() !== up) return reject(t("signWrongAccount", { acc: String(account) }));
 
-  renderKv("requestBox", [
+  const allRows = [
     [t("kMethod"), request.method, {}],
     [t("kSite"), sessionPeer(topic), {}],
     [t("kVerify"), validation, { cls: validation === "VALID" ? "ok" : "warn" }],
@@ -1323,14 +1372,15 @@ async function handleSignRequest(topic, id, c, request, validation, reject) {
     [t("kKm"), c.km, {}],
     ...rows,
     [t("kHash"), hash, {}],
-  ]);
+  ];
+  renderKv("requestBox", allRows);
   for (const [w, cls] of warnings) log(w, cls);
   log(t("signReplay"), "line-dim");
   log(t("signCompare", { c: compare }), "line-compare");
 
   pending = { kind: "sign", topic, id, method: request.method, walletParams, hash, c };
-  showActionBar("sign", t("actionTitleSign", { site: sessionPeer(topic) }), `${request.method}: ${compare}`);
   log(t("signReady"), "line-warn");
+  showRequestModal("sign", t("actionTitleSign", { site: sessionPeer(topic) }), allRows);
 }
 
 $("signBtn").addEventListener("click", async () => {
@@ -1339,6 +1389,7 @@ $("signBtn").addEventListener("click", async () => {
   const p = pending;
   $("signBtn").disabled = true;
   $("rejectBtn").disabled = true;
+  $("requestModal").dataset.busy = "1";
   const fail = async (msg, reason) => { log(msg, "line-err"); try { await respondError(p.topic, p.id, reason, 5000); } catch (e) { /* ignore */ } clearPending(); };
   try {
     const c = await freshCompliance();
