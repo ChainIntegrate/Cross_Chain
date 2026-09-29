@@ -13,3 +13,7 @@ node tools/decrypt.js
 ```
 
 The script asks for SALT and IV (press Enter to use the public defaults of the UP extension backup format), SECRET (base64, from your backup) and the password, which is not echoed. Run it offline on a trusted machine, then clear your terminal and its scrollback: the output is a private key that gives full control of the profile. **Do not paste your values into the file.**
+
+## `PLAN.md`
+
+Working notes for the maintainer: decisions already taken and next steps (NFT reception test, EURe bridge test, gas-balance email monitor, LSP25 relayer design, open audit items). Not published on the website.

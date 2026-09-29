@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>Ricezione NFT sulla UP — ChainIntegrate</title>
+<link rel="icon" href="favicon.ico">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
+    --text: #e6e8ec; --text-dim: #9aa1ad;
+    --accent: #5b8cff; --ok: #3fbf6f; --warn: #e0a83c; --err: #e05a5a;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+         max-width: 760px; margin: 0 auto; padding: 32px 20px 80px; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .subtitle { color: var(--text-dim); font-size: 13px; margin-bottom: 28px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+  .panel h2 { font-size: 14px; margin: 0 0 14px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.03em; }
+  .note { font-size: 12.5px; color: var(--text-dim); line-height: 1.5; margin-bottom: 12px; }
+  label { display: block; font-size: 13px; color: var(--text-dim); margin: 14px 0 6px; }
+  select, input { width: 100%; background: #10131a; border: 1px solid var(--border); color: var(--text);
+                  border-radius: 6px; padding: 10px 12px; font-size: 14px; font-family: inherit; }
+  button { width: 100%; background: var(--accent); color: white; border: none; border-radius: 6px;
+           padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; }
+  button:disabled { background: #3a3f4b; cursor: not-allowed; }
+  button.danger { background: var(--err); }
+  button.secondary { background: #2a2f3a; }
+  .status-box { background: #10131a; border: 1px solid var(--border); border-radius: 6px; padding: 12px;
+                font-family: monospace; font-size: 12.5px; margin-top: 12px; }
+  .status-box .empty { color: var(--text-dim); }
+  #log { font-family: monospace; font-size: 12.5px; white-space: pre-wrap; word-break: break-all; line-height: 1.6; }
+  .line-ok { color: var(--ok); } .line-warn { color: var(--warn); } .line-err { color: var(--err); } .line-dim { color: var(--text-dim); }
+  .line-compare { color: var(--warn); font-weight: 700; border: 1px solid var(--warn); border-radius: 6px; padding: 8px 10px; margin: 6px 0; }
+  .brand-row { margin-bottom: 24px; }
+  .brand-logo { display: block; width: 100%; height: auto; border-radius: 10px; }
+  .top-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .lang-btn { width: auto; background: #2a2f3a; padding: 6px 14px; font-size: 12px; margin-top: 0; flex-shrink: 0; }
+  .site-footer { margin-top: 40px; padding: 18px 20px; background: #f5f6f8; border: 1px solid #e3e5ea; border-radius: 10px; color: #4b4f58; }
+  .footer-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .footer-logo { height: 48px; width: auto; flex-shrink: 0; }
+  .footer-text { font-size: 13px; line-height: 1.6; }
+  .footer-li { display: inline-flex; vertical-align: middle; margin: 0 2px; }
+  .site-footer a { color: #2563eb; text-decoration: none; font-weight: 600; }
+  .kv { display: grid; grid-template-columns: 210px 1fr; gap: 6px 12px; font-size: 13px; margin-top: 10px; }
+  .kv .k { color: var(--text-dim); }
+  .kv .v { font-family: monospace; word-break: break-all; }
+  .kv .v.ok { color: var(--ok); } .kv .v.warn { color: var(--warn); } .kv .v.err { color: var(--err); }
+  .verdict { margin-top: 12px; font-weight: 700; }
+  .check-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 13.5px; }
+  .check-row input { width: auto; }
+  .warn-box { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--err); border-radius: 8px; background: rgba(224,90,90,0.08); font-size: 13px; line-height: 1.5; }
+  .plan { font-family: monospace; font-size: 12.5px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  @media (max-width: 560px) { .kv { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="brand-row">
+  <img src="banner.png" alt="ChainIntegrate" class="brand-logo" onerror="this.style.display='none'">
+</div>
+
+<div class="top-row">
+  <div>
+    <h1 data-i18n="h1">Ricezione NFT sulla UP (sperimentale)</h1>
+    <div class="subtitle" data-i18n="subtitle"></div>
+  </div>
+  <button class="lang-btn" id="langToggle" data-i18n="langToggleBtn">English</button>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel0Title">0 · Come funziona</h2>
+  <div class="note" data-i18n-html="panel0Note"></div>
+  <div class="warn-box" data-i18n-html="disclaimer"></div>
+  <div class="check-row"><input type="checkbox" id="ackRisk"><label for="ackRisk" style="margin:0; color: var(--text);" data-i18n="ackLabel">Ho letto e accetto</label></div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel1Title">1 · Rete</h2>
+  <input type="text" id="networkFilter" data-i18n-placeholder="networkFilterPlaceholder" placeholder="Filtra per nome...">
+  <select id="network" style="margin-top:8px;"></select>
+  <div id="customRpcWrap" style="display:none;">
+    <label data-i18n="customRpcLabel">RPC URL custom</label>
+    <input type="text" id="customRpc" placeholder="https://...">
+    <label data-i18n="customExplorerLabel">Explorer URL custom (opzionale)</label>
+    <input type="text" id="customExplorer" placeholder="https://.../tx/">
+  </div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel2Title">2 · La tua UP</h2>
+  <button id="connectUp" class="secondary" data-i18n="connectUpBtn">Leggi l'indirizzo dall'estensione UP</button>
+  <label for="upAddress" data-i18n="upAddressLabel">Indirizzo della UP</label>
+  <input type="text" id="upAddress" placeholder="0x...">
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel3Title">3 · Controller (MetaMask) e verifica</h2>
+  <div class="note" data-i18n="panel3Note"></div>
+  <button id="connectSigner" data-i18n="connectSignerBtn">Connetti MetaMask (controller)</button>
+  <div class="status-box" id="checkBox"><span class="empty" data-i18n="checkIdle">La verifica parte da sola quando rete, UP e MetaMask sono impostati.</span></div>
+  <button id="recheckBtn" class="secondary" data-i18n="recheckBtn">Ricontrolla</button>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel4Title">4 · Azioni</h2>
+  <div class="note" data-i18n-html="panel4Note"></div>
+  <button id="publishBtn" disabled data-i18n="publishBtn">Pubblica l'estensione su questa rete</button>
+  <button id="prepareBtn" disabled data-i18n="prepareBtn">Prepara e simula l'abilitazione</button>
+  <div class="status-box plan" id="planBox"><span class="empty" data-i18n="noPlan">Nessuna operazione preparata.</span></div>
+  <div class="check-row" id="replaceRow" style="display:none;"><input type="checkbox" id="ackReplace"><label for="ackReplace" style="margin:0; color: var(--warn);" data-i18n="ackReplaceLabel">Ho capito che sostituisco le estensioni esistenti indicate sopra</label></div>
+  <button id="enableBtn" class="danger" disabled data-i18n="enableBtn">Firma e invia (una sola transazione)</button>
+  <div id="log" class="line-dim" style="margin-top:10px;"></div>
+</div>
+
+<div class="site-footer">
+  <div class="footer-row">
+    <img src="logo.png" alt="ChainIntegrate" class="footer-logo" onerror="this.style.display='none'">
+    <div class="footer-text" data-i18n-html="footerHtml"></div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+// Same list as the other tool pages (copy; to be replaced by a shared chains.js).
+const CHAINS = [
+  { key: "0g", name: "0G", chainId: 16661, rpc: "https://evmrpc.0g.ai", explorer: "https://chainscan.0g.ai/tx/", currency: "0G" },
+  { key: "apechain", name: "ApeChain", chainId: 33139, rpc: "https://rpc.apechain.com", explorer: "https://apescan.io/tx/", currency: "APE" },
+  { key: "arbitrum-one", name: "Arbitrum One", chainId: 42161, rpc: "https://arb1.arbitrum.io/rpc", explorer: "https://arbiscan.io/tx/", currency: "ETH" },
+  { key: "avalanche-c-chain", name: "Avalanche C-Chain", chainId: 43114, rpc: "https://api.avax.network/ext/bc/C/rpc", explorer: "https://snowscan.xyz/tx/", currency: "AVAX" },
+  { key: "base", name: "Base", chainId: 8453, rpc: "https://mainnet.base.org", explorer: "https://basescan.org/tx/", currency: "ETH" },
+  { key: "berachain", name: "Berachain", chainId: 80094, rpc: "https://rpc.berachain.com", explorer: "https://berascan.com/tx/", currency: "BERA" },
+  { key: "blast", name: "Blast", chainId: 81457, rpc: "https://rpc.blast.io", explorer: "https://blastscan.io/tx/", currency: "ETH" },
+  { key: "bnb-smart-chain", name: "BNB Smart Chain", chainId: 56, rpc: "https://bsc-dataseed1.bnbchain.org", explorer: "https://bscscan.com/tx/", currency: "BNB" },
+  { key: "celo", name: "Celo", chainId: 42220, rpc: "https://forno.celo.org", explorer: "https://celoscan.io/tx/", currency: "CELO" },
+  { key: "chiliz", name: "Chiliz", chainId: 88888, rpc: "https://rpc.chiliz.com", explorer: "https://chiliscan.com/tx/", currency: "CHZ" },
+  { key: "conflux-evm-espace", name: "Conflux EVM eSpace", chainId: 1030, rpc: "https://evm.confluxrpc.com", explorer: "https://evm.confluxscan.net/tx/", currency: "CFX" },
+  { key: "core-blockchain", name: "Core Blockchain", chainId: 1116, rpc: "https://rpc.coredao.org", explorer: "https://scan.coredao.org/tx/", currency: "CORE" },
+  { key: "coti", name: "COTI", chainId: 2632500, rpc: "https://mainnet.coti.io/rpc", explorer: "https://mainnet.cotiscan.io/tx/", currency: "COTI" },
+  { key: "cronos", name: "Cronos", chainId: 25, rpc: "https://evm.cronos.org", explorer: "https://explorer.cronos.org/tx/", currency: "CRO" },
+  { key: "degen-chain", name: "Degen Chain", chainId: 666666666, rpc: "https://rpc.degen.tips", explorer: null, currency: "DEGEN" },
+  { key: "ethereum", name: "Ethereum", chainId: 1, rpc: "https://ethereum-rpc.publicnode.com", explorer: "https://etherscan.io/tx/", currency: "ETH" },
+  { key: "ethereum-classic", name: "Ethereum Classic", chainId: 61, rpc: "https://etc.rivet.link", explorer: "https://etc.blockscout.com/tx/", currency: "ETC" },
+  { key: "etherlink", name: "Etherlink", chainId: 42793, rpc: "https://node.mainnet.etherlink.com", explorer: "https://explorer.etherlink.com/tx/", currency: "XTZ" },
+  { key: "flare", name: "Flare", chainId: 14, rpc: "https://flare-api.flare.network/ext/C/rpc", explorer: "https://flare-explorer.flare.network/tx/", currency: "FLR" },
+  { key: "gnosis", name: "Gnosis", chainId: 100, rpc: "https://rpc.gnosischain.com", explorer: "https://gnosisscan.io/tx/", currency: "XDAI" },
+  { key: "gravity-alpha", name: "Gravity Alpha", chainId: 1625, rpc: "https://rpc.gravity.xyz", explorer: "https://explorer.gravity.xyz/tx/", currency: "G" },
+  { key: "hashkey-chain", name: "HashKey Chain", chainId: 177, rpc: "https://mainnet.hsk.xyz", explorer: "https://hsk.blockscout.com/tx/", currency: "HSK" },
+  { key: "immutable-zkevm", name: "Immutable zkEVM", chainId: 13371, rpc: "https://rpc.immutable.com", explorer: "https://explorer.immutable.com/tx/", currency: "IMX" },
+  { key: "ink", name: "Ink", chainId: 57073, rpc: "https://rpc-gel.inkonchain.com", explorer: "https://explorer.inkonchain.com/tx/", currency: "ETH" },
+  { key: "katana", name: "Katana", chainId: 747474, rpc: "https://rpc.katana.network", explorer: "https://katanascan.com/tx/", currency: "ETH" },
+  { key: "kava-evm", name: "Kava EVM", chainId: 2222, rpc: "https://evm.kava.io", explorer: "https://kavascan.com/tx/", currency: "KAVA" },
+  { key: "lens", name: "Lens", chainId: 232, rpc: "https://rpc.lens.xyz", explorer: "https://explorer.lens.xyz/tx/", currency: "GHO" },
+  { key: "linea", name: "Linea", chainId: 59144, rpc: "https://rpc.linea.build", explorer: "https://lineascan.build/tx/", currency: "ETH" },
+  { key: "mantle", name: "Mantle", chainId: 5000, rpc: "https://rpc.mantle.xyz", explorer: "https://mantlescan.xyz/tx/", currency: "MNT" },
+  { key: "megaeth", name: "MegaETH", chainId: 4326, rpc: "https://mainnet.megaeth.com/rpc", explorer: "https://mega.etherscan.io/tx/", currency: "ETH" },
+  { key: "mode", name: "Mode", chainId: 34443, rpc: "https://mainnet.mode.network", explorer: "https://explorer.mode.network/tx/", currency: "ETH" },
+  { key: "monad", name: "Monad", chainId: 143, rpc: "https://rpc.monad.xyz", explorer: "https://monadvision.com/tx/", currency: "MON" },
+  { key: "moonbeam", name: "Moonbeam", chainId: 1284, rpc: "https://rpc.api.moonbeam.network", explorer: "https://moonbeam.moonscan.io/tx/", currency: "GLMR" },
+  { key: "moonriver", name: "Moonriver", chainId: 1285, rpc: "https://rpc.api.moonriver.moonbeam.network", explorer: "https://moonriver.moonscan.io/tx/", currency: "MOVR" },
+  { key: "optimism", name: "Optimism", chainId: 10, rpc: "https://mainnet.optimism.io", explorer: "https://optimistic.etherscan.io/tx/", currency: "ETH" },
+  { key: "plasma", name: "Plasma", chainId: 9745, rpc: "https://rpc.plasma.to", explorer: "https://plasmascan.to/tx/", currency: "XPL" },
+  { key: "plume", name: "Plume", chainId: 98866, rpc: "https://rpc.plume.org", explorer: "https://explorer.plume.org/tx/", currency: "PLUME" },
+  { key: "polygon", name: "Polygon", chainId: 137, rpc: "https://polygon.drpc.org", explorer: "https://polygonscan.com/tx/", currency: "POL" },
+  { key: "pulsechain", name: "Pulsechain", chainId: 369, rpc: "https://rpc.pulsechain.com", explorer: "https://ipfs.scan.pulsechain.com/tx/", currency: "PLS" },
+  { key: "ronin", name: "Ronin", chainId: 2020, rpc: "https://api.roninchain.com/rpc", explorer: "https://app.roninchain.com/tx/", currency: "RON" },
+  { key: "scroll", name: "Scroll", chainId: 534352, rpc: "https://rpc.scroll.io", explorer: "https://scrollscan.com/tx/", currency: "ETH" },
+  { key: "somnia", name: "Somnia", chainId: 5031, rpc: "https://api.infra.mainnet.somnia.network", explorer: "https://mainnet.somnia.w3us.site/tx/", currency: "SOMI" },
+  { key: "soneium", name: "Soneium", chainId: 1868, rpc: "https://rpc.soneium.org", explorer: "https://soneium.blockscout.com/tx/", currency: "ETH" },
+  { key: "sonic", name: "Sonic", chainId: 146, rpc: "https://rpc.soniclabs.com", explorer: "https://sonicscan.org/tx/", currency: "S" },
+  { key: "stable", name: "Stable", chainId: 988, rpc: "https://rpc.stable.xyz", explorer: "https://stablescan.xyz/tx/", currency: "USDT0" },
+  { key: "story", name: "Story", chainId: 1514, rpc: "https://mainnet.datarpc.io", explorer: "https://datanetscan.io/tx/", currency: "DATA" },
+  { key: "stratis-xertra", name: "Stratis Xertra", chainId: 105105, rpc: "https://rpc.xertra.com", explorer: "https://explorer.xertra.com/tx/", currency: "STRAX" },
+  { key: "taiko-alethia", name: "Taiko Alethia", chainId: 167000, rpc: "https://rpc.mainnet.taiko.xyz", explorer: "https://taikoscan.io/tx/", currency: "ETH" },
+  { key: "telos-evm", name: "Telos EVM", chainId: 40, rpc: "https://rpc.telos.net", explorer: "https://teloscan.io/tx/", currency: "TLOS" },
+  { key: "tempo", name: "Tempo", chainId: 4217, rpc: "https://rpc.mainnet.tempo.xyz", explorer: "https://explore.tempo.xyz/tx/", currency: "USD" },
+  { key: "unichain", name: "Unichain", chainId: 130, rpc: "https://mainnet.unichain.org", explorer: "https://uniscan.xyz/tx/", currency: "ETH" },
+  { key: "world-chain", name: "World Chain", chainId: 480, rpc: "https://worldchain-mainnet.g.alchemy.com/public", explorer: "https://worldscan.org/tx/", currency: "ETH" },
+  { key: "x-layer", name: "X Layer", chainId: 196, rpc: "https://rpc.xlayer.tech", explorer: "https://www.oklink.com/xlayer/tx/", currency: "OKB" },
+  { key: "xai", name: "Xai", chainId: 660279, rpc: "https://xai-chain.net/rpc", explorer: "https://explorer.xai-chain.net/tx/", currency: "XAI" },
+  { key: "xdc-network", name: "XDC Network", chainId: 50, rpc: "https://erpc.xinfin.network", explorer: "https://xdcscan.com/tx/", currency: "XDC" },
+  { key: "zetachain", name: "ZetaChain", chainId: 7000, rpc: "https://zetachain-evm.blockpi.network/v1/rpc/public", explorer: "https://zetascan.com/tx/", currency: "ZETA" },
+  { key: "zksync", name: "zkSync", chainId: 324, rpc: "https://mainnet.era.zksync.io", explorer: "https://explorer.zksync.io/tx/", currency: "ETH" },
+  { key: "zora", name: "Zora", chainId: 7777777, rpc: "https://rpc.zora.energy", explorer: "https://explorer.zora.energy/tx/", currency: "ETH" },
+  { key: "arbitrum-sepolia", name: "Arbitrum Sepolia (testnet)", chainId: 421614, rpc: "https://sepolia-rollup.arbitrum.io/rpc", explorer: "https://sepolia.arbiscan.io/tx/", currency: "ETH" },
+  { key: "base-sepolia", name: "Base Sepolia (testnet)", chainId: 84532, rpc: "https://sepolia.base.org", explorer: "https://sepolia.basescan.org/tx/", currency: "ETH" },
+  { key: "ethereum-hoodi", name: "Ethereum Hoodi (testnet)", chainId: 560048, rpc: "https://rpc.hoodi.ethpandaops.io", explorer: "https://light-hoodi.beaconcha.in/tx/", currency: "ETH" },
+  { key: "ethereum-sepolia", name: "Ethereum Sepolia (testnet)", chainId: 11155111, rpc: "https://rpc.sepolia.org", explorer: "https://sepolia.etherscan.io/tx/", currency: "ETH" },
+  { key: "polygon-amoy", name: "Polygon Amoy (testnet)", chainId: 80002, rpc: "https://rpc-amoy.polygon.technology", explorer: "https://amoy.polygonscan.com/tx/", currency: "POL" },
+  { key: "zksync-sepolia", name: "zkSync Sepolia (testnet)", chainId: 300, rpc: "https://sepolia.era.zksync.dev", explorer: "https://sepolia.explorer.zksync.io/tx/", currency: "ETH" },
+  { key: "sei", name: "Sei", chainId: 1329, rpc: "https://evm-rpc.sei-apis.com", explorer: "https://seitrace.com/tx/", currency: "SEI" },
+  { key: "custom", name: "Custom RPC...", chainId: null, rpc: null, explorer: null, currency: "?" },
+];
+
+// ==================== EXTENSION ====================
+// contracts/NFTReceiverExtension.sol, compiled as documented in contracts/README.md (solc 0.8.24,
+// optimizer 200 runs, evmVersion paris, no metadata hash) and published through Nick's deterministic
+// deployment proxy with salt 0: same address on every chain. contracts/NFTReceiverExtension.json holds
+// the same values.
+const NICK_FACTORY = "0x4e59b44847b379578588920cA78FbF26c0B4956C";
+const EXT_SALT = "0x0000000000000000000000000000000000000000000000000000000000000000";
+const EXT_INIT_CODE = "0x608060405234801561001057600080fd5b506103c2806100206000396000f3fe608060405234801561001057600080fd5b506004361061004c5760003560e01c806301ffc9a714610051578063150b7a0214610079578063bc197c81146100b1578063f23a6e61146100d3575b600080fd5b61006461005f366004610145565b6100f3565b60405190151581526020015b60405180910390f35b6100986100873660046101db565b630a85bd0160e11b95945050505050565b6040516001600160e01b03199091168152602001610070565b6100986100bf36600461028f565b63bc197c8160e01b98975050505050505050565b6100986100e136600461034a565b63f23a6e6160e01b9695505050505050565b60006301ffc9a760e01b6001600160e01b0319831614806101245750630a85bd0160e11b6001600160e01b03198316145b8061013f5750630271189760e51b6001600160e01b03198316145b92915050565b60006020828403121561015757600080fd5b81356001600160e01b03198116811461016f57600080fd5b9392505050565b80356001600160a01b038116811461018d57600080fd5b919050565b60008083601f8401126101a457600080fd5b50813567ffffffffffffffff8111156101bc57600080fd5b6020830191508360208285010111156101d457600080fd5b9250929050565b6000806000806000608086880312156101f357600080fd5b6101fc86610176565b945061020a60208701610176565b935060408601359250606086013567ffffffffffffffff81111561022d57600080fd5b61023988828901610192565b969995985093965092949392505050565b60008083601f84011261025c57600080fd5b50813567ffffffffffffffff81111561027457600080fd5b6020830191508360208260051b85010111156101d457600080fd5b60008060008060008060008060a0898b0312156102ab57600080fd5b6102b489610176565b97506102c260208a01610176565b9650604089013567ffffffffffffffff808211156102df57600080fd5b6102eb8c838d0161024a565b909850965060608b013591508082111561030457600080fd5b6103108c838d0161024a565b909650945060808b013591508082111561032957600080fd5b506103368b828c01610192565b999c989b5096995094979396929594505050565b60008060008060008060a0878903121561036357600080fd5b61036c87610176565b955061037a60208801610176565b94506040870135935060608701359250608087013567ffffffffffffffff8111156103a457600080fd5b6103b089828a01610192565b979a969950949750929593949250505056";
+const EXT_RUNTIME_HASH = "0xed365f94b64256c4c81311071c739de4a006d09676dc9e2bd5cd49b346ddb955";
+const EXT_ADDRESS = "0x7F68e74483867058C806218aa05aB5527984C03e";
+
+// Selectors the UP forwards to the extension (LSP17), in this order.
+const HOOKS = [
+  { sel: "0x150b7a02", name: "onERC721Received" },
+  { sel: "0xf23a6e61", name: "onERC1155Received" },
+  { sel: "0xbc197c81", name: "onERC1155BatchReceived" },
+  { sel: "0x01ffc9a7", name: "supportsInterface" },
+];
+// LSP17 extension data key: bytes10 prefix + 0x0000 + function selector + zero padding.
+const LSP17_KEY = (selector) => "0xcee78b4094da860110960000" + selector.slice(2) + "00".repeat(16);
+const PERM_PREFIX = "0x4b80742de2bf82acb3630000"; // LSP6 AddressPermissions:Permissions:<address>
+
+// LSP6 permission bits, as in @lukso/lsp6-contracts LSP6Constants.sol (bits 0..22).
+const PERMISSION_BITS = [
+  "CHANGEOWNER","ADDCONTROLLER","EDITPERMISSIONS","ADDEXTENSIONS","CHANGEEXTENSIONS",
+  "ADDUNIVERSALRECEIVERDELEGATE","CHANGEUNIVERSALRECEIVERDELEGATE","REENTRANCY",
+  "SUPER_TRANSFERVALUE","TRANSFERVALUE","SUPER_CALL","CALL","SUPER_STATICCALL","STATICCALL",
+  "SUPER_DELEGATECALL","DELEGATECALL","DEPLOY","SUPER_SETDATA","SETDATA","ENCRYPT","DECRYPT",
+  "SIGN","EXECUTE_RELAY_CALL"
+];
+const P = Object.fromEntries(PERMISSION_BITS.map((n, i) => [n, 1n << BigInt(i)]));
+const permNames = (perms) => PERMISSION_BITS.filter((n) => perms & P[n]).join(", ") || "—";
+
+const UP_IFACE = new ethers.Interface([
+  "function setData(bytes32 dataKey, bytes dataValue)",
+  "function setDataBatch(bytes32[] dataKeys, bytes[] dataValues)",
+  "function getData(bytes32 dataKey) view returns (bytes)",
+  "function getDataBatch(bytes32[] dataKeys) view returns (bytes[])",
+  "function owner() view returns (address)",
+  "function supportsInterface(bytes4 interfaceId) view returns (bool)",
+]);
+const KM_IFACE = new ethers.Interface([
+  "function execute(bytes payload) payable returns (bytes)",
+  "function executeBatch(uint256[] values, bytes[] payloads) payable returns (bytes[])",
+  "error NotAuthorised(address from, string permission)",
+  "error NoPermissionsSet(address from)",
+  "error InvalidDataValuesForDataKeys(bytes32 dataKey, bytes dataValue)",
+]);
+
+// ==================== I18N ====================
+let LANG = "it";
+const I18N = {
+  it: {
+    pageTitle: "Ricezione NFT sulla UP — ChainIntegrate",
+    h1: "Ricezione NFT sulla UP (sperimentale)",
+    subtitle: "Permetti alla tua Universal Profile di ricevere NFT ERC-721 ed ERC-1155 su una rete dove l'hai rideployata (per esempio acquisti su OpenSea).",
+    langToggleBtn: "English",
+    panel0Title: "0 · Come funziona",
+    panel0Note: "Quando un NFT standard viene consegnato con un \"trasferimento sicuro\", il contratto del token chiede al destinatario se sa riceverlo. Una UP risponde solo tramite un'<b>estensione</b> (LSP17) registrata nei suoi dati; le UP rideployate di solito non ne hanno, e gli acquisti falliscono (\"il wallet non può ricevere\").<br><br>Questa pagina: <b>(1)</b> se serve, pubblica sulla rete l'estensione <code>NFTReceiverExtension</code>, un contratto minimo senza proprietario, dati o fondi, sempre allo stesso indirizzo su ogni rete; <b>(2)</b> la registra sulla UP con <b>una sola transazione atomica</b> del Key Manager: concede al controller il permesso di aggiungere estensioni, registra l'estensione, e riporta i permessi del controller <b>esattamente</b> a quelli di prima. Se una parte fallisce, non cambia niente. Prima di firmare vedi l'elenco delle operazioni e il risultato della simulazione.",
+    disclaimer: "<b>⚠️ Leggi prima di usare questa pagina</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Strumento sperimentale, non sottoposto ad audit esterno.</b> Transazioni reali e irreversibili.</li><li><b>Modifica la configurazione della UP su questa rete:</b> aggiunge le chiavi di estensione per ricevere NFT (su altre reti va ripetuta). I permessi del controller restano uguali a prima.</li><li><b>L'estensione</b> risponde solo alle chiamate di ricezione NFT e a <code>supportsInterface</code>: viene chiamata dalla UP con una chiamata normale, quindi non può leggere né modificare dati o fondi della UP. Sorgente, bytecode e istruzioni per verificarlo sono nella cartella <code>contracts/</code> del repository.</li><li><b>Ricevere NFT</b> significa anche poter ricevere NFT indesiderati (spam): non dare mai approvazioni o firme per NFT che non conosci.</li><li><b>Nessuna garanzia.</b> Software \"così com'è\" (licenza MIT): lo usi a tuo rischio. ChainIntegrate non risponde di perdite o danni. Nessuna affiliazione con LUKSO o altri.</li><li><b>Questa pagina non chiede mai chiavi private</b>: firmi tutto in MetaMask.</li></ul>",
+    ackLabel: "Ho letto e accetto: uso questo strumento a mio rischio.",
+    ackRequired: "Prima accetta le condizioni nel pannello 0.",
+    panel1Title: "1 · Rete",
+    networkFilterPlaceholder: "Filtra per nome... (es. base, polygon, arbitrum)",
+    customRpcLabel: "RPC URL custom",
+    customExplorerLabel: "Explorer URL custom (opzionale)",
+    customNetName: "Rete custom",
+    panel2Title: "2 · La tua UP",
+    connectUpBtn: "Leggi l'indirizzo dall'estensione UP",
+    upAddressLabel: "Indirizzo della UP",
+    panel3Title: "3 · Controller (MetaMask) e verifica",
+    panel3Note: "MetaMask con la chiave del controller della UP, sulla rete scelta. Paga il gas. La verifica parte da sola e si ripete se cambi rete, UP, account o rete in MetaMask.",
+    connectSignerBtn: "Connetti MetaMask (controller)",
+    checkIdle: "La verifica parte da sola quando rete, UP e MetaMask sono impostati.",
+    recheckBtn: "Ricontrolla",
+    panel4Title: "4 · Azioni",
+    panel4Note: "Se l'estensione non esiste ancora su questa rete, pubblicala (chiunque può farlo, costa solo gas, non dà controllo su nessuna UP). Poi prepara l'abilitazione: la pagina mostra ogni operazione e la simula; solo dopo puoi firmare.",
+    publishBtn: "Pubblica l'estensione su questa rete",
+    prepareBtn: "Prepara e simula l'abilitazione",
+    noPlan: "Nessuna operazione preparata.",
+    ackReplaceLabel: "Ho capito che sostituisco le estensioni esistenti indicate sopra",
+    enableBtn: "Firma e invia (una sola transazione)",
+
+    cNetwork: "Rete", cRpc: "RPC", cWallet: "MetaMask", cUp: "UP", cKm: "Key Manager", cPerms: "Permessi del controller",
+    cExt: "Estensione su questa rete", cFactory: "Factory deterministica", cHooks: "Stato sulla UP",
+    rpcOk: (v) => `✅ chainId ${v.id}`,
+    rpcWrong: (v) => `❌ l'RPC risponde con chainId ${v.id}, atteso ${v.exp}`,
+    rpcFail: (v) => `❌ RPC non raggiungibile: ${v.err}`,
+    walletMissing: "❌ non connesso",
+    walletOk: (v) => `✅ ${v.addr} · chainId ${v.id}`,
+    walletWrong: (v) => `❌ ${v.addr} è sulla rete con chainId ${v.id}: passa a chainId ${v.exp} in MetaMask`,
+    walletUnknown: "❌ impossibile leggere la rete di MetaMask",
+    upMissing: "❌ indirizzo mancante o non valido",
+    upNotDeployed: "❌ non deployata su questa rete",
+    upOk: (v) => `✅ ${v.addr}`,
+    kmBad: (v) => `❌ l'owner della UP (${v.addr}) non è un contratto su questa rete`,
+    kmOk: (v) => `✅ ${v.addr}`,
+    permsNone: "❌ nessuno: questo account non è un controller della UP. Importa in MetaMask la chiave del controller di QUESTA UP.",
+    permsList: (v) => `${v.hex} · ${v.names}`,
+    extOk: (v) => `✅ pubblicata (${v.addr}), codice verificato`,
+    extMissing: (v) => `⚠️ non ancora pubblicata su questa rete (${v.addr}): usa "Pubblica l'estensione"`,
+    extWrongCode: (v) => `❌ all'indirizzo ${v.addr} c'è un codice diverso da quello atteso: non usarla`,
+    factoryOk: "✅ presente",
+    factoryMissing: "❌ assente su questa rete: l'estensione non si può pubblicare allo stesso indirizzo",
+    hookOk: (v) => `${v.name}: ✅ già registrata`,
+    hookEmpty: (v) => `${v.name}: da aggiungere`,
+    hookOther: (v) => `${v.name}: ⚠️ c'è un'altra estensione (${v.ext}), verrebbe sostituita`,
+    verdictDone: "✅ La UP può già ricevere NFT ERC-721 ed ERC-1155 su questa rete. Non serve fare altro.",
+    verdictNeedPublish: "Pubblica prima l'estensione su questa rete (pannello 4).",
+    verdictReady: "✅ Pronto: prepara e simula l'abilitazione (pannello 4).",
+    verdictNoEdit: (v) => `❌ Al controller mancano i permessi ${v.missing} e non ha EDITPERMISSIONS per concederseli: serve un controller con più permessi.`,
+    verdictFail: "❌ Verifica non superata: correggi il punto in rosso qui sopra.",
+    verdictMissing: "Completa i campi mancanti: la verifica ripartirà da sola.",
+    checkRunning: "Verifica in corso...",
+
+    extNotFound: "Estensione Universal Profile non trovata.",
+    connectionRejected: "Connessione rifiutata o fallita.",
+    noSignerFound: "Nessun wallet firmatario trovato (es. MetaMask).",
+    genericError: (v) => `Errore: ${v.err}`,
+    checkFirst: "La verifica del pannello 3 non è verde: aggiornala prima di continuare.",
+    publishing: "Pubblicazione dell'estensione tramite la factory deterministica (conferma in MetaMask)...",
+    publishSim: "Simulazione della pubblicazione...",
+    publishSimFail: (v) => `❌ La simulazione della pubblicazione fallisce: ${v.err}.`,
+    txSent: (v) => `Tx inviata: ${v.hash}`,
+    waiting: "In attesa di conferma...",
+    txFailed: "❌ Transazione fallita on-chain.",
+    publishOk: "✅ Estensione pubblicata e codice verificato.",
+    publishBadCode: "❌ Dopo la pubblicazione il codice all'indirizzo non corrisponde: non usarla e segnala il problema.",
+    planTitle: (v) => `Operazioni in UNA transazione, firmata dal controller ${v.signer} e inviata al Key Manager ${v.km}:`,
+    planGrant: (v) => `1. Concede temporaneamente al controller: ${v.bits} (permessi ${v.from} → ${v.to})`,
+    planSet: (v) => `${v.n}. Registra l'estensione ${v.ext} sulla UP per: ${v.names}`,
+    planRestore: (v) => `${v.n}. Riporta i permessi del controller esattamente a ${v.from}`,
+    planNoGrant: "Il controller ha già i permessi necessari: nessuna modifica ai permessi.",
+    planAtomic: "Se una qualsiasi operazione fallisce, l'intera transazione viene annullata e non cambia nulla.",
+    planReplaceWarn: "⚠️ Alcune chiavi hanno già un'altra estensione: verrà sostituita. Spunta la conferma qui sotto per procedere.",
+    simulating: "Simulazione della transazione...",
+    simOk: (v) => `✅ Simulazione riuscita. Gas stimato: ${v.gas}.`,
+    simFail: (v) => `❌ La simulazione fallisce: ${v.err}. Niente viene inviato.`,
+    signerNoGas: (v) => `❌ Il controller non ha abbastanza fondi per il gas: servono circa ${v.need}, ne ha ${v.have}.`,
+    readyToSign: "Pronto. Rileggi le operazioni qui sopra, poi premi \"Firma e invia\" e conferma in MetaMask (destinatario: il Key Manager della UP).",
+    replaceAckRequired: "Spunta la conferma sulla sostituzione delle estensioni esistenti.",
+    stale: "❌ Qualcosa è cambiato dopo la preparazione (rete, account o dati della UP): prepara di nuovo.",
+    sending: "Invio della transazione (conferma in MetaMask)...",
+    verifying: "Verifica finale sulla UP...",
+    finalOk: "✅✅ Fatto: la UP ora può ricevere NFT ERC-721 ed ERC-1155 su questa rete, e i permessi del controller sono uguali a prima.",
+    finalBad: (v) => `⚠️ Transazione confermata, ma la verifica finale non torna: ${v.what}. Controlla sull'explorer.`,
+
+    footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a>`,
+  },
+  en: {
+    pageTitle: "NFT reception on the UP — ChainIntegrate",
+    h1: "NFT reception on the UP (experimental)",
+    subtitle: "Let your Universal Profile receive ERC-721 and ERC-1155 NFTs on a network where you redeployed it (for example purchases on OpenSea).",
+    langToggleBtn: "Italiano",
+    panel0Title: "0 · How it works",
+    panel0Note: "When a standard NFT is delivered with a \"safe transfer\", the token contract asks the recipient whether it can receive it. A UP answers only through an <b>extension</b> (LSP17) registered in its data; redeployed UPs usually have none, so purchases fail (\"wallet cannot receive\").<br><br>This page: <b>(1)</b> if needed, publishes on the network the <code>NFTReceiverExtension</code>, a minimal contract with no owner, data or funds, always at the same address on every network; <b>(2)</b> registers it on the UP with <b>a single atomic Key Manager transaction</b>: it grants the controller the permission to add extensions, registers the extension, and sets the controller's permissions back to <b>exactly</b> what they were. If any part fails, nothing changes. Before signing you see the list of operations and the simulation result.",
+    disclaimer: "<b>⚠️ Read before using this page</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Experimental tool, not externally audited.</b> Real, irreversible transactions.</li><li><b>It changes the UP's configuration on this network:</b> it adds the extension keys to receive NFTs (repeat it on other networks). The controller's permissions stay the same as before.</li><li><b>The extension</b> answers only NFT-reception calls and <code>supportsInterface</code>: the UP calls it with a normal call, so it cannot read or change the UP's data or funds. Source, bytecode and verification steps are in the repository's <code>contracts/</code> folder.</li><li><b>Receiving NFTs</b> also means being able to receive unwanted NFTs (spam): never give approvals or signatures for NFTs you do not know.</li><li><b>No warranty.</b> Software \"as is\" (MIT license): you use it at your own risk. ChainIntegrate is not liable for any loss or damage. No affiliation with LUKSO or others.</li><li><b>This page never asks for private keys</b>: you sign everything in MetaMask.</li></ul>",
+    ackLabel: "I have read and accept: I use this tool at my own risk.",
+    ackRequired: "Accept the conditions in panel 0 first.",
+    panel1Title: "1 · Network",
+    networkFilterPlaceholder: "Filter by name... (e.g. base, polygon, arbitrum)",
+    customRpcLabel: "Custom RPC URL",
+    customExplorerLabel: "Custom explorer URL (optional)",
+    customNetName: "Custom network",
+    panel2Title: "2 · Your UP",
+    connectUpBtn: "Read the address from the UP extension",
+    upAddressLabel: "UP address",
+    panel3Title: "3 · Controller (MetaMask) and check",
+    panel3Note: "MetaMask with the UP controller's key, on the chosen network. It pays the gas. The check starts by itself and runs again if you change network, UP, account or MetaMask's network.",
+    connectSignerBtn: "Connect MetaMask (controller)",
+    checkIdle: "The check starts by itself once network, UP and MetaMask are set.",
+    recheckBtn: "Check again",
+    panel4Title: "4 · Actions",
+    panel4Note: "If the extension does not exist on this network yet, publish it (anyone can, it only costs gas and gives no control over any UP). Then prepare the enabling: the page shows every operation and simulates it; only then can you sign.",
+    publishBtn: "Publish the extension on this network",
+    prepareBtn: "Prepare and simulate the enabling",
+    noPlan: "No operation prepared.",
+    ackReplaceLabel: "I understand that I am replacing the existing extensions listed above",
+    enableBtn: "Sign and send (a single transaction)",
+
+    cNetwork: "Network", cRpc: "RPC", cWallet: "MetaMask", cUp: "UP", cKm: "Key Manager", cPerms: "Controller permissions",
+    cExt: "Extension on this network", cFactory: "Deterministic factory", cHooks: "State on the UP",
+    rpcOk: (v) => `✅ chainId ${v.id}`,
+    rpcWrong: (v) => `❌ the RPC answers with chainId ${v.id}, expected ${v.exp}`,
+    rpcFail: (v) => `❌ RPC unreachable: ${v.err}`,
+    walletMissing: "❌ not connected",
+    walletOk: (v) => `✅ ${v.addr} · chainId ${v.id}`,
+    walletWrong: (v) => `❌ ${v.addr} is on chainId ${v.id}: switch MetaMask to chainId ${v.exp}`,
+    walletUnknown: "❌ could not read MetaMask's network",
+    upMissing: "❌ missing or invalid address",
+    upNotDeployed: "❌ not deployed on this network",
+    upOk: (v) => `✅ ${v.addr}`,
+    kmBad: (v) => `❌ the UP owner (${v.addr}) is not a contract on this network`,
+    kmOk: (v) => `✅ ${v.addr}`,
+    permsNone: "❌ none: this account is not a controller of the UP. Import into MetaMask the controller key of THIS UP.",
+    permsList: (v) => `${v.hex} · ${v.names}`,
+    extOk: (v) => `✅ published (${v.addr}), code verified`,
+    extMissing: (v) => `⚠️ not published on this network yet (${v.addr}): use "Publish the extension"`,
+    extWrongCode: (v) => `❌ the code at ${v.addr} is not the expected one: do not use it`,
+    factoryOk: "✅ present",
+    factoryMissing: "❌ missing on this network: the extension cannot be published at the same address",
+    hookOk: (v) => `${v.name}: ✅ already registered`,
+    hookEmpty: (v) => `${v.name}: to add`,
+    hookOther: (v) => `${v.name}: ⚠️ another extension is set (${v.ext}), it would be replaced`,
+    verdictDone: "✅ The UP can already receive ERC-721 and ERC-1155 NFTs on this network. Nothing else to do.",
+    verdictNeedPublish: "Publish the extension on this network first (panel 4).",
+    verdictReady: "✅ Ready: prepare and simulate the enabling (panel 4).",
+    verdictNoEdit: (v) => `❌ The controller lacks ${v.missing} and does not have EDITPERMISSIONS to grant them: a controller with more permissions is needed.`,
+    verdictFail: "❌ Check failed: fix the item in red above.",
+    verdictMissing: "Fill in the missing fields: the check will start again by itself.",
+    checkRunning: "Checking...",
+
+    extNotFound: "Universal Profile extension not found.",
+    connectionRejected: "Connection rejected or failed.",
+    noSignerFound: "No signing wallet found (e.g. MetaMask).",
+    genericError: (v) => `Error: ${v.err}`,
+    checkFirst: "The check in panel 3 is not green: update it before continuing.",
+    publishing: "Publishing the extension through the deterministic factory (confirm in MetaMask)...",
+    publishSim: "Simulating the publication...",
+    publishSimFail: (v) => `❌ The publication simulation fails: ${v.err}.`,
+    txSent: (v) => `Tx sent: ${v.hash}`,
+    waiting: "Waiting for confirmation...",
+    txFailed: "❌ Transaction failed on-chain.",
+    publishOk: "✅ Extension published and code verified.",
+    publishBadCode: "❌ After publishing, the code at the address does not match: do not use it and report the problem.",
+    planTitle: (v) => `Operations in ONE transaction, signed by the controller ${v.signer} and sent to the Key Manager ${v.km}:`,
+    planGrant: (v) => `1. Temporarily grants the controller: ${v.bits} (permissions ${v.from} → ${v.to})`,
+    planSet: (v) => `${v.n}. Registers the extension ${v.ext} on the UP for: ${v.names}`,
+    planRestore: (v) => `${v.n}. Sets the controller's permissions back to exactly ${v.from}`,
+    planNoGrant: "The controller already holds the needed permissions: no permission change.",
+    planAtomic: "If any operation fails, the whole transaction is reverted and nothing changes.",
+    planReplaceWarn: "⚠️ Some keys already hold another extension: it will be replaced. Tick the confirmation below to proceed.",
+    simulating: "Simulating the transaction...",
+    simOk: (v) => `✅ Simulation succeeded. Estimated gas: ${v.gas}.`,
+    simFail: (v) => `❌ The simulation fails: ${v.err}. Nothing is sent.`,
+    signerNoGas: (v) => `❌ The controller does not have enough funds for gas: about ${v.need} needed, it has ${v.have}.`,
+    readyToSign: "Ready. Read the operations above again, then press \"Sign and send\" and confirm in MetaMask (recipient: the UP's Key Manager).",
+    replaceAckRequired: "Tick the confirmation about replacing the existing extensions.",
+    stale: "❌ Something changed after preparing (network, account or UP data): prepare again.",
+    sending: "Sending the transaction (confirm in MetaMask)...",
+    verifying: "Final check on the UP...",
+    finalOk: "✅✅ Done: the UP can now receive ERC-721 and ERC-1155 NFTs on this network, and the controller's permissions are the same as before.",
+    finalBad: (v) => `⚠️ Transaction confirmed, but the final check does not match: ${v.what}. Check on the explorer.`,
+
+    footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a>`,
+  },
+};
+
+function t(key, vars) {
+  const entry = I18N[LANG][key];
+  return typeof entry === "function" ? entry(vars || {}) : entry;
+}
+function applyI18n() {
+  document.documentElement.lang = LANG;
+  document.title = t("pageTitle");
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.getAttribute("data-i18n")); });
+  document.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.getAttribute("data-i18n-html")); });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => { el.placeholder = t(el.getAttribute("data-i18n-placeholder")); });
+  if (lastCheck) renderCheck(lastCheck);
+}
+$("langToggle").addEventListener("click", () => { LANG = LANG === "it" ? "en" : "it"; applyI18n(); });
+
+// ==================== HELPERS ====================
+// Data from wallets and RPCs is written with textContent, never innerHTML.
+function setStatus(id, text, cls) {
+  const el = $(id);
+  el.textContent = "";
+  const span = document.createElement("span");
+  if (cls) span.className = cls;
+  span.textContent = text;
+  el.appendChild(span);
+}
+function log(msg, cls) {
+  const l = document.createElement("div");
+  if (cls) l.className = cls;
+  l.textContent = msg;
+  $("log").appendChild(l);
+}
+function logSeparator() {
+  const l = document.createElement("div");
+  l.className = "line-dim";
+  l.textContent = `—— ${new Date().toLocaleTimeString()} ——`;
+  $("log").appendChild(l);
+}
+const riskAccepted = () => $("ackRisk").checked;
+const tr = (v) => Array.isArray(v) ? t(v[0], v[1]) : v;
+
+// Upper bound of the gas price, read straight from the RPC (2 * baseFee + priority fee).
+async function estimateMaxGasPrice(provider) {
+  const gasPrice = BigInt(await provider.send("eth_gasPrice", []));
+  const block = await provider.send("eth_getBlockByNumber", ["latest", false]);
+  if (!block || !block.baseFeePerGas) return gasPrice;
+  const baseFee = BigInt(block.baseFeePerGas);
+  const tip = gasPrice > baseFee ? gasPrice - baseFee : 0n;
+  return 2n * baseFee + tip;
+}
+function revertReason(e) {
+  const data = e?.data || e?.info?.error?.data || e?.error?.data;
+  if (typeof data === "string" && data.length >= 10) {
+    try { const d = KM_IFACE.parseError(data); return `${d.name}(${d.args.map(String).join(", ")})`; } catch (x) { /* not an LSP6 error */ }
+  }
+  return e?.shortMessage || e?.reason || e?.message || String(e);
+}
+
+// ==================== 1. Network ====================
+const networkSelectEl = $("network");
+function renderNetworkOptions(filter) {
+  const f = (filter || "").toLowerCase();
+  networkSelectEl.innerHTML = "";
+  CHAINS.filter(c => c.name.toLowerCase().includes(f)).forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c.key;
+    opt.textContent = c.chainId ? `${c.name} (chainId ${c.chainId})` : c.name;
+    networkSelectEl.appendChild(opt);
+  });
+}
+renderNetworkOptions("");
+const presetNetworkKey = new URLSearchParams(location.search).get("network");
+if (presetNetworkKey && CHAINS.some(c => c.key === presetNetworkKey)) networkSelectEl.value = presetNetworkKey;
+
+function getNetwork() {
+  const c = CHAINS.find(x => x.key === networkSelectEl.value);
+  if (!c) return null;
+  if (c.key === "custom") {
+    return { key: "custom", name: t("customNetName"), chainId: null, rpc: $("customRpc").value.trim(), explorer: $("customExplorer").value.trim() || null, currency: "" };
+  }
+  return { ...c };
+}
+function onInputsChanged() {
+  $("customRpcWrap").style.display = networkSelectEl.value === "custom" ? "block" : "none";
+  scheduleCheck();
+}
+$("networkFilter").addEventListener("input", (e) => { renderNetworkOptions(e.target.value); onInputsChanged(); });
+networkSelectEl.addEventListener("change", onInputsChanged);
+$("customRpc").addEventListener("input", onInputsChanged);
+
+// ==================== 2. UP ====================
+$("connectUp").addEventListener("click", async () => {
+  if (!window.lukso) { setStatus("checkBox", t("extNotFound"), "line-err"); return; }
+  try {
+    const accounts = await window.lukso.request({ method: "eth_requestAccounts" });
+    $("upAddress").value = accounts[0];
+    scheduleCheck();
+  } catch (e) {
+    setStatus("checkBox", t("connectionRejected"), "line-err");
+  }
+});
+$("upAddress").addEventListener("input", () => scheduleCheck());
+
+// ==================== 3. Controller + check ====================
+let signerProvider = null, signerAddress = null;
+const discoveredProviders = [];
+window.addEventListener("eip6963:announceProvider", (e) => discoveredProviders.push(e.detail));
+window.dispatchEvent(new Event("eip6963:requestProvider"));
+
+$("connectSigner").addEventListener("click", async () => {
+  let candidate = discoveredProviders.find(p => !/lukso|universal profile/i.test(p.info.name))?.provider;
+  if (!candidate && window.ethereum && window.ethereum !== window.lukso) candidate = window.ethereum;
+  if (!candidate) { setStatus("checkBox", t("noSignerFound"), "line-err"); return; }
+  try {
+    const accounts = await candidate.request({ method: "eth_requestAccounts" });
+    signerAddress = accounts[0];
+    if (signerProvider !== candidate && candidate.on) {
+      candidate.on("accountsChanged", (acc) => { signerAddress = acc?.[0] || null; scheduleCheck(0); });
+      candidate.on("chainChanged", () => scheduleCheck(0));
+    }
+    signerProvider = candidate;
+    scheduleCheck(0);
+  } catch (e) {
+    setStatus("checkBox", t("connectionRejected"), "line-err");
+  }
+});
+$("recheckBtn").addEventListener("click", () => scheduleCheck(0));
+$("ackRisk").addEventListener("change", updateButtons);
+
+let check = null, lastCheck = null, checkRun = 0, checkTimer = null, plan = null;
+
+function scheduleCheck(delay = 500) {
+  check = null;
+  clearPlan();
+  updateButtons();
+  clearTimeout(checkTimer);
+  checkTimer = setTimeout(runCheck, delay);
+}
+async function runCheck() {
+  const run = ++checkRun;
+  check = null;
+  updateButtons();
+  setStatus("checkBox", t("checkRunning"), "empty");
+  const res = await computeCheck();
+  if (run !== checkRun) return null;
+  lastCheck = res;
+  check = res.ok ? res : null;
+  renderCheck(res);
+  updateButtons();
+  return res;
+}
+
+// Step-by-step report; stops at the first blocking problem.
+async function computeCheck() {
+  const res = { ok: false, missing: false, steps: [], verdict: [] };
+  const step = (key, text, cls) => res.steps.push([key, text, cls]);
+  const net = getNetwork();
+  const rawUp = $("upAddress").value.trim();
+  if (!net || !net.rpc || !ethers.isAddress(rawUp) || !signerProvider || !signerAddress) {
+    res.missing = true;
+    step("cUp", ethers.isAddress(rawUp) ? ethers.getAddress(rawUp) : ["upMissing"], ethers.isAddress(rawUp) ? "" : "err");
+    step("cWallet", signerAddress || ["walletMissing"], signerAddress ? "" : "err");
+    return res;
+  }
+  let provider, rpcId;
+  try {
+    rpcId = Number(await new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 }).send("eth_chainId", []));
+    provider = new ethers.JsonRpcProvider(net.rpc, rpcId, { staticNetwork: true, batchMaxCount: 1 });
+  } catch (e) {
+    step("cNetwork", net.name, "");
+    step("cRpc", ["rpcFail", { err: e.shortMessage || e.message }], "err");
+    return res;
+  }
+  const chainId = net.chainId || rpcId;
+  if (!net.chainId) net.name = `${t("customNetName")} (chainId ${rpcId})`;
+  step("cNetwork", net.chainId ? `${net.name} (chainId ${net.chainId})` : net.name, "");
+  if (rpcId !== chainId) { step("cRpc", ["rpcWrong", { id: rpcId, exp: chainId }], "err"); return res; }
+  step("cRpc", ["rpcOk", { id: rpcId }], "ok");
+
+  let walletId;
+  try { walletId = parseInt(await signerProvider.request({ method: "eth_chainId" }), 16); }
+  catch (e) { step("cWallet", ["walletUnknown"], "err"); return res; }
+  if (walletId !== chainId) { step("cWallet", ["walletWrong", { addr: signerAddress, id: walletId, exp: chainId }], "err"); return res; }
+  step("cWallet", ["walletOk", { addr: signerAddress, id: walletId }], "ok");
+
+  try {
+    const up = ethers.getAddress(rawUp);
+    if ((await provider.getCode(up)) === "0x") { step("cUp", ["upNotDeployed"], "err"); return res; }
+    step("cUp", ["upOk", { addr: up }], "ok");
+    const upC = new ethers.Contract(up, UP_IFACE, provider);
+    const km = ethers.getAddress(await upC.owner());
+    if ((await provider.getCode(km)) === "0x") { step("cKm", ["kmBad", { addr: km }], "err"); return res; }
+    step("cKm", ["kmOk", { addr: km }], "ok");
+
+    const permKey = PERM_PREFIX + signerAddress.slice(2).toLowerCase();
+    const permRaw = await upC.getData(permKey);
+    const perms = permRaw && permRaw !== "0x" ? BigInt(permRaw) : 0n;
+    if (perms === 0n) { step("cPerms", ["permsNone"], "err"); return res; }
+    step("cPerms", ["permsList", { hex: "0x" + perms.toString(16).padStart(6, "0"), names: permNames(perms) }], "");
+
+    // The extension: code at the deterministic address must be exactly the expected runtime.
+    const extCode = await provider.getCode(EXT_ADDRESS);
+    let extState;
+    if (extCode === "0x") extState = "missing";
+    else if (ethers.keccak256(extCode) === EXT_RUNTIME_HASH) extState = "ok";
+    else extState = "wrong";
+    step("cExt", extState === "ok" ? ["extOk", { addr: EXT_ADDRESS }] : extState === "missing" ? ["extMissing", { addr: EXT_ADDRESS }] : ["extWrongCode", { addr: EXT_ADDRESS }],
+      extState === "ok" ? "ok" : extState === "missing" ? "warn" : "err");
+    let factoryOk = true;
+    if (extState === "missing") {
+      factoryOk = (await provider.getCode(NICK_FACTORY)) !== "0x";
+      step("cFactory", factoryOk ? ["factoryOk"] : ["factoryMissing"], factoryOk ? "ok" : "err");
+    }
+    if (extState === "wrong") return res;
+
+    // Current value of the four LSP17 keys.
+    const values = await upC.getDataBatch(HOOKS.map(h => LSP17_KEY(h.sel)));
+    const hooks = HOOKS.map((h, i) => {
+      const v = values[i];
+      if (!v || v === "0x") return { ...h, state: "empty" };
+      const ext = ethers.dataLength(v) >= 20 ? ethers.getAddress(ethers.dataSlice(v, 0, 20)) : v;
+      return { ...h, state: String(ext).toLowerCase() === EXT_ADDRESS.toLowerCase() && ethers.dataLength(v) === 20 ? "ok" : "other", ext };
+    });
+    step("cHooks", hooks.map(h => h.state === "ok" ? t("hookOk", h) : h.state === "empty" ? t("hookEmpty", h) : t("hookOther", h)).join("\n"), hooks.every(h => h.state === "ok") ? "ok" : "warn");
+
+    const base = { net, chainId, provider, up, km, signer: signerAddress, permKey, permRaw, perms, extState, hooks };
+    if (hooks.every(h => h.state === "ok")) { Object.assign(res, base, { ok: true, done: true }); res.verdict.push([["verdictDone"], "line-ok"]); return res; }
+
+    // Permissions needed: ADDEXTENSIONS for empty keys, CHANGEEXTENSIONS for keys holding another value.
+    let needed = 0n;
+    if (hooks.some(h => h.state === "empty")) needed |= P.ADDEXTENSIONS;
+    if (hooks.some(h => h.state === "other")) needed |= P.CHANGEEXTENSIONS;
+    const missing = needed & ~perms;
+    if (missing && !(perms & P.EDITPERMISSIONS)) { res.verdict.push([["verdictNoEdit", { missing: permNames(missing) }], "line-err"]); return res; }
+    if (missing && ethers.dataLength(permRaw) !== 32) { step("cPerms", ["genericError", { err: "permission value is not 32 bytes" }], "err"); return res; }
+    Object.assign(res, base, { ok: true, done: false, missing });
+    if (extState === "missing") { if (!factoryOk) { res.ok = false; return res; } res.verdict.push([["verdictNeedPublish"], "line-warn"]); }
+    else res.verdict.push([["verdictReady"], "line-ok"]);
+  } catch (e) {
+    step("cUp", ["genericError", { err: e.shortMessage || e.message }], "err");
+    res.ok = false;
+  }
+  return res;
+}
+
+function renderCheck(res) {
+  const box = $("checkBox");
+  box.textContent = "";
+  const grid = document.createElement("div");
+  grid.className = "kv";
+  for (const [k, v, cls] of res.steps) {
+    const kd = document.createElement("div"); kd.className = "k"; kd.textContent = t(k);
+    const vd = document.createElement("div"); vd.className = "v" + (cls ? " " + cls : ""); vd.style.whiteSpace = "pre-wrap"; vd.textContent = tr(v);
+    grid.appendChild(kd); grid.appendChild(vd);
+  }
+  box.appendChild(grid);
+  const verdict = res.verdict.map(([v, cls]) => [tr(v), cls]);
+  if (res.missing) verdict.push([t("verdictMissing"), "line-dim"]);
+  else if (!res.ok && !res.verdict.length) verdict.push([t("verdictFail"), "line-err"]);
+  for (const [text, cls] of verdict) {
+    const d = document.createElement("div"); d.className = "verdict " + cls; d.textContent = text; box.appendChild(d);
+  }
+}
+
+function updateButtons() {
+  const ready = !!check && riskAccepted();
+  $("publishBtn").disabled = !(ready && check.extState === "missing");
+  $("prepareBtn").disabled = !(ready && !check.done && check.extState === "ok");
+  $("enableBtn").disabled = !(ready && plan);
+}
+function clearPlan() {
+  plan = null;
+  setStatus("planBox", t("noPlan"), "empty");
+  $("replaceRow").style.display = "none";
+  $("ackReplace").checked = false;
+}
+
+// Re-run right before acting: accounts, networks and UP data may have changed.
+async function freshCheck() {
+  clearTimeout(checkTimer);
+  const res = await runCheck();
+  return res && res.ok ? res : null;
+}
+
+// ==================== 4. Publish the extension ====================
+$("publishBtn").addEventListener("click", async () => {
+  if (!riskAccepted()) { log(t("ackRequired"), "line-err"); return; }
+  logSeparator();
+  const c = await freshCheck();
+  if (!c || c.extState !== "missing") { log(t("checkFirst"), "line-err"); return; }
+  $("publishBtn").disabled = true;
+  try {
+    const data = ethers.concat([EXT_SALT, EXT_INIT_CODE]);
+    log(t("publishSim"), "line-dim");
+    let gas;
+    try {
+      const out = await c.provider.call({ from: c.signer, to: NICK_FACTORY, data });
+      if (!out || ethers.getAddress(ethers.dataSlice(out, 0, 20)) !== ethers.getAddress(EXT_ADDRESS)) throw new Error(`factory returned ${out}`);
+      gas = await c.provider.estimateGas({ from: c.signer, to: NICK_FACTORY, data });
+    } catch (e) { log(t("publishSimFail", { err: revertReason(e) }), "line-err"); return; }
+    log(t("simOk", { gas: gas.toString() }), "line-ok");
+    log(t("publishing"), "line-dim");
+    const signer = await new ethers.BrowserProvider(signerProvider).getSigner();
+    if (signer.address.toLowerCase() !== c.signer.toLowerCase()) { log(t("stale"), "line-err"); return; }
+    const sent = await signer.sendTransaction({ to: NICK_FACTORY, data, gasLimit: gas + gas / 4n });
+    log(t("txSent", { hash: sent.hash }), "line-dim");
+    if (c.net.explorer) log(c.net.explorer + sent.hash, "line-dim");
+    log(t("waiting"), "line-dim");
+    const receipt = await c.provider.waitForTransaction(sent.hash);
+    if (!receipt || receipt.status !== 1) { log(t("txFailed"), "line-err"); return; }
+    // A load-balanced RPC may answer from a node that has not seen the block yet: retry a few times.
+    let verified = false;
+    for (let i = 0; i < 6 && !verified; i++) {
+      if (i) await new Promise(r => setTimeout(r, 1500));
+      const code = await c.provider.getCode(EXT_ADDRESS, receipt.blockNumber);
+      verified = code !== "0x" && ethers.keccak256(code) === EXT_RUNTIME_HASH;
+    }
+    log(verified ? t("publishOk") : t("publishBadCode"), verified ? "line-ok" : "line-err");
+  } catch (e) {
+    log(t("genericError", { err: e.shortMessage || e.message }), "line-err");
+  } finally {
+    scheduleCheck(0);
+  }
+});
+
+// ==================== 4. Enable: one atomic executeBatch ====================
+function buildPayloads(c) {
+  const todo = c.hooks.filter(h => h.state !== "ok");
+  const setExt = UP_IFACE.encodeFunctionData("setDataBatch", [todo.map(h => LSP17_KEY(h.sel)), todo.map(() => EXT_ADDRESS)]);
+  if (!c.missing) return { todo, payloads: [setExt] };
+  const granted = ethers.zeroPadValue(ethers.toBeHex(c.perms | c.missing), 32);
+  return {
+    todo,
+    payloads: [
+      UP_IFACE.encodeFunctionData("setData", [c.permKey, granted]),
+      setExt,
+      // Restore the exact bytes read from the UP, not a recomputed value.
+      UP_IFACE.encodeFunctionData("setData", [c.permKey, c.permRaw]),
+    ],
+  };
+}
+
+$("prepareBtn").addEventListener("click", async () => {
+  if (!riskAccepted()) { log(t("ackRequired"), "line-err"); return; }
+  logSeparator();
+  clearPlan();
+  updateButtons();
+  const c = await freshCheck();
+  if (!c || c.done || c.extState !== "ok") { log(t("checkFirst"), "line-err"); return; }
+  const { todo, payloads } = buildPayloads(c);
+  const hex = (n) => "0x" + n.toString(16).padStart(6, "0");
+  const lines = [t("planTitle", { signer: c.signer, km: c.km })];
+  let n = 1;
+  if (c.missing) { lines.push(t("planGrant", { bits: permNames(c.missing), from: hex(c.perms), to: hex(c.perms | c.missing) })); n++; }
+  else lines.push(t("planNoGrant"));
+  lines.push(t("planSet", { n, ext: EXT_ADDRESS, names: todo.map(h => h.name).join(", ") })); n++;
+  if (c.missing) lines.push(t("planRestore", { n, from: hex(c.perms) }));
+  lines.push(t("planAtomic"));
+  const replacing = todo.some(h => h.state === "other");
+  if (replacing) lines.push(t("planReplaceWarn"));
+  setStatus("planBox", lines.join("\n"), "");
+  $("replaceRow").style.display = replacing ? "flex" : "none";
+  log(lines.join("\n"), "line-compare");
+
+  const data = payloads.length === 1
+    ? KM_IFACE.encodeFunctionData("execute", [payloads[0]])
+    : KM_IFACE.encodeFunctionData("executeBatch", [payloads.map(() => 0), payloads]);
+  log(t("simulating"), "line-dim");
+  let gas;
+  try {
+    await c.provider.call({ from: c.signer, to: c.km, data });
+    gas = await c.provider.estimateGas({ from: c.signer, to: c.km, data });
+  } catch (e) { log(t("simFail", { err: revertReason(e) }), "line-err"); return; }
+  log(t("simOk", { gas: gas.toString() }), "line-ok");
+  const gasLimit = gas + gas / 4n;
+  const need = gasLimit * (await estimateMaxGasPrice(c.provider));
+  const bal = await c.provider.getBalance(c.signer);
+  const cur = c.net.currency || "";
+  if (bal < need) { log(t("signerNoGas", { need: `${ethers.formatEther(need)} ${cur}`, have: `${ethers.formatEther(bal)} ${cur}` }), "line-err"); return; }
+  plan = { data, gasLimit, c, replacing };
+  log(t("readyToSign"), "line-warn");
+  updateButtons();
+});
+$("ackReplace").addEventListener("change", updateButtons);
+
+$("enableBtn").addEventListener("click", async () => {
+  if (!plan || !riskAccepted()) return;
+  if (plan.replacing && !$("ackReplace").checked) { log(t("replaceAckRequired"), "line-err"); return; }
+  const p = plan;
+  $("enableBtn").disabled = true;
+  try {
+    // The data was built from the UP's state at preparation time: it must not have changed.
+    const c = await freshCheck();
+    const same = c && !c.done && c.chainId === p.c.chainId && c.up === p.c.up && c.km === p.c.km &&
+      c.signer.toLowerCase() === p.c.signer.toLowerCase() && c.permRaw === p.c.permRaw &&
+      JSON.stringify(c.hooks.map(h => h.state + (h.ext || ""))) === JSON.stringify(p.c.hooks.map(h => h.state + (h.ext || "")));
+    if (!same) { log(t("stale"), "line-err"); return; }
+    const signer = await new ethers.BrowserProvider(signerProvider).getSigner();
+    if (signer.address.toLowerCase() !== p.c.signer.toLowerCase()) { log(t("stale"), "line-err"); return; }
+    log(t("sending"), "line-dim");
+    const sent = await signer.sendTransaction({ to: p.c.km, data: p.data, gasLimit: p.gasLimit });
+    clearPlan();
+    log(t("txSent", { hash: sent.hash }), "line-dim");
+    if (p.c.net.explorer) log(p.c.net.explorer + sent.hash, "line-dim");
+    log(t("waiting"), "line-dim");
+    const receipt = await p.c.provider.waitForTransaction(sent.hash);
+    if (!receipt || receipt.status !== 1) { log(t("txFailed"), "line-err"); return; }
+
+    log(t("verifying"), "line-dim");
+    // Read at the transaction's block, with a few retries for RPC nodes that lag behind.
+    const upC = new ethers.Contract(p.c.up, UP_IFACE, p.c.provider);
+    const at = { blockTag: receipt.blockNumber };
+    let problems = ["not read"];
+    for (let i = 0; i < 6 && problems.length; i++) {
+      if (i) await new Promise(r => setTimeout(r, 1500));
+      try {
+        const [vals, permNow, s721, s1155] = await Promise.all([
+          upC.getDataBatch(HOOKS.map(h => LSP17_KEY(h.sel)), at),
+          upC.getData(p.c.permKey, at),
+          upC.supportsInterface("0x150b7a02", at),
+          upC.supportsInterface("0x4e2312e0", at),
+        ]);
+        problems = [];
+        if (!vals.every(v => String(v).toLowerCase() === EXT_ADDRESS.toLowerCase())) problems.push("extension keys");
+        if (permNow !== p.c.permRaw) problems.push(`controller permissions ${permNow}`);
+        if (!s721 || !s1155) problems.push("supportsInterface");
+      } catch (e) { problems = [e.shortMessage || e.message]; }
+    }
+    if (problems.length) log(t("finalBad", { what: problems.join(", ") }), "line-warn");
+    else log(t("finalOk"), "line-ok");
+  } catch (e) {
+    log(t("genericError", { err: e.shortMessage || e.message }), "line-err");
+  } finally {
+    scheduleCheck(0);
+  }
+});
+
+applyI18n();
+onInputsChanged();
+</script>
+
+</body>
+</html>

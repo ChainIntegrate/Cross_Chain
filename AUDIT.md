@@ -301,7 +301,7 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 | R-02 | Implement a CSP (I-03) and serve the site with `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` and `frame-ancestors 'none'`. | Defence in depth, anti-clickjacking. |
 | R-03 | Re-test all RPC endpoints (L-07), and whenever the ethers version is bumped, update the SRI hash (`openssl dgst -sha384 -binary ethers.umd.min.js \| openssl base64 -A`). | Otherwise a version bump breaks the pages or silently drops the integrity protection. |
 | R-04 | Consider moving the shared code (chain list, decoding, `checkChains`, `escapeHtml`) into one versioned JS file. | Six copies of the same logic had drifted apart. That drift caused several of the findings above. A shared `chains.js` is in progress (PR #21); `up-wallet.html` holds a seventh copy of the chain list until then. |
-| R-05 | Let redeployed profiles receive ERC-721 / ERC-1155 safe transfers with a minimal, stateless LSP17 extension published at the same address on every chain (I-12). | Marketplace purchases fail today; the proposal is ready and awaits approval. |
+| R-05 | ~~Let redeployed profiles receive ERC-721 / ERC-1155 safe transfers with a minimal, stateless LSP17 extension published at the same address on every chain (I-12).~~ ✅ Done with `up-nft-receiver.html` (one atomic `executeBatch`; controller permissions restored byte for byte) and `contracts/NFTReceiverExtension.sol` (reproducible bytecode, see `contracts/README.md`). Tested on a local chain with LUKSO UP/LSP6 0.12.1 and 0.14.0; not yet on mainnet. | Marketplace purchases failed on redeployed profiles. |
 | R-06 | Review `up-wallet.html` again (ideally with a second reviewer) before removing the "experimental" label, and after any change to its rejection rules, decoding or signing flow. | It is the only page that signs and sends arbitrary requests from third-party sites. |
 | R-07 | Decide whether to keep `up-walletconnect-basenames.html`: `up-wallet.html` covers the same case with more checks. | Two bridges double the code to maintain; the demo is now only an example. |
 
@@ -415,7 +415,14 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 
 - **Impact:** Safe NFT transfers call `onERC721Received` / `onERC1155Received` on the recipient. LSP0 answers them only through an LSP17 extension and otherwise reverts (`NoExtensionFoundForFunctionSelector`). Redeployed profiles usually have none, so marketplace purchases fail ("wallet cannot receive"), as seen on OpenSea during the live tests.
 - **Mitigation:** the compatibility check shows, per standard, whether the UP can receive NFTs and why not (no extension, or an extension without code on that network).
-- **Status:** ⏳ Planned (R-05)
+- **Status:** ✅ Addressed by `up-nft-receiver.html` and `contracts/NFTReceiverExtension.sol` (see R-05). The fix is opt-in per UP and per network.
+- **Review of the fix (maintainer's audit of PR #33):**
+  - **Data keys.** Each key is `bytes10(keccak256("LSP17Extension"))` + `0x0000` + the selector left-aligned in 20 bytes, as in `LSP2Utils.generateMappingKey(bytes10, bytes20)`. Each value is exactly 20 bytes, the extension address; the 21-byte "forward value" form is not used.
+  - **Permission bits.** The temporary grant adds only `ADDEXTENSIONS` (`0x08`) and/or `CHANGEEXTENSIONS` (`0x10`), and only the bits the controller lacks.
+  - **Restore.** The restore writes back the exact 32 bytes read from the UP, not a recomputed value.
+  - **No side calls.** The batch holds only `setData`, `setDataBatch` and `setData`, each executed by the Key Manager on the linked UP with no value. In LSP0/LSP6 0.12.1 and 0.14 this makes no external call while the permission is elevated.
+  - **How it was checked.** The page's own batch-building code was executed and every payload decoded, across four scenarios; all 32 checks pass.
+- **Residual risk (low).** The permission bytes are read right before sending. If, between that read and the block that includes the transaction, **another** controller changes this controller's permissions, the restore step writes the older value and silently undoes that change. The grant step is computed from the same read, so it has the same window. This needs two controllers acting on the same UP within seconds, and a client-side page cannot close the window. Mitigation: do not change a controller's permissions from elsewhere while this page's transaction is pending; afterwards, the page's final check compares the controller's permissions with the original value and reports any mismatch.
 
 #### I-13 — The vendored WalletKit bundle runs with full access to the page
 
