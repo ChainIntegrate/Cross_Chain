@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>UP Wallet — ChainIntegrate</title>
+<link rel="icon" href="favicon.ico">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="vendor/walletkit-1.6.0.min.js"></script>
+<!-- Site configuration, created on the server from config.example.js (not in the repository). -->
+<script src="config.js"></script>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
+    --text: #e6e8ec; --text-dim: #9aa1ad;
+    --accent: #5b8cff; --ok: #3fbf6f; --warn: #e0a83c; --err: #e05a5a;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+         max-width: 760px; margin: 0 auto; padding: 32px 20px 80px; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .subtitle { color: var(--text-dim); font-size: 13px; margin-bottom: 28px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+  .panel h2 { font-size: 14px; margin: 0 0 14px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.03em; }
+  .note { font-size: 12.5px; color: var(--text-dim); line-height: 1.5; margin-bottom: 12px; }
+  label { display: block; font-size: 13px; color: var(--text-dim); margin: 14px 0 6px; }
+  label:first-child { margin-top: 0; }
+  select, input { width: 100%; background: #10131a; border: 1px solid var(--border); color: var(--text);
+                  border-radius: 6px; padding: 10px 12px; font-size: 14px; font-family: inherit; }
+  button { width: 100%; background: var(--accent); color: white; border: none; border-radius: 6px;
+           padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; }
+  button:disabled { background: #3a3f4b; cursor: not-allowed; }
+  button.danger { background: var(--err); }
+  button.secondary { background: #2a2f3a; }
+  .status-box { background: #10131a; border: 1px solid var(--border); border-radius: 6px; padding: 12px;
+                font-family: monospace; font-size: 12.5px; margin-top: 12px; }
+  .status-box .empty { color: var(--text-dim); }
+  #log { font-family: monospace; font-size: 12.5px; white-space: pre-wrap; word-break: break-all; line-height: 1.6; }
+  .line-ok { color: var(--ok); } .line-warn { color: var(--warn); } .line-err { color: var(--err); } .line-dim { color: var(--text-dim); }
+  .line-compare { color: var(--warn); font-weight: 700; border: 1px solid var(--warn); border-radius: 6px; padding: 8px 10px; margin: 6px 0; }
+  .line-danger { color: var(--err); font-weight: 700; border: 1px solid var(--err); border-radius: 6px; padding: 8px 10px; margin: 6px 0; }
+  .brand-row { margin-bottom: 24px; }
+  .brand-logo { display: block; width: 100%; height: auto; border-radius: 10px; }
+  .top-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .lang-btn { width: auto; background: #2a2f3a; padding: 6px 14px; font-size: 12px; margin-top: 0; flex-shrink: 0; }
+  .site-footer { margin-top: 40px; padding: 18px 20px; background: #f5f6f8; border: 1px solid #e3e5ea; border-radius: 10px; color: #4b4f58; }
+  .footer-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .footer-logo { height: 48px; width: auto; flex-shrink: 0; }
+  .footer-text { font-size: 13px; line-height: 1.6; }
+  .footer-li { display: inline-flex; vertical-align: middle; margin: 0 2px; }
+  .site-footer a { color: #2563eb; text-decoration: none; font-weight: 600; }
+  .site-footer a:hover { text-decoration: underline; }
+  .kv { display: grid; grid-template-columns: 190px 1fr; gap: 6px 12px; font-size: 13px; margin-top: 10px; }
+  .kv .k { color: var(--text-dim); }
+  .kv .v { font-family: monospace; word-break: break-all; }
+  .kv .v.ok { color: var(--ok); } .kv .v.warn { color: var(--warn); } .kv .v.err { color: var(--err); }
+  .kv pre { margin: 0; white-space: pre-wrap; word-break: break-all; font-size: 12px; max-height: 320px; overflow: auto; }
+  .verdict { margin-top: 12px; font-weight: 700; }
+  .check-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 13.5px; }
+  .check-row input { width: auto; }
+  .warn-box { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--err); border-radius: 8px; background: rgba(224,90,90,0.08); font-size: 13px; line-height: 1.5; }
+  @media (max-width: 560px) { .kv { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="brand-row">
+  <img src="banner.png" alt="ChainIntegrate" class="brand-logo" onerror="this.style.display='none'">
+</div>
+
+<div class="top-row">
+  <div>
+    <h1 data-i18n="h1">UP Wallet (sperimentale)</h1>
+    <div class="subtitle" data-i18n="subtitle"></div>
+  </div>
+  <button class="lang-btn" id="langToggle" data-i18n="langToggleBtn">English</button>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel0Title">0 · Come funziona</h2>
+  <div class="note" data-i18n-html="panel0Note"></div>
+  <div class="warn-box" data-i18n-html="disclaimer"></div>
+  <div class="check-row"><input type="checkbox" id="ackRisk"><label for="ackRisk" style="margin:0; color: var(--text);" data-i18n="ackLabel">Ho letto e accetto</label></div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel1Title">1 · Rete</h2>
+  <div class="note" data-i18n="panel1Note"></div>
+  <input type="text" id="networkFilter" data-i18n-placeholder="networkFilterPlaceholder" placeholder="Filtra per nome...">
+  <select id="network" style="margin-top:8px;"></select>
+  <div id="customRpcWrap" style="display:none;">
+    <label data-i18n="customRpcLabel">RPC URL custom</label>
+    <input type="text" id="customRpc" placeholder="https://...">
+    <label data-i18n="customExplorerLabel">Explorer URL custom (opzionale)</label>
+    <input type="text" id="customExplorer" placeholder="https://.../tx/">
+  </div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel2Title">2 · La tua UP</h2>
+  <button id="connectUp" class="secondary" data-i18n="connectUpBtn">Leggi l'indirizzo dall'estensione UP</button>
+  <label for="upAddress" data-i18n="upAddressLabel">Indirizzo della UP</label>
+  <input type="text" id="upAddress" placeholder="0x...">
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel3Title">3 · Controller (MetaMask) e verifica</h2>
+  <div class="note" data-i18n="panel3Note"></div>
+  <button id="connectSigner" data-i18n="connectSignerBtn">Connetti MetaMask (controller)</button>
+  <div class="status-box" id="complianceBox"><span class="empty" data-i18n="complianceIdle">La verifica parte da sola quando rete, UP e MetaMask sono impostati.</span></div>
+  <button id="recheckBtn" class="secondary" data-i18n="recheckBtn">Ricontrolla</button>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel4Title">4 · Collega una dApp con WalletConnect</h2>
+  <div class="note" data-i18n-html="panel4Note"></div>
+  <label for="wcUri" data-i18n="wcUriLabel">Link WalletConnect (wc:...)</label>
+  <input type="text" id="wcUri" placeholder="wc:...">
+  <button id="pairBtn" disabled data-i18n="pairBtn">Collega</button>
+  <div class="status-box" id="wcStatus"><span class="empty" data-i18n="wcIdle">Nessuna sessione.</span></div>
+  <button id="disconnectBtn" class="secondary" disabled data-i18n="disconnectBtn">Disconnetti tutte le sessioni</button>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel5Title">5 · Richieste della dApp</h2>
+  <div class="check-row"><input type="checkbox" id="simulateOnly" checked><label for="simulateOnly" style="margin:0;" data-i18n="simulateOnlyLabel">Solo simulazione (non inviare nulla)</label></div>
+  <div class="note" style="margin-top:6px;" data-i18n="simulateOnlyNote"></div>
+  <div id="requestBox" class="status-box"><span class="empty" data-i18n="noRequest">Nessuna richiesta in attesa.</span></div>
+  <button id="sendBtn" class="danger" disabled data-i18n="sendBtn">Firma e invia la transazione (irreversibile)</button>
+  <button id="signBtn" class="danger" disabled data-i18n="signBtn">Firma il messaggio per la UP</button>
+  <button id="rejectBtn" class="secondary" disabled data-i18n="rejectBtn">Rifiuta la richiesta</button>
+  <div id="log" class="line-dim" style="margin-top:10px;"></div>
+</div>
+
+<div class="site-footer">
+  <div class="footer-row">
+    <img src="logo.png" alt="ChainIntegrate" class="footer-logo" onerror="this.style.display='none'">
+    <div class="footer-text" data-i18n-html="footerHtml"></div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+// ==================== CONFIG ====================
+// WalletConnect (Reown) Project ID, read from config.js, which exists only on the server
+// (see config.example.js). It is a public identifier; its protection is the Reown domain allowlist.
+const WALLETCONNECT_PROJECT_ID = (window.CROSSCHAIN_CONFIG && window.CROSSCHAIN_CONFIG.walletConnectProjectId) || "";
+
+// Same list as the other tool pages (copy; to be replaced by a shared chains.js).
+const CHAINS = [
+  { key: "0g", name: "0G", chainId: 16661, rpc: "https://evmrpc.0g.ai", explorer: "https://chainscan.0g.ai/tx/", currency: "0G" },
+  { key: "apechain", name: "ApeChain", chainId: 33139, rpc: "https://rpc.apechain.com", explorer: "https://apescan.io/tx/", currency: "APE" },
+  { key: "arbitrum-one", name: "Arbitrum One", chainId: 42161, rpc: "https://arb1.arbitrum.io/rpc", explorer: "https://arbiscan.io/tx/", currency: "ETH" },
+  { key: "avalanche-c-chain", name: "Avalanche C-Chain", chainId: 43114, rpc: "https://api.avax.network/ext/bc/C/rpc", explorer: "https://snowscan.xyz/tx/", currency: "AVAX" },
+  { key: "base", name: "Base", chainId: 8453, rpc: "https://mainnet.base.org", explorer: "https://basescan.org/tx/", currency: "ETH" },
+  { key: "berachain", name: "Berachain", chainId: 80094, rpc: "https://rpc.berachain.com", explorer: "https://berascan.com/tx/", currency: "BERA" },
+  { key: "blast", name: "Blast", chainId: 81457, rpc: "https://rpc.blast.io", explorer: "https://blastscan.io/tx/", currency: "ETH" },
+  { key: "bnb-smart-chain", name: "BNB Smart Chain", chainId: 56, rpc: "https://bsc-dataseed1.bnbchain.org", explorer: "https://bscscan.com/tx/", currency: "BNB" },
+  { key: "celo", name: "Celo", chainId: 42220, rpc: "https://forno.celo.org", explorer: "https://celoscan.io/tx/", currency: "CELO" },
+  { key: "chiliz", name: "Chiliz", chainId: 88888, rpc: "https://rpc.chiliz.com", explorer: "https://chiliscan.com/tx/", currency: "CHZ" },
+  { key: "conflux-evm-espace", name: "Conflux EVM eSpace", chainId: 1030, rpc: "https://evm.confluxrpc.com", explorer: "https://evm.confluxscan.net/tx/", currency: "CFX" },
+  { key: "core-blockchain", name: "Core Blockchain", chainId: 1116, rpc: "https://rpc.coredao.org", explorer: "https://scan.coredao.org/tx/", currency: "CORE" },
+  { key: "coti", name: "COTI", chainId: 2632500, rpc: "https://mainnet.coti.io/rpc", explorer: "https://mainnet.cotiscan.io/tx/", currency: "COTI" },
+  { key: "cronos", name: "Cronos", chainId: 25, rpc: "https://evm.cronos.org", explorer: "https://explorer.cronos.org/tx/", currency: "CRO" },
+  { key: "degen-chain", name: "Degen Chain", chainId: 666666666, rpc: "https://rpc.degen.tips", explorer: null, currency: "DEGEN" },
+  { key: "ethereum", name: "Ethereum", chainId: 1, rpc: "https://ethereum-rpc.publicnode.com", explorer: "https://etherscan.io/tx/", currency: "ETH" },
+  { key: "ethereum-classic", name: "Ethereum Classic", chainId: 61, rpc: "https://etc.rivet.link", explorer: "https://etc.blockscout.com/tx/", currency: "ETC" },
+  { key: "etherlink", name: "Etherlink", chainId: 42793, rpc: "https://node.mainnet.etherlink.com", explorer: "https://explorer.etherlink.com/tx/", currency: "XTZ" },
+  { key: "flare", name: "Flare", chainId: 14, rpc: "https://flare-api.flare.network/ext/C/rpc", explorer: "https://flare-explorer.flare.network/tx/", currency: "FLR" },
+  { key: "gnosis", name: "Gnosis", chainId: 100, rpc: "https://rpc.gnosischain.com", explorer: "https://gnosisscan.io/tx/", currency: "XDAI" },
+  { key: "gravity-alpha", name: "Gravity Alpha", chainId: 1625, rpc: "https://rpc.gravity.xyz", explorer: "https://explorer.gravity.xyz/tx/", currency: "G" },
+  { key: "hashkey-chain", name: "HashKey Chain", chainId: 177, rpc: "https://mainnet.hsk.xyz", explorer: "https://hsk.blockscout.com/tx/", currency: "HSK" },
+  { key: "immutable-zkevm", name: "Immutable zkEVM", chainId: 13371, rpc: "https://rpc.immutable.com", explorer: "https://explorer.immutable.com/tx/", currency: "IMX" },
+  { key: "ink", name: "Ink", chainId: 57073, rpc: "https://rpc-gel.inkonchain.com", explorer: "https://explorer.inkonchain.com/tx/", currency: "ETH" },
+  { key: "katana", name: "Katana", chainId: 747474, rpc: "https://rpc.katana.network", explorer: "https://katanascan.com/tx/", currency: "ETH" },
+  { key: "kava-evm", name: "Kava EVM", chainId: 2222, rpc: "https://evm.kava.io", explorer: "https://kavascan.com/tx/", currency: "KAVA" },
+  { key: "lens", name: "Lens", chainId: 232, rpc: "https://rpc.lens.xyz", explorer: "https://explorer.lens.xyz/tx/", currency: "GHO" },
+  { key: "linea", name: "Linea", chainId: 59144, rpc: "https://rpc.linea.build", explorer: "https://lineascan.build/tx/", currency: "ETH" },
+  { key: "mantle", name: "Mantle", chainId: 5000, rpc: "https://rpc.mantle.xyz", explorer: "https://mantlescan.xyz/tx/", currency: "MNT" },
+  { key: "megaeth", name: "MegaETH", chainId: 4326, rpc: "https://mainnet.megaeth.com/rpc", explorer: "https://mega.etherscan.io/tx/", currency: "ETH" },
+  { key: "mode", name: "Mode", chainId: 34443, rpc: "https://mainnet.mode.network", explorer: "https://explorer.mode.network/tx/", currency: "ETH" },
+  { key: "monad", name: "Monad", chainId: 143, rpc: "https://rpc.monad.xyz", explorer: "https://monadvision.com/tx/", currency: "MON" },
+  { key: "moonbeam", name: "Moonbeam", chainId: 1284, rpc: "https://rpc.api.moonbeam.network", explorer: "https://moonbeam.moonscan.io/tx/", currency: "GLMR" },
+  { key: "moonriver", name: "Moonriver", chainId: 1285, rpc: "https://rpc.api.moonriver.moonbeam.network", explorer: "https://moonriver.moonscan.io/tx/", currency: "MOVR" },
+  { key: "optimism", name: "Optimism", chainId: 10, rpc: "https://mainnet.optimism.io", explorer: "https://optimistic.etherscan.io/tx/", currency: "ETH" },
+  { key: "plasma", name: "Plasma", chainId: 9745, rpc: "https://rpc.plasma.to", explorer: "https://plasmascan.to/tx/", currency: "XPL" },
+  { key: "plume", name: "Plume", chainId: 98866, rpc: "https://rpc.plume.org", explorer: "https://explorer.plume.org/tx/", currency: "PLUME" },
+  { key: "polygon", name: "Polygon", chainId: 137, rpc: "https://polygon.drpc.org", explorer: "https://polygonscan.com/tx/", currency: "POL" },
+  { key: "pulsechain", name: "Pulsechain", chainId: 369, rpc: "https://rpc.pulsechain.com", explorer: "https://ipfs.scan.pulsechain.com/tx/", currency: "PLS" },
+  { key: "ronin", name: "Ronin", chainId: 2020, rpc: "https://api.roninchain.com/rpc", explorer: "https://app.roninchain.com/tx/", currency: "RON" },
+  { key: "scroll", name: "Scroll", chainId: 534352, rpc: "https://rpc.scroll.io", explorer: "https://scrollscan.com/tx/", currency: "ETH" },
+  { key: "somnia", name: "Somnia", chainId: 5031, rpc: "https://api.infra.mainnet.somnia.network", explorer: "https://mainnet.somnia.w3us.site/tx/", currency: "SOMI" },
+  { key: "soneium", name: "Soneium", chainId: 1868, rpc: "https://rpc.soneium.org", explorer: "https://soneium.blockscout.com/tx/", currency: "ETH" },
+  { key: "sonic", name: "Sonic", chainId: 146, rpc: "https://rpc.soniclabs.com", explorer: "https://sonicscan.org/tx/", currency: "S" },
+  { key: "stable", name: "Stable", chainId: 988, rpc: "https://rpc.stable.xyz", explorer: "https://stablescan.xyz/tx/", currency: "USDT0" },
+  { key: "story", name: "Story", chainId: 1514, rpc: "https://mainnet.datarpc.io", explorer: "https://datanetscan.io/tx/", currency: "DATA" },
+  { key: "stratis-xertra", name: "Stratis Xertra", chainId: 105105, rpc: "https://rpc.xertra.com", explorer: "https://explorer.xertra.com/tx/", currency: "STRAX" },
+  { key: "taiko-alethia", name: "Taiko Alethia", chainId: 167000, rpc: "https://rpc.mainnet.taiko.xyz", explorer: "https://taikoscan.io/tx/", currency: "ETH" },
+  { key: "telos-evm", name: "Telos EVM", chainId: 40, rpc: "https://rpc.telos.net", explorer: "https://teloscan.io/tx/", currency: "TLOS" },
+  { key: "tempo", name: "Tempo", chainId: 4217, rpc: "https://rpc.mainnet.tempo.xyz", explorer: "https://explore.tempo.xyz/tx/", currency: "USD" },
+  { key: "unichain", name: "Unichain", chainId: 130, rpc: "https://mainnet.unichain.org", explorer: "https://uniscan.xyz/tx/", currency: "ETH" },
+  { key: "world-chain", name: "World Chain", chainId: 480, rpc: "https://worldchain-mainnet.g.alchemy.com/public", explorer: "https://worldscan.org/tx/", currency: "ETH" },
+  { key: "x-layer", name: "X Layer", chainId: 196, rpc: "https://rpc.xlayer.tech", explorer: "https://www.oklink.com/xlayer/tx/", currency: "OKB" },
+  { key: "xai", name: "Xai", chainId: 660279, rpc: "https://xai-chain.net/rpc", explorer: "https://explorer.xai-chain.net/tx/", currency: "XAI" },
+  { key: "xdc-network", name: "XDC Network", chainId: 50, rpc: "https://erpc.xinfin.network", explorer: "https://xdcscan.com/tx/", currency: "XDC" },
+  { key: "zetachain", name: "ZetaChain", chainId: 7000, rpc: "https://zetachain-evm.blockpi.network/v1/rpc/public", explorer: "https://zetascan.com/tx/", currency: "ZETA" },
+  { key: "zksync", name: "zkSync", chainId: 324, rpc: "https://mainnet.era.zksync.io", explorer: "https://explorer.zksync.io/tx/", currency: "ETH" },
+  { key: "zora", name: "Zora", chainId: 7777777, rpc: "https://rpc.zora.energy", explorer: "https://explorer.zora.energy/tx/", currency: "ETH" },
+  { key: "arbitrum-sepolia", name: "Arbitrum Sepolia (testnet)", chainId: 421614, rpc: "https://sepolia-rollup.arbitrum.io/rpc", explorer: "https://sepolia.arbiscan.io/tx/", currency: "ETH" },
+  { key: "base-sepolia", name: "Base Sepolia (testnet)", chainId: 84532, rpc: "https://sepolia.base.org", explorer: "https://sepolia.basescan.org/tx/", currency: "ETH" },
+  { key: "ethereum-hoodi", name: "Ethereum Hoodi (testnet)", chainId: 560048, rpc: "https://rpc.hoodi.ethpandaops.io", explorer: "https://light-hoodi.beaconcha.in/tx/", currency: "ETH" },
+  { key: "ethereum-sepolia", name: "Ethereum Sepolia (testnet)", chainId: 11155111, rpc: "https://rpc.sepolia.org", explorer: "https://sepolia.etherscan.io/tx/", currency: "ETH" },
+  { key: "polygon-amoy", name: "Polygon Amoy (testnet)", chainId: 80002, rpc: "https://rpc-amoy.polygon.technology", explorer: "https://amoy.polygonscan.com/tx/", currency: "POL" },
+  { key: "zksync-sepolia", name: "zkSync Sepolia (testnet)", chainId: 300, rpc: "https://sepolia.era.zksync.dev", explorer: "https://sepolia.explorer.zksync.io/tx/", currency: "ETH" },
+  { key: "sei", name: "Sei", chainId: 1329, rpc: "https://evm-rpc.sei-apis.com", explorer: "https://seitrace.com/tx/", currency: "SEI" },
+  { key: "custom", name: "Custom RPC...", chainId: null, rpc: null, explorer: null, currency: "?" },
+];
+
+// LSP6 permission bits, as in @lukso/lsp6-contracts LSP6Constants.sol (bits 0..22).
+const PERMISSION_BITS = [
+  "CHANGEOWNER","ADDCONTROLLER","EDITPERMISSIONS","ADDEXTENSIONS","CHANGEEXTENSIONS",
+  "ADDUNIVERSALRECEIVERDELEGATE","CHANGEUNIVERSALRECEIVERDELEGATE","REENTRANCY",
+  "SUPER_TRANSFERVALUE","TRANSFERVALUE","SUPER_CALL","CALL","SUPER_STATICCALL","STATICCALL",
+  "SUPER_DELEGATECALL","DELEGATECALL","DEPLOY","SUPER_SETDATA","SETDATA","ENCRYPT","DECRYPT",
+  "SIGN","EXECUTE_RELAY_CALL"
+];
+const P = Object.fromEntries(PERMISSION_BITS.map((n, i) => [n, 1n << BigInt(i)]));
+const PRIVILEGED = P.CHANGEOWNER | P.ADDCONTROLLER | P.EDITPERMISSIONS | P.SUPER_DELEGATECALL | P.DELEGATECALL;
+const PERM_PREFIX = "0x4b80742de2bf82acb3630000"; // LSP6 AddressPermissions:Permissions:<address>
+const ERC1271_MAGIC = "0x1626ba7e";
+const PERMIT2 = "0x000000000022d473030f116ddee9f6b43ac78ba3";
+
+// Calls the page can decode. Anything else is shown as raw data with a warning.
+const KNOWN_IFACE = new ethers.Interface([
+  "function transfer(address to, uint256 amount)",
+  "function approve(address spender, uint256 amount)",
+  "function transferFrom(address from, address to, uint256 amount)",
+  "function increaseAllowance(address spender, uint256 addedValue)",
+  "function setApprovalForAll(address operator, bool approved)",
+  "function safeTransferFrom(address from, address to, uint256 tokenId)",
+  "function safeTransferFrom(address from, address to, uint256 tokenId, bytes data)",
+  "function safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes data)",
+  "function approve(address token, address spender, uint160 amount, uint48 expiration)",
+  "function transfer(address from, address to, uint256 amount, bool force, bytes data)",
+  "function authorizeOperator(address operator, uint256 amount, bytes operatorNotificationData)",
+  "function transfer(address from, address to, bytes32 tokenId, bool force, bytes data)",
+  "function authorizeOperator(address operator, bytes32 tokenId, bytes operatorNotificationData)",
+]);
+// LSP6 errors, to explain why a simulation fails.
+const KM_ERRORS = new ethers.Interface([
+  "error NotAuthorised(address from, string permission)",
+  "error NoPermissionsSet(address from)",
+  "error NoCallsAllowed(address from)",
+  "error NotAllowedCall(address from, address to, bytes4 selector)",
+  "error InvalidEncodedAllowedCalls(bytes allowedCallsValue)",
+]);
+const UP_IFACE = new ethers.Interface(["function execute(uint256 operationType, address target, uint256 value, bytes data) payable returns (bytes)"]);
+const KM_IFACE = new ethers.Interface(["function execute(bytes payload) payable returns (bytes)"]);
+
+// ==================== I18N ====================
+let LANG = "it";
+const I18N = {
+  it: {
+    pageTitle: "UP Wallet — ChainIntegrate",
+    h1: "UP Wallet (sperimentale)",
+    subtitle: "Usa la tua Universal Profile come account su qualsiasi dApp, su qualsiasi rete dove l'hai deployata: la dApp vede l'indirizzo della UP, il tuo controller firma.",
+    langToggleBtn: "English",
+    panel0Title: "0 · Come funziona",
+    panel0Note: "Questa pagina fa da <b>ponte WalletConnect</b> tra una dApp e la tua UP. La dApp vede come account l'indirizzo della UP. Ogni <b>transazione</b> viene incapsulata in <code>KeyManager.execute(UP.execute(...))</code> e firmata dal tuo controller in MetaMask: la chiamata parte dalla UP e il valore esce dal saldo della UP, il gas lo paga il controller. Ogni <b>firma di messaggio</b> la fa il controller e la UP la riconosce come propria (ERC-1271). Prima di tutto la pagina verifica che UP e controller siano compatibili sulla rete scelta. Ogni richiesta viene mostrata per intero, controllata e (per le transazioni) simulata; niente parte senza il tuo clic e la tua conferma in MetaMask.",
+    disclaimer: "<b>⚠️ Leggi prima di usare questa pagina</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Strumento sperimentale, non sottoposto ad audit.</b> Può contenere errori.</li><li><b>Transazioni reali e irreversibili.</b> Nessuno può annullare una transazione confermata. Usa importi minimi e parti sempre in modalità simulazione.</li><li><b>La pagina non conosce le dApp.</b> Decodifica solo una parte delle chiamate (token standard e casi comuni); per il resto ti mostra i dati grezzi. Se non capisci cosa fa una richiesta, <b>rifiutala</b>.</li><li><b>Firme di messaggi.</b> Una firma può autorizzare azioni anche senza transazione: accessi, ordini, permessi a spendere token. La pagina mostra il contenuto e l'esito dei controlli, ma non può sapere a cosa servirà la firma.</li><li><b>Le approvazioni di token restano valide</b> anche dopo aver chiuso la pagina: chi le riceve può spostare i token della UP finché non le revochi.</li><li><b>Responsabilità.</b> ChainIntegrate non si assume alcuna responsabilità per firme o transazioni approvate su contenuto poco chiaro, né per l'uso che le dApp ne fanno. Il software è fornito \"così com'è\" (licenza MIT), senza garanzie: lo usi a tuo rischio.</li><li><b>Da cosa dipende la sicurezza:</b> dall'architettura (firmi sempre tu nel tuo wallet, i permessi li applica il Key Manager della UP) e dai servizi usati (la verifica del dominio di WalletConnect/Reown, gli RPC della rete). La pagina mostra l'esito di queste verifiche ma non può garantirle.</li><li><b>Un controller per ogni UP.</b> Se lo stesso controller governa più UP, una firma valida per questa UP vale anche per le altre.</li><li><b>Questa pagina non chiede mai chiavi private</b> né seed phrase.</li><li><b>Privacy:</b> la connessione WalletConnect passa dai server di Reown, che vedono i metadati della sessione (indirizzi, rete). Le verifiche usano l'RPC pubblico della rete scelta.</li><li><b>Nessuna affiliazione</b> con LUKSO, WalletConnect/Reown, MetaMask o le dApp che colleghi. Non è una consulenza finanziaria.</li></ul><div style=\"margin-top:8px;\">Sempre rifiutati: <code>eth_sign</code> e i formati di firma vecchi, la creazione di contratti, le transazioni della UP verso se stessa o verso il proprio Key Manager (potrebbero cambiarne controller e permessi), le richieste su una rete diversa da quella scelta.</div>",
+    ackLabel: "Ho letto e accetto: uso questo strumento a mio rischio.",
+    ackRequired: "Prima accetta le condizioni nel pannello 0.",
+    panel1Title: "1 · Rete",
+    panel1Note: "La rete su cui la UP è deployata e su cui vuoi usare la dApp. Una rete alla volta: cambiarla chiude le sessioni WalletConnect attive.",
+    networkFilterPlaceholder: "Filtra per nome... (es. base, polygon, arbitrum)",
+    customRpcLabel: "RPC URL custom",
+    customExplorerLabel: "Explorer URL custom (opzionale)",
+    customNetName: "Rete custom",
+    panel2Title: "2 · La tua UP",
+    connectUpBtn: "Leggi l'indirizzo dall'estensione UP",
+    upAddressLabel: "Indirizzo della UP",
+    panel3Title: "3 · Controller (MetaMask) e verifica",
+    panel3Note: "MetaMask con la chiave del controller della UP, sulla rete scelta. Paga il gas: deve avere un po' della moneta della rete. La verifica di compatibilità tra UP e controller parte da sola e si ripete se cambi rete, UP, account o rete in MetaMask.",
+    connectSignerBtn: "Connetti MetaMask (controller)",
+    complianceIdle: "La verifica parte da sola quando rete, UP e MetaMask sono impostati.",
+    recheckBtn: "Ricontrolla",
+    panel4Title: "4 · Collega una dApp con WalletConnect",
+    panel4Note: "Sulla dApp scegli di connetterti con <b>WalletConnect</b>, copia il link di connessione (sotto il QR code, inizia con <code>wc:</code>) e incollalo qui. Si attiva solo quando la verifica del pannello 3 è verde. Tieni aperta questa pagina mentre usi la dApp.",
+    wcUriLabel: "Link WalletConnect (wc:...)",
+    pairBtn: "Collega",
+    wcIdle: "Nessuna sessione.",
+    disconnectBtn: "Disconnetti tutte le sessioni",
+    panel5Title: "5 · Richieste della dApp",
+    simulateOnlyLabel: "Solo simulazione (non inviare nulla)",
+    simulateOnlyNote: "Con la spunta, le transazioni vengono controllate e simulate, poi alla dApp si risponde che è una simulazione: non si invia e non si spende nulla. Le firme di messaggi non si possono simulare: vengono sempre mostrate e firmate solo se premi \"Firma il messaggio\".",
+    noRequest: "Nessuna richiesta in attesa.",
+    sendBtn: "Firma e invia la transazione (irreversibile)",
+    signBtn: "Firma il messaggio per la UP",
+    rejectBtn: "Rifiuta la richiesta",
+
+    // compliance
+    cNetwork: "Rete", cRpc: "RPC", cWallet: "MetaMask", cUp: "UP", cKm: "Key Manager", cPerms: "Permessi del controller",
+    cCanCall: "Chiamate a contratti", cCanValue: "Invio di valore", cCanSign: "Firme di messaggi", cUpBal: "Saldo della UP", cGasBal: "Saldo del controller (gas)",
+    full: "sì", limited: "solo verso le AllowedCalls", none: "no",
+    rpcOk: (v) => `✅ chainId ${v.id}`,
+    rpcWrong: (v) => `❌ l'RPC risponde con chainId ${v.id}, atteso ${v.exp}`,
+    rpcFail: (v) => `❌ RPC non raggiungibile: ${v.err}`,
+    walletMissing: "❌ non connesso",
+    walletOk: (v) => `✅ ${v.addr} · chainId ${v.id}`,
+    walletWrong: (v) => `❌ ${v.addr} è sulla rete con chainId ${v.id}: passa a chainId ${v.exp} in MetaMask`,
+    walletUnknown: "❌ impossibile leggere la rete di MetaMask",
+    upMissing: "❌ indirizzo mancante o non valido",
+    upNotDeployed: "❌ non deployata su questa rete",
+    upOk: (v) => `✅ ${v.addr}`,
+    kmBad: (v) => `❌ l'owner della UP (${v.addr}) non è un contratto su questa rete`,
+    kmOk: (v) => `✅ ${v.addr}`,
+    permsNone: "❌ nessuno: questo account non è un controller della UP. Controlla di aver importato in MetaMask la chiave del controller di QUESTA UP.",
+    permsList: (v) => `${v.hex} · ${v.names}`,
+    gasLow: (v) => `⚠️ ${v.bal}: senza moneta della rete il controller non può pagare il gas`,
+    verdictOk: "✅ UP e controller compatibili su questa rete: puoi collegare una dApp.",
+    verdictPrivileged: "ℹ️ Questo controller ha anche permessi di amministrazione della UP (controller e permessi): proteggi bene la sua chiave.",
+    verdictNoUse: "❌ Il controller non ha permessi utili per le dApp (né chiamate, né invio di valore, né firme).",
+    verdictFail: "❌ Verifica non superata: correggi il punto in rosso qui sopra. Il collegamento a una dApp resta disattivato.",
+    verdictMissing: "Completa i campi mancanti: la verifica ripartirà da sola.",
+    complianceRunning: "Verifica in corso...",
+
+    // WalletConnect
+    extNotFound: "Estensione Universal Profile non trovata.",
+    connectionRejected: "Connessione rifiutata o fallita.",
+    noSignerFound: "Nessun wallet firmatario trovato (es. MetaMask).",
+    noProjectId: "Manca il Project ID di WalletConnect: sul server va creato il file config.js (vedi config.example.js).",
+    invalidUri: "Il link deve iniziare con wc:",
+    complianceFirst: "Prima la verifica del pannello 3 deve essere verde.",
+    pairing: "Collegamento in corso... conferma sulla dApp se richiesto.",
+    proposalFrom: (v) => `Richiesta di connessione da: ${v.name} (${v.url}) — verifica del dominio: ${v.verify}`,
+    proposalScam: "❌ WalletConnect segnala questo sito come truffa o dominio non valido: connessione rifiutata.",
+    proposalUnverified: "⚠️ Dominio non verificato da WalletConnect: controlla di essere sul sito giusto prima di approvare qualsiasi cosa.",
+    proposalRejectedChains: (v) => `❌ Connessione rifiutata: la dApp richiede reti diverse da quella scelta (${v.err}). Scegli nel pannello 1 la rete che la dApp usa e ricollega.`,
+    sessionActive: (v) => `✅ Sessione attiva con ${v.name} (${v.url}) — account presentato: ${v.acc} su chainId ${v.id}.`,
+    sessionClosed: "Sessione chiusa.",
+    sessionsDropped: "Rete o UP cambiata: sessioni WalletConnect chiuse. Ricollega la dApp.",
+    genericError: (v) => `Errore: ${v.err}`,
+
+    // requests
+    reqMethod: (v) => `Richiesta dalla dApp: ${v.method}`,
+    reqBusy: "C'è già una richiesta in attesa: la nuova viene rifiutata.",
+    reqUnsupported: (v) => `Metodo non supportato, rifiutato: ${v.method}`,
+    reqWrongChain: (v) => `❌ Richiesta sulla rete ${v.chain}, diversa da quella scelta (${v.exp}): rifiutata.`,
+    reqSwitchChain: (v) => `La dApp chiede di passare alla rete con chainId ${v.id}. Qui si usa una rete alla volta: se serve, scegli quella rete nel pannello 1 e ricollega. Rifiutata.`,
+    complianceLost: "❌ La verifica di compatibilità non è più verde (vedi pannello 3): richiesta rifiutata.",
+    reqWrongFrom: (v) => `❌ La transazione non parte dalla UP (from = ${v.from}): rifiutata.`,
+    reqCreate: "❌ Creazione di contratti non supportata: rifiutata.",
+    reqSelf: "❌ Transazione verso la UP stessa o verso il suo Key Manager: potrebbe cambiarne controller o permessi. Sempre rifiutata.",
+    reqNoCall: "❌ Il controller non ha il permesso CALL né SUPER_CALL: non può fare chiamate a contratti. Rifiutata.",
+    reqNoValue: "❌ Il controller non ha il permesso TRANSFERVALUE né SUPER_TRANSFERVALUE: non può inviare valore. Rifiutata.",
+    kSite: "Sito", kVerify: "Verifica dominio", kNetwork: "Rete", kFrom: "Mittente (UP)", kTo: "Destinatario", kValue: "Valore (dalla UP)",
+    kCall: "Operazione", kRaw: "Dati grezzi", kSigner: "Firma (controller)", kKm: "Tramite Key Manager",
+    kMethod: "Metodo", kAccount: "Account (UP)", kContentType: "Tipo di contenuto", kContent: "Contenuto da firmare (deve coincidere con MetaMask)",
+    kHash: "Hash verificato dalla UP", kDomain: "Dominio (EIP-712)", kPrimaryType: "Tipo di messaggio",
+    toContract: "contratto", toEoa: "indirizzo senza codice",
+    nativeTransfer: (v) => `Invio di ${v.amount} ${v.cur} a ${v.to}`,
+    unknownCall: (v) => `Chiamata non riconosciuta (selettore ${v.sel})`,
+    warnUnknownCall: "⚠️ La pagina non riconosce questa chiamata: non può dirti cosa fa. Se non lo sai con certezza, rifiuta.",
+    warnEoaData: "⚠️ Il destinatario non è un contratto ma la transazione contiene dati: insolito, controlla.",
+    warnApproval: (v) => `⚠️⚠️ APPROVAZIONE: ${v.who} potrà spostare ${v.what} della UP senza altre conferme, anche dopo che chiudi questa pagina, finché non revochi.`,
+    warnApprovalAll: "tutti gli NFT di questa collezione",
+    warnUnlimited: "una quantità ILLIMITATA di token",
+    infoRevoke: "ℹ️ Revoca di un'approvazione (importo 0 o permesso tolto).",
+    infoTransfer: (v) => `ℹ️ Trasferimento: ${v.what} a ${v.to}.`,
+    upNoFunds: (v) => `❌ La UP non ha abbastanza fondi per il valore richiesto: servono ${v.need}, ne ha ${v.have}.`,
+    chainsOk: "✅ RPC e MetaMask sulla rete scelta; controller verificato.",
+    simulating: "Simulazione della transazione incapsulata...",
+    simOk: (v) => `✅ Simulazione riuscita. Gas stimato: ${v.gas}.`,
+    simFail: (v) => `❌ La simulazione fallisce: ${v.err}. Niente viene inviato.`,
+    signerNoGas: (v) => `❌ Il controller non ha abbastanza fondi per il gas: servono circa ${v.need}, ne ha ${v.have}.`,
+    simOnlyDone: "Modalità simulazione: niente inviato. Alla dApp è stato risposto che si tratta di una simulazione.",
+    readyToSend: "Pronto. Controlla i dati sopra, poi premi \"Firma e invia\". In MetaMask vedrai come destinatario il Key Manager della UP e nessun valore: è corretto, è l'incapsulamento (il valore esce dalla UP).",
+    signerChanged: "❌ L'account attivo in MetaMask non è quello verificato: rifiutata.",
+    sending: "Invio della transazione incapsulata (conferma in MetaMask)...",
+    txSent: (v) => `Tx inviata: ${v.hash}`,
+    waiting: "In attesa di conferma...",
+    txOk: "✅✅ Transazione confermata.",
+    txFailed: "❌ Transazione fallita on-chain.",
+    rejectedByUser: "Richiesta rifiutata.",
+
+    // signatures
+    signLegacyRejected: (v) => `❌ ${v.method} rifiutato: questo formato può autorizzare qualsiasi cosa, anche una transazione, e non viene mai firmato.`,
+    signWrongAccount: (v) => `❌ La firma è chiesta per ${v.acc}, non per la tua UP: rifiutata.`,
+    signBadData: (v) => `❌ Dati da firmare non validi: ${v.err}. Rifiutata.`,
+    signWrongDomainChain: (v) => `❌ Il messaggio è per la rete con chainId ${v.id}, non per quella scelta: rifiutata.`,
+    signNoPermission: "❌ Il controller non ha il permesso SIGN sulla UP: la UP non riconoscerebbe la firma. Rifiutata.",
+    verifyBad: (v) => `❌ WalletConnect segnala il sito come non affidabile (${v.v}): richiesta rifiutata.`,
+    verifyWarn: (v) => `⚠️ Verifica del dominio WalletConnect: ${v.v}. Non è confermato che la richiesta venga dal sito dichiarato.`,
+    verifyOk: "✅ Verifica del dominio WalletConnect: VALID.",
+    signOpaque: "⚠️ Il contenuto NON è leggibile: è un hash o dati binari. Non puoi sapere cosa autorizzi. Se non sai esattamente a cosa serve, rifiuta.",
+    signPermit: "⚠️⚠️ Questo messaggio sembra un PERMESSO A SPENDERE TOKEN (Permit/Permit2): chi lo riceve può spostare token della UP senza altre conferme. Firma solo se sai esattamente perché.",
+    signOrder: "⚠️⚠️ Questo messaggio sembra un ORDINE (per esempio di vendita): chi lo esegue può trasferire beni della UP alle condizioni scritte. Controlla ogni campo.",
+    siweDomainMismatch: (v) => `⚠️⚠️ Messaggio di accesso per il dominio \"${v.d}\", ma il sito collegato è ${v.site}: possibile phishing. Rifiuta se non sei sicuro.`,
+    siweChainMismatch: (v) => `⚠️ Il messaggio di accesso indica chainId ${v.id}, diverso dalla rete scelta.`,
+    signReplay: "ℹ️ Se questo controller governa anche altre UP, la firma vale anche per quelle.",
+    signCompare: (v) => `👉 DA CONTROLLARE IN METAMASK: il messaggio che MetaMask ti chiede di firmare deve essere esattamente questo: ${v.c}\nSe è diverso, rifiuta in MetaMask.`,
+    signReady: "Pronto. Leggi il contenuto sopra: se non capisci cosa stai firmando, premi \"Rifiuta\". Altrimenti premi \"Firma il messaggio\" e confronta il messaggio in MetaMask con quello nel riquadro qui sopra.",
+    signing: "Firma in corso con il controller (conferma in MetaMask)...",
+    signRecovered: (v) => `Firma ricevuta. Firmatario ricavato dalla firma: ${v.addr}.`,
+    signWrongSigner: "❌ La firma non è del controller verificato: non viene inviata alla dApp.",
+    signCheckingUp: "Verifica on-chain: la UP riconosce la firma? (isValidSignature)",
+    signValid: "✅ La UP riconosce la firma come propria. Firma inviata alla dApp.",
+    signInvalid: (v) => `❌ La UP NON riconosce la firma (risposta ${v.r}): non viene inviata alla dApp.`,
+    ctText: "testo leggibile", ctOpaque: "dati non leggibili (hash o binario)", ctTyped: "dati strutturati EIP-712",
+
+    footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a>`,
+  },
+  en: {
+    pageTitle: "UP Wallet — ChainIntegrate",
+    h1: "UP Wallet (experimental)",
+    subtitle: "Use your Universal Profile as the account on any dApp, on any network where you deployed it: the dApp sees the UP address, your controller signs.",
+    langToggleBtn: "Italiano",
+    panel0Title: "0 · How it works",
+    panel0Note: "This page is a <b>WalletConnect bridge</b> between a dApp and your UP. The dApp sees the UP address as the account. Every <b>transaction</b> is wrapped into <code>KeyManager.execute(UP.execute(...))</code> and signed by your controller in MetaMask: the call comes from the UP and any value is paid from the UP's balance, while the controller pays the gas. Every <b>message signature</b> is made by the controller and the UP recognises it as its own (ERC-1271). First of all, the page checks that the UP and the controller are compatible on the chosen network. Every request is shown in full, checked and (for transactions) simulated; nothing happens without your click and your confirmation in MetaMask.",
+    disclaimer: "<b>⚠️ Read before using this page</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Experimental tool, not audited.</b> It may contain bugs.</li><li><b>Real, irreversible transactions.</b> Nobody can undo a confirmed transaction. Use minimal amounts and always start in simulation mode.</li><li><b>The page does not know the dApps.</b> It decodes only part of the calls (standard tokens and common cases); for the rest it shows you the raw data. If you do not understand what a request does, <b>reject it</b>.</li><li><b>Message signatures.</b> A signature can authorise actions even without a transaction: logins, orders, permissions to spend tokens. The page shows the content and the result of the checks, but cannot know what the signature will be used for.</li><li><b>Token approvals stay valid</b> after you close the page: whoever receives them can move the UP's tokens until you revoke them.</li><li><b>Responsibility.</b> ChainIntegrate takes no responsibility for signatures or transactions approved on unclear content, nor for what dApps do with them. The software is provided \"as is\" (MIT license), without warranty: you use it at your own risk.</li><li><b>What security relies on:</b> the architecture (you always sign in your own wallet, permissions are enforced by the UP's Key Manager) and the services used (WalletConnect/Reown domain verification, the network's RPCs). The page shows the result of these checks but cannot guarantee them.</li><li><b>One controller per UP.</b> If the same controller governs several UPs, a signature valid for this UP is valid for the others too.</li><li><b>This page never asks for private keys</b> or seed phrases.</li><li><b>Privacy:</b> the WalletConnect connection goes through Reown's servers, which see the session metadata (addresses, network). Checks use the chosen network's public RPC.</li><li><b>No affiliation</b> with LUKSO, WalletConnect/Reown, MetaMask or the dApps you connect. This is not financial advice.</li></ul><div style=\"margin-top:8px;\">Always rejected: <code>eth_sign</code> and legacy signature formats, contract creation, transactions from the UP to itself or to its own Key Manager (they could change its controllers and permissions), requests on a network other than the chosen one.</div>",
+    ackLabel: "I have read and accept: I use this tool at my own risk.",
+    ackRequired: "Accept the conditions in panel 0 first.",
+    panel1Title: "1 · Network",
+    panel1Note: "The network where the UP is deployed and where you want to use the dApp. One network at a time: changing it closes the active WalletConnect sessions.",
+    networkFilterPlaceholder: "Filter by name... (e.g. base, polygon, arbitrum)",
+    customRpcLabel: "Custom RPC URL",
+    customExplorerLabel: "Custom explorer URL (optional)",
+    customNetName: "Custom network",
+    panel2Title: "2 · Your UP",
+    connectUpBtn: "Read the address from the UP extension",
+    upAddressLabel: "UP address",
+    panel3Title: "3 · Controller (MetaMask) and check",
+    panel3Note: "MetaMask with the UP controller's key, on the chosen network. It pays the gas: it needs some of the network's coin. The compatibility check between UP and controller starts by itself and runs again if you change network, UP, account or MetaMask's network.",
+    connectSignerBtn: "Connect MetaMask (controller)",
+    complianceIdle: "The check starts by itself once network, UP and MetaMask are set.",
+    recheckBtn: "Check again",
+    panel4Title: "4 · Connect a dApp through WalletConnect",
+    panel4Note: "On the dApp choose to connect with <b>WalletConnect</b>, copy the connection link (below the QR code, it starts with <code>wc:</code>) and paste it here. It is enabled only when the check in panel 3 is green. Keep this page open while you use the dApp.",
+    wcUriLabel: "WalletConnect link (wc:...)",
+    pairBtn: "Connect",
+    wcIdle: "No session.",
+    disconnectBtn: "Disconnect all sessions",
+    panel5Title: "5 · Requests from the dApp",
+    simulateOnlyLabel: "Simulation only (send nothing)",
+    simulateOnlyNote: "When checked, transactions are checked and simulated, then the dApp is told it was a simulation: nothing is sent and nothing is spent. Message signatures cannot be simulated: they are always shown and signed only if you press \"Sign the message\".",
+    noRequest: "No pending request.",
+    sendBtn: "Sign and send the transaction (irreversible)",
+    signBtn: "Sign the message for the UP",
+    rejectBtn: "Reject the request",
+
+    cNetwork: "Network", cRpc: "RPC", cWallet: "MetaMask", cUp: "UP", cKm: "Key Manager", cPerms: "Controller permissions",
+    cCanCall: "Contract calls", cCanValue: "Sending value", cCanSign: "Message signatures", cUpBal: "UP balance", cGasBal: "Controller balance (gas)",
+    full: "yes", limited: "only to the AllowedCalls", none: "no",
+    rpcOk: (v) => `✅ chainId ${v.id}`,
+    rpcWrong: (v) => `❌ the RPC answers with chainId ${v.id}, expected ${v.exp}`,
+    rpcFail: (v) => `❌ RPC unreachable: ${v.err}`,
+    walletMissing: "❌ not connected",
+    walletOk: (v) => `✅ ${v.addr} · chainId ${v.id}`,
+    walletWrong: (v) => `❌ ${v.addr} is on chainId ${v.id}: switch MetaMask to chainId ${v.exp}`,
+    walletUnknown: "❌ could not read MetaMask's network",
+    upMissing: "❌ missing or invalid address",
+    upNotDeployed: "❌ not deployed on this network",
+    upOk: (v) => `✅ ${v.addr}`,
+    kmBad: (v) => `❌ the UP owner (${v.addr}) is not a contract on this network`,
+    kmOk: (v) => `✅ ${v.addr}`,
+    permsNone: "❌ none: this account is not a controller of the UP. Check that you imported into MetaMask the controller key of THIS UP.",
+    permsList: (v) => `${v.hex} · ${v.names}`,
+    gasLow: (v) => `⚠️ ${v.bal}: without the network's coin the controller cannot pay for gas`,
+    verdictOk: "✅ UP and controller are compatible on this network: you can connect a dApp.",
+    verdictPrivileged: "ℹ️ This controller also has admin permissions on the UP (controllers and permissions): protect its key well.",
+    verdictNoUse: "❌ The controller has no permission useful for dApps (no calls, no value transfers, no signatures).",
+    verdictFail: "❌ Check failed: fix the item in red above. Connecting a dApp stays disabled.",
+    verdictMissing: "Fill in the missing fields: the check will start again by itself.",
+    complianceRunning: "Checking...",
+
+    extNotFound: "Universal Profile extension not found.",
+    connectionRejected: "Connection rejected or failed.",
+    noSignerFound: "No signing wallet found (e.g. MetaMask).",
+    noProjectId: "The WalletConnect Project ID is missing: create config.js on the server (see config.example.js).",
+    invalidUri: "The link must start with wc:",
+    complianceFirst: "The check in panel 3 must be green first.",
+    pairing: "Connecting... confirm on the dApp if asked.",
+    proposalFrom: (v) => `Connection request from: ${v.name} (${v.url}) — domain verification: ${v.verify}`,
+    proposalScam: "❌ WalletConnect flags this site as a scam or invalid domain: connection rejected.",
+    proposalUnverified: "⚠️ Domain not verified by WalletConnect: check that you are on the right site before approving anything.",
+    proposalRejectedChains: (v) => `❌ Connection rejected: the dApp requires networks other than the chosen one (${v.err}). Choose in panel 1 the network the dApp uses and connect again.`,
+    sessionActive: (v) => `✅ Session active with ${v.name} (${v.url}) — account presented: ${v.acc} on chainId ${v.id}.`,
+    sessionClosed: "Session closed.",
+    sessionsDropped: "Network or UP changed: WalletConnect sessions closed. Connect the dApp again.",
+    genericError: (v) => `Error: ${v.err}`,
+
+    reqMethod: (v) => `Request from the dApp: ${v.method}`,
+    reqBusy: "A request is already pending: the new one is rejected.",
+    reqUnsupported: (v) => `Unsupported method, rejected: ${v.method}`,
+    reqWrongChain: (v) => `❌ Request on network ${v.chain}, not the chosen one (${v.exp}): rejected.`,
+    reqSwitchChain: (v) => `The dApp asks to switch to chainId ${v.id}. This page uses one network at a time: if needed, choose that network in panel 1 and connect again. Rejected.`,
+    complianceLost: "❌ The compatibility check is no longer green (see panel 3): request rejected.",
+    reqWrongFrom: (v) => `❌ The transaction does not come from the UP (from = ${v.from}): rejected.`,
+    reqCreate: "❌ Contract creation is not supported: rejected.",
+    reqSelf: "❌ Transaction to the UP itself or to its Key Manager: it could change its controllers or permissions. Always rejected.",
+    reqNoCall: "❌ The controller has neither CALL nor SUPER_CALL: it cannot call contracts. Rejected.",
+    reqNoValue: "❌ The controller has neither TRANSFERVALUE nor SUPER_TRANSFERVALUE: it cannot send value. Rejected.",
+    kSite: "Site", kVerify: "Domain verification", kNetwork: "Network", kFrom: "Sender (UP)", kTo: "Recipient", kValue: "Value (from the UP)",
+    kCall: "Operation", kRaw: "Raw data", kSigner: "Signer (controller)", kKm: "Through Key Manager",
+    kMethod: "Method", kAccount: "Account (UP)", kContentType: "Content type", kContent: "Content to sign (must match MetaMask)",
+    kHash: "Hash checked by the UP", kDomain: "Domain (EIP-712)", kPrimaryType: "Message type",
+    toContract: "contract", toEoa: "address without code",
+    nativeTransfer: (v) => `Send ${v.amount} ${v.cur} to ${v.to}`,
+    unknownCall: (v) => `Unrecognised call (selector ${v.sel})`,
+    warnUnknownCall: "⚠️ The page does not recognise this call: it cannot tell you what it does. Unless you know for sure, reject it.",
+    warnEoaData: "⚠️ The recipient is not a contract but the transaction carries data: unusual, check it.",
+    warnApproval: (v) => `⚠️⚠️ APPROVAL: ${v.who} will be able to move ${v.what} of the UP without further confirmation, even after you close this page, until you revoke it.`,
+    warnApprovalAll: "all the NFTs of this collection",
+    warnUnlimited: "an UNLIMITED amount of tokens",
+    infoRevoke: "ℹ️ Revocation of an approval (amount 0 or permission removed).",
+    infoTransfer: (v) => `ℹ️ Transfer: ${v.what} to ${v.to}.`,
+    upNoFunds: (v) => `❌ The UP does not have enough funds for the requested value: ${v.need} needed, it has ${v.have}.`,
+    chainsOk: "✅ RPC and MetaMask on the chosen network; controller verified.",
+    simulating: "Simulating the wrapped transaction...",
+    simOk: (v) => `✅ Simulation succeeded. Estimated gas: ${v.gas}.`,
+    simFail: (v) => `❌ The simulation fails: ${v.err}. Nothing is sent.`,
+    signerNoGas: (v) => `❌ The controller does not have enough funds for gas: about ${v.need} needed, it has ${v.have}.`,
+    simOnlyDone: "Simulation mode: nothing sent. The dApp was told this was a simulation.",
+    readyToSend: "Ready. Check the data above, then press \"Sign and send\". MetaMask will show the UP's Key Manager as the recipient and no value: that is correct, it is the wrapping (the value comes from the UP).",
+    signerChanged: "❌ The active MetaMask account is not the verified one: rejected.",
+    sending: "Sending the wrapped transaction (confirm in MetaMask)...",
+    txSent: (v) => `Tx sent: ${v.hash}`,
+    waiting: "Waiting for confirmation...",
+    txOk: "✅✅ Transaction confirmed.",
+    txFailed: "❌ Transaction failed on-chain.",
+    rejectedByUser: "Request rejected.",
+
+    signLegacyRejected: (v) => `❌ ${v.method} rejected: this format can authorise anything, even a transaction, and is never signed.`,
+    signWrongAccount: (v) => `❌ The signature is requested for ${v.acc}, not for your UP: rejected.`,
+    signBadData: (v) => `❌ Invalid data to sign: ${v.err}. Rejected.`,
+    signWrongDomainChain: (v) => `❌ The message is for chainId ${v.id}, not for the chosen network: rejected.`,
+    signNoPermission: "❌ The controller does not have the SIGN permission on the UP: the UP would not recognise the signature. Rejected.",
+    verifyBad: (v) => `❌ WalletConnect flags the site as untrusted (${v.v}): request rejected.`,
+    verifyWarn: (v) => `⚠️ WalletConnect domain verification: ${v.v}. It is not confirmed that the request comes from the declared site.`,
+    verifyOk: "✅ WalletConnect domain verification: VALID.",
+    signOpaque: "⚠️ The content is NOT readable: it is a hash or binary data. You cannot know what you are authorising. Unless you know exactly what it is for, reject it.",
+    signPermit: "⚠️⚠️ This message looks like a PERMISSION TO SPEND TOKENS (Permit/Permit2): whoever receives it can move the UP's tokens without further confirmation. Only sign if you know exactly why.",
+    signOrder: "⚠️⚠️ This message looks like an ORDER (for example a sale): whoever executes it can transfer the UP's assets on the stated terms. Check every field.",
+    siweDomainMismatch: (v) => `⚠️⚠️ Sign-in message for the domain \"${v.d}\", but the connected site is ${v.site}: possible phishing. Reject it unless you are sure.`,
+    siweChainMismatch: (v) => `⚠️ The sign-in message states chainId ${v.id}, which is not the chosen network.`,
+    signReplay: "ℹ️ If this controller also governs other UPs, the signature is valid for them too.",
+    signCompare: (v) => `👉 CHECK IN METAMASK: the message MetaMask asks you to sign must be exactly this: ${v.c}\nIf it is different, reject it in MetaMask.`,
+    signReady: "Ready. Read the content above: if you do not understand what you are signing, press \"Reject\". Otherwise press \"Sign the message\" and compare the message in MetaMask with the one in the box above.",
+    signing: "Signing with the controller (confirm in MetaMask)...",
+    signRecovered: (v) => `Signature received. Signer recovered from the signature: ${v.addr}.`,
+    signWrongSigner: "❌ The signature is not from the verified controller: it is not sent to the dApp.",
+    signCheckingUp: "On-chain check: does the UP recognise the signature? (isValidSignature)",
+    signValid: "✅ The UP recognises the signature as its own. Signature sent to the dApp.",
+    signInvalid: (v) => `❌ The UP does NOT recognise the signature (answer ${v.r}): it is not sent to the dApp.`,
+    ctText: "readable text", ctOpaque: "unreadable data (hash or binary)", ctTyped: "EIP-712 structured data",
+
+    footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a>`,
+  },
+};
+
+function t(key, vars) {
+  const entry = I18N[LANG][key];
+  return typeof entry === "function" ? entry(vars || {}) : entry;
+}
+function applyI18n() {
+  document.documentElement.lang = LANG;
+  document.title = t("pageTitle");
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.getAttribute("data-i18n")); });
+  document.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.getAttribute("data-i18n-html")); });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => { el.placeholder = t(el.getAttribute("data-i18n-placeholder")); });
+  if (lastCompliance) renderCompliance(lastCompliance);
+}
+$("langToggle").addEventListener("click", () => { LANG = LANG === "it" ? "en" : "it"; applyI18n(); });
+
+// ==================== HELPERS ====================
+// All data coming from the dApp, wallets or RPCs is written with textContent, never innerHTML.
+function setStatus(id, text, cls) {
+  const el = $(id);
+  el.textContent = "";
+  const span = document.createElement("span");
+  if (cls) span.className = cls;
+  span.textContent = text;
+  el.appendChild(span);
+}
+function log(msg, cls) {
+  const l = document.createElement("div");
+  if (cls) l.className = cls;
+  l.textContent = msg;
+  $("log").appendChild(l);
+}
+// The log keeps the history of the session: each request starts with a separator.
+function logSeparator() {
+  const l = document.createElement("div");
+  l.className = "line-dim";
+  l.textContent = `—— ${new Date().toLocaleTimeString()} ——`;
+  $("log").appendChild(l);
+}
+// rows: [key, value, { block?: bool, cls?: "ok"|"warn"|"err" }]
+function renderKv(boxId, rows, verdict) {
+  const box = $(boxId);
+  box.textContent = "";
+  const grid = document.createElement("div");
+  grid.className = "kv";
+  for (const [k, v, opt] of rows) {
+    const kd = document.createElement("div"); kd.className = "k"; kd.textContent = k;
+    const vd = document.createElement("div"); vd.className = "v" + (opt?.cls ? " " + opt.cls : "");
+    if (opt?.block) { const pre = document.createElement("pre"); pre.textContent = v; vd.appendChild(pre); }
+    else vd.textContent = v;
+    grid.appendChild(kd); grid.appendChild(vd);
+  }
+  box.appendChild(grid);
+  for (const [text, cls] of verdict || []) {
+    const d = document.createElement("div");
+    d.className = "verdict " + cls;
+    d.textContent = text;
+    box.appendChild(d);
+  }
+}
+const riskAccepted = () => $("ackRisk").checked;
+const permNames = (perms) => PERMISSION_BITS.filter((n) => perms & P[n]).join(", ") || "—";
+
+// Upper bound of the gas price, read straight from the RPC (2 * baseFee + priority fee).
+// ethers' getFeeData() is avoided: on some chains it calls a third-party gas station.
+async function estimateMaxGasPrice(provider) {
+  const gasPrice = BigInt(await provider.send("eth_gasPrice", []));
+  const block = await provider.send("eth_getBlockByNumber", ["latest", false]);
+  if (!block || !block.baseFeePerGas) return gasPrice;
+  const baseFee = BigInt(block.baseFeePerGas);
+  const tip = gasPrice > baseFee ? gasPrice - baseFee : 0n;
+  return 2n * baseFee + tip;
+}
+
+// ==================== 1. Network ====================
+const networkSelectEl = $("network");
+function renderNetworkOptions(filter) {
+  const f = (filter || "").toLowerCase();
+  networkSelectEl.innerHTML = "";
+  CHAINS.filter(c => c.name.toLowerCase().includes(f)).forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c.key;
+    opt.textContent = c.chainId ? `${c.name} (chainId ${c.chainId})` : c.name;
+    networkSelectEl.appendChild(opt);
+  });
+}
+renderNetworkOptions("");
+const presetNetworkKey = new URLSearchParams(location.search).get("network");
+if (presetNetworkKey && CHAINS.some(c => c.key === presetNetworkKey)) networkSelectEl.value = presetNetworkKey;
+
+function getNetwork() {
+  const c = CHAINS.find(x => x.key === networkSelectEl.value);
+  if (!c) return null;
+  if (c.key === "custom") {
+    return { key: "custom", name: t("customNetName"), chainId: null, rpc: $("customRpc").value.trim(), explorer: $("customExplorer").value.trim() || null, currency: "" };
+  }
+  return { ...c };
+}
+function onNetworkChanged() {
+  $("customRpcWrap").style.display = networkSelectEl.value === "custom" ? "block" : "none";
+  dropSessions();
+  scheduleCompliance();
+}
+$("networkFilter").addEventListener("input", (e) => { renderNetworkOptions(e.target.value); onNetworkChanged(); });
+networkSelectEl.addEventListener("change", onNetworkChanged);
+$("customRpc").addEventListener("input", onNetworkChanged);
+
+// ==================== 2. UP ====================
+$("connectUp").addEventListener("click", async () => {
+  if (!window.lukso) { setStatus("complianceBox", t("extNotFound"), "line-err"); return; }
+  try {
+    const accounts = await window.lukso.request({ method: "eth_requestAccounts" });
+    $("upAddress").value = accounts[0];
+    dropSessions();
+    scheduleCompliance();
+  } catch (e) {
+    setStatus("complianceBox", t("connectionRejected"), "line-err");
+  }
+});
+$("upAddress").addEventListener("input", () => { dropSessions(); scheduleCompliance(); });
+
+// ==================== 3. Controller + compliance ====================
+let signerProvider = null, signerAddress = null;
+const discoveredProviders = [];
+window.addEventListener("eip6963:announceProvider", (e) => discoveredProviders.push(e.detail));
+window.dispatchEvent(new Event("eip6963:requestProvider"));
+
+$("connectSigner").addEventListener("click", async () => {
+  let candidate = discoveredProviders.find(p => !/lukso|universal profile/i.test(p.info.name))?.provider;
+  if (!candidate && window.ethereum && window.ethereum !== window.lukso) candidate = window.ethereum;
+  if (!candidate) { setStatus("complianceBox", t("noSignerFound"), "line-err"); return; }
+  try {
+    const accounts = await candidate.request({ method: "eth_requestAccounts" });
+    signerAddress = accounts[0];
+    if (signerProvider !== candidate && candidate.on) {
+      // Any account or network change in MetaMask re-runs the check immediately.
+      candidate.on("accountsChanged", (acc) => { signerAddress = acc?.[0] || null; scheduleCompliance(0); });
+      candidate.on("chainChanged", () => scheduleCompliance(0));
+    }
+    signerProvider = candidate;
+    scheduleCompliance(0);
+  } catch (e) {
+    setStatus("complianceBox", t("connectionRejected"), "line-err");
+  }
+});
+$("recheckBtn").addEventListener("click", () => scheduleCompliance(0));
+
+// The result of the last check. Pairing and every request need a green one.
+let compliance = null, lastCompliance = null, complianceRun = 0, complianceTimer = null;
+
+function scheduleCompliance(delay = 500) {
+  compliance = null;
+  updatePairButton();
+  clearTimeout(complianceTimer);
+  complianceTimer = setTimeout(runCompliance, delay);
+}
+
+async function runCompliance() {
+  const run = ++complianceRun;
+  compliance = null;
+  updatePairButton();
+  setStatus("complianceBox", t("complianceRunning"), "empty");
+  const res = await computeCompliance();
+  if (run !== complianceRun) return null; // a newer check started meanwhile
+  lastCompliance = res;
+  compliance = res.ok ? res : null;
+  renderCompliance(res);
+  updatePairButton();
+  return res;
+}
+
+// Builds a step-by-step report; stops at the first blocking problem so the user sees where.
+async function computeCompliance() {
+  const res = { ok: false, missing: false, steps: [], verdict: [] };
+  const step = (key, text, cls) => res.steps.push([key, text, cls]);
+  const net = getNetwork();
+  const rawUp = $("upAddress").value.trim();
+  if (!net || !net.rpc || !ethers.isAddress(rawUp) || !signerProvider || !signerAddress) {
+    res.missing = true;
+    if (net && net.rpc) step("cNetwork", net.chainId ? `${net.name} (chainId ${net.chainId})` : net.name, "");
+    step("cUp", ethers.isAddress(rawUp) ? ethers.getAddress(rawUp) : ["upMissing"], ethers.isAddress(rawUp) ? "" : "err");
+    step("cWallet", signerAddress || ["walletMissing"], signerAddress ? "" : "err");
+    return res;
+  }
+  let provider, rpcId;
+  try {
+    rpcId = Number(await new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 }).send("eth_chainId", []));
+    // From here on the provider is pinned to the chainId the RPC reported.
+    provider = new ethers.JsonRpcProvider(net.rpc, rpcId, { staticNetwork: true, batchMaxCount: 1 });
+  } catch (e) {
+    step("cNetwork", net.name, "");
+    step("cRpc", ["rpcFail", { err: e.shortMessage || e.message }], "err");
+    return res;
+  }
+  const chainId = net.chainId || rpcId;
+  if (!net.chainId) net.name = `${t("customNetName")} (chainId ${rpcId})`;
+  step("cNetwork", net.chainId ? `${net.name} (chainId ${net.chainId})` : net.name, "");
+  if (rpcId !== chainId) { step("cRpc", ["rpcWrong", { id: rpcId, exp: chainId }], "err"); return res; }
+  step("cRpc", ["rpcOk", { id: rpcId }], "ok");
+
+  let walletId;
+  try { walletId = parseInt(await signerProvider.request({ method: "eth_chainId" }), 16); }
+  catch (e) { step("cWallet", ["walletUnknown"], "err"); return res; }
+  if (walletId !== chainId) { step("cWallet", ["walletWrong", { addr: signerAddress, id: walletId, exp: chainId }], "err"); return res; }
+  step("cWallet", ["walletOk", { addr: signerAddress, id: walletId }], "ok");
+
+  try {
+    const up = ethers.getAddress(rawUp);
+    if ((await provider.getCode(up)) === "0x") { step("cUp", ["upNotDeployed"], "err"); return res; }
+    step("cUp", ["upOk", { addr: up }], "ok");
+    const km = ethers.getAddress(await new ethers.Contract(up, ["function owner() view returns (address)"], provider).owner());
+    if ((await provider.getCode(km)) === "0x") { step("cKm", ["kmBad", { addr: km }], "err"); return res; }
+    step("cKm", ["kmOk", { addr: km }], "ok");
+
+    const raw = await new ethers.Contract(up, ["function getData(bytes32) view returns (bytes)"], provider)
+      .getData(PERM_PREFIX + signerAddress.slice(2).toLowerCase());
+    const perms = raw && raw !== "0x" ? BigInt(raw) : 0n;
+    if (perms === 0n) { step("cPerms", ["permsNone"], "err"); return res; }
+    step("cPerms", ["permsList", { hex: "0x" + perms.toString(16).padStart(6, "0"), names: permNames(perms) }], "");
+
+    const level = (sup, lim) => (perms & sup) ? "full" : (perms & lim) ? "limited" : "none";
+    const canCall = level(P.SUPER_CALL, P.CALL);
+    const canValue = level(P.SUPER_TRANSFERVALUE, P.TRANSFERVALUE);
+    const canSign = (perms & P.SIGN) ? "full" : "none";
+    const cls = (l) => l === "full" ? "ok" : l === "limited" ? "warn" : "err";
+    step("cCanCall", [canCall], cls(canCall));
+    step("cCanValue", [canValue], cls(canValue));
+    step("cCanSign", [canSign], cls(canSign));
+
+    const cur = net.currency || "";
+    const [upBal, gasBal] = await Promise.all([provider.getBalance(up), provider.getBalance(signerAddress)]);
+    step("cUpBal", `${ethers.formatEther(upBal)} ${cur}`, "");
+    step("cGasBal", gasBal === 0n ? ["gasLow", { bal: `0 ${cur}` }] : `${ethers.formatEther(gasBal)} ${cur}`, gasBal === 0n ? "warn" : "");
+
+    if (canCall === "none" && canValue === "none" && canSign === "none") { res.verdict.push([["verdictNoUse"], "line-err"]); return res; }
+    Object.assign(res, { ok: true, net, chainId, caip: `eip155:${chainId}`, provider, up, km, signer: signerAddress, perms });
+    res.verdict.push([["verdictOk"], "line-ok"]);
+    if (perms & PRIVILEGED) res.verdict.push([["verdictPrivileged"], "line-dim"]);
+  } catch (e) {
+    step("cUp", ["genericError", { err: e.shortMessage || e.message }], "err");
+  }
+  return res;
+}
+
+function renderCompliance(res) {
+  // Values are stored as [messageKey, vars] so the report follows the language toggle.
+  const tr = (v) => Array.isArray(v) ? t(v[0], v[1]) : v;
+  const rows = res.steps.map(([k, v, cls]) => [t(k), tr(v), { cls }]);
+  const verdict = res.verdict.map(([v, cls]) => [tr(v), cls]);
+  if (res.missing) verdict.push([t("verdictMissing"), "line-dim"]);
+  else if (!res.ok && !res.verdict.length) verdict.push([t("verdictFail"), "line-err"]);
+  renderKv("complianceBox", rows, verdict);
+}
+
+// Re-run right before acting on a request: accounts, networks and permissions may have changed.
+async function freshCompliance() {
+  clearTimeout(complianceTimer);
+  const res = await runCompliance();
+  return res && res.ok ? res : null;
+}
+
+// ==================== 4. WalletConnect ====================
+let walletKit = null;
+let pending = null; // { kind: "tx" | "sign", topic, id, ... }
+let sessionChain = null; // CAIP chain of the approved sessions
+
+function updatePairButton() { $("pairBtn").disabled = !compliance; }
+
+async function getWalletKit() {
+  if (walletKit) return walletKit;
+  if (!WALLETCONNECT_PROJECT_ID) throw new Error(t("noProjectId"));
+  const { Core, WalletKit } = window.WalletKitBundle;
+  const core = new Core({ projectId: WALLETCONNECT_PROJECT_ID });
+  walletKit = await WalletKit.init({
+    core,
+    metadata: {
+      name: "ChainIntegrate UP Wallet",
+      description: "Universal Profile bridge",
+      url: location.origin,
+      icons: [location.origin + "/favicon.ico"],
+    },
+  });
+  walletKit.on("session_proposal", onSessionProposal);
+  walletKit.on("session_request", onSessionRequest);
+  walletKit.on("session_delete", () => { showSessions(); log(t("sessionClosed"), "line-dim"); });
+  showSessions();
+  return walletKit;
+}
+
+function showSessions() {
+  const sessions = walletKit ? Object.values(walletKit.getActiveSessions()) : [];
+  $("disconnectBtn").disabled = sessions.length === 0;
+  if (!sessions.length) { setStatus("wcStatus", t("wcIdle"), "empty"); return; }
+  const s = sessions[sessions.length - 1];
+  const parts = (s.namespaces.eip155?.accounts?.[0] || "").split(":");
+  setStatus("wcStatus", t("sessionActive", { name: s.peer.metadata.name, url: s.peer.metadata.url, acc: parts[2] || "", id: parts[1] || "" }), "line-ok");
+}
+
+// Network or UP changed: the dApp would keep a stale account/chain, so close every session.
+async function dropSessions() {
+  if (pending) { const p = pending; clearPending(t("noRequest")); try { await respondError(p.topic, p.id, "Bridge settings changed", 5000); } catch (e) { /* ignore */ } }
+  if (!walletKit) return;
+  const sessions = Object.values(walletKit.getActiveSessions());
+  if (!sessions.length) return;
+  const { getSdkError } = window.WalletKitBundle;
+  for (const s of sessions) {
+    try { await walletKit.disconnectSession({ topic: s.topic, reason: getSdkError("USER_DISCONNECTED") }); } catch (e) { /* already gone */ }
+  }
+  sessionChain = null;
+  showSessions();
+  log(t("sessionsDropped"), "line-warn");
+}
+
+$("pairBtn").addEventListener("click", async () => {
+  const uri = $("wcUri").value.trim();
+  if (!riskAccepted()) { setStatus("wcStatus", t("ackRequired"), "line-err"); return; }
+  if (!compliance) { setStatus("wcStatus", t("complianceFirst"), "line-err"); return; }
+  if (!uri.startsWith("wc:")) { setStatus("wcStatus", t("invalidUri"), "line-err"); return; }
+  try {
+    const kit = await getWalletKit();
+    setStatus("wcStatus", t("pairing"), "empty");
+    await kit.pair({ uri });
+    $("wcUri").value = "";
+  } catch (e) {
+    setStatus("wcStatus", t("genericError", { err: e.message }), "line-err");
+  }
+});
+
+$("disconnectBtn").addEventListener("click", async () => {
+  if (!walletKit) return;
+  const { getSdkError } = window.WalletKitBundle;
+  for (const s of Object.values(walletKit.getActiveSessions())) {
+    try { await walletKit.disconnectSession({ topic: s.topic, reason: getSdkError("USER_DISCONNECTED") }); } catch (e) { /* already gone */ }
+  }
+  showSessions();
+});
+
+async function onSessionProposal({ id, params, verifyContext }) {
+  const { buildApprovedNamespaces, getSdkError } = window.WalletKitBundle;
+  const meta = params.proposer.metadata || {};
+  const verified = verifyContext?.verified || {};
+  const validation = verified.validation || "UNKNOWN";
+  logSeparator();
+  log(t("proposalFrom", { name: meta.name, url: meta.url, verify: validation }), "line-dim");
+  if (verified.isScam || validation === "INVALID") {
+    log(t("proposalScam"), "line-err");
+    try { await walletKit.rejectSession({ id, reason: getSdkError("USER_REJECTED") }); } catch (e) { /* ignore */ }
+    return;
+  }
+  if (validation !== "VALID") log(t("proposalUnverified"), "line-warn");
+  const c = riskAccepted() ? await freshCompliance() : null;
+  if (!c) {
+    log(riskAccepted() ? t("complianceFirst") : t("ackRequired"), "line-err");
+    try { await walletKit.rejectSession({ id, reason: getSdkError("USER_REJECTED") }); } catch (e) { /* ignore */ }
+    return;
+  }
+  try {
+    // The UP address is the account presented to the dApp, on the chosen network only.
+    const namespaces = buildApprovedNamespaces({
+      proposal: params,
+      supportedNamespaces: {
+        eip155: {
+          chains: [c.caip],
+          methods: ["eth_sendTransaction", "personal_sign", "eth_signTypedData_v4", "eth_signTypedData", "eth_signTypedData_v3", "eth_sign", "wallet_switchEthereumChain"],
+          events: ["accountsChanged", "chainChanged"],
+          accounts: [`${c.caip}:${c.up}`],
+        },
+      },
+    });
+    await walletKit.approveSession({ id, namespaces });
+    sessionChain = c.caip;
+    showSessions();
+  } catch (e) {
+    log(t("proposalRejectedChains", { err: e.message }), "line-err");
+    try { await walletKit.rejectSession({ id, reason: getSdkError("UNSUPPORTED_CHAINS") }); } catch (e2) { /* ignore */ }
+  }
+}
+
+// ==================== 5. Requests ====================
+async function respondResult(topic, id, result) {
+  await walletKit.respondSessionRequest({ topic, response: { id, jsonrpc: "2.0", result } });
+}
+async function respondError(topic, id, message, code = 5000) {
+  await walletKit.respondSessionRequest({ topic, response: { id, jsonrpc: "2.0", error: { code, message } } });
+}
+function clearPending(msg) {
+  pending = null;
+  $("sendBtn").disabled = true;
+  $("signBtn").disabled = true;
+  $("rejectBtn").disabled = true;
+  if (msg) setStatus("requestBox", msg, "empty");
+}
+function sessionPeer(topic) {
+  const s = walletKit?.getActiveSessions?.()[topic];
+  return s ? `${s.peer.metadata.name} (${s.peer.metadata.url})` : "—";
+}
+function sessionHost(topic) {
+  try { return new URL(walletKit.getActiveSessions()[topic].peer.metadata.url).host.toLowerCase(); } catch (e) { return ""; }
+}
+
+async function onSessionRequest(event) {
+  const { topic, id, params, verifyContext } = event;
+  const { request, chainId } = params;
+  logSeparator();
+  log(t("reqMethod", { method: request.method }), "line-dim");
+
+  if (["eth_sign", "eth_signTypedData", "eth_signTypedData_v3"].includes(request.method)) {
+    log(t("signLegacyRejected", { method: request.method }), "line-err");
+    return respondError(topic, id, `Rejected: ${request.method} is never signed by this bridge`, 5000);
+  }
+  if (request.method === "wallet_switchEthereumChain") {
+    const wanted = parseInt(request.params?.[0]?.chainId, 16);
+    if (sessionChain === `eip155:${wanted}`) return respondResult(topic, id, null);
+    log(t("reqSwitchChain", { id: wanted }), "line-warn");
+    return respondError(topic, id, "Only the chosen network is supported", 4902);
+  }
+  if (!["eth_sendTransaction", "personal_sign", "eth_signTypedData_v4"].includes(request.method)) {
+    log(t("reqUnsupported", { method: request.method }), "line-warn");
+    return respondError(topic, id, `Unsupported method: ${request.method}`, 4200);
+  }
+  if (pending) {
+    log(t("reqBusy"), "line-warn");
+    return respondError(topic, id, "Another request is pending", 5000);
+  }
+  const reject = async (msg) => { log(msg, "line-err"); await respondError(topic, id, "Rejected by the UP bridge", 5000); };
+  if (!riskAccepted()) return reject(t("ackRequired"));
+
+  // Domain verification by WalletConnect/Reown.
+  const verified = verifyContext?.verified || {};
+  const validation = verified.validation || "UNKNOWN";
+  if (verified.isScam || validation === "INVALID") return reject(t("verifyBad", { v: verified.isScam ? "SCAM" : validation }));
+  if (validation === "VALID") log(t("verifyOk"), "line-ok"); else log(t("verifyWarn", { v: validation }), "line-warn");
+
+  // Fresh compatibility check: network, account and permissions as they are now.
+  const c = await freshCompliance();
+  if (!c) return reject(t("complianceLost"));
+  if (chainId !== c.caip) return reject(t("reqWrongChain", { chain: chainId, exp: c.caip }));
+  log(t("chainsOk"), "line-ok");
+
+  if (request.method === "eth_sendTransaction") return handleSendTransaction(topic, id, c, request.params?.[0] || {}, validation, reject);
+  return handleSignRequest(topic, id, c, request, validation, reject);
+}
+
+// --- Transactions ---
+function simError(e) {
+  const data = e?.data || e?.info?.error?.data || e?.error?.data;
+  if (typeof data === "string" && data.length >= 10) {
+    try { const d = KM_ERRORS.parseError(data); return `${d.name}(${d.args.map(String).join(", ")})`; } catch (x) { /* not an LSP6 error */ }
+  }
+  return e?.shortMessage || e?.reason || e?.message || String(e);
+}
+
+async function describeCall(c, to, value, data, rows, warnings) {
+  const cur = c.net.currency || "";
+  const toCode = await c.provider.getCode(to);
+  rows.push([t("kTo"), `${to} (${toCode === "0x" ? t("toEoa") : t("toContract")})`, {}]);
+  rows.push([t("kValue"), `${ethers.formatEther(value)} ${cur}`, { cls: value > 0n ? "warn" : "" }]);
+  if (data === "0x") {
+    rows.push([t("kCall"), t("nativeTransfer", { amount: ethers.formatEther(value), cur, to }), {}]);
+    return;
+  }
+  if (toCode === "0x") warnings.push([t("warnEoaData"), "line-warn"]);
+  let parsed = null;
+  try { parsed = KNOWN_IFACE.parseTransaction({ data, value }); } catch (e) { parsed = null; }
+  if (!parsed) {
+    rows.push([t("kCall"), t("unknownCall", { sel: data.slice(0, 10) }), { cls: "warn" }]);
+    rows.push([t("kRaw"), data, { block: true }]);
+    warnings.push([t("warnUnknownCall"), "line-warn"]);
+    return;
+  }
+  // Token metadata read from the chain, when the target exposes it.
+  let symbol = "", decimals = null;
+  try {
+    const tok = new ethers.Contract(to, ["function symbol() view returns (string)", "function decimals() view returns (uint8)"], c.provider);
+    [symbol, decimals] = await Promise.all([tok.symbol().catch(() => ""), tok.decimals().then(Number).catch(() => null)]);
+  } catch (e) { /* not a token */ }
+  const amount = (x) => decimals !== null ? `${ethers.formatUnits(x, decimals)} ${symbol}`.trim() : `${x.toString()} ${symbol}`.trim();
+  const args = parsed.fragment.inputs.map((inp, i) => `${inp.name || "arg" + i}: ${String(parsed.args[i])}`);
+  rows.push([t("kCall"), `${parsed.name}(${parsed.fragment.inputs.map(i => i.type).join(",")})\n${args.join("\n")}`, { block: true }]);
+  rows.push([t("kRaw"), data, { block: true }]);
+
+  const sig = parsed.signature;
+  const a = parsed.args;
+  const huge = (x, bits = 256) => x >= (1n << BigInt(bits - 1));
+  if (sig === "approve(address,uint256)" || sig === "increaseAllowance(address,uint256)") {
+    if (a[1] === 0n && sig.startsWith("approve")) warnings.push([t("infoRevoke"), "line-dim"]);
+    else warnings.push([t("warnApproval", { who: a[0], what: huge(a[1]) ? t("warnUnlimited") : amount(a[1]) }), "line-danger"]);
+  } else if (sig === "approve(address,address,uint160,uint48)") {
+    warnings.push([t("warnApproval", { who: a[1], what: huge(a[2], 160) ? t("warnUnlimited") : `${a[2].toString()} (token ${a[0]})` }), "line-danger"]);
+  } else if (sig === "setApprovalForAll(address,bool)") {
+    if (a[1]) warnings.push([t("warnApproval", { who: a[0], what: t("warnApprovalAll") }), "line-danger"]);
+    else warnings.push([t("infoRevoke"), "line-dim"]);
+  } else if (parsed.name === "authorizeOperator") {
+    const what = typeof a[1] === "bigint" ? (huge(a[1]) ? t("warnUnlimited") : amount(a[1])) : `NFT ${a[1]}`;
+    warnings.push([t("warnApproval", { who: a[0], what }), "line-danger"]);
+  } else if (sig === "transfer(address,uint256)") {
+    warnings.push([t("infoTransfer", { what: amount(a[1]), to: a[0] }), "line-warn"]);
+  } else if (parsed.name === "transfer" || parsed.name === "transferFrom" || parsed.name === "safeTransferFrom") {
+    let what;
+    if (sig === "safeTransferFrom(address,address,uint256,uint256,bytes)") what = `${a[3]} × id ${a[2]}`;
+    else if (parsed.fragment.inputs[2].type === "bytes32" || /^safeTransferFrom\(address,address,uint256(,bytes)?\)$/.test(sig)) what = `NFT ${a[2]}`;
+    else what = amount(a[2]);
+    warnings.push([t("infoTransfer", { what, to: a[1] }), "line-warn"]);
+  }
+}
+
+async function handleSendTransaction(topic, id, c, tx, validation, reject) {
+  if (!tx.from || tx.from.toLowerCase() !== c.up.toLowerCase()) return reject(t("reqWrongFrom", { from: tx.from }));
+  if (!tx.to) return reject(t("reqCreate"));
+  if (!ethers.isAddress(tx.to)) return reject(t("genericError", { err: "invalid to" }));
+  const to = ethers.getAddress(tx.to);
+  if (to === c.up || to === c.km) return reject(t("reqSelf"));
+  const value = BigInt(tx.value || 0);
+  const data = tx.data || tx.input || "0x";
+  if (!ethers.isHexString(data)) return reject(t("genericError", { err: "invalid data" }));
+  if (data !== "0x" && !(c.perms & (P.CALL | P.SUPER_CALL))) return reject(t("reqNoCall"));
+  if (value > 0n && !(c.perms & (P.TRANSFERVALUE | P.SUPER_TRANSFERVALUE))) return reject(t("reqNoValue"));
+
+  const cur = c.net.currency || "";
+  try {
+    const rows = [
+      [t("kSite"), sessionPeer(topic), {}],
+      [t("kVerify"), validation, { cls: validation === "VALID" ? "ok" : "warn" }],
+      [t("kNetwork"), c.net.name, {}],
+      [t("kFrom"), c.up, {}],
+    ];
+    const warnings = [];
+    await describeCall(c, to, value, data, rows, warnings);
+    rows.push([t("kKm"), c.km, {}], [t("kSigner"), c.signer, {}]);
+    renderKv("requestBox", rows);
+    for (const [w, cls] of warnings) log(w, cls);
+
+    const upBal = await c.provider.getBalance(c.up);
+    if (upBal < value) return reject(t("upNoFunds", { need: `${ethers.formatEther(value)} ${cur}`, have: `${ethers.formatEther(upBal)} ${cur}` }));
+
+    // Wrap: KeyManager.execute(UP.execute(CALL, to, value, data)): the dApp sees msg.sender = UP.
+    const inner = UP_IFACE.encodeFunctionData("execute", [0, to, value, data]);
+    const wrapped = KM_IFACE.encodeFunctionData("execute", [inner]);
+
+    log(t("simulating"), "line-dim");
+    let gas;
+    try {
+      await c.provider.call({ from: c.signer, to: c.km, data: wrapped });
+      gas = await c.provider.estimateGas({ from: c.signer, to: c.km, data: wrapped });
+    } catch (e) {
+      return reject(t("simFail", { err: simError(e) }));
+    }
+    log(t("simOk", { gas: gas.toString() }), "line-ok");
+
+    const gasLimit = gas + gas / 4n;
+    const need = gasLimit * (await estimateMaxGasPrice(c.provider));
+    const signerBal = await c.provider.getBalance(c.signer);
+    if (signerBal < need) return reject(t("signerNoGas", { need: `${ethers.formatEther(need)} ${cur}`, have: `${ethers.formatEther(signerBal)} ${cur}` }));
+
+    if ($("simulateOnly").checked) {
+      log(t("simOnlyDone"), "line-warn");
+      return respondError(topic, id, "Simulation only: transaction not sent", 5000);
+    }
+    pending = { kind: "tx", topic, id, wrapped, gasLimit, c };
+    $("sendBtn").disabled = false;
+    $("rejectBtn").disabled = false;
+    log(t("readyToSend"), "line-warn");
+  } catch (e) {
+    return reject(t("genericError", { err: e.shortMessage || e.message }));
+  }
+}
+
+$("sendBtn").addEventListener("click", async () => {
+  if (!pending || pending.kind !== "tx") return;
+  if (!riskAccepted()) { log(t("ackRequired"), "line-err"); return; }
+  const p = pending;
+  $("sendBtn").disabled = true;
+  $("rejectBtn").disabled = true;
+  const fail = async (msg, reason) => { log(msg, "line-err"); try { await respondError(p.topic, p.id, reason, 5000); } catch (e) { /* ignore */ } clearPending(); };
+  try {
+    const c = await freshCompliance();
+    if (!c || c.chainId !== p.c.chainId || c.km !== p.c.km) return fail(t("complianceLost"), "Bridge check failed");
+    if (c.signer.toLowerCase() !== p.c.signer.toLowerCase()) return fail(t("signerChanged"), "Signer changed");
+    const signer = await new ethers.BrowserProvider(signerProvider).getSigner();
+    if (signer.address.toLowerCase() !== p.c.signer.toLowerCase()) return fail(t("signerChanged"), "Signer changed");
+    log(t("sending"), "line-dim");
+    const sent = await signer.sendTransaction({ to: p.c.km, data: p.wrapped, gasLimit: p.gasLimit });
+    log(t("txSent", { hash: sent.hash }), "line-dim");
+    if (p.c.net.explorer) log(p.c.net.explorer + sent.hash, "line-dim");
+    // The dApp tracks the transaction by its hash; the transaction is the wrapped one.
+    await respondResult(p.topic, p.id, sent.hash);
+    clearPending();
+    log(t("waiting"), "line-dim");
+    const receipt = await p.c.provider.waitForTransaction(sent.hash);
+    if (receipt && receipt.status === 1) log(t("txOk"), "line-ok");
+    else log(t("txFailed"), "line-err");
+  } catch (e) {
+    if (pending === p) await fail(t("genericError", { err: e.shortMessage || e.message }), "Send failed");
+    else log(t("genericError", { err: e.shortMessage || e.message }), "line-err");
+  }
+});
+
+// --- Message signatures (ERC-1271) ---
+// Returns the message as readable text, or null when it is a hash or binary data.
+function readableText(bytes) {
+  if (!bytes.length) return null;
+  let text;
+  try { text = new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch (e) { return null; }
+  return /^[\P{C}\n\r\t]*$/u.test(text) ? text : null;
+}
+
+// Sign-In with Ethereum (EIP-4361): the domain must be the connected site's.
+function checkSiwe(text, topic, c, warnings) {
+  const m = text.match(/^(?:[a-z][a-z0-9+.-]*:\/\/)?([^\s/]+) wants you to sign in with your Ethereum account:/i);
+  if (!m) return;
+  const host = sessionHost(topic);
+  if (host && m[1].toLowerCase() !== host) warnings.push([t("siweDomainMismatch", { d: m[1], site: host }), "line-danger"]);
+  const ch = text.match(/^Chain ID: (\d+)$/m);
+  if (ch && Number(ch[1]) !== c.chainId) warnings.push([t("siweChainMismatch", { id: ch[1] }), "line-warn"]);
+}
+
+async function handleSignRequest(topic, id, c, request, validation, reject) {
+  if (!(c.perms & P.SIGN)) return reject(t("signNoPermission"));
+  const p = request.params || [];
+  const up = c.up.toLowerCase();
+  let account, hash, compare, walletParams;
+  const rows = [], warnings = [];
+  try {
+    if (request.method === "personal_sign") {
+      // Standard order is [message, address]; some dApps swap it.
+      const [a, b] = p;
+      const swapped = typeof a === "string" && a.toLowerCase() === up && !(typeof b === "string" && b.toLowerCase() === up);
+      const message = swapped ? b : a;
+      account = swapped ? a : b;
+      if (typeof message !== "string") throw new Error("missing message");
+      const bytes = ethers.isHexString(message) ? ethers.getBytes(message) : ethers.toUtf8Bytes(message);
+      const text = readableText(bytes);
+      hash = ethers.hashMessage(bytes);
+      walletParams = ethers.hexlify(bytes);
+      compare = text !== null ? text : ethers.hexlify(bytes);
+      rows.push([t("kContentType"), text !== null ? t("ctText") : t("ctOpaque"), { cls: text !== null ? "" : "warn" }]);
+      rows.push([t("kContent"), compare, { block: true }]);
+      if (text === null) warnings.push([t("signOpaque"), "line-warn"]);
+      else checkSiwe(text, topic, c, warnings);
+    } else {
+      account = p[0];
+      const raw = p[1];
+      const data = typeof raw === "string" ? JSON.parse(raw) : raw;
+      if (!data || typeof data !== "object" || !data.types || !data.message) throw new Error("missing types or message");
+      const domain = data.domain || {};
+      if (domain.chainId !== undefined && domain.chainId !== null && Number(domain.chainId) !== c.chainId) {
+        return reject(t("signWrongDomainChain", { id: String(domain.chainId) }));
+      }
+      const types = { ...data.types };
+      delete types.EIP712Domain;
+      hash = ethers.TypedDataEncoder.hash(domain, types, data.message);
+      walletParams = typeof raw === "string" ? raw : JSON.stringify(raw);
+      compare = `${data.primaryType || "?"} · ${domain.name || "?"} · verifyingContract ${domain.verifyingContract || "—"} · chainId ${domain.chainId ?? "—"}`;
+      rows.push([t("kContentType"), t("ctTyped"), {}]);
+      rows.push([t("kDomain"), JSON.stringify(domain, null, 2), { block: true }]);
+      rows.push([t("kPrimaryType"), String(data.primaryType || "—"), {}]);
+      rows.push([t("kContent"), JSON.stringify(data.message, null, 2), { block: true }]);
+      const vc = String(domain.verifyingContract || "").toLowerCase();
+      const pt = String(data.primaryType || "");
+      if (/permit/i.test(pt) || vc === PERMIT2 || /permit2/i.test(String(domain.name || ""))) warnings.push([t("signPermit"), "line-danger"]);
+      else if (/order/i.test(pt)) warnings.push([t("signOrder"), "line-danger"]);
+    }
+  } catch (e) {
+    return reject(t("signBadData", { err: e.shortMessage || e.message }));
+  }
+  if (typeof account !== "string" || account.toLowerCase() !== up) return reject(t("signWrongAccount", { acc: String(account) }));
+
+  renderKv("requestBox", [
+    [t("kMethod"), request.method, {}],
+    [t("kSite"), sessionPeer(topic), {}],
+    [t("kVerify"), validation, { cls: validation === "VALID" ? "ok" : "warn" }],
+    [t("kNetwork"), c.net.name, {}],
+    [t("kAccount"), c.up, {}],
+    [t("kSigner"), c.signer, {}],
+    [t("kKm"), c.km, {}],
+    ...rows,
+    [t("kHash"), hash, {}],
+  ]);
+  for (const [w, cls] of warnings) log(w, cls);
+  log(t("signReplay"), "line-dim");
+  log(t("signCompare", { c: compare }), "line-compare");
+
+  pending = { kind: "sign", topic, id, method: request.method, walletParams, hash, c };
+  $("signBtn").disabled = false;
+  $("rejectBtn").disabled = false;
+  log(t("signReady"), "line-warn");
+}
+
+$("signBtn").addEventListener("click", async () => {
+  if (!pending || pending.kind !== "sign") return;
+  if (!riskAccepted()) { log(t("ackRequired"), "line-err"); return; }
+  const p = pending;
+  $("signBtn").disabled = true;
+  $("rejectBtn").disabled = true;
+  const fail = async (msg, reason) => { log(msg, "line-err"); try { await respondError(p.topic, p.id, reason, 5000); } catch (e) { /* ignore */ } clearPending(); };
+  try {
+    const c = await freshCompliance();
+    if (!c || c.chainId !== p.c.chainId || c.up !== p.c.up) return fail(t("complianceLost"), "Bridge check failed");
+    if (c.signer.toLowerCase() !== p.c.signer.toLowerCase()) return fail(t("signerChanged"), "Signer changed");
+
+    log(t("signing"), "line-dim");
+    const signature = p.method === "personal_sign"
+      ? await signerProvider.request({ method: "personal_sign", params: [p.walletParams, p.c.signer] })
+      : await signerProvider.request({ method: "eth_signTypedData_v4", params: [p.c.signer, p.walletParams] });
+
+    const recovered = ethers.recoverAddress(p.hash, signature);
+    log(t("signRecovered", { addr: recovered }), "line-dim");
+    if (recovered.toLowerCase() !== p.c.signer.toLowerCase()) return fail(t("signWrongSigner"), "Signature check failed");
+
+    log(t("signCheckingUp"), "line-dim");
+    let answer;
+    try {
+      answer = await new ethers.Contract(p.c.up, ["function isValidSignature(bytes32,bytes) view returns (bytes4)"], p.c.provider).isValidSignature(p.hash, signature);
+    } catch (e) {
+      answer = "revert";
+    }
+    if (String(answer).toLowerCase() !== ERC1271_MAGIC) return fail(t("signInvalid", { r: String(answer) }), "Signature not accepted by the UP");
+
+    await respondResult(p.topic, p.id, signature);
+    log(t("signValid"), "line-ok");
+    clearPending();
+  } catch (e) {
+    await fail(t("genericError", { err: e.shortMessage || e.message }), "Signing failed");
+  }
+});
+
+$("rejectBtn").addEventListener("click", async () => {
+  if (!pending) return;
+  const { topic, id } = pending;
+  clearPending(t("noRequest"));
+  log(t("rejectedByUser"), "line-dim");
+  await respondError(topic, id, "User rejected", 5000);
+});
+
+applyI18n();
+onNetworkChanged();
+</script>
+
+</body>
+</html>
