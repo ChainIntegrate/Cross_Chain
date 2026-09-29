@@ -56,6 +56,10 @@
   button.secondary { background: #2a2f3a; }
   .amount-row { display: flex; gap: 8px; align-items: stretch; }
   .amount-row button { width: auto; margin-top: 0; padding: 0 16px; }
+  .asset-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; max-height: 320px; overflow-y: auto; }
+  .asset-row { width: 100%; margin-top: 0; padding: 8px 10px; text-align: left; font-size: 12.5px; font-weight: 500; background: #10131a; border: 1px solid var(--border); overflow-wrap: anywhere; }
+  .asset-row:hover { border-color: var(--accent); }
+  .asset-row.spam { color: var(--warn); }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .chip { width: auto; margin-top: 0; padding: 4px 10px; font-size: 12px; font-weight: 500; font-family: monospace; background: #2a2f3a; }
   .site-footer { margin-top: 40px; padding: 18px 20px; background: #f5f6f8; border: 1px solid #e3e5ea; border-radius: 10px; color: #4b4f58; }
@@ -128,6 +132,12 @@
     <option value="token" data-i18n="assetTokenOpt">Token o NFT (indirizzo del contratto)</option>
   </select>
   <div id="tokenWrap" hidden>
+    <label data-i18n="blockscoutLabel">Explorer Blockscout della rete (per cercare cosa possiede la UP)</label>
+    <input type="text" id="blockscoutUrl" placeholder="https://....blockscout.com">
+    <div class="note" style="margin-top:8px;" data-i18n="blockscoutNote"></div>
+    <button id="discoverBtn" type="button" class="secondary" data-i18n="discoverBtn">Cerca token e NFT della UP</button>
+    <div id="discoverStatus" class="note" style="margin-top:8px;"></div>
+    <div id="discoverList" class="asset-list"></div>
     <label data-i18n="tokenAddressLabel">Indirizzo del contratto (token o collezione NFT)</label>
     <input type="text" id="tokenAddress" placeholder="0x...">
     <div class="note" style="margin-top:8px;" data-i18n="tokenAddressNote"></div>
@@ -204,6 +214,15 @@ const I18N = {
     sendBtn: "Invia (irreversibile)",
     logInitial: "In attesa dei collegamenti sopra.",
 
+    blockscoutLabel: "Explorer Blockscout della rete (per cercare cosa possiede la UP)",
+    blockscoutNote: "Un nodo RPC non sa elencare i token di un indirizzo: lo sanno gli explorer. La ricerca usa l'API pubblica di Blockscout (senza chiave), solo quando premi il pulsante. Per le reti più diffuse l'indirizzo è già compilato; per le altre puoi inserire l'URL di un explorer Blockscout della rete, oppure incollare sotto l'indirizzo del contratto preso da un altro explorer. L'elenco è solo una scorciatoia: la verifica rilegge tutto dalla blockchain.",
+    discoverBtn: "Cerca token e NFT della UP",
+    discoverRunning: "Ricerca su Blockscout...",
+    discoverErr: (v) => `Blockscout non ha risposto (${v.err}). Controlla l'URL, oppure copia l'indirizzo del contratto dall'explorer.`,
+    discoverEmpty: "Blockscout non trova token né NFT per questa UP su questa rete.",
+    discoverFound: (v) => `Trovati ${v.n} elementi. Clicca su uno per sceglierlo. Diffida dei token che non riconosci: chiunque può mandarne a qualsiasi indirizzo.`,
+    blockscoutUrlErr: "URL Blockscout mancante o non valido (deve iniziare con https://).",
+    spamTag: "⚠️ segnalato come spam",
     assetKindLabel: "Cosa inviare",
     assetNativeOpt: "Valuta nativa della rete (ETH, POL, …)",
     assetTokenOpt: "Token o NFT (indirizzo del contratto)",
@@ -340,6 +359,15 @@ const I18N = {
     sendBtn: "Send (irreversible)",
     logInitial: "Waiting for the connections above.",
 
+    blockscoutLabel: "The network's Blockscout explorer (to find what the UP holds)",
+    blockscoutNote: "An RPC node cannot list an address's tokens; explorers can. The search uses Blockscout's public API (no key), only when you press the button. For the most common networks the address is already filled in; for the others you can enter the URL of a Blockscout explorer for the network, or paste below the contract address taken from another explorer. The list is only a shortcut: the check reads everything again from the chain.",
+    discoverBtn: "Find the UP's tokens and NFTs",
+    discoverRunning: "Searching on Blockscout...",
+    discoverErr: (v) => `Blockscout did not answer (${v.err}). Check the URL, or copy the contract address from the explorer.`,
+    discoverEmpty: "Blockscout finds no tokens or NFTs for this UP on this network.",
+    discoverFound: (v) => `Found ${v.n} items. Click one to pick it. Be wary of tokens you don't recognise: anyone can send them to any address.`,
+    blockscoutUrlErr: "Blockscout URL missing or invalid (it must start with https://).",
+    spamTag: "⚠️ flagged as spam",
     assetKindLabel: "What to send",
     assetNativeOpt: "The network's native currency (ETH, POL, …)",
     assetTokenOpt: "Token or NFT (contract address)",
@@ -884,6 +912,123 @@ $("detectBtn").addEventListener("click", readAssetForUi);
 $("tokenAddress").addEventListener("input", () => { detectRequestId++; detectedAsset = null; renderAssetStatus(); });
 $("tokenAddress").addEventListener("change", readAssetForUi);
 
+// --- Finding what the UP holds ---
+// An RPC node cannot list the tokens of an address: each token keeps its own balances. Explorers
+// can, because they index every Transfer event. Blockscout's public API answers without a key,
+// so the page asks it, only when the user presses the button (a few GET requests per search).
+// The list is only a shortcut: the check reads everything again from the chain.
+const BLOCKSCOUT = {
+  "ethereum": "https://eth.blockscout.com",
+  "base": "https://base.blockscout.com",
+  "optimism": "https://optimism.blockscout.com",
+  "arbitrum-one": "https://arbitrum.blockscout.com",
+  "polygon": "https://polygon.blockscout.com",
+  "gnosis": "https://gnosis.blockscout.com",
+  "celo": "https://celo.blockscout.com",
+  "unichain": "https://unichain.blockscout.com",
+  "soneium": "https://soneium.blockscout.com",
+  "zora": "https://explorer.zora.energy",
+  "mode": "https://explorer.mode.network",
+  "ink": "https://explorer.inkonchain.com",
+  "ethereum-sepolia": "https://eth-sepolia.blockscout.com",
+  "base-sepolia": "https://base-sepolia.blockscout.com",
+  "arbitrum-sepolia": "https://arbitrum-sepolia.blockscout.com",
+};
+const BLOCKSCOUT_MAX_PAGES = 5;
+const NFT_TYPES = ["ERC-721", "ERC-1155", "ERC-404", "LSP8"];
+
+function setBlockscoutFromNetwork() {
+  $("blockscoutUrl").value = BLOCKSCOUT[networkSelectEl.value] || "";
+  discoverRequestId++;
+  $("discoverList").innerHTML = "";
+  $("discoverStatus").textContent = "";
+}
+networkSelectEl.addEventListener("change", setBlockscoutFromNetwork);
+
+async function blockscoutGet(base, path, params) {
+  const u = new URL(base.replace(/\/+$/, "") + path);
+  Object.entries(params || {}).forEach(([k, v]) => u.searchParams.set(k, v));
+  const r = await fetch(u.toString(), { headers: { accept: "application/json" }, credentials: "omit", referrerPolicy: "no-referrer" });
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  return r.json();
+}
+const bsTokenAddress = (tok) => (tok && (tok.address_hash || tok.address)) || null;
+const bsIsSpam = (tok) => !!(tok && ((tok.reputation && tok.reputation !== "ok") || tok.is_scam === true));
+
+let discoverRequestId = 0;
+$("discoverBtn").addEventListener("click", async () => {
+  const requestId = ++discoverRequestId;
+  const up = currentProfile().address;
+  const status = $("discoverStatus"), list = $("discoverList");
+  list.innerHTML = "";
+  if (!ethers.isAddress(up)) { status.textContent = t("missingAddrErr"); return; }
+  let base;
+  try {
+    base = new URL($("blockscoutUrl").value.trim());
+    if (base.protocol !== "https:") throw new Error();
+  } catch (e) { status.textContent = t("blockscoutUrlErr"); return; }
+  status.textContent = t("discoverRunning");
+  const rows = [];
+  try {
+    // Fungible tokens: one row per token with the UP's balance.
+    const balances = await blockscoutGet(base.href, `/api/v2/addresses/${up}/token-balances`);
+    (Array.isArray(balances) ? balances : []).forEach(b => {
+      const tok = b.token || {};
+      const address = bsTokenAddress(tok);
+      if (!address || !ethers.isAddress(address) || NFT_TYPES.includes(tok.type)) return;
+      let amount;
+      try { amount = BigInt(b.value || "0"); } catch (e) { return; }
+      if (amount === 0n) return;
+      let shown;
+      try { shown = ethers.formatUnits(amount, Number(tok.decimals || 0)); } catch (e) { shown = amount.toString(); }
+      rows.push({ address, type: tok.type || "?", name: tok.name, symbol: tok.symbol, amount: shown, spam: bsIsSpam(tok) });
+    });
+    // NFTs: one row per token ID, grouped by collection.
+    let params = {};
+    for (let page = 0; page < BLOCKSCOUT_MAX_PAGES; page++) {
+      const res = await blockscoutGet(base.href, `/api/v2/addresses/${up}/nft/collections`, params);
+      (res.items || []).forEach(c => {
+        const tok = c.token || {};
+        const address = bsTokenAddress(tok);
+        if (!address || !ethers.isAddress(address)) return;
+        (c.token_instances || []).forEach(inst => {
+          if (inst.id === undefined || inst.id === null) return;
+          rows.push({ address, type: tok.type || "?", name: tok.name, symbol: tok.symbol, id: String(inst.id), copies: inst.value || null, spam: bsIsSpam(tok) });
+        });
+      });
+      if (!res.next_page_params) break;
+      params = res.next_page_params;
+    }
+  } catch (e) {
+    if (requestId !== discoverRequestId) return;
+    status.textContent = t("discoverErr", { err: e.message });
+    return;
+  }
+  if (requestId !== discoverRequestId) return;
+  if (!rows.length) { status.textContent = t("discoverEmpty"); return; }
+  rows.sort((a, b) => (a.spam - b.spam));
+  status.textContent = t("discoverFound", { n: rows.length });
+  rows.forEach(r => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "asset-row" + (r.spam ? " spam" : "");
+    const title = [r.name, r.symbol ? `(${r.symbol})` : ""].filter(Boolean).join(" ") || r.address;
+    let line = `${r.type} · ${title}`;
+    if (r.id !== undefined) line += ` · ID ${r.id.length > 20 ? r.id.slice(0, 10) + "…" + r.id.slice(-6) : r.id}` + (r.copies && r.copies !== "1" ? ` ×${r.copies}` : "");
+    else line += ` · ${r.amount}`;
+    if (r.spam) line += ` · ${t("spamTag")}`;
+    btn.textContent = line;
+    btn.title = r.address;
+    btn.addEventListener("click", () => {
+      $("tokenAddress").value = r.address;
+      $("tokenId").value = r.id !== undefined ? r.id : "";
+      invalidateCheck();
+      readAssetForUi();
+    });
+    list.appendChild(btn);
+  });
+});
+
 // "All": the whole balance. The controller pays the gas, not the UP, so the native balance can
 // be sent in full.
 $("maxBtn").addEventListener("click", async () => {
@@ -1196,6 +1341,7 @@ $("sendBtn").addEventListener("click", async () => {
   }
 });
 updateAssetFields();
+setBlockscoutFromNetwork();
 </script>
 
 </body>
