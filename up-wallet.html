@@ -439,6 +439,8 @@ const I18N = {
     sending: "Invio della transazione incapsulata (conferma in MetaMask)...",
     txSummary: (v) => `Riepilogo: verso ${v.to} · valore dalla UP: ${v.value} · operazione: ${v.op}`,
     txSent: (v) => `Tx inviata: ${v.hash}`,
+    txNotDelivered: (v) => `⚠️ La transazione È STATA INVIATA (hash sopra), ma la dApp non ha ricevuto la risposta (${v.err}): la sessione era chiusa o scaduta. NON ripeterla: controlla l'esito sull'explorer.`,
+    invalidValue: "❌ Valore della transazione non valido: rifiutata.",
     txSentSummary: (v) => `Inviata: la UP paga ${v.value} a ${v.to} (più il gas, pagato dal controller).`,
     waiting: "In attesa di conferma...",
     txOk: "✅✅ Transazione confermata.",
@@ -449,6 +451,7 @@ const I18N = {
     signLegacyRejected: (v) => `❌ ${v.method} rifiutato: questo formato può autorizzare qualsiasi cosa, anche una transazione, e non viene mai firmato.`,
     signWrongAccount: (v) => `❌ La firma è chiesta per ${v.acc}, non per la tua UP: rifiutata.`,
     signBadData: (v) => `❌ Dati da firmare non validi: ${v.err}. Rifiutata.`,
+    signNoChain: "⚠️ Il messaggio non indica la rete (chainId): la firma può valere su ogni rete dove esiste questa UP.",
     signWrongDomainChain: (v) => `❌ Il messaggio è per la rete con chainId ${v.id}, non per quella scelta: rifiutata.`,
     signNoPermission: "❌ Il controller non ha il permesso SIGN sulla UP: la UP non riconoscerebbe la firma. Rifiutata.",
     verifyBad: (v) => `❌ WalletConnect segnala il sito come non affidabile (${v.v}): richiesta rifiutata.`,
@@ -596,6 +599,8 @@ const I18N = {
     sending: "Sending the wrapped transaction (confirm in MetaMask)...",
     txSummary: (v) => `Summary: to ${v.to} · value from the UP: ${v.value} · operation: ${v.op}`,
     txSent: (v) => `Tx sent: ${v.hash}`,
+    txNotDelivered: (v) => `⚠️ The transaction WAS SENT (hash above), but the dApp did not receive the answer (${v.err}): the session was closed or expired. Do NOT repeat it: check the outcome on the explorer.`,
+    invalidValue: "❌ Invalid transaction value: rejected.",
     txSentSummary: (v) => `Sent: the UP pays ${v.value} to ${v.to} (plus gas, paid by the controller).`,
     waiting: "Waiting for confirmation...",
     txOk: "✅✅ Transaction confirmed.",
@@ -605,6 +610,7 @@ const I18N = {
     signLegacyRejected: (v) => `❌ ${v.method} rejected: this format can authorise anything, even a transaction, and is never signed.`,
     signWrongAccount: (v) => `❌ The signature is requested for ${v.acc}, not for your UP: rejected.`,
     signBadData: (v) => `❌ Invalid data to sign: ${v.err}. Rejected.`,
+    signNoChain: "⚠️ The message does not state a network (chainId): the signature may be valid on every network where this UP exists.",
     signWrongDomainChain: (v) => `❌ The message is for chainId ${v.id}, not for the chosen network: rejected.`,
     signNoPermission: "❌ The controller does not have the SIGN permission on the UP: the UP would not recognise the signature. Rejected.",
     verifyBad: (v) => `❌ WalletConnect flags the site as untrusted (${v.v}): request rejected.`,
@@ -937,6 +943,14 @@ async function getWalletKit() {
   walletKit.on("session_proposal", onSessionProposal);
   walletKit.on("session_request", onSessionRequest);
   walletKit.on("session_delete", () => { showSessions(); log(t("sessionClosed"), "line-dim"); });
+  // Sessions restored from a previous visit may present another UP or network: close them.
+  const { getSdkError } = window.WalletKitBundle;
+  for (const s of Object.values(walletKit.getActiveSessions())) {
+    const acc = s.namespaces?.eip155?.accounts || [];
+    if (!compliance || acc.length !== 1 || acc[0].toLowerCase() !== `${compliance.caip}:${compliance.up}`.toLowerCase()) {
+      try { await walletKit.disconnectSession({ topic: s.topic, reason: getSdkError("USER_DISCONNECTED") }); } catch (e) { /* already gone */ }
+    } else sessionChain = compliance.caip;
+  }
   showSessions();
   return walletKit;
 }
@@ -1202,7 +1216,9 @@ async function handleSendTransaction(topic, id, c, tx, validation, reject) {
   if (!ethers.isAddress(tx.to)) return reject(t("genericError", { err: "invalid to" }));
   const to = ethers.getAddress(tx.to);
   if (to === c.up || to === c.km) return reject(t("reqSelf"));
-  const value = BigInt(tx.value || 0);
+  let value;
+  try { value = BigInt(tx.value || 0); } catch (e) { value = -1n; }
+  if (value < 0n) return reject(t("invalidValue"));
   const data = tx.data || tx.input || "0x";
   if (!ethers.isHexString(data)) return reject(t("genericError", { err: "invalid data" }));
   if (data !== "0x" && !(c.perms & (P.CALL | P.SUPER_CALL))) return reject(t("reqNoCall"));
@@ -1279,9 +1295,11 @@ $("sendBtn").addEventListener("click", async () => {
     log(t("txSent", { hash: sent.hash }), "line-dim");
     log(t("txSentSummary", { value: p.valueText, to: p.to }), "line-dim");
     if (p.c.net.explorer) log(p.c.net.explorer + sent.hash, "line-dim");
-    // The dApp tracks the transaction by its hash; the transaction is the wrapped one.
-    await respondResult(p.topic, p.id, sent.hash);
+    // From here the transaction exists on-chain: never report it as failed or ask to repeat it.
     clearPending();
+    // The dApp tracks the transaction by its hash; the transaction is the wrapped one.
+    try { await respondResult(p.topic, p.id, sent.hash); }
+    catch (e) { log(t("txNotDelivered", { err: e.message || String(e) }), "line-danger"); }
     log(t("waiting"), "line-dim");
     const receipt = await p.c.provider.waitForTransaction(sent.hash);
     if (receipt && receipt.status === 1) log(t("txOk"), "line-ok");
@@ -1343,6 +1361,8 @@ async function handleSignRequest(topic, id, c, request, validation, reject) {
       if (domain.chainId !== undefined && domain.chainId !== null && Number(domain.chainId) !== c.chainId) {
         return reject(t("signWrongDomainChain", { id: String(domain.chainId) }));
       }
+      // Without a chainId the signature is not bound to a network: it may be valid wherever the UP exists.
+      if (domain.chainId === undefined || domain.chainId === null) warnings.push([t("signNoChain"), "line-warn"]);
       const types = { ...data.types };
       delete types.EIP712Domain;
       hash = ethers.TypedDataEncoder.hash(domain, types, data.message);

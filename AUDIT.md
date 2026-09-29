@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| **Audit date** | 2026-09-27 |
-| **Commit audited** | `f56dd29` (branch `main`) |
-| **Revision** | 3 — rev. 2 reclassified H-03, M-05, I-01 and I-02 after the maintainer's feedback (salt/IV are public format values; all profiles and addresses shown belong to the maintainer and are public by choice); rev. 3 adds L-09, found while testing the new implementation-publishing page, and M-08, after the maintainer described how the site is deployed; M-08 was fixed and verified on the live site the same day |
-| **Scope** | Every file in the repository: 6 HTML tools, `decrypt.js`, README, images in `guide-assets/`, and the full git history |
-| **Method** | Manual code review, cross-check against the LUKSO reference contracts (`@lukso/lsp6-contracts` 0.16.3, `@lukso/lsp23-contracts` 0.16.3), browser end-to-end tests with mocked wallets/RPCs (Playwright + Chromium), and a git history review for secrets and personal data |
+| **Audit date** | 2026-09-27 (rev. 1–3); 2026-09-29 (rev. 4) |
+| **Commit audited** | `f56dd29` (rev. 1–3); `47642bc` (rev. 4), both on branch `main` |
+| **Revision** | 3 — rev. 2 reclassified H-03, M-05, I-01 and I-02 after the maintainer's feedback (salt/IV are public format values; all profiles and addresses shown belong to the maintainer and are public by choice); rev. 3 adds L-09, found while testing the new implementation-publishing page, and M-08, after the maintainer described how the site is deployed; M-08 was fixed and verified on the live site the same day; rev. 4 adds the two WalletConnect pages (section 7) |
+| **Scope** | Rev. 1–3: every file in the repository at the time: 6 HTML tools, `decrypt.js`, README, images in `guide-assets/`, and the full git history. Rev. 4: the WalletConnect pages `up-wallet.html` and `up-walletconnect-basenames.html`, the vendored `vendor/walletkit-1.6.0.min.js` and `config.example.js` |
+| **Method** | Manual code review, cross-check against the LUKSO reference contracts (`@lukso/lsp6-contracts` 0.16.3, `@lukso/lsp23-contracts` 0.16.3; for rev. 4 also `@lukso/lsp-smart-contracts` 0.14.0 for LSP0, LSP6 `isValidSignature` and LSP17), browser end-to-end tests with mocked wallets/RPCs/WalletConnect (Playwright + Chromium), a git history review for secrets and personal data, and, for rev. 4, live tests by the maintainer on Base and Polygon mainnet |
 
 ## Contents
 
@@ -16,6 +16,7 @@
 4. [Things that were checked and found correct](#4-things-that-were-checked-and-found-correct)
 5. [Residual risks and recommendations](#5-residual-risks-and-recommendations)
 6. [How the fixes were verified](#6-how-the-fixes-were-verified)
+7. [Rev. 4 — WalletConnect pages (UP Wallet and Basenames demo)](#7-rev-4--walletconnect-pages-up-wallet-and-basenames-demo)
 
 ---
 
@@ -26,9 +27,11 @@ The tools are static, client-side pages. They never ask for a private key: every
 | Severity | Count | Fixed | Open (recommendation only) |
 |---|---|---|---|
 | High | 2 | 2 | 0 |
-| Medium | 8 | 8 | 0 |
-| Low | 9 | 8 | 1 |
-| Informational | 6 | 2 | 4 (documented / accepted) |
+| Medium | 9 | 9 | 0 |
+| Low | 12 | 11 | 1 |
+| Informational | 13 | 2 | 11 (documented / accepted / planned) |
+
+Rev. 4 (section 7) adds M-09, L-10 to L-12 and I-07 to I-13. The pages it covers are **experimental**: unlike the other tools, they sign messages and send arbitrary transactions on behalf of the profile, so their residual risk is inherently higher and depends on the user reading what is shown.
 
 Severity scale: **High** means funds can be lost or sent to the wrong place, or personal data is exposed. **Medium** means the page gives a wrong or misleading security result, or there is a realistic injection or supply-chain vector. **Low** means a robustness or UX flaw with limited impact. **Informational** covers hardening advice and accepted design risks.
 
@@ -297,7 +300,10 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 | R-01 | ~~Redeploy the website with the fixed pages.~~ ✅ Done on 2026-09-27 (all fixes pulled on `crosschain-lukso.chainintegrate.it`). | The fixes only protect users once the published copies are replaced. |
 | R-02 | Implement a CSP (I-03) and serve the site with `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` and `frame-ancestors 'none'`. | Defence in depth, anti-clickjacking. |
 | R-03 | Re-test all RPC endpoints (L-07), and whenever the ethers version is bumped, update the SRI hash (`openssl dgst -sha384 -binary ethers.umd.min.js \| openssl base64 -A`). | Otherwise a version bump breaks the pages or silently drops the integrity protection. |
-| R-04 | Consider moving the shared code (chain list, decoding, `checkChains`, `escapeHtml`) into one versioned JS file. | Six copies of the same logic had drifted apart. That drift caused several of the findings above. |
+| R-04 | Consider moving the shared code (chain list, decoding, `checkChains`, `escapeHtml`) into one versioned JS file. | Six copies of the same logic had drifted apart. That drift caused several of the findings above. A shared `chains.js` is in progress (PR #21); `up-wallet.html` holds a seventh copy of the chain list until then. |
+| R-05 | Let redeployed profiles receive ERC-721 / ERC-1155 safe transfers with a minimal, stateless LSP17 extension published at the same address on every chain (I-12). | Marketplace purchases fail today; the proposal is ready and awaits approval. |
+| R-06 | Review `up-wallet.html` again (ideally with a second reviewer) before removing the "experimental" label, and after any change to its rejection rules, decoding or signing flow. | It is the only page that signs and sends arbitrary requests from third-party sites. |
+| R-07 | Decide whether to keep `up-walletconnect-basenames.html`: `up-wallet.html` covers the same case with more checks. | Two bridges double the code to maintain; the demo is now only an example. |
 
 ---
 
@@ -314,4 +320,124 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
   - Verify-only and v2 pages complete their checks; the Test page applies the `?network=` preset ✔
   - No uncaught page errors ✔
 - **`decrypt.js`:** decrypted freshly generated AES-256-GCM/PBKDF2-SHA256 vectors through a pseudo-terminal, both with explicit salt/IV and with the defaults; the password was not echoed.
-- **Not tested:** real transactions on live networks, and the reachability of the public RPCs (network egress to them was not available in the audit environment).
+- **Not tested:** real transactions on live networks, and the reachability of the public RPCs (network egress to them was not available in the audit environment). For the WalletConnect pages, see section 7.5: they were tested live by the maintainer.
+
+---
+
+## 7. Rev. 4 — WalletConnect pages (UP Wallet and Basenames demo)
+
+### 7.1 What the pages do
+
+- **`up-wallet.html` (experimental).** A WalletConnect wallet whose account is the Universal Profile. A dApp connects with a `wc:` link and sees the UP address on one chosen network. Every transaction request is wrapped into `KeyManager.execute(UP.execute(CALL, to, value, data))` and signed by the controller in MetaMask. Every message signature is made by the controller and validated by the UP through ERC-1271.
+- **`up-walletconnect-basenames.html` (experimental demo).** The first version of the same bridge, restricted to Base and to `register` on the two Basenames controllers. It is superseded by `up-wallet.html` (see R-07).
+
+### 7.2 Architecture and trust model
+
+```
+ dApp (any website) ──WalletConnect (Reown relay)──► page: sees the UP address as account, on one network
+ page ──► public RPC of the chosen network: compatibility check, decoding helpers, simulation, isValidSignature
+ page ──► MetaMask (controller key): signs KeyManager.execute(...) or the message, after explicit confirmation
+ KeyManager (LSP6) ──► enforces the controller's permissions on-chain; UP (LSP0) ──► performs the CALL
+```
+
+**Trusted:** the controller's wallet (it shows the final transaction or message and signs it), the UP's Key Manager (it enforces permissions on-chain), ethers (SRI-pinned) and the vendored WalletKit bundle (pinned, SHA-256 in `vendor/README.md`).
+
+**Partly trusted:** Reown's relay and Verify service (they transport the session and state whether the dApp's domain is genuine), and the RPC of the chosen network (every check the page shows is computed from its answers; see I-08).
+
+**Untrusted:** the dApp and everything it sends (metadata, requests, messages, transaction data), the site's self-declared name and URL.
+
+**Invariants the pages enforce:**
+1. The account presented to the dApp is the UP, on the chosen network only. Changing network or UP closes every session.
+2. Before pairing and again before every request and every signature, a **compatibility check** re-reads: RPC chainId, MetaMask chainId and account, UP and Key Manager code, the controller's permissions. Pairing stays disabled until it is green.
+3. A transaction is sent only if: `from` is the UP; it is not a contract creation; `to` is neither the UP nor its Key Manager (which could change controllers or permissions); the controller holds CALL/TRANSFERVALUE as needed; the wrapped call succeeds in simulation; UP and controller balances suffice; and the user clicked "Sign and send" and confirmed in MetaMask.
+4. A signature is returned only if: the method is `personal_sign` or `eth_signTypedData_v4` (`eth_sign` and legacy typed data are always rejected); the account is the UP; typed data is not for another chain; the controller holds SIGN; the user clicked "Sign the message" and confirmed in MetaMask; the recovered signer is the verified controller; and the UP answers `isValidSignature` with `0x1626ba7e`.
+5. Everything the dApp sends is rendered with `textContent`, never `innerHTML`.
+
+### 7.3 Findings
+
+#### M-09 — A transaction already broadcast could be reported as failed
+
+- **Files:** `up-wallet.html`, `up-walletconnect-basenames.html`
+- **Impact:** After MetaMask broadcast the wrapped transaction, the page sent the hash to the dApp. If that answer failed (session closed or request expired, which happens when the user takes long to decide), the error handler logged a generic error and answered "Send failed". The transaction was nevertheless on-chain. A user reading "error" could repeat the operation and pay twice.
+- **Fix:** Once the transaction is broadcast, the request is closed first and the answer to the dApp is attempted separately. If it fails, the page says explicitly that the transaction **was sent**, must **not** be repeated, and should be checked on the explorer; it then keeps waiting for the receipt as usual.
+- **Status:** ✅ Fixed (tested with a relay answer that fails after broadcast)
+
+#### L-10 — A malformed `value` left the dApp's request unanswered
+
+- **Files:** `up-wallet.html`, `up-walletconnect-basenames.html`
+- **Impact:** `BigInt(tx.value)` was evaluated outside the error handling. A malformed value threw, the request was never answered and the dApp waited indefinitely.
+- **Fix:** The value is parsed inside the checks; malformed or negative values are rejected with a message.
+- **Status:** ✅ Fixed
+
+#### L-11 — EIP-712 messages without a chainId were signed without a warning
+
+- **Files:** `up-wallet.html`, `up-walletconnect-basenames.html`
+- **Impact:** Typed data for another chain is rejected, but typed data whose domain has **no** `chainId` was accepted silently. Such a signature is not bound to a network and may be valid on every chain where the UP exists (the UP has the same address everywhere).
+- **Fix:** A warning is shown before signing. Rejecting them outright would break legitimate dApps that omit the field.
+- **Status:** ✅ Fixed (warning)
+
+#### L-12 — Sessions restored from a previous visit were not re-validated
+
+- **File:** `up-wallet.html`
+- **Impact:** WalletKit restores sessions from browser storage. A session approved in an earlier visit for another UP or network could appear as active. Requests on it were already rejected (account and chain are checked on every request), so the impact was confusion rather than a wrong action.
+- **Fix:** When WalletKit starts, sessions whose account is not exactly the current UP on the current network are disconnected.
+- **Status:** ✅ Fixed
+
+#### I-07 — One controller signature is valid for every UP that controller governs
+
+- **Impact:** LSP6 `isValidSignature` (0.14 and later) recovers the signer from the hash and checks that it holds SIGN on this UP. It does not bind the signature to one account, so if the same controller governs several UPs, a message signed "for" one is valid for all of them.
+- **Mitigation:** stated in the disclaimer and on every signature request; users are told to use one controller per UP.
+- **Status:** ⏳ Accepted (property of LSP6)
+
+#### I-08 — The page's checks are only as trustworthy as the RPC
+
+- **Impact:** The compatibility check, token metadata, simulation and `isValidSignature` are read from the RPC of the chosen network. A malicious or broken RPC (for example a custom one) could make a harmful transaction look safe. MetaMask signs with its own RPC and shows the final data, but it only sees the wrapped call to the Key Manager.
+- **Mitigation:** built-in networks use public RPCs; RPC and wallet chainIds must match; the user signs in MetaMask.
+- **Status:** ⏳ Accepted. Recommendation: use a trusted RPC, especially with the custom option.
+
+#### I-09 — Decoding covers only common calls; opaque content cannot be interpreted
+
+- **Impact:** ERC-20/721/1155 transfers and approvals, Permit2 `approve` and LSP7/LSP8 calls are decoded, with strong warnings on approvals (including "unlimited"). Router calls (swaps, bridges, marketplaces), batched calls and `personal_sign` requests over a hash cannot be interpreted: an approval hidden inside them is not detected.
+- **Mitigation:** such requests carry an explicit "not recognised / not readable" warning, raw data is shown, five well-known contracts are named when they have code on the chosen network (Permit2, Seaport 1.5/1.6, LI.FI Diamond, 0x AllowanceHolder) with the note that a name says who receives the call, not what it does. The disclaimer states that ChainIntegrate takes no responsibility for requests approved on unclear content.
+- **Status:** ⏳ Accepted (inherent to a generic wallet)
+
+#### I-10 — Site identity relies on Reown Verify
+
+- **Impact:** The dApp's name and URL are self-declared. The page rejects requests that Reown marks `INVALID` or as a scam, and warns on `UNKNOWN`. The Sign-In-with-Ethereum check compares the message's domain with the site's declared URL, so it catches a login message for another domain, but not a site that lies about its own URL while Verify is `UNKNOWN`.
+- **Status:** ⏳ Accepted; the warning on `UNKNOWN` is shown on every request
+
+#### I-11 — WalletConnect relay: privacy and availability
+
+- **Impact:** Sessions go through Reown's servers, which see the session metadata (addresses, network, dApp). The Project ID is public by design; it lives in `config.js` on the server (git-ignored) and is protected by Reown's domain allowlist. If Reown is unavailable, the bridge does not work; funds are not affected.
+- **Status:** ⏳ Documented in the disclaimer
+
+#### I-12 — Redeployed UPs cannot receive ERC-721 / ERC-1155 safe transfers
+
+- **Impact:** Safe NFT transfers call `onERC721Received` / `onERC1155Received` on the recipient. LSP0 answers them only through an LSP17 extension and otherwise reverts (`NoExtensionFoundForFunctionSelector`). Redeployed profiles usually have none, so marketplace purchases fail ("wallet cannot receive"), as seen on OpenSea during the live tests.
+- **Mitigation:** the compatibility check shows, per standard, whether the UP can receive NFTs and why not (no extension, or an extension without code on that network).
+- **Status:** ⏳ Planned (R-05)
+
+#### I-13 — The vendored WalletKit bundle runs with full access to the page
+
+- **Impact:** `vendor/walletkit-1.6.0.min.js` is third-party code. A tampered copy could alter requests or answers.
+- **Mitigation:** the file is committed, pinned to an exact version, with its SHA-256 and rebuild steps in `vendor/README.md`, and served from the same origin (no CDN).
+- **Status:** ⏳ Accepted. Recommendation: rebuild and compare the hash on every update.
+
+### 7.4 Checked and found correct
+
+- **Wrapping.** The transaction sent to MetaMask decodes as `KeyManager.execute(UP.execute(0 /* CALL */, to, value, data))` with the dApp's exact `to`, `value` and `data` (asserted in the tests). No `DELEGATECALL`, `CREATE` or `STATICCALL` path exists.
+- **ERC-1271.** In `@lukso/lsp-smart-contracts` 0.14.0, LSP6 `isValidSignature` recovers the signer with `ECDSA.tryRecover(dataHash, signature)` and returns `0x1626ba7e` only if it holds SIGN. The page recovers the signer from the same hash (`hashMessage` for `personal_sign`, `TypedDataEncoder.hash` for EIP-712) before asking the UP.
+- **Permission bits and data keys.** The permission table matches `LSP6Constants.sol`; SIGN is bit 21. The LSP17 extension key is `0xcee78b4094da86011096` + `0000` + selector + zero padding, as generated by `LSP2Utils.generateMappingKey` in LSP0.
+- **Injection.** A Sign-In message containing `<img src=x onerror=…>` is displayed as text and does not execute. dApp names, URLs, messages, addresses and errors are always written with `textContent`.
+- **Known-contract names.** The five addresses were checked on the block explorers and in each project's documentation. A name is never shown for an address without code on the chosen network (tested).
+
+### 7.5 How it was verified
+
+- **Mocked end-to-end suites** (Playwright + Chromium, mocked MetaMask with real ECDSA signatures, mocked RPC and WalletConnect):
+  - `up-wallet.html`: 57 checks. They cover the compatibility check and its re-runs on MetaMask account/network changes, pairing and session rules, every rejection rule, decoding and warnings (approvals, unlimited amounts, NFTs, unknown calls, known contracts), LSP6 error decoding, simulation, the real send path and its wrapping, the M-09 case, signatures (SIWE phishing, typed data, orders, missing chainId, SIGN permission, UP refusal), the modal window and the language toggle.
+  - `up-walletconnect-basenames.html`: 36 checks.
+- **Live tests by the maintainer on mainnet**, with the ChainIntegrate UP redeployed at `0x328A…317b`:
+  - Base: a Basenames name registered to the UP including the primary-name signature (tx `0x73037e94…`), later transferred;
+  - Polygon: Sign-In with OpenSea (ERC-1271 accepted by OpenSea), a POL → EURe swap through 0x AllowanceHolder (tx `0x390a2feb…`), a transaction to LI.FI (tx `0x5a61bb4f…`);
+  - blocks observed in practice: wrong MetaMask account (not a controller), insufficient controller gas, message-signing formats refused;
+  - an OpenSea session left half-open after reloading the dApp was fixed by disconnecting and reconnecting (no issue in the bridge).
