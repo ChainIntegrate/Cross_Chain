@@ -81,6 +81,14 @@ The constructor takes only the EntryPoint and the owner. Published through Nick'
   - `UPPaymaster.input.json` is the self-contained standard-JSON input, with the `@account-abstraction/contracts` 0.6.0 interfaces embedded;
   - `UPPaymaster.json` holds the creation code, the ABI and these parameters.
 
+**Native currency: one independent copy per chain**
+The contract never names a token. On each chain it holds and pays that chain's native currency: ETH on Base, Arbitrum and Optimism, POL on Polygon, AVAX on Avalanche, xDAI on Gnosis. Each chain's copy has its own deposit, allowlist and cap. In practice:
+- **The cap is in the chain's native units (wei).** Set it on each chain separately: 0.05 means about $150 in ETH but a few cents in POL.
+- **The allowlist is per chain.** Adding a UP, setting the cap or withdrawing is one owner transaction on each chain, so the owner needs a little native gas there too.
+- **Top-ups are per chain,** in that chain's native currency. One gas-refuel transaction can fund several chains at once.
+- **It works only where EntryPoint v0.6 exists** at `0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789`. The publishing step must check for its code first. zkSync Era is excluded: it has native account abstraction and different deployment addresses.
+- **L2 data fees (Base, Optimism, Arbitrum) are not in EntryPoint v0.6's gas accounting.** The relayer covers them through `preVerificationGas`. Set too low, the relayer loses a little on each operation. This is a relayer setting, not a paymaster one.
+
 **What a UP needs, once per chain**
 One transaction signed by the controller, done with a page like `up-nft-receiver.html`:
 1. Register LUKSO's `Extension4337` (from `@lukso/lsp-smart-contracts`) as the LSP17 extension for `validateUserOp` (`0x3a871cdd`).
