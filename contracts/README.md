@@ -56,3 +56,63 @@ LSP6 checks each payload when it runs, so the three steps work in one transactio
 - after it, ERC-721 and ERC-1155 (single and batch) safe transfers are accepted;
 - `supportsInterface` reports both receiver interfaces;
 - the controller's permissions are unchanged.
+
+## UPPaymaster (experimental, not published)
+
+`UPPaymaster.sol` is an [ERC-4337](https://eips.ethereum.org/EIPS/eip-4337) paymaster for EntryPoint v0.6. It pays the gas of user operations sent by Universal Profiles on its allowlist, and of nothing else. It is the "who pays?" contract of the planned gas relayer: controllers sign, a relayer sends, the paymaster pays from its deposit, and the controllers never need gas.
+
+**Status:** experimental and unaudited. Nothing is published yet; the first real test will use small amounts.
+
+**What it does**
+- `validatePaymasterUserOp` accepts an operation only if the sender UP is on the allowlist and the operation cannot cost more than `maxCostPerOp`. It reads only storage keyed by the sender.
+- Anyone can fund it by sending native currency to it: `receive()` forwards the amount to the paymaster's EntryPoint deposit. A top-up is a plain transfer, so gas-refuel services can send to it directly.
+- Only the owner can:
+  - add or remove UPs;
+  - set the cost cap, which starts at 0, so nothing is sponsored until the owner sets it;
+  - withdraw the deposit;
+  - transfer ownership, in two steps.
+- No `postOp` logic, no stake, no other function.
+
+**Same address on every chain for a given owner**
+The constructor takes only the EntryPoint and the owner. Published through Nick's factory with salt 0 and the canonical EntryPoint v0.6 (`0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789`), it lands at the same address on every chain for the same owner, whoever sends the transaction.
+- **Address:** `initCode = creationCode ++ abi.encode(entryPoint, owner)`, then the last 20 bytes of `keccak256(0xff ++ factory ++ salt ++ keccak256(initCode))`.
+- **Build:** same compiler settings as the NFT extension (solc 0.8.24, optimizer 200, `paris`, no metadata hash).
+- **Files:**
+  - `UPPaymaster.input.json` is the self-contained standard-JSON input, with the `@account-abstraction/contracts` 0.6.0 interfaces embedded;
+  - `UPPaymaster.json` holds the creation code, the ABI and these parameters.
+
+**Native currency: one independent copy per chain**
+The contract never names a token. On each chain it holds and pays that chain's native currency: ETH on Base, Arbitrum and Optimism, POL on Polygon, AVAX on Avalanche, xDAI on Gnosis. Each chain's copy has its own deposit, allowlist and cap. In practice:
+- **The cap is in the chain's native units (wei).** Set it on each chain separately: 0.05 means about $150 in ETH but a few cents in POL.
+- **The allowlist is per chain.** Adding a UP, setting the cap or withdrawing is one owner transaction on each chain, so the owner needs a little native gas there too.
+- **Top-ups are per chain,** in that chain's native currency. One gas-refuel transaction can fund several chains at once.
+- **It works only where EntryPoint v0.6 exists** at `0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789`. The publishing step must check for its code first. zkSync Era is excluded: it has native account abstraction and different deployment addresses.
+- **L2 data fees (Base, Optimism, Arbitrum) are not in EntryPoint v0.6's gas accounting.** The relayer covers them through `preVerificationGas`. Set too low, the relayer loses a little on each operation. This is a relayer setting, not a paymaster one.
+
+**What a UP needs, once per chain**
+One transaction signed by the controller, done with a page like `up-nft-receiver.html`:
+1. Register LUKSO's `Extension4337` (from `@lukso/lsp-smart-contracts`) as the LSP17 extension for `validateUserOp` (`0x3a871cdd`).
+2. Add the EntryPoint as a controller with `SUPER_CALL` and `SUPER_TRANSFERVALUE`.
+   - It gets no `SETDATA`: permission changes can never go through the relayer.
+3. Give the signing controller the 4337 permission (`0x800000`).
+
+The controller signs the user operation hash with `personal_sign`, so MetaMask works. LSP25 relay calls need an EIP-191 version 0 signature, which MetaMask cannot produce without `eth_sign`.
+
+**Tested on a local chain** with the EntryPoint v0.6 of `@account-abstraction/contracts` 0.6.0, `Extension4337` of `@lukso/lsp-smart-contracts` 0.17.4, and the LUKSO `UniversalProfile` and `LSP6KeyManager` 0.12.1 and 0.14.0. 21 of 21 checks pass on each version.
+- **Build and publishing:**
+  - the committed input reproduces the committed creation code;
+  - the paymaster lands at the predicted address, owned by the owner, whoever publishes it;
+  - a plain transfer lands in its deposit.
+- **Happy path:**
+  - with the cap at 0 nothing is sponsored;
+  - after the owner sets the cap and allowlists the UP, a controller holding no ETH moves the UP's funds;
+  - the paymaster pays and the relayer is reimbursed.
+- **Refused:**
+  - a replay;
+  - a UP not on the allowlist;
+  - a non-controller signature;
+  - a controller without the 4337 permission;
+  - an operation above the cap;
+  - direct calls to the UP or to `validateUserOp`;
+  - allowlist changes or withdrawals by anyone but the owner.
+- **The EntryPoint's permissions do not leak:** a signer allowed only to call contracts cannot use the EntryPoint's value-transfer permission.

@@ -2,7 +2,7 @@
 
 Internal notes for the maintainer. They live in `tools/`, which is **not published on the website**: the server's sparse checkout excludes `tools/`, and the root `.htaccess` blocks it on Apache. Keep secrets, email credentials and private addresses out of this file anyway: the repository is public.
 
-Last update: 2026-09-29.
+Last update: 2026-09-30.
 
 ---
 
@@ -24,6 +24,9 @@ Last update: 2026-09-29.
 - **`tools/`** is never served.
 - **Contributors** fix their own branches (CONTRIBUTING rule 5); the maintainer reviews and merges.
 - **WalletConnect Project ID** only in the server's `config.js` (git-ignored), protected by the Reown domain allowlist.
+- **Alchemy API key** (free plan) only in the server's `config.js`, restricted to the site's domain in the Alchemy dashboard. Used by the Send page to list a UP's tokens and NFTs. Networks enabled in the Alchemy app: Ethereum, Polygon, Arbitrum, Base, Avalanche, Gnosis; others can be enabled in the dashboard without code changes.
+- **Finding a UP's holdings:** Alchemy first; Blockscout as the alternative without a key (its index proved incomplete on Polygon and Base); pasting the contract address always works. The `eth_getLogs` scan was tried and removed: public RPCs allow only small block ranges, hundreds of requests per search. The list is only a shortcut: the check reads everything again from the chain.
+- **Spam label:** only Alchemy's `isSpam` verdict (or Blockscout's reputation) marks a row; `spamClassifications` are signals, not a verdict. Alchemy flags Basenames as spam (false positive): accepted as is, explained in the guide. No allowlist of "trusted" contracts.
 - **No browser extension impersonating a wallet.**
 - **Security model of the bridge pages:** security comes from the architecture (Key Manager permissions, signing in the user's wallet) and from services (Reown Verify). Every step is shown; ChainIntegrate takes no responsibility for requests approved on unclear content.
 - **UP Wallet:** one network at a time; compatibility check between UP and controller as soon as network, UP and MetaMask are set, again on every change and before every request.
@@ -74,7 +77,7 @@ The notes below are kept for reference.
   3. Simulate the bridge transaction and compare the amount received on Base with the fees.
   4. Send only if the fees are acceptable. Check that the Base EURe address is the official Monerium one.
 - **Route 2 (fallback):** send EURe from the UP to the historical wallet **on Polygon** (plain transfer), then bridge with the Monerium app from the historical wallet. Only the historical wallet must be linked to the Monerium profile, on both networks; the UP does not.
-- **Done (2026-09-29):** the Send page (`up-invia-fondi.html`) now transfers ERC-20 tokens and NFTs (ERC-721, ERC-1155, LSP7/LSP8) as well as native currency, so a plain token or NFT transfer does not need an external dApp.
+- **Done (2026-09-29/30):** the Send page (`up-invia-fondi.html`) now transfers ERC-20 tokens and NFTs (ERC-721, ERC-1155, LSP7/LSP8) as well as native currency, so a plain token or NFT transfer does not need an external dApp. It lists what the UP holds through Alchemy (verified live on Polygon and Base) or Blockscout. PRs #37–#42.
 
 ### 2.3 Gas monitoring by email (to build)
 - **What:** a small read-only script on the VPS, run hourly by cron. It needs no private key.
@@ -89,7 +92,22 @@ The notes below are kept for reference.
   2. how the VPS sends email (existing `sendmail`/`msmtp`, or an SMTP account with credentials in a server-only file);
   3. the recipient address.
 
-### 2.4 Gas abstraction: relayer with LSP25 (design, not started)
+### 2.4 Gas abstraction: relayer with our own ERC-4337 paymaster (in progress)
+**Decision (2026-09-30).** ERC-4337 with our own paymaster, not LSP25 and not a third-party gas tank.
+- **Why not LSP25:** relay calls need an EIP-191 version 0 signature, which MetaMask cannot produce without `eth_sign`.
+- **Why 4337:** `Extension4337` accepts `personal_sign`.
+- **Pieces:**
+  - `contracts/UPPaymaster.sol` pays only for allowlisted UPs, with a cost cap. It is owned by the maintainer's "cassa" address and has the same address on every chain.
+  - The relayer (bundler) is an EOA generated from a terminal on the VPS, with no permission on any UP. The EntryPoint reimburses it from the paymaster deposit, so its balance does not drain.
+  - Top-ups: from the cassa (USDC), one transaction through a gas-refuel service (e.g. gas.zip) to the paymaster address on each chain. Email alerts when a deposit is low. No automatic top-ups.
+- **Status:** tested on a local chain (21/21 on LUKSO 0.12.1 and 0.14.0). Not published.
+- **Next:**
+  1. Maintainer review of the contract.
+  2. Real test on Base with small amounts: publish `Extension4337` and the paymaster, set up the ChainIntegrate UP, send one sponsored operation.
+  3. The relayer service on the VPS.
+  4. UP Wallet and Send page option "gas paid by the relayer".
+
+The notes below are the earlier LSP25 design, kept for reference.
 - **Goal:** controllers never need gas on any network. They sign; a relayer submits through `KeyManager.executeRelayCall` (LSP25). The signature binds nonce, chainId and validity window.
 - **Relayer:**
   - one EOA with the same address on every network;
