@@ -1,0 +1,13 @@
+{
+  "keyFile": "/etc/crosschain-relayer/relayer.key",
+  "listen": { "host": "127.0.0.1", "port": 8787 },
+  "allowedOrigins": ["https://crosschain-lukso.chainintegrate.it"],
+  "limits": { "perIpPerMinute": 6, "perSenderPerMinute": 3 },
+  "chains": {
+    "8453": {
+      "rpc": "https://mainnet.base.org",
+      "paymasters": ["0xb353565d1f801E7402DBC267b8C0E30E3540D4eD"],
+      "minBalanceWarn": "0.0005"
+    }
+  }
+}

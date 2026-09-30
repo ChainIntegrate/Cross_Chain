@@ -153,6 +153,8 @@
   <button id="signOpBtn" disabled data-i18n="signOpBtn">A · Prepara e firma con il controller</button>
   <div class="status-box plan" id="opBox"><span class="empty" data-i18n="noOp">Nessuna operazione firmata.</span></div>
   <button id="relayBtn" class="danger" disabled data-i18n="relayBtn">B · Invia come relayer (account attivo in MetaMask)</button>
+  <button id="relaySvcBtn" class="danger" disabled data-i18n="relaySvcBtn">B · Invia tramite il relayer del sito</button>
+  <div class="note" id="svcInfo"></div>
 </div>
 
 <div class="panel">
@@ -291,12 +293,20 @@ const I18N = {
     readyToSignRevoke: "Controlla l'elenco qui sopra, poi premi \"Firma e invia la disattivazione\".",
     revokeOk: "✅ Verifica finale: estensione rimossa, EntryPoint senza permessi e fuori dall'elenco, permesso 4337 tolto all'account, nessun altro permesso cambiato.",
     panel4Title: "4 · Operazione di prova",
-    panel4Note: "<b>A</b> · con il <b>controller</b> attivo in MetaMask: la pagina prepara un invio dalla UP e ti chiede di firmarne l'impronta (<code>userOpHash</code>). MetaMask mostrerà un testo esadecimale: confrontalo con l'impronta scritta qui sotto. Nessun gas.<br><b>B</b> · con <b>un altro account</b> (la cassa o qualunque account con un po' di gas): la pagina simula e invia l'operazione all'EntryPoint. Il gas anticipato torna a quell'account dal deposito del paymaster.",
+    panel4Note: "<b>A</b> · con il <b>controller</b> attivo in MetaMask: la pagina prepara un invio dalla UP e ti chiede di firmarne l'impronta (<code>userOpHash</code>). MetaMask mostrerà un testo esadecimale: confrontalo con l'impronta scritta qui sotto. Nessun gas.<br><b>B</b> · con <b>un altro account</b> (la cassa o qualunque account con un po' di gas): la pagina simula e invia l'operazione all'EntryPoint. Il gas anticipato torna a quell'account dal deposito del paymaster. Se il sito ha un relayer attivo per questa rete, puoi invece usare <b>B · Invia tramite il relayer del sito</b>: la stessa cosa, fatta dal servizio del sito con il suo account.",
     testToLabel: "Destinatario",
     testAmountLabel: "Importo che la UP invia (valuta nativa)",
     signOpBtn: "A · Prepara e firma con il controller",
     noOp: "Nessuna operazione firmata.",
     relayBtn: "B · Invia come relayer (account attivo in MetaMask)",
+    relaySvcBtn: "B · Invia tramite il relayer del sito",
+    svcNone: "Relayer del sito: non raggiungibile. Usa B con un account MetaMask.",
+    svcNotServed: "Relayer del sito: attivo, ma non serve questa rete o questo paymaster. Usa B con un account MetaMask.",
+    svcReady: (v) => `Relayer del sito: ${v.addr} · saldo su questa rete: ${v.bal}. Anticipa il gas e lo riceve indietro dal paymaster; tu non firmi altro.`,
+    svcSending: "Invio dell'operazione firmata al relayer del sito...",
+    svcRefused: (v) => `Il relayer del sito ha rifiutato l'operazione: ${v.err}`,
+    svcRepeated: "Il relayer aveva già inviato questa operazione: segue la stessa transazione.",
+    hintBsvc: (v) => `Operazione firmata da ${v.signer}. Inviala con "B · Invia tramite il relayer del sito" (nessun gas da parte tua), oppure con B attivando in MetaMask un account con un po' di gas.`,
     logTitle: "Registro",
     // status labels
     kNetwork: "Rete", kRpc: "RPC", kWallet: "MetaMask", kEntryPoint: "EntryPoint v0.6",
@@ -427,12 +437,20 @@ const I18N = {
     readyToSignRevoke: "Check the list above, then press \"Sign and send turning it off\".",
     revokeOk: "✅ Final check: extension removed, EntryPoint without permissions and out of the list, 4337 permission removed from the account, no other permission changed.",
     panel4Title: "4 · Test operation",
-    panel4Note: "<b>A</b> · with the <b>controller</b> active in MetaMask: the page prepares a transfer from the UP and asks you to sign its fingerprint (<code>userOpHash</code>). MetaMask will show a hex text: compare it with the fingerprint written below. No gas.<br><b>B</b> · with <b>another account</b> (the cassa or any account with a little gas): the page simulates and sends the operation to the EntryPoint. The gas advanced goes back to that account from the paymaster deposit.",
+    panel4Note: "<b>A</b> · with the <b>controller</b> active in MetaMask: the page prepares a transfer from the UP and asks you to sign its fingerprint (<code>userOpHash</code>). MetaMask will show a hex text: compare it with the fingerprint written below. No gas.<br><b>B</b> · with <b>another account</b> (the cassa or any account with a little gas): the page simulates and sends the operation to the EntryPoint. The gas advanced goes back to that account from the paymaster deposit. If the site runs a relayer for this network, you can use <b>B · Send through the site relayer</b> instead: the same thing, done by the site's service with its own account.",
     testToLabel: "Recipient",
     testAmountLabel: "Amount the UP sends (native currency)",
     signOpBtn: "A · Prepare and sign with the controller",
     noOp: "No operation signed.",
     relayBtn: "B · Send as the relayer (account active in MetaMask)",
+    relaySvcBtn: "B · Send through the site relayer",
+    svcNone: "Site relayer: not reachable. Use B with a MetaMask account.",
+    svcNotServed: "Site relayer: running, but it does not serve this network or this paymaster. Use B with a MetaMask account.",
+    svcReady: (v) => `Site relayer: ${v.addr} · balance on this network: ${v.bal}. It advances the gas and gets it back from the paymaster; you sign nothing else.`,
+    svcSending: "Sending the signed operation to the site relayer...",
+    svcRefused: (v) => `The site relayer refused the operation: ${v.err}`,
+    svcRepeated: "The relayer had already sent this operation: following the same transaction.",
+    hintBsvc: (v) => `Operation signed by ${v.signer}. Send it with "B · Send through the site relayer" (no gas from you), or with B by making an account with a little gas active in MetaMask.`,
     logTitle: "Log",
     kNetwork: "Network", kRpc: "RPC", kWallet: "MetaMask", kEntryPoint: "EntryPoint v0.6",
     kPmAddress: "Paymaster address", kOwnerCheck: "⚠️ Warning",
@@ -633,6 +651,7 @@ $("ackRisk").addEventListener("change", updateButtons);
 let state = null, checkRun = 0, checkTimer = null, setupPlan = null, signedOp = null, revokePlan = null;
 // One action at a time: every action button is disabled while one is running.
 let busy = false;
+let svc = null; // site relayer, from GET relay/info: { relayer, entryPoint, chains: { [chainId]: { paymasters, balance } } }
 function scheduleCheck(delay = 500) {
   state = null; setupPlan = null; revokePlan = null;
   setStatus("setupPlanBox", t("noPlan"), "empty");
@@ -807,11 +826,14 @@ function updateButtons() {
   $("sendRevokeBtn").disabled = !(ok && revokePlan);
   $("signOpBtn").disabled = !(ok && s.upDone && s.pmState === "ok" && s.sponsored);
   $("relayBtn").disabled = !(ok && signedOp);
+  const svcOk = !!(signedOp && svcServes(signedOp.chainId, signedOp.pm));
+  $("relaySvcBtn").disabled = !(ok && svcOk);
+  $("svcInfo").textContent = svcLine(s);
   // Which account each step needs, so a grey button is never a mystery.
   let hint = "";
   if (busy) hint = t("hintBusy");
   else if (!s || !s.ok) hint = t("hintCheck");
-  else if (signedOp) hint = t("hintB", { signer: signedOp.signerAddr });
+  else if (signedOp) hint = t(svcOk ? "hintBsvc" : "hintB", { signer: signedOp.signerAddr });
   else if (!(s.pmState === "ok" && s.sponsored && s.cap > 0n)) hint = t("hintPm");
   else if (!s.upDone) hint = t(s.perms ? "hintSetup" : "hintA");
   else hint = t("hintReadyA");
@@ -1074,7 +1096,30 @@ $("signOpBtn").addEventListener("click", () => guarded(async () => {
   signedOp = { op, hash, signerAddr: who, chainId: s.chainId, up: s.upAddr, pm: s.pmAddr, to: ethers.getAddress(to), amount, legacy: fees.legacy };
   log(t("signedOk", { addr: who }), "line-ok");
 }, false));
-$("relayBtn").addEventListener("click", async () => {
+// ---- site relayer (tools/relayer), reached on the same site at relay/
+async function loadSvc() {
+  try {
+    const r = await fetch("relay/info", { cache: "no-store" });
+    const j = r.ok ? await r.json() : null;
+    svc = j && ethers.isAddress(j.relayer) && j.chains && j.entryPoint === ENTRY_POINT ? j : null;
+  } catch (e) { svc = null; }
+  updateButtons();
+}
+function svcServes(chainId, pm) {
+  const c = svc && svc.chains[String(chainId)];
+  return !!(c && pm && c.paymasters.some(a => a.toLowerCase() === pm.toLowerCase()));
+}
+function svcLine(s) {
+  if (!svc) return t("svcNone");
+  if (!s || !s.ok || !svcServes(s.chainId, s.pmAddr)) return t("svcNotServed");
+  const bal = svc.chains[String(s.chainId)].balance;
+  return t("svcReady", { addr: svc.relayer, bal: bal == null ? "?" : fmt(BigInt(bal), s.cur) });
+}
+const opJson = (op) => Object.fromEntries(Object.entries(op).map(([k, v]) => [k, typeof v === "bigint" ? v.toString() : v]));
+
+// B: the relayer is either the account active in MetaMask or the site relayer. The result is reported
+// the same way in both cases.
+async function relaySigned(viaService) {
   if (!signedOp || !riskAccepted() || busy) return;
   const so = signedOp;
   busy = true; updateButtons();
@@ -1083,42 +1128,57 @@ $("relayBtn").addEventListener("click", async () => {
     const s = await freshState();
     if (!s || !s.ok || s.chainId !== so.chainId) { log(t("stale"), "line-err"); return; }
     signedOp = so; updateButtons();
-    log(t("relayWho", { addr: s.signer }), "line-dim");
-    if (s.signer === so.signerAddr) log(t("relaySameAsSigner"), "line-warn");
+    const relayer = viaService ? svc && svc.relayer : s.signer;
+    if (!relayer || (viaService && !svcServes(so.chainId, so.pm))) { log(t("svcNotServed"), "line-err"); return; }
+    log(t("relayWho", { addr: relayer }), "line-dim");
+    if (!viaService && s.signer === so.signerAddr) log(t("relaySameAsSigner"), "line-warn");
     const ep = new ethers.Contract(ENTRY_POINT, EP_IFACE, s.provider);
-    const data = EP_IFACE.encodeFunctionData("handleOps", [[so.op], s.signer]);
-    const [depBefore, relBefore, ctlBefore, recvBefore] = await Promise.all([ep.balanceOf(so.pm), s.provider.getBalance(s.signer), s.provider.getBalance(so.signerAddr), s.provider.getBalance(so.to)]);
-    log(t("simulating"), "line-dim");
-    let gas;
-    try { await s.provider.call({ from: s.signer, to: ENTRY_POINT, data }); gas = await s.provider.estimateGas({ from: s.signer, to: ENTRY_POINT, data }); }
-    catch (e) { log(t("simFail", { err: revertReason(e) }), "line-err"); return; }
-    log(t("simOk", { gas: gas.toString() }), "line-ok");
-    const gasLimit = gas + gas / 4n;
-    // Same prices as the operation: the EntryPoint reimburses at the operation's price, so a higher tip
-    // chosen by the wallet would be paid by the relayer.
-    const feeFields = so.legacy ? { gasPrice: so.op.maxFeePerGas } : { maxFeePerGas: so.op.maxFeePerGas, maxPriorityFeePerGas: so.op.maxPriorityFeePerGas };
-    const need = gasLimit * so.op.maxFeePerGas;
-    if (relBefore < need) { log(t("noGas", { need: fmt(need, s.cur), have: fmt(relBefore, s.cur) }), "line-err"); return; }
-    const signer = await new ethers.BrowserProvider(signerProvider).getSigner();
-    if (signer.address !== s.signer) { log(t("stale"), "line-err"); return; }
-    log(t("sending"), "line-dim");
-    const sent = await signer.sendTransaction({ to: ENTRY_POINT, data, gasLimit, ...feeFields });
+    const [depBefore, relBefore, ctlBefore, recvBefore] = await Promise.all([ep.balanceOf(so.pm), s.provider.getBalance(relayer), s.provider.getBalance(so.signerAddr), s.provider.getBalance(so.to)]);
+    let hash;
+    if (viaService) {
+      log(t("svcSending"), "line-dim");
+      let r, j;
+      try {
+        r = await fetch("relay/send", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chainId: so.chainId, op: opJson(so.op) }) });
+        j = await r.json();
+      } catch (e) { log(t("svcRefused", { err: e.message }), "line-err"); return; }
+      if (!r.ok || !j.hash) { log(t("svcRefused", { err: (j && j.error) || `HTTP ${r.status}` }), "line-err"); return; }
+      if (j.repeated) log(t("svcRepeated"), "line-dim");
+      hash = j.hash;
+    } else {
+      const data = EP_IFACE.encodeFunctionData("handleOps", [[so.op], s.signer]);
+      log(t("simulating"), "line-dim");
+      let gas;
+      try { await s.provider.call({ from: s.signer, to: ENTRY_POINT, data }); gas = await s.provider.estimateGas({ from: s.signer, to: ENTRY_POINT, data }); }
+      catch (e) { log(t("simFail", { err: revertReason(e) }), "line-err"); return; }
+      log(t("simOk", { gas: gas.toString() }), "line-ok");
+      const gasLimit = gas + gas / 4n;
+      // Same prices as the operation: the EntryPoint reimburses at the operation's price, so a higher tip
+      // chosen by the wallet would be paid by the relayer.
+      const feeFields = so.legacy ? { gasPrice: so.op.maxFeePerGas } : { maxFeePerGas: so.op.maxFeePerGas, maxPriorityFeePerGas: so.op.maxPriorityFeePerGas };
+      const need = gasLimit * so.op.maxFeePerGas;
+      if (relBefore < need) { log(t("noGas", { need: fmt(need, s.cur), have: fmt(relBefore, s.cur) }), "line-err"); return; }
+      const signer = await new ethers.BrowserProvider(signerProvider).getSigner();
+      if (signer.address !== s.signer) { log(t("stale"), "line-err"); return; }
+      log(t("sending"), "line-dim");
+      hash = (await signer.sendTransaction({ to: ENTRY_POINT, data, gasLimit, ...feeFields })).hash;
+    }
     signedOp = null; setStatus("opBox", t("noOp"), "empty"); updateButtons();
-    log(t("txSent", { hash: sent.hash }), "line-dim");
-    const explorerUrl = getExplorerUrl(s.netInfo, EXPLORER_PATH, sent.hash);
+    log(t("txSent", { hash }), "line-dim");
+    const explorerUrl = getExplorerUrl(s.netInfo, EXPLORER_PATH, hash);
     if (explorerUrl) log(explorerUrl, "line-dim");
     log(t("waiting"), "line-dim");
-    const rc = await s.provider.waitForTransaction(sent.hash);
+    const rc = await s.provider.waitForTransaction(hash);
     if (!rc || rc.status !== 1) { log(t("txFailed"), "line-err"); return; }
     let ev = null, why = null;
     for (const l of rc.logs) {
       try { const p = EP_IFACE.parseLog(l); if (p?.name === "UserOperationEvent") ev = p; if (p?.name === "UserOperationRevertReason") why = p.args.revertReason; } catch (e) { /* other contracts' logs */ }
     }
     const at = rc.blockNumber;
-    const [depAfter, relAfter, ctlAfter, recvAfter] = await Promise.all([ep.balanceOf(so.pm, { blockTag: at }), s.provider.getBalance(s.signer, at), s.provider.getBalance(so.signerAddr, at), s.provider.getBalance(so.to, at)]);
+    const [depAfter, relAfter, ctlAfter, recvAfter] = await Promise.all([ep.balanceOf(so.pm, { blockTag: at }), s.provider.getBalance(relayer, at), s.provider.getBalance(so.signerAddr, at), s.provider.getBalance(so.to, at)]);
     // On OP-stack chains the receipt also carries the L1 data fee, paid on top of gasUsed * price.
     let l1Fee = 0n;
-    try { const raw = await s.provider.send("eth_getTransactionReceipt", [sent.hash]); if (raw && raw.l1Fee) l1Fee = BigInt(raw.l1Fee); } catch (e) { /* not available */ }
+    try { const raw = await s.provider.send("eth_getTransactionReceipt", [hash]); if (raw && raw.l1Fee) l1Fee = BigInt(raw.l1Fee); } catch (e) { /* not available */ }
     const relGas = rc.gasUsed * (rc.gasPrice || rc.effectiveGasPrice || 0n) + l1Fee;
     const relNet = ev ? ev.args.actualGasCost - relGas : null;
     log(t("result", { success: ev && ev.args.success ? t("resultOk") : t("resultFail"), cost: ev ? fmt(ev.args.actualGasCost, s.cur) : "?",
@@ -1127,13 +1187,15 @@ $("relayBtn").addEventListener("click", async () => {
     if (relNet !== null) log(t("relayerNet", { net: (relNet >= 0n ? "+" : "−") + fmt(relNet >= 0n ? relNet : -relNet, s.cur) }), relNet >= 0n ? "line-ok" : "line-warn");
     if (why) log(t("revertReason", { r: revertReason({ data: why }) }), "line-warn");
   } catch (e) { log(t("genericError", { err: revertReason(e) }), "line-err"); }
-  finally { busy = false; scheduleCheck(0); }
-});
+  finally { busy = false; if (viaService) loadSvc(); scheduleCheck(0); }
+}
+$("relayBtn").addEventListener("click", () => relaySigned(false));
+$("relaySvcBtn").addEventListener("click", () => relaySigned(true));
 
 // ==================== START ====================
 applyI18n();
 Promise.all([fetch("contracts/Extension4337.json").then(r => r.json()), fetch("contracts/UPPaymaster.json").then(r => r.json())])
-  .then(([e, p]) => { EXT = e; PMJ = p; onInputsChanged(); })
+  .then(([e, p]) => { EXT = e; PMJ = p; onInputsChanged(); loadSvc(); })
   .catch((e) => setStatus("netBox", "contracts/*.json: " + e.message, "line-err"));
 </script>
 

@@ -136,7 +136,12 @@ The notes below are kept for reference.
 - **Next:**
   1. Allowlist and set up the maintainer's personal UP (`0x328A…317b`) and Birra20venti's UP, then other chains (Polygon first).
   2. Check whether gas.zip can deliver directly to the paymaster.
-  3. The relayer service on the VPS: Node.js, and an Apache proxy to a local port. It uses the same `preVerificationGas` and fee rules, and accepts a list of known paymasters.
+  3. The relayer service on the VPS: **code ready (2026-09-30), to install.** It is `tools/relayer/`, installed as described in its README.
+     - It runs from its own clone in `/opt`, with its key in `/etc`, as a systemd service on `127.0.0.1:8787`. The web server passes `/relay/` to it (nginx or Apache).
+     - It uses the same `preVerificationGas` and fee rules as the page, and accepts only listed paymasters.
+     - It simulates the execution alone as well as `handleOps`. When only the execution fails, `handleOps` does not revert, so the paymaster would pay for nothing. Found by the local test.
+     - The page has a second B button, "Send through the site relayer". It stays off, with a note, while `relay/info` does not answer.
+     - To install: `node -v`, the web server type, then the README steps. The relayer address is generated on the server and funded with about 0.001 ETH on Base.
   4. UP Wallet and Send page option "gas paid by the relayer".
   5. Optional: verify `Extension4337`'s source on Basescan (LUKSO's build input is needed).
 
