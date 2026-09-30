@@ -117,3 +117,62 @@ Risultato: ✅ riuscita
   saldo del relayer: 0.134189648223083657 ETH → 0.134288241856797548 ETH (gas della transazione 0.0000025913899642 ETH)
   saldo del controller: 0.000489005019855369 ETH → 0.000489005019855369 ETH
   destinatario: +0.000098593633713891 ETH
+# ---------------------------------------------------------------------------------------------
+# After the fixes of PR #45 (computed preVerificationGas, relay transaction at the operation's
+# prices). Operation 2 was relayed by the controller itself; operation 3 by the cassa. In both the
+# relayer ends slightly positive (the 15% margin), and in operation 3 the controller's balance is
+# unchanged.
+
+—— 18:09:11 ——
+Operazione (userOp) per l'EntryPoint 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789
+  La UP 0x4a2605796e0d91A9667d6E30365aEEC384C48c27 invia 0.0001 ETH a 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9
+  nonce 1 · paga il paymaster 0xb353565d1f801E7402DBC267b8C0E30E3540D4eD
+  preVerificationGas 52550 (base della transazione, dati, costo L1 dove c'è)
+  costo massimo 0.00001542805 ETH (tetto 0.0003 ETH, deposito 0.000498792926 ETH)
+
+Impronta da firmare (userOpHash):
+  0xe7ed619a51348fd38989f9cdf9fc9b14dde7c6d05d75b811731ecfd8fc51d31e
+Firma in MetaMask: confronta il testo esadecimale con l'impronta qui sopra.
+✅ Firmata da 0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c (controller con permesso 4337). Ora passa in MetaMask all'account che farà da relayer e premi B.
+—— 18:12:56 ——
+Relayer: 0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c. Anticipa il gas e lo riceve indietro dal paymaster.
+Nota: stai inviando con lo stesso account che ha firmato. Funziona, ma per la prova usa un altro account: così si vede che il controller non spende gas.
+Simulazione...
+✅ Simulazione riuscita (gas stimato 678191).
+Conferma in MetaMask...
+Transazione inviata: 0x66d1f67e755559e2b6d00c1111ff5f4a7c0d033c0b3715edae0c5849bb95a931
+https://basescan.org/tx/0x66d1f67e755559e2b6d00c1111ff5f4a7c0d033c0b3715edae0c5849bb95a931
+In attesa di conferma...
+Risultato: ✅ riuscita
+  costo dell'operazione pagato dal paymaster: 0.000001074774 ETH
+  deposito del paymaster: 0.000498792926 ETH → 0.000497718152 ETH
+  saldo del relayer: 0.000489005019855369 ETH → 0.000489147619200229 ETH (gas della transazione 0.00000093217465514 ETH)
+  saldo del controller: 0.000489005019855369 ETH → 0.000489147619200229 ETH
+  destinatario: +0.0001 ETH
+Bilancio del relayer per questa operazione (rimborso − gas, costo L1 incluso): +0.00000014259934486 ETH
+—— 18:16:30 ——
+Operazione (userOp) per l'EntryPoint 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789
+  La UP 0x4a2605796e0d91A9667d6E30365aEEC384C48c27 invia 0.0001 ETH a 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9
+  nonce 2 · paga il paymaster 0xb353565d1f801E7402DBC267b8C0E30E3540D4eD
+  preVerificationGas 52557 (base della transazione, dati, costo L1 dove c'è)
+  costo massimo 0.000015428127 ETH (tetto 0.0003 ETH, deposito 0.000497718152 ETH)
+
+Impronta da firmare (userOpHash):
+  0x6bceaa50928999c2754557a9fba315156d303106c8401433c64a621ae36820d8
+Firma in MetaMask: confronta il testo esadecimale con l'impronta qui sopra.
+✅ Firmata da 0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c (controller con permesso 4337). Ora passa in MetaMask all'account che farà da relayer e premi B.
+—— 18:17:36 ——
+Relayer: 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9. Anticipa il gas e lo riceve indietro dal paymaster.
+Simulazione...
+✅ Simulazione riuscita (gas stimato 678120).
+Conferma in MetaMask...
+Transazione inviata: 0xf74b8e927b35f76fea85520d419ed596b184823959ddcaabcb39cbfda4b1c0f7
+https://basescan.org/tx/0xf74b8e927b35f76fea85520d419ed596b184823959ddcaabcb39cbfda4b1c0f7
+In attesa di conferma...
+Risultato: ✅ riuscita
+  costo dell'operazione pagato dal paymaster: 0.000001059816 ETH
+  deposito del paymaster: 0.000497718152 ETH → 0.000496658336 ETH
+  saldo del relayer: 0.134388241856797548 ETH → 0.134488382892130215 ETH (gas della transazione 0.000000918780667333 ETH)
+  saldo del controller: 0.000489147619200229 ETH → 0.000489147619200229 ETH
+  destinatario: +0.000100141035332667 ETH
+Bilancio del relayer per questa operazione (rimborso − gas, costo L1 incluso): +0.000000141035332667 ETH

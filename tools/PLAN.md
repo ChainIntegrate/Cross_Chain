@@ -122,13 +122,18 @@ The notes below are kept for reference.
     - MetaMask choosing a higher tip than the operation's, now the relay transaction uses the operation's own fee fields.
   - **The owner field** kept the first connected account. The page now warns when the owner entered is not the active account.
   - **A click during a pending transaction** was dropped. Action buttons are now locked while an action runs, and the check retries instead of dropping the request.
+- **Confirmed after the fixes (2026-09-30):** two more sponsored operations on Base.
+  - `0x66d1f67e755559e2b6d00c1111ff5f4a7c0d033c0b3715edae0c5849bb95a931`, relayed by the controller.
+  - `0xf74b8e927b35f76fea85520d419ed596b184823959ddcaabcb39cbfda4b1c0f7`, relayed by the cassa. The controller's balance was unchanged.
+  - In both, the relayer ended about +0.00000014 ETH, the 15% margin.
+  - The paymaster paid about 0.0000011 ETH per operation, less than half a cent. The 0.0005 ETH deposit covers about 450 operations.
+- **Page usability:** the check runs its reads in parallel, so buttons react faster. A hint under section 4 says which account each step needs. If MetaMask does not report an account switch, pressing "Connect MetaMask" updates the page, and the signed operation is kept.
 - **Next:**
-  1. Repeat one sponsored operation on Base to confirm the relayer is no longer out of pocket. The page now prints the relayer's balance for the operation.
-  2. Allowlist and set up the maintainer's personal UP (`0x328A…317b`) and Birra20venti's UP, then other chains (Polygon first).
-  3. Check whether gas.zip can deliver directly to the paymaster.
-  4. The relayer service on the VPS: Node.js, and an Apache proxy to a local port. It uses the same `preVerificationGas` and fee rules, and accepts a list of known paymasters.
-  5. UP Wallet and Send page option "gas paid by the relayer".
-  6. Optional: verify `Extension4337`'s source on Basescan (LUKSO's build input is needed).
+  1. Allowlist and set up the maintainer's personal UP (`0x328A…317b`) and Birra20venti's UP, then other chains (Polygon first).
+  2. Check whether gas.zip can deliver directly to the paymaster.
+  3. The relayer service on the VPS: Node.js, and an Apache proxy to a local port. It uses the same `preVerificationGas` and fee rules, and accepts a list of known paymasters.
+  4. UP Wallet and Send page option "gas paid by the relayer".
+  5. Optional: verify `Extension4337`'s source on Basescan (LUKSO's build input is needed).
 
 The notes below are the earlier LSP25 design, kept for reference.
 - **Goal:** controllers never need gas on any network. They sign; a relayer submits through `KeyManager.executeRelayCall` (LSP25). The signature binds nonce, chainId and validity window.
