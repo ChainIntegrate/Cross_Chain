@@ -144,6 +144,7 @@
   <input type="text" id="testTo" placeholder="0x...">
   <label for="testAmount" data-i18n="testAmountLabel">Importo che la UP invia (valuta nativa)</label>
   <input type="text" id="testAmount" value="0.0001">
+  <div class="note line-warn" id="opHint" style="margin-top:12px;"></div>
   <button id="signOpBtn" disabled data-i18n="signOpBtn">A · Prepara e firma con il controller</button>
   <div class="status-box plan" id="opBox"><span class="empty" data-i18n="noOp">Nessuna operazione firmata.</span></div>
   <button id="relayBtn" class="danger" disabled data-i18n="relayBtn">B · Invia come relayer (account attivo in MetaMask)</button>
@@ -411,6 +412,13 @@ const I18N = {
     relayWho: (v) => `Relayer: ${v.addr}. Anticipa il gas e lo riceve indietro dal paymaster.`,
     relaySameAsSigner: "Nota: stai inviando con lo stesso account che ha firmato. Funziona, ma per la prova usa un altro account: così si vede che il controller non spende gas.",
     result: (v) => `Risultato: ${v.success}\n  costo dell'operazione pagato dal paymaster: ${v.cost}\n  deposito del paymaster: ${v.depBefore} → ${v.depAfter}\n  saldo del relayer: ${v.relBefore} → ${v.relAfter} (gas della transazione ${v.relGas})\n  saldo del controller: ${v.ctlBefore} → ${v.ctlAfter}\n  destinatario: +${v.recv}`,
+    hintBusy: "Operazione in corso: attendi la fine.",
+    hintCheck: "Verifica in corso, oppure rete o MetaMask da sistemare (sezione 1).",
+    hintPm: "Prima: paymaster pubblicato, tetto impostato e UP in lista (sezione 2, con la cassa).",
+    hintA: "Per A attiva in MetaMask il controller della UP (con il permesso 4337). Se la sezione 1 non mostra l'account scelto, premi \"Connetti MetaMask\".",
+    hintSetup: "La UP non è ancora configurata per questo account (sezione 3), oppure l'account attivo non ha il permesso 4337: per A serve il controller configurato.",
+    hintReadyA: "Pronto per A: l'account attivo è un controller con il permesso 4337.",
+    hintB: (v) => `Operazione firmata da ${v.signer}. Per B attiva l'account che fa da relayer (con un po' di gas): se la sezione 1 non lo mostra, premi "Connetti MetaMask" — l'operazione firmata resta.`,
     relayerNet: (v) => `Bilancio del relayer per questa operazione (rimborso − gas, costo L1 incluso): ${v.net}`,
     resultOk: "✅ riuscita", resultFail: "❌ eseguita ma fallita nella UP (il gas è stato pagato comunque)",
     revertReason: (v) => `Motivo del fallimento nella UP: ${v.r}`,
@@ -526,6 +534,13 @@ const I18N = {
     relayWho: (v) => `Relayer: ${v.addr}. It advances the gas and gets it back from the paymaster.`,
     relaySameAsSigner: "Note: you are sending with the same account that signed. It works, but for the test use another account: it shows that the controller spends no gas.",
     result: (v) => `Result: ${v.success}\n  operation cost paid by the paymaster: ${v.cost}\n  paymaster deposit: ${v.depBefore} → ${v.depAfter}\n  relayer balance: ${v.relBefore} → ${v.relAfter} (transaction gas ${v.relGas})\n  controller balance: ${v.ctlBefore} → ${v.ctlAfter}\n  recipient: +${v.recv}`,
+    hintBusy: "An action is running: wait for it to end.",
+    hintCheck: "Checking, or network / MetaMask to fix (section 1).",
+    hintPm: "First: paymaster published, cap set and UP on the allowlist (section 2, with the cassa).",
+    hintA: "For A, make the UP's controller (with the 4337 permission) active in MetaMask. If section 1 does not show the chosen account, press \"Connect MetaMask\".",
+    hintSetup: "The UP is not set up for this account yet (section 3), or the active account lacks the 4337 permission: A needs the set-up controller.",
+    hintReadyA: "Ready for A: the active account is a controller with the 4337 permission.",
+    hintB: (v) => `Operation signed by ${v.signer}. For B, make the relayer account (with a little gas) active: if section 1 does not show it, press "Connect MetaMask" — the signed operation is kept.`,
     relayerNet: (v) => `Relayer balance for this operation (reimbursement − gas, L1 fee included): ${v.net}`,
     resultOk: "✅ succeeded", resultFail: "❌ executed but failed inside the UP (the gas was paid anyway)",
     revertReason: (v) => `Why it failed inside the UP: ${v.r}`,
@@ -541,6 +556,7 @@ function applyI18n() {
   document.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.getAttribute("data-i18n-html")); });
   document.querySelectorAll("[data-i18n-placeholder]").forEach(el => { el.placeholder = t(el.getAttribute("data-i18n-placeholder")); });
   if (state) render(state);
+  updateButtons();
 }
 $("langToggle").addEventListener("click", () => { LANG = LANG === "it" ? "en" : "it"; applyI18n(); });
 
@@ -702,57 +718,69 @@ async function computeState() {
   if (walletId !== chainId) { s.net.push(["kWallet", ["walletWrong", { addr: signerAddress, id: walletId, exp: chainId }], "err"]); return s; }
   s.net.push(["kWallet", ["walletOk", { addr: signerAddress, id: walletId }], "ok"]);
   s.signer = signerAddress;
-  s.epOk = (await provider.getCode(ENTRY_POINT)) !== "0x";
+  // Independent reads run in parallel: the page re-checks on every change, so this sets its speed.
+  const rawOwner = $("ownerAddress").value.trim();
+  const rawUp = $("upAddress").value.trim();
+  const owner = ethers.isAddress(rawOwner) ? ethers.getAddress(rawOwner) : null;
+  const up = ethers.isAddress(rawUp) ? ethers.getAddress(rawUp) : null;
+  const pmInit = owner ? ethers.concat([PMJ.creationCode, enc(["address", "address"], [ENTRY_POINT, owner])]) : null;
+  const pmAddr = owner ? ethers.getCreate2Address(NICK_FACTORY, SALT, ethers.keccak256(pmInit)) : null;
+  const none = Promise.resolve(null);
+  const [epCode, factoryCode, extCode, pmCode, upCode] = await Promise.all([
+    provider.getCode(ENTRY_POINT), provider.getCode(NICK_FACTORY), provider.getCode(EXT.address),
+    pmAddr ? provider.getCode(pmAddr) : none, up ? provider.getCode(up) : none,
+  ]);
+  s.epOk = epCode !== "0x";
   s.net.push(["kEntryPoint", s.epOk ? ["epOk"] : ["epMissing"], s.epOk ? "ok" : "err"]);
   if (!s.epOk) return s;
-  s.factoryOk = (await provider.getCode(NICK_FACTORY)) !== "0x";
+  s.factoryOk = factoryCode !== "0x";
   s.ok = true;
 
   // ---- paymaster
-  const rawOwner = $("ownerAddress").value.trim();
-  if (!ethers.isAddress(rawOwner)) { s.pm.push(["kPmOwner", ["ownerInvalid"], "err"]); }
+  const pmState = !pmAddr ? null : pmCode === "0x" ? "missing" : ethers.keccak256(pmCode) === PMJ.runtimeCodeHash ? "ok" : "wrong";
+  const upDeployed = !!(up && upCode && upCode !== "0x");
+  const pmC = pmState === "ok" ? new ethers.Contract(pmAddr, PM_ABI, provider) : null;
+  const upC = upDeployed ? new ethers.Contract(up, UP_IFACE, provider) : null;
+  const [pmRead, upOwner] = await Promise.all([
+    pmC ? Promise.all([pmC.owner(), pmC.maxCostPerOp(), pmC.deposit(), up ? pmC.sponsored(up) : Promise.resolve(false)]) : none,
+    upC ? upC.owner().catch(() => null) : none,
+  ]);
+  if (!owner) { s.pm.push(["kPmOwner", ["ownerInvalid"], "err"]); }
   else {
-    const owner = ethers.getAddress(rawOwner);
-    const pmInit = ethers.concat([PMJ.creationCode, enc(["address", "address"], [ENTRY_POINT, owner])]);
-    const pmAddr = ethers.getCreate2Address(NICK_FACTORY, SALT, ethers.keccak256(pmInit));
-    Object.assign(s, { owner, pmInit, pmAddr });
+    Object.assign(s, { owner, pmInit, pmAddr, pmState });
     s.pm.push(["kPmAddress", pmAddr, ""]);
     if (owner !== signerAddress) s.pm.push(["kOwnerCheck", ["ownerNotActive", { owner, active: signerAddress }], "warn"]);
-    const code = await provider.getCode(pmAddr);
-    s.pmState = code === "0x" ? "missing" : ethers.keccak256(code) === PMJ.runtimeCodeHash ? "ok" : "wrong";
-    s.pm.push(["kPmCode", [s.pmState === "ok" ? "pmOk" : s.pmState === "missing" ? "pmMissing" : "pmWrong"], s.pmState === "ok" ? "ok" : s.pmState === "missing" ? "warn" : "err"]);
-    if (s.pmState === "ok") {
-      const pm = new ethers.Contract(pmAddr, PM_ABI, provider);
-      const [onChainOwner, cap, dep] = await Promise.all([pm.owner(), pm.maxCostPerOp(), pm.deposit()]);
+    s.pm.push(["kPmCode", [pmState === "ok" ? "pmOk" : pmState === "missing" ? "pmMissing" : "pmWrong"], pmState === "ok" ? "ok" : pmState === "missing" ? "warn" : "err"]);
+    if (pmRead) {
+      const [onChainOwner, cap, dep, sponsored] = pmRead;
       Object.assign(s, { pmOwner: onChainOwner, cap, deposit: dep });
       s.pm.push(["kPmOwner", onChainOwner === owner ? owner : ["ownerMismatch", { owner: onChainOwner }], onChainOwner === owner ? "" : "err"]);
       s.pm.push(["kPmDeposit", fmt(dep, s.cur), dep > 0n ? "" : "warn"]);
       s.pm.push(["kPmCap", cap > 0n ? fmt(cap, s.cur) : ["capZero"], cap > 0n ? "" : "warn"]);
       s.isOwner = onChainOwner === signerAddress;
       s.pm.push(["kYou", [s.isOwner ? "youOwner" : "youNotOwner", { addr: signerAddress }], s.isOwner ? "ok" : "warn"]);
+      if (upDeployed) { s.sponsored = sponsored; s.pm.push(["kPmUp", sponsored ? ["yes"] : ["no"], sponsored ? "ok" : "warn"]); }
     }
   }
 
   // ---- UP
-  const extCode = await provider.getCode(EXT.address);
   s.extState = extCode === "0x" ? "missing" : ethers.keccak256(extCode) === EXT.runtimeCodeHash ? "ok" : "wrong";
-  const rawUp = $("upAddress").value.trim();
-  if (!ethers.isAddress(rawUp)) { s.up.push(["kUp", ["upMissing"], "warn"]); s.up.push(["kExt", [s.extState === "ok" ? "extOk" : s.extState === "missing" ? "extMissing" : "extWrong", { addr: EXT.address }], s.extState === "ok" ? "ok" : s.extState === "missing" ? "warn" : "err"]); return s; }
+  const extRow = ["kExt", [s.extState === "ok" ? "extOk" : s.extState === "missing" ? "extMissing" : "extWrong", { addr: EXT.address }], s.extState === "ok" ? "ok" : s.extState === "missing" ? "warn" : "err"];
+  if (!up) { s.up.push(["kUp", ["upMissing"], "warn"]); s.up.push(extRow); return s; }
   try {
-    const up = ethers.getAddress(rawUp);
     s.upAddr = up;
-    if ((await provider.getCode(up)) === "0x") { s.up.push(["kUp", ["upNotDeployed"], "err"]); return s; }
+    if (!upDeployed) { s.up.push(["kUp", ["upNotDeployed"], "err"]); return s; }
     s.up.push(["kUp", ["upOk", { addr: up }], "ok"]);
-    if (s.pmState === "ok") {
-      s.sponsored = await new ethers.Contract(s.pmAddr, PM_ABI, provider).sponsored(up);
-      s.pm.push(["kPmUp", s.sponsored ? ["yes"] : ["no"], s.sponsored ? "ok" : "warn"]);
-    }
-    const upC = new ethers.Contract(up, UP_IFACE, provider);
-    const km = ethers.getAddress(await upC.owner());
-    if ((await provider.getCode(km)) === "0x") { s.up.push(["kKm", ["kmBad", { addr: km }], "err"]); return s; }
+    if (!upOwner) { s.up.push(["kKm", ["kmBad", { addr: "?" }], "err"]); return s; }
+    const km = ethers.getAddress(upOwner);
+    const [kmCode, data] = await Promise.all([
+      provider.getCode(km),
+      upC.getDataBatch([PERM_KEY(signerAddress), LSP17_KEY(EXT.validateUserOpSelector), PERM_KEY(ENTRY_POINT), ARRAY_KEY]),
+    ]);
+    if (kmCode === "0x") { s.up.push(["kKm", ["kmBad", { addr: km }], "err"]); return s; }
     s.up.push(["kKm", km, "ok"]);
-    s.up.push(["kExt", [s.extState === "ok" ? "extOk" : s.extState === "missing" ? "extMissing" : "extWrong", { addr: EXT.address }], s.extState === "ok" ? "ok" : s.extState === "missing" ? "warn" : "err"]);
-    const [permRaw, extVal, epRaw, lenRaw] = await upC.getDataBatch([PERM_KEY(signerAddress), LSP17_KEY(EXT.validateUserOpSelector), PERM_KEY(ENTRY_POINT), ARRAY_KEY]);
+    s.up.push(extRow);
+    const [permRaw, extVal, epRaw, lenRaw] = data;
     const perms = permRaw && permRaw !== "0x" ? BigInt(permRaw) : 0n;
     const epPerms = epRaw && epRaw !== "0x" ? BigInt(epRaw) : 0n;
     const len = lenRaw && lenRaw !== "0x" ? Number(BigInt(lenRaw)) : 0;
@@ -809,6 +837,15 @@ function updateButtons() {
   $("sendSetupBtn").disabled = !(ok && setupPlan);
   $("signOpBtn").disabled = !(ok && s.upDone && s.pmState === "ok" && s.sponsored);
   $("relayBtn").disabled = !(ok && signedOp);
+  // Which account each step needs, so a grey button is never a mystery.
+  let hint = "";
+  if (busy) hint = t("hintBusy");
+  else if (!s || !s.ok) hint = t("hintCheck");
+  else if (signedOp) hint = t("hintB", { signer: signedOp.signerAddr });
+  else if (!(s.pmState === "ok" && s.sponsored && s.cap > 0n)) hint = t("hintPm");
+  else if (!s.upDone) hint = t(s.perms ? "hintSetup" : "hintA");
+  else hint = t("hintReadyA");
+  $("opHint").textContent = hint;
 }
 
 // ==================== SENDING ====================
