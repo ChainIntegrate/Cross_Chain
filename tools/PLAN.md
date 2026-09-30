@@ -136,7 +136,11 @@ The notes below are kept for reference.
 - **Next:**
   1. Allowlist and set up the maintainer's personal UP (`0x328A…317b`) and Birra20venti's UP, then other chains (Polygon first).
   2. Check whether gas.zip can deliver directly to the paymaster.
-  3. The relayer service on the VPS: **code ready (2026-09-30), to install.** It is `tools/relayer/`, installed as described in its README.
+  3. The relayer service on the VPS: **installed and working (2026-09-30).** It is `tools/relayer/`, installed as described in its README.
+     - Relayer address: `0xbb683923c2Df0269996C0E2F276A5097cE863C2F`. Key in `/etc/crosschain-relayer/relayer.key` on the server; the maintainer keeps a copy in a password manager.
+     - Funded with 0.001 ETH on Base: `0x3e060f31e6f0b85f7e2b09fef5922982ed0c6256d58bacf470edb7a8f3422ba1`.
+     - nginx passes `/relay/` to `127.0.0.1:8787`, in the site's HTTPS server block. The previous config is saved as `/root/crosschain-lukso.nginx.bak`.
+     - First operation through the site relayer: `0x74ec840e4a389f9a5841437bb371005c52ad13ea4fc16a698cb25eac9f3cdebb`, nonce 3 of the ChainIntegrate UP. The UP sent 0.0001 ETH to the cassa; the controller spent nothing; the paymaster paid 0.0000011 ETH; the relayer ended +0.00000015 ETH. Page log in `tools/logs/2026-09-30-base-site-relayer.txt`.
      - It runs from its own clone in `/opt`, with its key in `/etc`, as a systemd service on `127.0.0.1:8787`. The web server passes `/relay/` to it (nginx or Apache).
      - It uses the same `preVerificationGas` and fee rules as the page, and accepts only listed paymasters.
      - It simulates the execution alone as well as `handleOps`. When only the execution fails, `handleOps` does not revert, so the paymaster would pay for nothing. Found by the local test.

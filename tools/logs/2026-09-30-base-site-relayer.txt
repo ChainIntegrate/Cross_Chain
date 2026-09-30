@@ -1,0 +1,27 @@
+First operation through the site relayer (tools/relayer on the VPS), Base mainnet, 2026-09-30.
+Page: up-gas-relay.html. Signer: controller of the ChainIntegrate UP. Button B: "Send through the site relayer".
+
+—— 22:54:56 ——
+Operazione (userOp) per l'EntryPoint 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789
+  La UP 0x4a2605796e0d91A9667d6E30365aEEC384C48c27 invia 0.0001 ETH a 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9
+  nonce 3 · paga il paymaster 0xb353565d1f801E7402DBC267b8C0E30E3540D4eD
+  preVerificationGas 51932 (base della transazione, dati, costo L1 dove c'è)
+  costo massimo 0.000015421252 ETH (tetto 0.0003 ETH, deposito 0.000496658336 ETH)
+
+Impronta da firmare (userOpHash):
+  0x2a679a742ff1c032a786fc79baa642450801b9b5335ca3dd94ac35c3cd66d39d
+Firma in MetaMask: confronta il testo esadecimale con l'impronta qui sopra.
+✅ Firmata da 0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c (controller con permesso 4337). Ora passa in MetaMask all'account che farà da relayer e premi B.
+—— 22:55:22 ——
+Relayer: 0xbb683923c2Df0269996C0E2F276A5097cE863C2F. Anticipa il gas e lo riceve indietro dal paymaster.
+Invio dell'operazione firmata al relayer del sito...
+Transazione inviata: 0x74ec840e4a389f9a5841437bb371005c52ad13ea4fc16a698cb25eac9f3cdebb
+https://basescan.org/tx/0x74ec840e4a389f9a5841437bb371005c52ad13ea4fc16a698cb25eac9f3cdebb
+In attesa di conferma...
+Risultato: ✅ riuscita
+  costo dell'operazione pagato dal paymaster: 0.000001071066 ETH
+  deposito del paymaster: 0.000496658336 ETH → 0.00049558727 ETH
+  saldo del relayer: 0.001 ETH → 0.001000146413116112 ETH (gas della transazione 0.000000924652883888 ETH)
+  saldo del controller: 0.000489147619200229 ETH → 0.000489147619200229 ETH
+  destinatario: +0.0001 ETH
+Bilancio del relayer per questa operazione (rimborso − gas, costo L1 incluso): +0.000000146413116112 ETH
