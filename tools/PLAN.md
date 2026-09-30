@@ -92,7 +92,22 @@ The notes below are kept for reference.
   2. how the VPS sends email (existing `sendmail`/`msmtp`, or an SMTP account with credentials in a server-only file);
   3. the recipient address.
 
-### 2.4 Gas abstraction: relayer with LSP25 (design, not started)
+### 2.4 Gas abstraction: relayer with our own ERC-4337 paymaster (in progress)
+**Decision (2026-09-30).** ERC-4337 with our own paymaster, not LSP25 and not a third-party gas tank.
+- **Why not LSP25:** relay calls need an EIP-191 version 0 signature, which MetaMask cannot produce without `eth_sign`.
+- **Why 4337:** `Extension4337` accepts `personal_sign`.
+- **Pieces:**
+  - `contracts/UPPaymaster.sol` pays only for allowlisted UPs, with a cost cap. It is owned by the maintainer's "cassa" address and has the same address on every chain.
+  - The relayer (bundler) is an EOA generated from a terminal on the VPS, with no permission on any UP. The EntryPoint reimburses it from the paymaster deposit, so its balance does not drain.
+  - Top-ups: from the cassa (USDC), one transaction through a gas-refuel service (e.g. gas.zip) to the paymaster address on each chain. Email alerts when a deposit is low. No automatic top-ups.
+- **Status:** tested on a local chain (21/21 on LUKSO 0.12.1 and 0.14.0). Not published.
+- **Next:**
+  1. Maintainer review of the contract.
+  2. Real test on Base with small amounts: publish `Extension4337` and the paymaster, set up the ChainIntegrate UP, send one sponsored operation.
+  3. The relayer service on the VPS.
+  4. UP Wallet and Send page option "gas paid by the relayer".
+
+The notes below are the earlier LSP25 design, kept for reference.
 - **Goal:** controllers never need gas on any network. They sign; a relayer submits through `KeyManager.executeRelayCall` (LSP25). The signature binds nonce, chainId and validity window.
 - **Relayer:**
   - one EOA with the same address on every network;
