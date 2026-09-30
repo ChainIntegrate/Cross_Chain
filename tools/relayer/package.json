@@ -1,0 +1,10 @@
+{
+  "name": "crosschain-up-relayer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Gas relayer for Universal Profiles on EVM chains (ERC-4337, EntryPoint v0.6). Experimental.",
+  "license": "MIT",
+  "main": "relay.js",
+  "engines": { "node": ">=18" },
+  "dependencies": { "ethers": "6.13.4" }
+}
