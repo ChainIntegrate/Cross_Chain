@@ -415,7 +415,7 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 
 - **Impact:** Safe NFT transfers call `onERC721Received` / `onERC1155Received` on the recipient. LSP0 answers them only through an LSP17 extension and otherwise reverts (`NoExtensionFoundForFunctionSelector`). Redeployed profiles usually have none, so marketplace purchases fail ("wallet cannot receive"), as seen on OpenSea during the live tests.
 - **Mitigation:** the compatibility check shows, per standard, whether the UP can receive NFTs and why not (no extension, or an extension without code on that network).
-- **Status:** ✅ Addressed by `up-nft-receiver.html` and `contracts/NFTReceiverExtension.sol` (see R-05). The fix is opt-in per UP and per network. **Published and enabled on Base and Polygon, published (not enabled) on LUKSO; source verified on Basescan, Polygonscan and the LUKSO explorer.** **Verified on Base mainnet (2026-09-29):** after enabling it on the ChainIntegrate UP, the UP bought an ERC-1155 (BasePaint) on OpenSea through Seaport 1.6 and received it, and the controller's permissions were unchanged.
+- **Status:** ✅ Addressed by `up-nft-receiver.html` and `contracts/NFTReceiverExtension.sol` (see R-05). The fix is opt-in per UP and per network. **Published and enabled on Base and Polygon, published (not enabled) on LUKSO; source verified on Basescan, Polygonscan and the LUKSO explorer.** **Verified on Base mainnet (2026-09-29):** after enabling it on the maintainer's personal UP (`0x328A…317b`), the UP bought an ERC-1155 (BasePaint) on OpenSea through Seaport 1.6 and received it, and the controller's permissions were unchanged.
 - **Review of the fix (maintainer's audit of PR #33):**
   - **Data keys.** Each key is `bytes10(keccak256("LSP17Extension"))` + `0x0000` + the selector left-aligned in 20 bytes, as in `LSP2Utils.generateMappingKey(bytes10, bytes20)`. Each value is exactly 20 bytes, the extension address; the 21-byte "forward value" form is not used.
   - **Permission bits.** The temporary grant adds only `ADDEXTENSIONS` (`0x08`) and/or `CHANGEEXTENSIONS` (`0x10`), and only the bits the controller lacks.
@@ -443,7 +443,7 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 - **Mocked end-to-end suites** (Playwright + Chromium, mocked MetaMask with real ECDSA signatures, mocked RPC and WalletConnect):
   - `up-wallet.html`: 57 checks. They cover the compatibility check and its re-runs on MetaMask account/network changes, pairing and session rules, every rejection rule, decoding and warnings (approvals, unlimited amounts, NFTs, unknown calls, known contracts), LSP6 error decoding, simulation, the real send path and its wrapping, the M-09 case, signatures (SIWE phishing, typed data, orders, missing chainId, SIGN permission, UP refusal), the modal window and the language toggle.
   - `up-walletconnect-basenames.html`: 36 checks.
-- **Live tests by the maintainer on mainnet**, with the ChainIntegrate UP redeployed at `0x328A…317b`:
+- **Live tests by the maintainer on mainnet**, with the maintainer's personal UP redeployed at `0x328A…317b`:
   - Base: a Basenames name registered to the UP including the primary-name signature (tx `0x73037e94…`), later transferred;
   - Polygon: Sign-In with OpenSea (ERC-1271 accepted by OpenSea), a POL → EURe swap through 0x AllowanceHolder (tx `0x390a2feb…`), a transaction to LI.FI (tx `0x5a61bb4f…`);
   - blocks observed in practice: wrong MetaMask account (not a controller), insufficient controller gas, message-signing formats refused;

@@ -39,11 +39,11 @@ Last update: 2026-09-30.
 
 ### 2.1 NFT reception (PR #33, #36)
 **Base: done on 2026-09-29.**
-- The extension was published and enabled on the ChainIntegrate UP (`0x328A…317b`); one of the transactions is `0xf77455eb…7553`.
+- The extension was published and enabled on the maintainer's personal UP (`0x328A…317b`); one of the transactions is `0xf77455eb…7553`.
 - The page's final check reported the NFT keys set and the controller's permissions unchanged.
 - The publisher address does not matter: the extension has no owner, and its address depends only on factory, salt and bytecode.
 - **Verified on mainnet:** the UP bought an ERC-1155 on OpenSea on Base. The transaction was Seaport 1.6 `fulfillAdvancedOrder`, recipient the UP, 0.00088209 ETH paid from the UP. The token is BasePaint `0xBa5e05cb…dcAc83`, id 665, and it was received by the UP through the extension. The simulation had already succeeded, which it could not do before the extension. Basescan labels the UP with its Basenames primary name.
-- **Polygon: done on 2026-09-29.** The extension was published and enabled on the ChainIntegrate UP (enabling tx `0x3b042f87…0000`).
+- **Polygon: done on 2026-09-29.** The extension was published and enabled on the maintainer's personal UP (enabling tx `0x3b042f87…0000`).
 - **LUKSO: published only, NOT enabled, on 2026-09-29** (tx `0xd00aa669…aa99`). The original UP on LUKSO does not need it, because LSP8 NFTs arrive without it. It is published there so the address is the same across the whole ecosystem.
 - **Source verified** on Basescan, Polygonscan and the LUKSO explorer (Blockscout) for `0x7F68e74483867058C806218aa05aB5527984C03e`, using `contracts/NFTReceiverExtension.input.json` (Standard-JSON input, solc v0.8.24+commit.e11b9ed9, MIT). Do not upload `NFTReceiverExtension.json`: it is the summary file, and explorers reject it with `Unknown key "abi"`.
 - **Next:**
@@ -51,7 +51,7 @@ Last update: 2026-09-30.
   - optional: teach the UP Wallet to decode Seaport orders (what is received, by whom, what is paid, to whom).
 
 1. `git pull` on the server.
-2. On Base, with the ChainIntegrate UP (`0x328A…317b`) and its controller:
+2. On Base, with the maintainer's personal UP (`0x328A…317b`) and its controller:
    1. publish the extension (once per network);
    2. "Prepare and simulate", read the plan, then "Sign and send";
    3. check that the UP Wallet shows "Receiving ERC-721/1155 NFTs: yes".
@@ -107,9 +107,9 @@ The notes below are kept for reference.
      1. publish the paymaster;
      2. top it up;
      3. set the cap;
-     4. allowlist the ChainIntegrate UP;
+     4. allowlist the ChainIntegrate UP (`0x4a2605796e0d91A9667d6E30365aEEC384C48c27`), then also the maintainer's personal UP (`0x328A…317b`) and Birra20venti's UP;
      5. publish `Extension4337`;
-     6. set up the UP;
+     6. set up each UP, signed by that UP's own controller;
      7. sign and relay one test transfer.
      Also check whether gas.zip can deliver directly to the paymaster.
   3. The relayer service on the VPS.
