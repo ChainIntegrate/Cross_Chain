@@ -116,3 +116,27 @@ The controller signs the user operation hash with `personal_sign`, so MetaMask w
   - direct calls to the UP or to `validateUserOp`;
   - allowlist changes or withdrawals by anyone but the owner.
 - **The EntryPoint's permissions do not leak:** a signer allowed only to call contracts cannot use the EntryPoint's value-transfer permission.
+
+## Extension4337 (LUKSO, published by this project at a deterministic address)
+
+`Extension4337.json` holds LUKSO's `Extension4337` exactly as released in `@lukso/lsp-smart-contracts` 0.17.4 (`artifacts/Extension4337.json`; the Solidity source is in `@lukso/lsp17-contracts`, `contracts/Extension4337.sol`). It is the LSP17 extension that lets a UP answer the EntryPoint's `validateUserOp` (selector `0x3a871cdd`):
+- it recovers the signer from the user operation hash with `personal_sign` semantics;
+- it requires the signer to hold the 4337 permission (`0x800000`);
+- it asks the Key Manager, read-only, whether the signer may perform the operation's call data.
+
+It has no owner. Its constructor takes only the EntryPoint, so published through Nick's factory with salt 0 and the canonical EntryPoint v0.6 it has the same address on every chain, whoever publishes it:
+
+| | |
+|---|---|
+| Address | `0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2` |
+| EntryPoint | `0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789` |
+| Runtime code hash | `0x91968b95ee6f8e01a554060b775c13e8df3f0173d87a55a48ed54b8ff02c052d` |
+
+`up-gas-relay.html` publishes it when missing, and checks this code hash before using it. Its audit status is unknown to this project: treat it as experimental.
+
+**Verify it:**
+1. Compare `creationCode` with the `bytecode` of `artifacts/Extension4337.json` in the npm package `@lukso/lsp-smart-contracts@0.17.4`.
+2. `initCode` is `creationCode ++ abi.encode(entryPoint)`.
+3. The address is `keccak256(0xff ++ factory ++ salt ++ keccak256(initCode))`, last 20 bytes.
+
+`UPPaymaster.json` also records the paymaster's runtime code hash with the canonical EntryPoint. It is the same for every owner, because the owner lives in storage and the EntryPoint in an immutable. The page checks it the same way.

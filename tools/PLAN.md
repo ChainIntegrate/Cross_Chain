@@ -103,7 +103,15 @@ The notes below are kept for reference.
 - **Status:** tested on a local chain (21/21 on LUKSO 0.12.1 and 0.14.0). Not published.
 - **Next:**
   1. Maintainer review of the contract.
-  2. Real test on Base with small amounts: publish `Extension4337` and the paymaster, set up the ChainIntegrate UP, send one sponsored operation.
+  2. Real test on Base with small amounts, with `up-gas-relay.html` (tested on a local chain, 25/25 on LUKSO 0.12.1 and 0.14.0). The cassa is the historical wallet `0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9`, so the paymaster address is `0xb353565d1f801E7402DBC267b8C0E30E3540D4eD` on every chain; `Extension4337` is at `0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2`. Steps:
+     1. publish the paymaster;
+     2. top it up;
+     3. set the cap;
+     4. allowlist the ChainIntegrate UP;
+     5. publish `Extension4337`;
+     6. set up the UP;
+     7. sign and relay one test transfer.
+     Also check whether gas.zip can deliver directly to the paymaster.
   3. The relayer service on the VPS.
   4. UP Wallet and Send page option "gas paid by the relayer".
 
