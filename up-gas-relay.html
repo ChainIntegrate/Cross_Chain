@@ -290,7 +290,11 @@ const permHex = (n) => "0x" + n.toString(16).padStart(6, "0");
 // go through the relayer.
 const EP_PERMS = P.SUPER_CALL | P.SUPER_TRANSFERVALUE;
 // Gas limits of the test operation (EntryPoint v0.6 counts verification 3 times when a paymaster is used).
-const OP_GAS = { call: 150000n, verification: 400000n, preVerification: 60000n };
+const OP_GAS = { call: 150000n, verification: 400000n };
+// OP-stack chains (Base, Optimism, ...) charge an L1 data fee outside the gas used; their GasPriceOracle
+// predeploy tells how much.
+const OP_GAS_ORACLE = "0x420000000000000000000000000000000000000F";
+const UO_TUPLE = "tuple(address,uint256,bytes,bytes,uint256,uint256,uint256,uint256,uint256,bytes,bytes)";
 
 // ==================== I18N ====================
 let LANG = "it";
@@ -345,7 +349,8 @@ const I18N = {
     logTitle: "Registro",
     // status labels
     kNetwork: "Rete", kRpc: "RPC", kWallet: "MetaMask", kEntryPoint: "EntryPoint v0.6",
-    kPmAddress: "Indirizzo del paymaster", kPmCode: "Codice", kPmOwner: "Proprietario", kPmDeposit: "Deposito", kPmCap: "Tetto per operazione", kPmUp: "UP in lista", kYou: "Account attivo",
+    kPmAddress: "Indirizzo del paymaster", kOwnerCheck: "⚠️ Attenzione",
+    ownerNotActive: (v) => `Il proprietario scritto (${v.owner}) NON è l'account attivo in MetaMask (${v.active}). Se stai per pubblicare o ricaricare, controlla che sia davvero il proprietario che vuoi: l'indirizzo del paymaster dipende da lui.`, kPmCode: "Codice", kPmOwner: "Proprietario", kPmDeposit: "Deposito", kPmCap: "Tetto per operazione", kPmUp: "UP in lista", kYou: "Account attivo",
     kUp: "UP", kKm: "Key Manager", kPerms: "Permessi dell'account attivo", kExt: "Extension4337", kExtKey: "Estensione registrata", kEpPerms: "Permessi dell'EntryPoint", kSigner4337: "Permesso 4337 dell'account", kReady: "Stato",
     rpcOk: (v) => `chainId ${v.id}`, rpcFail: (v) => `non risponde: ${v.err}`, rpcWrong: (v) => `chainId ${v.id}, atteso ${v.exp}`,
     walletMissing: "non connesso", walletWrong: (v) => `${v.addr} è sulla rete ${v.id}, non ${v.exp}: cambia rete in MetaMask`, walletOk: (v) => `${v.addr} (chainId ${v.id})`,
@@ -397,7 +402,7 @@ const I18N = {
     setupBad: (v) => `⚠️ Verifica finale non riuscita: ${v.what}. Controlla sull'explorer.`,
     opNeedsSetup: "La UP deve essere configurata (sezione 3) e l'account attivo deve essere un suo controller con il permesso 4337.",
     opNeedsPm: "Serve un paymaster pubblicato, con la UP in lista e un tetto impostato (sezione 2).",
-    opPlan: (v) => `Operazione (userOp) per l'EntryPoint ${v.ep}\n  La UP ${v.up} invia ${v.amount} a ${v.to}\n  nonce ${v.nonce} · paga il paymaster ${v.pm}\n  costo massimo ${v.maxCost} (tetto ${v.cap}, deposito ${v.deposit})\n\nImpronta da firmare (userOpHash):\n  ${v.hash}`,
+    opPlan: (v) => `Operazione (userOp) per l'EntryPoint ${v.ep}\n  La UP ${v.up} invia ${v.amount} a ${v.to}\n  nonce ${v.nonce} · paga il paymaster ${v.pm}\n  preVerificationGas ${v.pvg} (base della transazione, dati, costo L1 dove c'è)\n  costo massimo ${v.maxCost} (tetto ${v.cap}, deposito ${v.deposit})\n\nImpronta da firmare (userOpHash):\n  ${v.hash}`,
     opOverCap: (v) => `❌ Il costo massimo (${v.maxCost}) supera il tetto del paymaster (${v.cap}): alza il tetto nella sezione 2.`,
     opLowDeposit: (v) => `❌ Il deposito del paymaster (${v.deposit}) è inferiore al costo massimo (${v.maxCost}): ricaricalo.`,
     signAsk: "Firma in MetaMask: confronta il testo esadecimale con l'impronta qui sopra.",
@@ -406,6 +411,7 @@ const I18N = {
     relayWho: (v) => `Relayer: ${v.addr}. Anticipa il gas e lo riceve indietro dal paymaster.`,
     relaySameAsSigner: "Nota: stai inviando con lo stesso account che ha firmato. Funziona, ma per la prova usa un altro account: così si vede che il controller non spende gas.",
     result: (v) => `Risultato: ${v.success}\n  costo dell'operazione pagato dal paymaster: ${v.cost}\n  deposito del paymaster: ${v.depBefore} → ${v.depAfter}\n  saldo del relayer: ${v.relBefore} → ${v.relAfter} (gas della transazione ${v.relGas})\n  saldo del controller: ${v.ctlBefore} → ${v.ctlAfter}\n  destinatario: +${v.recv}`,
+    relayerNet: (v) => `Bilancio del relayer per questa operazione (rimborso − gas, costo L1 incluso): ${v.net}`,
     resultOk: "✅ riuscita", resultFail: "❌ eseguita ma fallita nella UP (il gas è stato pagato comunque)",
     revertReason: (v) => `Motivo del fallimento nella UP: ${v.r}`,
     footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a>`,
@@ -459,7 +465,8 @@ const I18N = {
     relayBtn: "B · Send as the relayer (account active in MetaMask)",
     logTitle: "Log",
     kNetwork: "Network", kRpc: "RPC", kWallet: "MetaMask", kEntryPoint: "EntryPoint v0.6",
-    kPmAddress: "Paymaster address", kPmCode: "Code", kPmOwner: "Owner", kPmDeposit: "Deposit", kPmCap: "Cap per operation", kPmUp: "UP on the allowlist", kYou: "Active account",
+    kPmAddress: "Paymaster address", kOwnerCheck: "⚠️ Warning",
+    ownerNotActive: (v) => `The owner entered (${v.owner}) is NOT the account active in MetaMask (${v.active}). If you are about to publish or top up, check that it really is the owner you want: the paymaster's address depends on it.`, kPmCode: "Code", kPmOwner: "Owner", kPmDeposit: "Deposit", kPmCap: "Cap per operation", kPmUp: "UP on the allowlist", kYou: "Active account",
     kUp: "UP", kKm: "Key Manager", kPerms: "Active account's permissions", kExt: "Extension4337", kExtKey: "Extension registered", kEpPerms: "EntryPoint's permissions", kSigner4337: "Account's 4337 permission", kReady: "Status",
     rpcOk: (v) => `chainId ${v.id}`, rpcFail: (v) => `not answering: ${v.err}`, rpcWrong: (v) => `chainId ${v.id}, expected ${v.exp}`,
     walletMissing: "not connected", walletWrong: (v) => `${v.addr} is on chain ${v.id}, not ${v.exp}: switch network in MetaMask`, walletOk: (v) => `${v.addr} (chainId ${v.id})`,
@@ -510,7 +517,7 @@ const I18N = {
     setupBad: (v) => `⚠️ Final check failed: ${v.what}. Check on the explorer.`,
     opNeedsSetup: "The UP must be set up (section 3) and the active account must be one of its controllers with the 4337 permission.",
     opNeedsPm: "A published paymaster is needed, with the UP on its allowlist and a cap set (section 2).",
-    opPlan: (v) => `Operation (userOp) for the EntryPoint ${v.ep}\n  The UP ${v.up} sends ${v.amount} to ${v.to}\n  nonce ${v.nonce} · paid by the paymaster ${v.pm}\n  maximum cost ${v.maxCost} (cap ${v.cap}, deposit ${v.deposit})\n\nFingerprint to sign (userOpHash):\n  ${v.hash}`,
+    opPlan: (v) => `Operation (userOp) for the EntryPoint ${v.ep}\n  The UP ${v.up} sends ${v.amount} to ${v.to}\n  nonce ${v.nonce} · paid by the paymaster ${v.pm}\n  preVerificationGas ${v.pvg} (transaction base cost, data, L1 fee where it applies)\n  maximum cost ${v.maxCost} (cap ${v.cap}, deposit ${v.deposit})\n\nFingerprint to sign (userOpHash):\n  ${v.hash}`,
     opOverCap: (v) => `❌ The maximum cost (${v.maxCost}) exceeds the paymaster's cap (${v.cap}): raise the cap in section 2.`,
     opLowDeposit: (v) => `❌ The paymaster deposit (${v.deposit}) is lower than the maximum cost (${v.maxCost}): top it up.`,
     signAsk: "Sign in MetaMask: compare the hex text with the fingerprint above.",
@@ -519,6 +526,7 @@ const I18N = {
     relayWho: (v) => `Relayer: ${v.addr}. It advances the gas and gets it back from the paymaster.`,
     relaySameAsSigner: "Note: you are sending with the same account that signed. It works, but for the test use another account: it shows that the controller spends no gas.",
     result: (v) => `Result: ${v.success}\n  operation cost paid by the paymaster: ${v.cost}\n  paymaster deposit: ${v.depBefore} → ${v.depAfter}\n  relayer balance: ${v.relBefore} → ${v.relAfter} (transaction gas ${v.relGas})\n  controller balance: ${v.ctlBefore} → ${v.ctlAfter}\n  recipient: +${v.recv}`,
+    relayerNet: (v) => `Relayer balance for this operation (reimbursement − gas, L1 fee included): ${v.net}`,
     resultOk: "✅ succeeded", resultFail: "❌ executed but failed inside the UP (the gas was paid anyway)",
     revertReason: (v) => `Why it failed inside the UP: ${v.r}`,
     footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a>`,
@@ -555,7 +563,7 @@ const riskAccepted = () => $("ackRisk").checked;
 async function estimateFees(provider) {
   const gasPrice = BigInt(await provider.send("eth_gasPrice", []));
   const block = await provider.send("eth_getBlockByNumber", ["latest", false]);
-  if (!block || !block.baseFeePerGas) return { maxFee: gasPrice, tip: gasPrice };
+  if (!block || !block.baseFeePerGas) return { maxFee: gasPrice, tip: gasPrice, legacy: true };
   const baseFee = BigInt(block.baseFeePerGas);
   const tip = gasPrice > baseFee ? gasPrice - baseFee : 0n;
   return { maxFee: 2n * baseFee + tip, tip };
@@ -566,6 +574,26 @@ function revertReason(e) {
     for (const iface of [EP_IFACE, KM_IFACE]) { try { const d = iface.parseError(data); return `${d.name}(${d.args.map(String).join(", ")})`; } catch (x) { /* next */ } }
   }
   return e?.shortMessage || e?.reason || e?.message || String(e);
+}
+// preVerificationGas: what the EntryPoint does not measure (transaction base cost, calldata, per-operation
+// overhead), with the formula of the ERC-4337 reference bundler, plus the L1 data fee on OP-stack chains,
+// plus a 15% margin. Too low, and the relayer is reimbursed less than it pays.
+async function preVerificationGas(provider, op, maxFee) {
+  const probe = { ...op, preVerificationGas: 100000n, signature: "0x" + "ff".repeat(65) };
+  const packed = ethers.getBytes(enc([UO_TUPLE], [[probe.sender, probe.nonce, probe.initCode, probe.callData, probe.callGasLimit,
+    probe.verificationGasLimit, probe.preVerificationGas, probe.maxFeePerGas, probe.maxPriorityFeePerGas, probe.paymasterAndData, probe.signature]]));
+  let calldata = 0n;
+  for (const b of packed) calldata += b === 0 ? 4n : 16n;
+  let pvg = 21000n + 18300n + 4n * BigInt(Math.ceil(packed.length / 32)) + calldata;
+  try {
+    if ((await provider.getCode(OP_GAS_ORACLE)) !== "0x") {
+      const tx = EP_IFACE.encodeFunctionData("handleOps", [[probe], ethers.ZeroAddress]);
+      const oracle = new ethers.Contract(OP_GAS_ORACLE, ["function getL1Fee(bytes) view returns (uint256)"], provider);
+      const l1Fee = await oracle.getL1Fee(ethers.concat([tx, "0x" + "ff".repeat(100)])); // + room for the transaction envelope
+      if (maxFee > 0n) pvg += (l1Fee + maxFee - 1n) / maxFee;
+    }
+  } catch (e) { /* not an OP-stack chain, or the oracle is unavailable */ }
+  return pvg + pvg * 15n / 100n;
 }
 const fmt = (wei, cur) => `${ethers.formatEther(wei)} ${cur || ""}`.trim();
 const b32 = (n) => ethers.zeroPadValue(ethers.toBeHex(n), 32);
@@ -625,6 +653,8 @@ $("ackRisk").addEventListener("change", updateButtons);
 
 // ==================== STATE ====================
 let state = null, checkRun = 0, checkTimer = null, setupPlan = null, signedOp = null;
+// One action at a time: every action button is disabled while one is running.
+let busy = false;
 function scheduleCheck(delay = 500) {
   state = null; setupPlan = null;
   setStatus("setupPlanBox", t("noPlan"), "empty");
@@ -642,7 +672,13 @@ async function runCheck() {
   updateButtons();
   return s;
 }
-async function freshState() { clearTimeout(checkTimer); return runCheck(); }
+// A check started meanwhile (e.g. by a confirmation or an account switch) makes runCheck return null:
+// retry, so a request is never dropped silently.
+async function freshState() {
+  clearTimeout(checkTimer);
+  for (let i = 0; i < 3; i++) { const r = await runCheck(); if (r) return r; }
+  return null;
+}
 
 async function computeState() {
   const s = { net: [], pm: [], up: [], ok: false };
@@ -681,6 +717,7 @@ async function computeState() {
     const pmAddr = ethers.getCreate2Address(NICK_FACTORY, SALT, ethers.keccak256(pmInit));
     Object.assign(s, { owner, pmInit, pmAddr });
     s.pm.push(["kPmAddress", pmAddr, ""]);
+    if (owner !== signerAddress) s.pm.push(["kOwnerCheck", ["ownerNotActive", { owner, active: signerAddress }], "warn"]);
     const code = await provider.getCode(pmAddr);
     s.pmState = code === "0x" ? "missing" : ethers.keccak256(code) === PMJ.runtimeCodeHash ? "ok" : "wrong";
     s.pm.push(["kPmCode", [s.pmState === "ok" ? "pmOk" : s.pmState === "missing" ? "pmMissing" : "pmWrong"], s.pmState === "ok" ? "ok" : s.pmState === "missing" ? "warn" : "err"]);
@@ -759,7 +796,7 @@ function render(s) {
   if (s.up.length) renderKv("upBox", s.up); else setStatus("upBox", t("notChecked"), "empty");
 }
 function updateButtons() {
-  const s = state, ok = !!(s && s.ok && riskAccepted());
+  const s = state, ok = !!(s && s.ok && riskAccepted() && !busy);
   $("publishPmBtn").disabled = !(ok && s.pmState === "missing" && s.factoryOk);
   $("fundBtn").disabled = !(ok && s.pmState === "ok");
   const own = ok && s.pmState === "ok" && s.isOwner;
@@ -802,9 +839,11 @@ async function sendTx(tx, label) {
 // recheck: false for steps that only prepare something (a new check would discard it).
 async function guarded(fn, recheck = true) {
   if (!riskAccepted()) { log(t("ackRequired"), "line-err"); return; }
+  if (busy) return;
+  busy = true; updateButtons();
   logSeparator();
   try { await fn(); } catch (e) { log(t("genericError", { err: revertReason(e) }), "line-err"); }
-  finally { if (recheck) scheduleCheck(0); else updateButtons(); }
+  finally { busy = false; if (recheck) scheduleCheck(0); else updateButtons(); }
 }
 async function codeHashAt(provider, addr, blockTag) {
   for (let i = 0; i < 6; i++) { if (i) await new Promise(r => setTimeout(r, 1500)); const c = await provider.getCode(addr, blockTag); if (c !== "0x") return ethers.keccak256(c); }
@@ -884,9 +923,10 @@ $("prepareSetupBtn").addEventListener("click", () => guarded(async () => {
   log(t("readyToSign"), "line-warn");
 }, false));
 $("sendSetupBtn").addEventListener("click", async () => {
-  if (!setupPlan) return;
+  if (!setupPlan || busy) return;
   const p = setupPlan;
   if (!riskAccepted()) { log(t("ackRequired"), "line-err"); return; }
+  busy = true; updateButtons();
   try {
     const s = await freshState();
     const same = s && s.canSetup && s.upAddr === p.s.upAddr && s.km === p.s.km && s.signer === p.s.signer && s.permRaw === p.s.permRaw &&
@@ -910,7 +950,7 @@ $("sendSetupBtn").addEventListener("click", async () => {
     }
     log(problems.length ? t("setupBad", { what: problems.join(", ") }) : t("setupOk"), problems.length ? "line-warn" : "line-ok");
   } catch (e) { log(t("genericError", { err: revertReason(e) }), "line-err"); }
-  finally { scheduleCheck(0); }
+  finally { busy = false; scheduleCheck(0); }
 });
 
 // ---- test operation: A (controller signs), B (relayer sends)
@@ -928,15 +968,16 @@ $("signOpBtn").addEventListener("click", () => guarded(async () => {
   const op = {
     sender: s.upAddr, nonce: await ep.getNonce(s.upAddr, 0), initCode: "0x",
     callData: UP_IFACE.encodeFunctionData("execute", [0, ethers.getAddress(to), amount, "0x"]),
-    callGasLimit: OP_GAS.call, verificationGasLimit: OP_GAS.verification, preVerificationGas: OP_GAS.preVerification,
+    callGasLimit: OP_GAS.call, verificationGasLimit: OP_GAS.verification, preVerificationGas: 0n,
     maxFeePerGas: fees.maxFee, maxPriorityFeePerGas: fees.tip < fees.maxFee ? fees.tip : fees.maxFee,
     paymasterAndData: s.pmAddr, signature: "0x",
   };
-  const maxCost = (OP_GAS.call + OP_GAS.verification * 3n + OP_GAS.preVerification) * fees.maxFee;
+  op.preVerificationGas = await preVerificationGas(s.provider, op, fees.maxFee);
+  const maxCost = (OP_GAS.call + OP_GAS.verification * 3n + op.preVerificationGas) * fees.maxFee;
   if (maxCost > s.cap) { log(t("opOverCap", { maxCost: fmt(maxCost, s.cur), cap: fmt(s.cap, s.cur) }), "line-err"); return; }
   if (maxCost > s.deposit) { log(t("opLowDeposit", { maxCost: fmt(maxCost, s.cur), deposit: fmt(s.deposit, s.cur) }), "line-err"); return; }
   const hash = await ep.getUserOpHash(op);
-  const text = t("opPlan", { ep: ENTRY_POINT, up: s.upAddr, amount: fmt(amount, s.cur), to: ethers.getAddress(to), nonce: op.nonce.toString(), pm: s.pmAddr,
+  const text = t("opPlan", { ep: ENTRY_POINT, up: s.upAddr, amount: fmt(amount, s.cur), to: ethers.getAddress(to), nonce: op.nonce.toString(), pm: s.pmAddr, pvg: op.preVerificationGas.toString(),
     maxCost: fmt(maxCost, s.cur), cap: fmt(s.cap, s.cur), deposit: fmt(s.deposit, s.cur), hash });
   setStatus("opBox", text, "");
   log(text, "line-compare");
@@ -947,12 +988,13 @@ $("signOpBtn").addEventListener("click", () => guarded(async () => {
   const permRaw = await s.upC.getData(PERM_KEY(who));
   const ok = permRaw && permRaw !== "0x" && (BigInt(permRaw) & P.ERC4337) !== 0n;
   if (!ok) { log(t("signedBad", { addr: who }), "line-err"); return; }
-  signedOp = { op, hash, signerAddr: who, chainId: s.chainId, up: s.upAddr, pm: s.pmAddr, to: ethers.getAddress(to), amount };
+  signedOp = { op, hash, signerAddr: who, chainId: s.chainId, up: s.upAddr, pm: s.pmAddr, to: ethers.getAddress(to), amount, legacy: fees.legacy };
   log(t("signedOk", { addr: who }), "line-ok");
 }, false));
 $("relayBtn").addEventListener("click", async () => {
-  if (!signedOp || !riskAccepted()) return;
+  if (!signedOp || !riskAccepted() || busy) return;
   const so = signedOp;
+  busy = true; updateButtons();
   logSeparator();
   try {
     const s = await freshState();
@@ -969,12 +1011,15 @@ $("relayBtn").addEventListener("click", async () => {
     catch (e) { log(t("simFail", { err: revertReason(e) }), "line-err"); return; }
     log(t("simOk", { gas: gas.toString() }), "line-ok");
     const gasLimit = gas + gas / 4n;
-    const need = gasLimit * (await estimateFees(s.provider)).maxFee;
+    // Same prices as the operation: the EntryPoint reimburses at the operation's price, so a higher tip
+    // chosen by the wallet would be paid by the relayer.
+    const feeFields = so.legacy ? { gasPrice: so.op.maxFeePerGas } : { maxFeePerGas: so.op.maxFeePerGas, maxPriorityFeePerGas: so.op.maxPriorityFeePerGas };
+    const need = gasLimit * so.op.maxFeePerGas;
     if (relBefore < need) { log(t("noGas", { need: fmt(need, s.cur), have: fmt(relBefore, s.cur) }), "line-err"); return; }
     const signer = await new ethers.BrowserProvider(signerProvider).getSigner();
     if (signer.address !== s.signer) { log(t("stale"), "line-err"); return; }
     log(t("sending"), "line-dim");
-    const sent = await signer.sendTransaction({ to: ENTRY_POINT, data, gasLimit });
+    const sent = await signer.sendTransaction({ to: ENTRY_POINT, data, gasLimit, ...feeFields });
     signedOp = null; setStatus("opBox", t("noOp"), "empty"); updateButtons();
     log(t("txSent", { hash: sent.hash }), "line-dim");
     if (s.netInfo.explorer) log(s.netInfo.explorer + sent.hash, "line-dim");
@@ -987,13 +1032,18 @@ $("relayBtn").addEventListener("click", async () => {
     }
     const at = rc.blockNumber;
     const [depAfter, relAfter, ctlAfter, recvAfter] = await Promise.all([ep.balanceOf(so.pm, { blockTag: at }), s.provider.getBalance(s.signer, at), s.provider.getBalance(so.signerAddr, at), s.provider.getBalance(so.to, at)]);
-    const relGas = rc.gasUsed * (rc.gasPrice || rc.effectiveGasPrice || 0n);
+    // On OP-stack chains the receipt also carries the L1 data fee, paid on top of gasUsed * price.
+    let l1Fee = 0n;
+    try { const raw = await s.provider.send("eth_getTransactionReceipt", [sent.hash]); if (raw && raw.l1Fee) l1Fee = BigInt(raw.l1Fee); } catch (e) { /* not available */ }
+    const relGas = rc.gasUsed * (rc.gasPrice || rc.effectiveGasPrice || 0n) + l1Fee;
+    const relNet = ev ? ev.args.actualGasCost - relGas : null;
     log(t("result", { success: ev && ev.args.success ? t("resultOk") : t("resultFail"), cost: ev ? fmt(ev.args.actualGasCost, s.cur) : "?",
       depBefore: fmt(depBefore, s.cur), depAfter: fmt(depAfter, s.cur), relBefore: fmt(relBefore, s.cur), relAfter: fmt(relAfter, s.cur), relGas: fmt(relGas, s.cur),
       ctlBefore: fmt(ctlBefore, s.cur), ctlAfter: fmt(ctlAfter, s.cur), recv: fmt(recvAfter - recvBefore, s.cur) }), ev && ev.args.success ? "line-ok" : "line-err");
+    if (relNet !== null) log(t("relayerNet", { net: (relNet >= 0n ? "+" : "−") + fmt(relNet >= 0n ? relNet : -relNet, s.cur) }), relNet >= 0n ? "line-ok" : "line-warn");
     if (why) log(t("revertReason", { r: revertReason({ data: why }) }), "line-warn");
   } catch (e) { log(t("genericError", { err: revertReason(e) }), "line-err"); }
-  finally { scheduleCheck(0); }
+  finally { busy = false; scheduleCheck(0); }
 });
 
 // ==================== START ====================

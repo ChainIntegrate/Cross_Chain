@@ -100,20 +100,35 @@ The notes below are kept for reference.
   - `contracts/UPPaymaster.sol` pays only for allowlisted UPs, with a cost cap. It is owned by the maintainer's "cassa" address and has the same address on every chain.
   - The relayer (bundler) is an EOA generated from a terminal on the VPS, with no permission on any UP. The EntryPoint reimburses it from the paymaster deposit, so its balance does not drain.
   - Top-ups: from the cassa (USDC), one transaction through a gas-refuel service (e.g. gas.zip) to the paymaster address on each chain. Email alerts when a deposit is low. No automatic top-ups.
-- **Status:** tested on a local chain (21/21 on LUKSO 0.12.1 and 0.14.0). Not published.
+- **Status: working on Base mainnet (2026-09-30).**
+  - **Addresses** (the same on every chain):
+    - cassa (paymaster owner): `0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9`;
+    - paymaster: `0xb353565d1f801E7402DBC267b8C0E30E3540D4eD`, source verified on Basescan;
+    - `Extension4337`: `0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2`.
+  - **Base transactions,** all done with `up-gas-relay.html`:
+    - paymaster published `0x2ea09cea…5e11`;
+    - top-up of 0.0005 ETH `0xfab74f97…889c`;
+    - cap 0.0003 ETH `0x2faf2305…5ef5`;
+    - ChainIntegrate UP allowlisted `0x5e8e4004…357e`;
+    - `Extension4337` published `0x55b5556f…0856`;
+    - ChainIntegrate UP set up by its controller `0x9C8F…5C9c` `0x22f697ef…b3d9`. Its permissions went from `0x7f3f06` to `0xff3f06`, and the EntryPoint became a controller with `0x500`.
+  - **First sponsored operation:** `0x4ca591a7…3721`. The UP sent 0.0001 ETH to the cassa, signed by the controller with `personal_sign`, relayed by the cassa.
+    - The controller's balance was unchanged.
+    - The paymaster paid 0.0000012 ETH.
+  - **Stray paymaster:** `0x4D66c2d931ac6777CB6E64e20F6eBdFdc1030705` was published by mistake (tx `0x9811c6cc…4770`) with the personal controller `0x86F7…c6f2` as owner, because the page had filled in the owner from the account connected first. It is empty. Ignore it and never fund it.
+- **Lessons from the Base test,** fixed in `up-gas-relay.html` afterwards:
+  - **The relayer paid about 2.1× its reimbursement.** Two causes:
+    - a fixed `preVerificationGas` of 60,000, now computed with the reference bundler formula plus the L1 data fee from the OP-stack `GasPriceOracle`, plus 15%;
+    - MetaMask choosing a higher tip than the operation's, now the relay transaction uses the operation's own fee fields.
+  - **The owner field** kept the first connected account. The page now warns when the owner entered is not the active account.
+  - **A click during a pending transaction** was dropped. Action buttons are now locked while an action runs, and the check retries instead of dropping the request.
 - **Next:**
-  1. Maintainer review of the contract.
-  2. Real test on Base with small amounts, with `up-gas-relay.html` (tested on a local chain, 25/25 on LUKSO 0.12.1 and 0.14.0). The cassa is the historical wallet `0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9`, so the paymaster address is `0xb353565d1f801E7402DBC267b8C0E30E3540D4eD` on every chain; `Extension4337` is at `0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2`. Steps:
-     1. publish the paymaster;
-     2. top it up;
-     3. set the cap;
-     4. allowlist the ChainIntegrate UP (`0x4a2605796e0d91A9667d6E30365aEEC384C48c27`), then also the maintainer's personal UP (`0x328A…317b`) and Birra20venti's UP;
-     5. publish `Extension4337`;
-     6. set up each UP, signed by that UP's own controller;
-     7. sign and relay one test transfer.
-     Also check whether gas.zip can deliver directly to the paymaster.
-  3. The relayer service on the VPS.
-  4. UP Wallet and Send page option "gas paid by the relayer".
+  1. Repeat one sponsored operation on Base to confirm the relayer is no longer out of pocket. The page now prints the relayer's balance for the operation.
+  2. Allowlist and set up the maintainer's personal UP (`0x328A…317b`) and Birra20venti's UP, then other chains (Polygon first).
+  3. Check whether gas.zip can deliver directly to the paymaster.
+  4. The relayer service on the VPS: Node.js, and an Apache proxy to a local port. It uses the same `preVerificationGas` and fee rules, and accepts a list of known paymasters.
+  5. UP Wallet and Send page option "gas paid by the relayer".
+  6. Optional: verify `Extension4337`'s source on Basescan (LUKSO's build input is needed).
 
 The notes below are the earlier LSP25 design, kept for reference.
 - **Goal:** controllers never need gas on any network. They sign; a relayer submits through `KeyManager.executeRelayCall` (LSP25). The signature binds nonce, chainId and validity window.
