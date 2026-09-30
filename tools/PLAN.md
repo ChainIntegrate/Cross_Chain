@@ -134,7 +134,13 @@ The notes below are kept for reference.
   - Possible later: 4337 on LUKSO too, so the UP is operated the same way on every chain (same `personal_sign` flow, same relayer). Only an idea for now.
 - **Page usability:** the check runs its reads in parallel, so buttons react faster. A hint under section 4 says which account each step needs. If MetaMask does not report an account switch, pressing "Connect MetaMask" updates the page, and the signed operation is kept.
 - **Next:**
-  1. Allowlist and set up the maintainer's personal UP (`0x328A…317b`) and Birra20venti's UP, then other chains (Polygon first).
+  1. Allowlist and set up more UPs, then other chains (Polygon first).
+     - **Maintainer's personal UP `0x328A19Ab63744AAF3d0AeBfB8e6Dc5246fAf317b`: done on Base (2026-09-30).** Page log in `tools/logs/2026-09-30-base-personal-up.txt`.
+       - Cassa transactions: allowlist `0x0483703823f3141228573f5cef7ae4493de7c442008e642b71e7e7c3e747b9bc`, cap `0xcc722322ae744d8be695aa9be6c9ac3e01cbfb350ccd9361f5145addce9c7017`.
+       - Setup by the controller `0x86F7…c6f2` (Key Manager `0x25d0…A222`): `0xba9605614d28f25cb8f84cc8679f1dc80e5e565124439605eee712e84fa3f0cd`. Permissions `0x7f3f06` → `0xff3f06`; final check passed.
+       - First operation through the site relayer: `0xd6b6916b3ce0c05bce9cfd84f972643ee46bbf3fdefc177f54d7966457b039b7`. Controller unchanged, paymaster paid 0.0000012 ETH, relayer +0.00000015 ETH.
+     - Birra20venti's UP: to do. Its controller must sign the setup.
+     - Feedback from this run, fixed in `up-gas-relay.html`: about 20 seconds with no visible sign between a click and the MetaMask popup (a fixed status box now shows each step), and a step-by-step guide in section 0 (roles, connecting several MetaMask accounts, what to redo after a reload, order of the steps).
   2. Check whether gas.zip can deliver directly to the paymaster.
   3. The relayer service on the VPS: **installed and working (2026-09-30).** It is `tools/relayer/`, installed as described in its README.
      - Relayer address: `0xbb683923c2Df0269996C0E2F276A5097cE863C2F`. Key in `/etc/crosschain-relayer/relayer.key` on the server; the maintainer keeps a copy in a password manager.
