@@ -224,7 +224,8 @@ const I18N = {
     scanFindingStart: "Cerco il blocco in cui è stata creata la UP...",
     scanFromCreation: (v) => `Dal blocco di creazione della UP (${v.block}).`,
     scanFromDays: (v) => `Il nodo RPC non conserva lo stato storico: cerco negli ultimi ${v.days} giorni (dal blocco ${v.block}).`,
-    scanProgress: (v) => `Scansione eventi: ${v.pct}% — contratti trovati: ${v.contracts}.`,
+    scanProgress: (v) => `Scansione eventi: ${v.pct}% — contratti trovati: ${v.contracts} — blocchi per richiesta: ${v.chunk}.`,
+    scanNodeLimit: (v) => `Il nodo ha rifiutato un intervallo più grande (${v.err}): la ricerca continua con intervalli più piccoli.`,
     scanReading: (v) => `Leggo cosa possiede ancora la UP in ${v.contracts} contratti...`,
     scanFound: (v) => `La UP possiede ${v.n} elementi. Clicca su uno per sceglierlo. Diffida dei token che non riconosci: chiunque può mandarne a qualsiasi indirizzo.`,
     scanEmpty: "Nessun token o NFT trovato negli eventi di trasferimento verso la UP.",
@@ -378,7 +379,8 @@ const I18N = {
     scanFindingStart: "Looking for the block where the UP was created...",
     scanFromCreation: (v) => `From the UP's creation block (${v.block}).`,
     scanFromDays: (v) => `The RPC node keeps no historical state: searching the last ${v.days} days (from block ${v.block}).`,
-    scanProgress: (v) => `Scanning events: ${v.pct}% — contracts found: ${v.contracts}.`,
+    scanProgress: (v) => `Scanning events: ${v.pct}% — contracts found: ${v.contracts} — blocks per request: ${v.chunk}.`,
+    scanNodeLimit: (v) => `The node refused a larger range (${v.err}): the search continues with smaller ranges.`,
     scanReading: (v) => `Reading what the UP still holds in ${v.contracts} contracts...`,
     scanFound: (v) => `The UP holds ${v.n} items. Click one to pick it. Be wary of tokens you don't recognise: anyone can send them to any address.`,
     scanEmpty: "No tokens or NFTs found in the transfer events towards the UP.",
@@ -1094,7 +1096,10 @@ async function scanTransfersTo(provider, up, from, to, onProgress, isStale) {
     if (!found.has(a)) found.set(a, { kind, ids: new Set() });
     if (id !== undefined && found.get(a).ids.size < SCAN_MAX_IDS) found.get(a).ids.add(id);
   };
-  let chunk = SCAN_FIRST_CHUNK, start = from;
+  // chunk: blocks per request. maxChunk: the largest range the node has not refused yet; once a
+  // range is refused the scan never grows past half of it, so the node's limit is hit only a few
+  // times at the start. A rate limit (HTTP 429) is waited out instead of shrinking the range.
+  let chunk = SCAN_FIRST_CHUNK, maxChunk = SCAN_MAX_CHUNK, start = from, lastErr = null, rateLimited = 0;
   while (start <= to) {
     if (isStale()) throw new Error("stale");
     const end = Math.min(to, start + chunk - 1);
@@ -1105,9 +1110,21 @@ async function scanTransfersTo(provider, up, from, to, onProgress, isStale) {
       const b = await provider.send("eth_getLogs", [{ ...range, topics: [[TOPIC_1155_SINGLE, TOPIC_1155_BATCH], null, null, upTopic] }]);
       logs = a.concat(b);
     } catch (e) {
-      if (chunk > SCAN_MIN_CHUNK) { chunk = Math.max(SCAN_MIN_CHUNK, Math.floor(chunk / 4)); continue; }
+      lastErr = String(e.shortMessage || e.message).slice(0, 160);
+      if (/429|rate limit|too many requests/i.test(lastErr) && rateLimited < 5) {
+        rateLimited++;
+        await new Promise(r => setTimeout(r, 1500 * rateLimited));
+        continue;
+      }
+      if (chunk > SCAN_MIN_CHUNK) {
+        maxChunk = Math.max(SCAN_MIN_CHUNK, Math.floor(chunk / 2));
+        chunk = Math.max(SCAN_MIN_CHUNK, Math.floor(chunk / 4));
+        onProgress(start - from, to - from + 1, found.size, chunk, lastErr);
+        continue;
+      }
       throw e;
     }
+    rateLimited = 0;
     for (const l of logs) {
       try {
         if (l.topics[0] === TOPIC_TRANSFER) {
@@ -1124,8 +1141,8 @@ async function scanTransfersTo(provider, up, from, to, onProgress, isStale) {
       } catch (e) { /* malformed event: skip */ }
     }
     start = end + 1;
-    chunk = Math.min(SCAN_MAX_CHUNK, chunk * 2);
-    onProgress(start - from, to - from + 1, found.size);
+    chunk = Math.min(maxChunk, chunk * 2);
+    onProgress(start - from, to - from + 1, found.size, chunk, lastErr);
   }
   return found;
 }
@@ -1182,8 +1199,11 @@ $("scanBtn").addEventListener("click", async () => {
       from = Math.max(0, latest - await blocksForDays(provider, latest, SCAN_FALLBACK_DAYS));
       fromNote = t("scanFromDays", { days: SCAN_FALLBACK_DAYS, block: from });
     }
-    const found = await scanTransfersTo(provider, up, from, latest, (done, total, contracts) => {
-      if (!isStale()) status.textContent = `${fromNote} ${t("scanProgress", { pct: Math.floor(done * 100 / total), contracts })}`;
+    const found = await scanTransfersTo(provider, up, from, latest, (done, total, contracts, chunk, lastErr) => {
+      if (isStale()) return;
+      let msg = `${fromNote} ${t("scanProgress", { pct: Math.floor(done * 100 / total), contracts, chunk })}`;
+      if (lastErr) msg += ` ${t("scanNodeLimit", { err: lastErr })}`;
+      status.textContent = msg;
     }, isStale);
     status.textContent = `${fromNote} ${t("scanReading", { contracts: found.size })}`;
     const rows = await holdingsFromScan(provider, up, found, isStale);
