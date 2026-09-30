@@ -157,9 +157,7 @@ The notes below are the earlier LSP25 design, kept for reference.
 ---
 
 ## 3. Other open items
-- **PR #21 (Bertrand, `chains.js`):** waiting for him to resolve the `CONTRIBUTING.md` conflict. After the merge:
-  - `git pull` on the server, and check that the network menus still populate;
-  - switch `up-wallet.html` and `up-nft-receiver.html` to `chains.js`, since they still hold their own copies of the chain list.
+- **`chains.js` (PR #21, Bertrand, merged 2026-09-30):** the five original tool pages load the shared list. `up-wallet.html`, `up-nft-receiver.html` and `up-gas-relay.html` were switched too in the follow-up PR. Only the deprecated v2 page keeps its own list. After the pull, check on the server that the network menus populate and that explorer links open.
 - **UP Wallet hint:** add a short note: "if the dApp hangs after the page delivered the answer, disconnect all sessions, disconnect on the dApp and reconnect with a new `wc:` link; do not reload the dApp with the session open".
 - **AUDIT R-06:** second review of `up-wallet.html` before removing the "experimental" label.
 - **AUDIT R-07:** keep or remove the Basenames demo.
