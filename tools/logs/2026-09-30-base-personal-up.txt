@@ -1,0 +1,64 @@
+Maintainer's personal UP on Base mainnet, 2026-09-30: allowlist and cap (cassa), setup (controller),
+first operation through the site relayer. Page: up-gas-relay.html.
+
+—— 23:08:11 ——   (cassa: add the UP to the allowlist)
+Simulazione...
+✅ Simulazione riuscita (gas stimato 48213).
+Conferma in MetaMask...
+Transazione inviata: 0x0483703823f3141228573f5cef7ae4493de7c442008e642b71e7e7c3e747b9bc
+https://basescan.org/tx/0x0483703823f3141228573f5cef7ae4493de7c442008e642b71e7e7c3e747b9bc
+In attesa di conferma...
+✅ Confermata.
+—— 23:11:46 ——   (cassa: cap per operation)
+Simulazione...
+✅ Simulazione riuscita (gas stimato 27282).
+Conferma in MetaMask...
+Transazione inviata: 0xcc722322ae744d8be695aa9be6c9ac3e01cbfb350ccd9361f5145addce9c7017
+https://basescan.org/tx/0xcc722322ae744d8be695aa9be6c9ac3e01cbfb350ccd9361f5145addce9c7017
+In attesa di conferma...
+✅ Confermata.
+—— 23:14:19 ——
+Configurazione della UP 0x328A19Ab63744AAF3d0AeBfB8e6Dc5246fAf317b
+Firma: 0x86F72AF152E8b502E8Dc7CF87A115Ec94490c6f2 · Key Manager: 0x25d0591a83508cE6C937DBB173B00c5A17A6A222 · una sola transazione (executeBatch):
+1. Permessi temporanei al controller: + ADDEXTENSIONS (0x7f3f06 → 0x7f3f0e)
+2. setDataBatch:
+   - estensione per validateUserOp (0x3a871cdd) → 0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2
+   - EntryPoint aggiunto all'elenco dei controller (posizione 2)
+   - permessi dell'EntryPoint 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789 → 0x000500 (SUPER_CALL, SUPER_TRANSFERVALUE; niente SETDATA)
+3. Permessi finali del controller: 0x7f3f06 → 0xff3f06 (quelli di prima + 4337, senza i permessi temporanei)
+Se una parte fallisce, l'intera transazione viene annullata e non cambia niente.
+Simulazione...
+✅ Simulazione riuscita (gas stimato 205631).
+Controlla l'elenco qui sopra, poi premi "Firma e invia".
+Simulazione...
+✅ Simulazione riuscita (gas stimato 205631).
+Conferma in MetaMask...
+Transazione inviata: 0xba9605614d28f25cb8f84cc8679f1dc80e5e565124439605eee712e84fa3f0cd
+https://basescan.org/tx/0xba9605614d28f25cb8f84cc8679f1dc80e5e565124439605eee712e84fa3f0cd
+In attesa di conferma...
+✅ Confermata.
+✅ Verifica finale: estensione registrata, EntryPoint con i permessi previsti, permesso 4337 al controller, nessun altro permesso cambiato.
+—— 23:15:55 ——
+Operazione (userOp) per l'EntryPoint 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789
+  La UP 0x328A19Ab63744AAF3d0AeBfB8e6Dc5246fAf317b invia 0.0001 ETH a 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9
+  nonce 0 · paga il paymaster 0xb353565d1f801E7402DBC267b8C0E30E3540D4eD
+  preVerificationGas 51713 (base della transazione, dati, costo L1 dove c'è)
+  costo massimo 0.000015418843 ETH (tetto 0.0003 ETH, deposito 0.00049558727 ETH)
+
+Impronta da firmare (userOpHash):
+  0xc22aaaf35ad30edfbd15dafa1eed943af5ca695e2245c391b43cca25bc1d0390
+Firma in MetaMask: confronta il testo esadecimale con l'impronta qui sopra.
+✅ Firmata da 0x86F72AF152E8b502E8Dc7CF87A115Ec94490c6f2 (controller con permesso 4337). Ora passa in MetaMask all'account che farà da relayer e premi B.
+—— 23:16:33 ——
+Relayer: 0xbb683923c2Df0269996C0E2F276A5097cE863C2F. Anticipa il gas e lo riceve indietro dal paymaster.
+Invio dell'operazione firmata al relayer del sito...
+Transazione inviata: 0xd6b6916b3ce0c05bce9cfd84f972643ee46bbf3fdefc177f54d7966457b039b7
+https://basescan.org/tx/0xd6b6916b3ce0c05bce9cfd84f972643ee46bbf3fdefc177f54d7966457b039b7
+In attesa di conferma...
+Risultato: ✅ riuscita
+  costo dell'operazione pagato dal paymaster: 0.000001172352 ETH
+  deposito del paymaster: 0.00049558727 ETH → 0.000494414918 ETH
+  saldo del relayer: 0.001000146413116112 ETH → 0.001000294549419263 ETH (gas della transazione 0.000001024215696849 ETH)
+  saldo del controller: 0.000480800347207435 ETH → 0.000480800347207435 ETH
+  destinatario: +0.0001 ETH
+Bilancio del relayer per questa operazione (rimborso − gas, costo L1 incluso): +0.000000148136303151 ETH

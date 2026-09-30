@@ -59,6 +59,21 @@
   .check-row input { width: auto; }
   .warn-box { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--err); border-radius: 8px; background: rgba(224,90,90,0.08); font-size: 13px; line-height: 1.5; }
   .plan { font-family: monospace; font-size: 12.5px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  details.guide { margin: 4px 0 14px; border: 1px solid var(--accent); border-radius: 8px; padding: 10px 14px; background: rgba(91,140,255,0.06); }
+  details.guide summary { cursor: pointer; font-weight: 600; font-size: 14px; color: var(--text); }
+  details.guide > div { font-size: 13px; line-height: 1.6; color: var(--text); margin-top: 8px; }
+  details.guide h4 { font-size: 13.5px; margin: 14px 0 4px; color: var(--accent); }
+  details.guide ol, details.guide ul { margin: 4px 0; padding-left: 22px; }
+  details.guide li { margin: 3px 0; }
+  /* While an action runs: a fixed box that says what is happening, so the wait before the wallet opens is never silent. */
+  #busyToast { display: none; position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 50;
+               width: calc(100% - 32px); max-width: 720px; background: #1d2330; border: 2px solid var(--warn); border-radius: 10px;
+               padding: 12px 16px; font-size: 14px; line-height: 1.5; color: var(--text); box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
+  #busyToast.on { display: flex; gap: 12px; align-items: center; }
+  #busyToast .spin { width: 18px; height: 18px; flex: 0 0 18px; border: 3px solid var(--warn); border-top-color: transparent; border-radius: 50%; animation: spin 0.9s linear infinite; }
+  #busyToast .msg { word-break: break-word; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { #busyToast .spin { animation: none; } }
   @media (max-width: 560px) { .kv { grid-template-columns: 1fr; } .row { flex-wrap: wrap; } .row button { width: 100%; } }
 </style>
 </head>
@@ -79,6 +94,7 @@
 <div class="panel">
   <h2 data-i18n="panel0Title">0 · Come funziona</h2>
   <div class="note" data-i18n-html="panel0Note"></div>
+  <details class="guide" id="guideBox"><summary data-i18n="guideSummary">Guida passo passo</summary><div data-i18n-html="guideHtml"></div></details>
   <div class="warn-box" data-i18n-html="disclaimer"></div>
   <div class="check-row"><input type="checkbox" id="ackRisk"><label for="ackRisk" style="margin:0; color: var(--text);" data-i18n="ackLabel">Ho letto e accetto</label></div>
 </div>
@@ -161,6 +177,8 @@
   <h2 data-i18n="logTitle">Registro</h2>
   <div id="log" class="line-dim"></div>
 </div>
+
+<div id="busyToast" role="status" aria-live="polite"><div class="spin"></div><div class="msg" id="busyMsg"></div></div>
 
 <div class="site-footer">
   <div class="footer-row">
@@ -246,11 +264,53 @@ const I18N = {
     subtitle: "La tua UP opera senza che il controller abbia gas: il controller firma, un relayer invia, il tuo paymaster paga. ERC-4337 (EntryPoint v0.6).",
     langToggleBtn: "English",
     panel0Title: "0 · Come funziona",
-    panel0Note: "<b>2 · Paymaster:</b> un contratto tuo (<code>contracts/UPPaymaster.sol</code>), stesso indirizzo su ogni rete per lo stesso proprietario, che paga il gas <b>solo</b> per le UP nella sua lista e fino a un tetto per operazione. Lo ricarichi con un semplice invio; solo il proprietario gestisce lista, tetto e prelievi.<br><b>3 · UP:</b> una transazione del controller, una volta per rete: registra l'estensione <code>Extension4337</code> di LUKSO, aggiunge l'EntryPoint come controller (può chiamare e inviare valore, <b>non</b> modificare dati o permessi) e dà al controller il permesso 4337. Gli altri permessi del controller restano identici.<br><b>4 · Prova:</b> il controller firma un'operazione con <code>personal_sign</code> (nessun gas); poi un qualunque account in MetaMask la invia all'EntryPoint come relayer: anticipa il gas e viene rimborsato dal paymaster nella stessa transazione.",
+    guideSummary: "📘 Guida passo passo: chi fa cosa, più account in MetaMask, ordine dei passaggi",
+    guideHtml: `<h4>Chi fa cosa</h4>
+<ul>
+<li><b>Cassa</b>, proprietario del paymaster: pubblica, ricarica, imposta il tetto, mette le UP in lista (sezione 2).</li>
+<li><b>Controller della UP</b>: configura la UP, una volta per rete (sezione 3), e firma ogni operazione (pulsante A). La configurazione costa un po' di gas; le operazioni no.</li>
+<li><b>Relayer</b>: invia l'operazione firmata (pulsante B). Di solito è il <b>relayer del sito</b>, che non chiede niente; in alternativa un qualunque account MetaMask con un po' di gas.</li>
+<li><b>Estensione UP</b> (facoltativa): serve solo a leggere l'indirizzo della UP. Qui non firma niente.</li>
+</ul>
+<h4>Più account in MetaMask: collegali tutti prima di iniziare</h4>
+<ol>
+<li>Premi <b>Connetti MetaMask</b>. Nella finestra di MetaMask spunta <b>sia la cassa sia il controller</b>, poi conferma. Si possono collegare più account allo stesso sito.</li>
+<li>Se hai collegato un solo account: apri MetaMask, scegli l'altro account dal menu in alto; se MetaMask segnala che non è connesso a questo sito, usa il suo pulsante <b>Connetti</b>.</li>
+<li>La pagina usa sempre e solo l'account <b>attivo</b> in MetaMask. Dopo ogni cambio controlla la riga <b>MetaMask</b> della sezione 1: deve mostrare l'account giusto. Se non si aggiorna, premi di nuovo <b>Connetti MetaMask</b>. Un'operazione già firmata non si perde.</li>
+<li>Estensione UP e MetaMask attive insieme sono normali: fanno due lavori diversi.</li>
+</ol>
+<h4>Ogni volta che apri o ricarichi la pagina</h4>
+<ol>
+<li>Spunta la casella <b>Ho letto e accetto</b> qui sotto: senza, i pulsanti restano grigi.</li>
+<li>Sezione 1: scegli la rete.</li>
+<li>Sezione 2: il campo <b>Proprietario</b> deve essere la <b>cassa</b>. La pagina propone l'account attivo: se è il controller, correggilo, altrimenti la pagina calcola un altro paymaster.</li>
+<li>Sezione 3: indirizzo della UP.</li>
+</ol>
+<h4>Una volta per rete, con la cassa attiva</h4>
+<ol><li>Pubblica il paymaster, se manca.</li><li>Ricaricalo.</li><li>Imposta il tetto per operazione.</li></ol>
+<h4>Per ogni UP</h4>
+<ol>
+<li>Scrivi l'indirizzo della UP nella sezione 3. Con la <b>cassa attiva</b>, sezione 2: <b>Aggiungi la UP (sezione 3) alla lista</b>.</li>
+<li><b>Passa al controller della UP</b> in MetaMask, controlla la sezione 1.</li>
+<li>Sezione 3: <b>Prepara e simula</b>, leggi il piano, poi <b>Firma e invia</b>. Una sola transazione; la pagina verifica il risultato.</li>
+</ol>
+<h4>Ogni operazione, con il controller attivo</h4>
+<ol>
+<li><b>A · Prepara e firma</b>: confronta l'impronta in MetaMask con quella della pagina, poi firma. Nessun gas.</li>
+<li><b>B · Invia tramite il relayer del sito</b>: nessun cambio di account, nessuna firma. Se il relayer del sito non è attivo, passa a un account con un po' di gas e usa l'altro pulsante B.</li>
+</ol>
+<h4>Mentre aspetti</h4>
+<ul>
+<li>Dopo ogni clic compare un riquadro in basso con lo stato. Prima di aprire MetaMask la pagina legge i dati e simula: possono passare alcuni secondi. <b>Non cliccare di nuovo.</b></li>
+<li>Se MetaMask non compare, apri l'estensione: la richiesta può essere in attesa lì.</li>
+</ul>
+<h4>Tornare indietro</h4>
+<ul><li>Sezione 3, <b>Disattivare il 4337 su questa UP</b>: una transazione del controller riporta la UP com'era. Sezione 2: <b>Togli</b>, con la cassa, la toglie dalla lista.</li></ul>`,
+    panel0Note: "<b>2 · Paymaster:</b> un contratto tuo (<code>contracts/UPPaymaster.sol</code>), stesso indirizzo su ogni rete per lo stesso proprietario, che paga il gas <b>solo</b> per le UP nella sua lista e fino a un tetto per operazione. Lo ricarichi con un semplice invio; solo il proprietario gestisce lista, tetto e prelievi.<br><b>3 · UP:</b> una transazione del controller, una volta per rete: registra l'estensione <code>Extension4337</code> di LUKSO, aggiunge l'EntryPoint come controller (può chiamare e inviare valore, <b>non</b> modificare dati o permessi) e dà al controller il permesso 4337. Gli altri permessi del controller restano identici.<br><b>4 · Prova:</b> il controller firma un'operazione con <code>personal_sign</code> (nessun gas); poi un relayer la invia all'EntryPoint: il relayer del sito, se attivo, oppure un qualunque account in MetaMask. Anticipa il gas e viene rimborsato dal paymaster nella stessa transazione.",
     disclaimer: "<b>⚠️ Leggi prima di usare questa pagina</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Strumento sperimentale, non sottoposto ad audit.</b> Il paymaster e l'<code>Extension4337</code> di LUKSO non sono stati verificati da terzi. Usa importi piccoli.</li><li><b>Modifica la configurazione della UP su questa rete:</b> l'EntryPoint diventa un controller con permessi di chiamata e invio. Esegue solo operazioni firmate da un controller con il permesso 4337 e nei limiti dei permessi di chi firma.</li><li><b>Il deposito del paymaster</b> si consuma a ogni operazione delle UP in lista: aggiungi solo UP di cui ti fidi e tieni il deposito basso.</li><li><b>Nessuna garanzia.</b> Software \"così com'è\" (licenza MIT): lo usi a tuo rischio. Nessuna affiliazione con LUKSO o altri.</li><li><b>Questa pagina non chiede mai chiavi private</b>: firmi tutto in MetaMask.</li></ul>",
     ackLabel: "Ho letto e accetto",
     panel1Title: "1 · Rete e MetaMask",
-    panel1Note: "Ogni sezione usa l'account attivo in MetaMask: la cassa per la sezione 2, il controller della UP per la sezione 3 e la firma della sezione 4, un account qualsiasi con un po' di gas per l'invio come relayer. Cambia account in MetaMask tra un passo e l'altro: la pagina se ne accorge.",
+    panel1Note: "Ogni sezione usa l'account attivo in MetaMask: la cassa per la sezione 2, il controller della UP per la sezione 3 e la firma della sezione 4, per l'invio il relayer del sito oppure un account qualsiasi con un po' di gas. Collega a questa pagina tutti gli account che userai e cambia account in MetaMask tra un passo e l'altro: vedi la guida nella sezione 0.",
     networkFilterPlaceholder: "Filtra per nome... (es. base, polygon)",
     customRpcLabel: "RPC URL custom",
     customExplorerLabel: "Explorer URL custom (opzionale)",
@@ -343,6 +403,7 @@ const I18N = {
     simFail: (v) => `❌ Simulazione fallita: ${v.err}`,
     noGas: (v) => `❌ L'account attivo non ha abbastanza gas: servono circa ${v.need}, ha ${v.have}.`,
     sending: "Conferma in MetaMask...",
+    busyStart: "In corso: lettura dei dati e simulazione. Se serve una firma, MetaMask si apre tra qualche secondo.",
     txSent: (v) => `Transazione inviata: ${v.hash}`,
     waiting: "In attesa di conferma...",
     txOk: "✅ Confermata.",
@@ -390,11 +451,53 @@ const I18N = {
     subtitle: "Your UP operates while the controller holds no gas: the controller signs, a relayer sends, your paymaster pays. ERC-4337 (EntryPoint v0.6).",
     langToggleBtn: "Italiano",
     panel0Title: "0 · How it works",
-    panel0Note: "<b>2 · Paymaster:</b> a contract of yours (<code>contracts/UPPaymaster.sol</code>), at the same address on every chain for the same owner, that pays gas <b>only</b> for the UPs on its allowlist and up to a cap per operation. You fund it with a plain transfer; only the owner manages allowlist, cap and withdrawals.<br><b>3 · UP:</b> one controller transaction, once per chain: it registers LUKSO's <code>Extension4337</code>, adds the EntryPoint as a controller (it can call and send value, <b>not</b> change data or permissions) and gives the controller the 4337 permission. The controller's other permissions stay identical.<br><b>4 · Test:</b> the controller signs an operation with <code>personal_sign</code> (no gas); then any account in MetaMask sends it to the EntryPoint as the relayer: it advances the gas and is reimbursed by the paymaster in the same transaction.",
+    guideSummary: "📘 Step-by-step guide: who does what, several MetaMask accounts, order of the steps",
+    guideHtml: `<h4>Who does what</h4>
+<ul>
+<li><b>Cassa</b>, the paymaster owner: publishes, funds, sets the cap, puts UPs on the allowlist (section 2).</li>
+<li><b>The UP's controller</b>: sets up the UP, once per chain (section 3), and signs every operation (button A). The setup costs a little gas; operations do not.</li>
+<li><b>Relayer</b>: sends the signed operation (button B). Usually the <b>site relayer</b>, which asks for nothing; otherwise any MetaMask account with a little gas.</li>
+<li><b>UP extension</b> (optional): only reads the UP address. It signs nothing here.</li>
+</ul>
+<h4>Several MetaMask accounts: connect them all before starting</h4>
+<ol>
+<li>Press <b>Connect MetaMask</b>. In the MetaMask window tick <b>both the cassa and the controller</b>, then confirm. Several accounts can be connected to the same site.</li>
+<li>If you connected only one: open MetaMask and pick the other account from the menu at the top; if MetaMask says it is not connected to this site, use its <b>Connect</b> button.</li>
+<li>The page always uses the account <b>active</b> in MetaMask, and only that one. After each switch check the <b>MetaMask</b> row in section 1: it must show the right account. If it does not update, press <b>Connect MetaMask</b> again. An operation already signed is kept.</li>
+<li>UP extension and MetaMask active together is normal: they do two different jobs.</li>
+</ol>
+<h4>Every time you open or reload the page</h4>
+<ol>
+<li>Tick <b>I have read and accept</b> below: without it the buttons stay grey.</li>
+<li>Section 1: choose the network.</li>
+<li>Section 2: the <b>Owner</b> field must be the <b>cassa</b>. The page proposes the active account: if it is the controller, correct it, otherwise the page computes another paymaster.</li>
+<li>Section 3: the UP address.</li>
+</ol>
+<h4>Once per chain, with the cassa active</h4>
+<ol><li>Publish the paymaster, if missing.</li><li>Fund it.</li><li>Set the cap per operation.</li></ol>
+<h4>For each UP</h4>
+<ol>
+<li>Enter the UP address in section 3. With the <b>cassa active</b>, section 2: <b>Add the UP (section 3) to the allowlist</b>.</li>
+<li><b>Switch to the UP's controller</b> in MetaMask, check section 1.</li>
+<li>Section 3: <b>Prepare and simulate</b>, read the plan, then <b>Sign and send</b>. One transaction; the page verifies the result.</li>
+</ol>
+<h4>Every operation, with the controller active</h4>
+<ol>
+<li><b>A · Prepare and sign</b>: compare the fingerprint in MetaMask with the page's, then sign. No gas.</li>
+<li><b>B · Send through the site relayer</b>: no account switch, no signature. If the site relayer is not running, switch to an account with a little gas and use the other B button.</li>
+</ol>
+<h4>While you wait</h4>
+<ul>
+<li>After each click a box at the bottom shows the status. Before MetaMask opens the page reads the data and simulates: it can take a few seconds. <b>Do not click again.</b></li>
+<li>If MetaMask does not appear, open the extension: the request may be waiting there.</li>
+</ul>
+<h4>Going back</h4>
+<ul><li>Section 3, <b>Turning 4337 off on this UP</b>: one controller transaction restores the UP as it was. Section 2: <b>Remove</b>, with the cassa, takes it off the allowlist.</li></ul>`,
+    panel0Note: "<b>2 · Paymaster:</b> a contract of yours (<code>contracts/UPPaymaster.sol</code>), at the same address on every chain for the same owner, that pays gas <b>only</b> for the UPs on its allowlist and up to a cap per operation. You fund it with a plain transfer; only the owner manages allowlist, cap and withdrawals.<br><b>3 · UP:</b> one controller transaction, once per chain: it registers LUKSO's <code>Extension4337</code>, adds the EntryPoint as a controller (it can call and send value, <b>not</b> change data or permissions) and gives the controller the 4337 permission. The controller's other permissions stay identical.<br><b>4 · Test:</b> the controller signs an operation with <code>personal_sign</code> (no gas); then a relayer sends it to the EntryPoint: the site relayer if it is running, or any account in MetaMask. It advances the gas and is reimbursed by the paymaster in the same transaction.",
     disclaimer: "<b>⚠️ Read before using this page</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Experimental tool, not audited.</b> The paymaster and LUKSO's <code>Extension4337</code> have not been reviewed by third parties. Use small amounts.</li><li><b>It changes the UP's configuration on this chain:</b> the EntryPoint becomes a controller with call and value-transfer permissions. It only executes operations signed by a controller with the 4337 permission, within the signer's own permissions.</li><li><b>The paymaster deposit</b> is spent by every operation of allowlisted UPs: add only UPs you trust and keep the deposit low.</li><li><b>No warranty.</b> Software \"as is\" (MIT licence): use it at your own risk. No affiliation with LUKSO or anyone else.</li><li><b>This page never asks for private keys</b>: you sign everything in MetaMask.</li></ul>",
     ackLabel: "I have read and accept",
     panel1Title: "1 · Network and MetaMask",
-    panel1Note: "Each section uses the account active in MetaMask: the cassa for section 2, the UP's controller for section 3 and the signature in section 4, any account with some gas to send as the relayer. Switch account in MetaMask between steps: the page notices.",
+    panel1Note: "Each section uses the account active in MetaMask: the cassa for section 2, the UP's controller for section 3 and the signature in section 4, for sending, the site relayer or any account with some gas. Connect all the accounts you will use to this page and switch account in MetaMask between steps: see the guide in section 0.",
     networkFilterPlaceholder: "Filter by name... (e.g. base, polygon)",
     customRpcLabel: "Custom RPC URL",
     customExplorerLabel: "Custom explorer URL (optional)",
@@ -485,6 +588,7 @@ const I18N = {
     simFail: (v) => `❌ Simulation failed: ${v.err}`,
     noGas: (v) => `❌ The active account does not have enough gas: about ${v.need} needed, it has ${v.have}.`,
     sending: "Confirm in MetaMask...",
+    busyStart: "Working: reading the data and simulating. If a signature is needed, MetaMask opens in a few seconds.",
     txSent: (v) => `Transaction sent: ${v.hash}`,
     waiting: "Waiting for confirmation...",
     txOk: "✅ Confirmed.",
@@ -553,7 +657,16 @@ function renderKv(id, rows) {
   }
   box.appendChild(grid);
 }
-function log(msg, cls) { const l = document.createElement("div"); if (cls) l.className = cls; l.textContent = msg; $("log").appendChild(l); }
+function log(msg, cls) {
+  const l = document.createElement("div"); if (cls) l.className = cls; l.textContent = msg; $("log").appendChild(l);
+  // While an action runs, the fixed box shows its latest step (first line only).
+  if (busy && !/^—— /.test(msg)) { const first = String(msg).split("\n")[0]; $("busyMsg").textContent = first.length > 200 ? first.slice(0, 200) + "…" : first; }
+}
+function syncBusyToast() {
+  const box = $("busyToast"), was = box.classList.contains("on");
+  if (busy && !was) $("busyMsg").textContent = t("busyStart");
+  box.classList.toggle("on", busy);
+}
 function logSeparator() { log(`—— ${new Date().toLocaleTimeString()} ——`, "line-dim"); }
 const riskAccepted = () => $("ackRisk").checked;
 async function estimateFees(provider) {
@@ -811,6 +924,7 @@ function render(s) {
   if (s.up.length) renderKv("upBox", s.up); else setStatus("upBox", t("notChecked"), "empty");
 }
 function updateButtons() {
+  syncBusyToast();
   const s = state, ok = !!(s && s.ok && riskAccepted() && !busy);
   $("publishPmBtn").disabled = !(ok && s.pmState === "missing" && s.factoryOk);
   $("fundBtn").disabled = !(ok && s.pmState === "ok");
