@@ -127,6 +127,8 @@ The notes below are kept for reference.
   - `0xf74b8e927b35f76fea85520d419ed596b184823959ddcaabcb39cbfda4b1c0f7`, relayed by the cassa. The controller's balance was unchanged.
   - In both, the relayer ended about +0.00000014 ETH, the 15% margin.
   - The paymaster paid about 0.0000011 ETH per operation, less than half a cent. The 0.0005 ETH deposit covers about 450 operations.
+- **Revoke (2026-10-01):** `up-gas-relay.html` can turn 4337 off on a UP with one controller transaction. It removes the extension key, the EntryPoint's permissions and its entry in `AddressPermissions[]`, and the 4337 bit. It restores the UP exactly as before the setup.
+- **Open question for LUKSO:** the audit and production status of `Extension4337`, to be asked by the maintainer in the LUKSO dev chat. Until then, keep little value on UPs set up for 4337.
 - **Page usability:** the check runs its reads in parallel, so buttons react faster. A hint under section 4 says which account each step needs. If MetaMask does not report an account switch, pressing "Connect MetaMask" updates the page, and the signed operation is kept.
 - **Next:**
   1. Allowlist and set up the maintainer's personal UP (`0x328A…317b`) and Birra20venti's UP, then other chains (Polygon first).

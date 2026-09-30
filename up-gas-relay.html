@@ -136,6 +136,10 @@
   <button id="prepareSetupBtn" disabled data-i18n="prepareSetupBtn">Prepara e simula la configurazione della UP</button>
   <div class="status-box plan" id="setupPlanBox"><span class="empty" data-i18n="noPlan">Nessuna operazione preparata.</span></div>
   <button id="sendSetupBtn" class="danger" disabled data-i18n="sendSetupBtn">Firma e invia la configurazione (una sola transazione)</button>
+  <h3 data-i18n="revokeTitle">Disattivare il 4337 su questa UP</h3>
+  <div class="note" data-i18n-html="revokeNote"></div>
+  <button id="prepareRevokeBtn" class="secondary" disabled data-i18n="prepareRevokeBtn">Prepara e simula la disattivazione</button>
+  <button id="sendRevokeBtn" class="danger" disabled data-i18n="sendRevokeBtn">Firma e invia la disattivazione (una sola transazione)</button>
 </div>
 
 <div class="panel">
@@ -274,6 +278,18 @@ const I18N = {
     prepareSetupBtn: "Prepara e simula la configurazione della UP",
     noPlan: "Nessuna operazione preparata.",
     sendSetupBtn: "Firma e invia la configurazione (una sola transazione)",
+    revokeTitle: "Disattivare il 4337 su questa UP",
+    revokeNote: "Annulla la configurazione con <b>una sola transazione</b> del controller: toglie l'estensione per <code>validateUserOp</code>, i permessi dell'EntryPoint e il suo posto nell'elenco dei controller, e il permesso 4337 all'account attivo. Dopo, nessuna operazione può più passare dall'EntryPoint su questa UP. Gli altri permessi restano identici. Si può riconfigurare in qualsiasi momento.",
+    prepareRevokeBtn: "Prepara e simula la disattivazione",
+    sendRevokeBtn: "Firma e invia la disattivazione (una sola transazione)",
+    revokePlanTitle: (v) => `Disattivazione del 4337 sulla UP ${v.up}\nFirma: ${v.signer} · Key Manager: ${v.km} · una sola transazione (executeBatch):`,
+    revokeExt: "estensione per validateUserOp (0x3a871cdd) → rimossa",
+    revokeEpPerms: (v) => `permessi dell'EntryPoint ${v.ep} → rimossi`,
+    revokeEpList: (v) => `EntryPoint tolto dall'elenco dei controller (posizione ${v.i})`,
+    revokeFinal: (v) => `${v.n}. Permessi finali dell'account: ${v.from} → ${v.to} (senza 4337 e senza i permessi temporanei)`,
+    revokeAfter: "Il paymaster non viene toccato: se vuoi, togli la UP dalla sua lista nella sezione 2 (con la cassa).",
+    readyToSignRevoke: "Controlla l'elenco qui sopra, poi premi \"Firma e invia la disattivazione\".",
+    revokeOk: "✅ Verifica finale: estensione rimossa, EntryPoint senza permessi e fuori dall'elenco, permesso 4337 tolto all'account, nessun altro permesso cambiato.",
     panel4Title: "4 · Operazione di prova",
     panel4Note: "<b>A</b> · con il <b>controller</b> attivo in MetaMask: la pagina prepara un invio dalla UP e ti chiede di firmarne l'impronta (<code>userOpHash</code>). MetaMask mostrerà un testo esadecimale: confrontalo con l'impronta scritta qui sotto. Nessun gas.<br><b>B</b> · con <b>un altro account</b> (la cassa o qualunque account con un po' di gas): la pagina simula e invia l'operazione all'EntryPoint. Il gas anticipato torna a quell'account dal deposito del paymaster.",
     testToLabel: "Destinatario",
@@ -398,6 +414,18 @@ const I18N = {
     prepareSetupBtn: "Prepare and simulate the UP setup",
     noPlan: "No operation prepared.",
     sendSetupBtn: "Sign and send the setup (one transaction)",
+    revokeTitle: "Turning 4337 off on this UP",
+    revokeNote: "Undoes the setup with <b>one transaction</b> of the controller: it removes the extension for <code>validateUserOp</code>, the EntryPoint's permissions and its place in the controllers list, and the 4337 permission of the active account. Afterwards no operation can go through the EntryPoint on this UP. The other permissions stay identical. It can be set up again at any time.",
+    prepareRevokeBtn: "Prepare and simulate turning it off",
+    sendRevokeBtn: "Sign and send turning it off (one transaction)",
+    revokePlanTitle: (v) => `Turning 4337 off on the UP ${v.up}\nSigner: ${v.signer} · Key Manager: ${v.km} · one transaction (executeBatch):`,
+    revokeExt: "extension for validateUserOp (0x3a871cdd) → removed",
+    revokeEpPerms: (v) => `EntryPoint ${v.ep} permissions → removed`,
+    revokeEpList: (v) => `EntryPoint removed from the controllers list (position ${v.i})`,
+    revokeFinal: (v) => `${v.n}. Account's final permissions: ${v.from} → ${v.to} (without 4337 and without the temporary permissions)`,
+    revokeAfter: "The paymaster is not touched: if you want, remove the UP from its allowlist in section 2 (with the cassa).",
+    readyToSignRevoke: "Check the list above, then press \"Sign and send turning it off\".",
+    revokeOk: "✅ Final check: extension removed, EntryPoint without permissions and out of the list, 4337 permission removed from the account, no other permission changed.",
     panel4Title: "4 · Test operation",
     panel4Note: "<b>A</b> · with the <b>controller</b> active in MetaMask: the page prepares a transfer from the UP and asks you to sign its fingerprint (<code>userOpHash</code>). MetaMask will show a hex text: compare it with the fingerprint written below. No gas.<br><b>B</b> · with <b>another account</b> (the cassa or any account with a little gas): the page simulates and sends the operation to the EntryPoint. The gas advanced goes back to that account from the paymaster deposit.",
     testToLabel: "Recipient",
@@ -602,11 +630,11 @@ $("recheckBtn").addEventListener("click", () => scheduleCheck(0));
 $("ackRisk").addEventListener("change", updateButtons);
 
 // ==================== STATE ====================
-let state = null, checkRun = 0, checkTimer = null, setupPlan = null, signedOp = null;
+let state = null, checkRun = 0, checkTimer = null, setupPlan = null, signedOp = null, revokePlan = null;
 // One action at a time: every action button is disabled while one is running.
 let busy = false;
 function scheduleCheck(delay = 500) {
-  state = null; setupPlan = null;
+  state = null; setupPlan = null; revokePlan = null;
   setStatus("setupPlanBox", t("noPlan"), "empty");
   updateButtons();
   clearTimeout(checkTimer);
@@ -720,12 +748,13 @@ async function computeState() {
     const len = lenRaw && lenRaw !== "0x" ? Number(BigInt(lenRaw)) : 0;
     const extKey = !extVal || extVal === "0x" ? "empty" : (ethers.dataLength(extVal) === 20 && extVal.toLowerCase() === EXT.address.toLowerCase()) ? "ok" : "other";
     // Is the EntryPoint already in AddressPermissions[]? (read up to 50 entries)
-    let epListed = false;
+    let epListed = false, epIndex = -1, items = [];
     if (len > 0 && len <= 50) {
-      const items = await upC.getDataBatch(Array.from({ length: len }, (_, i) => ARRAY_INDEX_KEY(i)));
-      epListed = items.some(v => v && v.toLowerCase() === ENTRY_POINT.toLowerCase());
+      items = await upC.getDataBatch(Array.from({ length: len }, (_, i) => ARRAY_INDEX_KEY(i)));
+      epIndex = items.findIndex(v => v && v.toLowerCase() === ENTRY_POINT.toLowerCase());
+      epListed = epIndex >= 0;
     }
-    Object.assign(s, { upC, km, permKey: PERM_KEY(signerAddress), permRaw, perms, epPerms, len, extKey, extVal, epListed });
+    Object.assign(s, { upC, km, permKey: PERM_KEY(signerAddress), permRaw, perms, epPerms, len, extKey, extVal, epListed, epIndex, items });
     if (perms === 0n) { s.up.push(["kPerms", ["permsNone"], "err"]); return s; }
     s.up.push(["kPerms", `${permHex(perms)} — ${permNames(perms)}`, ""]);
     s.up.push(["kExtKey", extKey === "ok" ? ["keyOk"] : extKey === "empty" ? ["keyEmpty"] : ["keyOther", { addr: extVal }], extKey === "ok" ? "ok" : "warn"]);
@@ -749,6 +778,11 @@ async function computeState() {
     else if (s.extState !== "ok") s.up.push(["kReady", ["readyNeedExt"], "warn"]);
     else s.up.push(["kReady", [epState === "other" ? "readyEpOther" : "readyTodo"], "warn"]);
     s.canSetup = !s.upDone && !missingHard && s.extState === "ok" && ethers.dataLength(permRaw) === 32;
+    // Revoke: anything of the 4337 setup present. Needs EDITPERMISSIONS (EntryPoint and own permissions, the
+    // controllers list) and CHANGEEXTENSIONS to remove the extension key (granted for the transaction if missing).
+    const anything = extKey === "ok" || epPerms !== 0n || epListed || has4337;
+    s.revokeTemp = extKey === "ok" && !(perms & P.CHANGEEXTENSIONS) ? P.CHANGEEXTENSIONS : 0n;
+    s.canRevoke = anything && (perms & P.EDITPERMISSIONS) !== 0n && ethers.dataLength(permRaw) === 32 && (!epListed || len <= 50);
   } catch (e) { s.up.push(["kUp", ["genericError", { err: e.shortMessage || e.message }], "err"]); }
   return s;
 }
@@ -769,6 +803,8 @@ function updateButtons() {
   $("publishExtBtn").disabled = !(ok && s.extState === "missing" && s.factoryOk);
   $("prepareSetupBtn").disabled = !(ok && s.canSetup);
   $("sendSetupBtn").disabled = !(ok && setupPlan);
+  $("prepareRevokeBtn").disabled = !(ok && s.canRevoke);
+  $("sendRevokeBtn").disabled = !(ok && revokePlan);
   $("signOpBtn").disabled = !(ok && s.upDone && s.pmState === "ok" && s.sponsored);
   $("relayBtn").disabled = !(ok && signedOp);
   // Which account each step needs, so a grey button is never a mystery.
@@ -921,6 +957,81 @@ $("sendSetupBtn").addEventListener("click", async () => {
       } catch (e) { problems = [e.shortMessage || e.message]; }
     }
     log(problems.length ? t("setupBad", { what: problems.join(", ") }) : t("setupOk"), problems.length ? "line-warn" : "line-ok");
+  } catch (e) { log(t("genericError", { err: revertReason(e) }), "line-err"); }
+  finally { busy = false; scheduleCheck(0); }
+});
+
+// ---- revoke: one atomic executeBatch that undoes the setup
+function buildRevoke(s) {
+  const keys = [], vals = [];
+  if (s.extKey === "ok") { keys.push(LSP17_KEY(EXT.validateUserOpSelector)); vals.push("0x"); }
+  if (s.epPerms !== 0n) { keys.push(PERM_KEY(ENTRY_POINT)); vals.push("0x"); }
+  if (s.epListed) {
+    // Remove from AddressPermissions[]: move the last entry into the EntryPoint's slot, shorten the list.
+    const last = s.len - 1;
+    if (s.epIndex !== last) { keys.push(ARRAY_INDEX_KEY(s.epIndex)); vals.push(s.items[last]); }
+    keys.push(ARRAY_INDEX_KEY(last), ARRAY_KEY); vals.push("0x", ethers.toBeHex(last, 16));
+  }
+  const finalPerms = s.perms & ~P.ERC4337;
+  const payloads = [];
+  if (s.revokeTemp) payloads.push(UP_IFACE.encodeFunctionData("setData", [s.permKey, b32(s.perms | s.revokeTemp)]));
+  if (keys.length) payloads.push(UP_IFACE.encodeFunctionData("setDataBatch", [keys, vals]));
+  if (finalPerms !== s.perms || s.revokeTemp) payloads.push(UP_IFACE.encodeFunctionData("setData", [s.permKey, b32(finalPerms)]));
+  return { payloads, finalPerms };
+}
+$("prepareRevokeBtn").addEventListener("click", () => guarded(async () => {
+  revokePlan = null;
+  const s = await freshState();
+  if (!s || !s.canRevoke) { log(t("notReady"), "line-err"); return; }
+  const { payloads, finalPerms } = buildRevoke(s);
+  const lines = [t("revokePlanTitle", { up: s.upAddr, signer: s.signer, km: s.km })];
+  let n = 1;
+  if (s.revokeTemp) { lines.push(t("planGrant", { bits: permNames(s.revokeTemp), from: permHex(s.perms), to: permHex(s.perms | s.revokeTemp) })); n++; }
+  const what = [];
+  if (s.extKey === "ok") what.push(t("revokeExt"));
+  if (s.epPerms !== 0n) what.push(t("revokeEpPerms", { ep: ENTRY_POINT }));
+  if (s.epListed) what.push(t("revokeEpList", { i: s.epIndex }));
+  if (what.length) { lines.push(`${n}. setDataBatch:\n` + what.map(w => "   - " + w).join("\n")); n++; }
+  if (finalPerms !== s.perms || s.revokeTemp) lines.push(t("revokeFinal", { n, from: permHex(s.perms), to: permHex(finalPerms) }));
+  lines.push(t("revokeAfter"));
+  lines.push(t("planAtomic"));
+  setStatus("setupPlanBox", lines.join("\n"), "");
+  log(lines.join("\n"), "line-compare");
+  const data = KM_IFACE.encodeFunctionData("executeBatch", [payloads.map(() => 0), payloads]);
+  log(t("simulating"), "line-dim");
+  try { await s.provider.call({ from: s.signer, to: s.km, data }); } catch (e) { log(t("simFail", { err: revertReason(e) }), "line-err"); return; }
+  log(t("simOk", { gas: (await s.provider.estimateGas({ from: s.signer, to: s.km, data })).toString() }), "line-ok");
+  revokePlan = { data, s, finalPerms };
+  log(t("readyToSignRevoke"), "line-warn");
+}, false));
+$("sendRevokeBtn").addEventListener("click", async () => {
+  if (!revokePlan || busy) return;
+  const p = revokePlan;
+  if (!riskAccepted()) { log(t("ackRequired"), "line-err"); return; }
+  busy = true; updateButtons();
+  try {
+    const s = await freshState();
+    const same = s && s.canRevoke && s.upAddr === p.s.upAddr && s.km === p.s.km && s.signer === p.s.signer && s.permRaw === p.s.permRaw &&
+      s.extKey === p.s.extKey && s.epPerms === p.s.epPerms && s.len === p.s.len && s.epIndex === p.s.epIndex;
+    if (!same) { log(t("stale"), "line-err"); return; }
+    const r = await sendTx({ to: p.s.km, data: p.data });
+    if (!r) return;
+    const at = { blockTag: r.receipt.blockNumber };
+    let problems = ["not read"];
+    for (let i = 0; i < 6 && problems.length; i++) {
+      if (i) await new Promise(res => setTimeout(res, 1500));
+      try {
+        const [ext, ep, mine, lenRaw] = await p.s.upC.getDataBatch([LSP17_KEY(EXT.validateUserOpSelector), PERM_KEY(ENTRY_POINT), p.s.permKey, ARRAY_KEY], at);
+        const len = lenRaw && lenRaw !== "0x" ? Number(BigInt(lenRaw)) : 0;
+        const list = len > 0 && len <= 50 ? await p.s.upC.getDataBatch(Array.from({ length: len }, (_, k) => ARRAY_INDEX_KEY(k)), at) : [];
+        problems = [];
+        if (p.s.extKey === "ok" && ext && ext !== "0x") problems.push("extension key");
+        if (ep && ep !== "0x") problems.push("EntryPoint permissions");
+        if (list.some(v => v && v.toLowerCase() === ENTRY_POINT.toLowerCase())) problems.push("EntryPoint still listed");
+        if (mine !== b32(p.finalPerms)) problems.push(`controller permissions ${mine}`);
+      } catch (e) { problems = [e.shortMessage || e.message]; }
+    }
+    log(problems.length ? t("setupBad", { what: problems.join(", ") }) : t("revokeOk"), problems.length ? "line-warn" : "line-ok");
   } catch (e) { log(t("genericError", { err: revertReason(e) }), "line-err"); }
   finally { busy = false; scheduleCheck(0); }
 });
