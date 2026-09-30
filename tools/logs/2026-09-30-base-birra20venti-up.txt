@@ -1,0 +1,47 @@
+Birra20venti's UP on Base mainnet, 2026-09-30: allowlist (cassa), setup (its controller), first test
+operation refused by the site relayer before sending (nothing spent). Page: up-gas-relay.html.
+
+—— 23:30:51 ——   (cassa: add the UP to the allowlist)
+Simulazione...
+✅ Simulazione riuscita (gas stimato 48213).
+Conferma in MetaMask...
+Transazione inviata: 0xdbe267b10f969a217cf526fe25e3a2e7fbfe2dae12c7f299b841b08e01993006
+https://basescan.org/tx/0xdbe267b10f969a217cf526fe25e3a2e7fbfe2dae12c7f299b841b08e01993006
+In attesa di conferma...
+✅ Confermata.
+—— 23:33:36 ——
+Configurazione della UP 0x1d62B8d2c63B942095AD3C7FFc7e845195D9E718
+Firma: 0x434667A8840E18628Cbd7B3a51D7cEE207fD9d4c · Key Manager: 0x595DCd1cd30146FA21186bcE639625C9026C4feE · una sola transazione (executeBatch):
+1. Permessi temporanei al controller: + ADDEXTENSIONS (0x7f3f06 → 0x7f3f0e)
+2. setDataBatch:
+   - estensione per validateUserOp (0x3a871cdd) → 0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2
+   - EntryPoint aggiunto all'elenco dei controller (posizione 2)
+   - permessi dell'EntryPoint 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789 → 0x000500 (SUPER_CALL, SUPER_TRANSFERVALUE; niente SETDATA)
+3. Permessi finali del controller: 0x7f3f06 → 0xff3f06 (quelli di prima + 4337, senza i permessi temporanei)
+Se una parte fallisce, l'intera transazione viene annullata e non cambia niente.
+Simulazione...
+✅ Simulazione riuscita (gas stimato 205631).
+Controlla l'elenco qui sopra, poi premi "Firma e invia".
+Simulazione...
+✅ Simulazione riuscita (gas stimato 205631).
+Conferma in MetaMask...
+Transazione inviata: 0x5b327db2833bbcdb5d3e780b526cec0eca4a2bfcb4e8d917fbbce17a12ad040d
+https://basescan.org/tx/0x5b327db2833bbcdb5d3e780b526cec0eca4a2bfcb4e8d917fbbce17a12ad040d
+In attesa di conferma...
+✅ Confermata.
+✅ Verifica finale: estensione registrata, EntryPoint con i permessi previsti, permesso 4337 al controller, nessun altro permesso cambiato.
+—— 23:35:18 ——
+Operazione (userOp) per l'EntryPoint 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789
+  La UP 0x1d62B8d2c63B942095AD3C7FFc7e845195D9E718 invia 0.0001 ETH a 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9
+  nonce 0 · paga il paymaster 0xb353565d1f801E7402DBC267b8C0E30E3540D4eD
+  preVerificationGas 51625 (base della transazione, dati, costo L1 dove c'è)
+  costo massimo 0.000015417875 ETH (tetto 0.0003 ETH, deposito 0.000494414918 ETH)
+
+Impronta da firmare (userOpHash):
+  0x63f331184701d72bc394c28f7bde1d2bdb8780d8ad6d7129c6f875447ebe3ad0
+Firma in MetaMask: confronta il testo esadecimale con l'impronta qui sopra.
+✅ Firmata da 0x434667A8840E18628Cbd7B3a51D7cEE207fD9d4c (controller con permesso 4337). Ora premi "B · Invia tramite il relayer del sito", se è attivo, oppure passa in MetaMask all'account che farà da relayer e premi B.
+—— 23:35:35 ——
+Relayer: 0xbb683923c2Df0269996C0E2F276A5097cE863C2F. Anticipa il gas e lo riceve indietro dal paymaster.
+Invio dell'operazione firmata al relayer del sito...
+Il relayer del sito ha rifiutato l'operazione: the operation would fail: execution reverted (unknown custom error)
