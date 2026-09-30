@@ -128,7 +128,10 @@ The notes below are kept for reference.
   - In both, the relayer ended about +0.00000014 ETH, the 15% margin.
   - The paymaster paid about 0.0000011 ETH per operation, less than half a cent. The 0.0005 ETH deposit covers about 450 operations.
 - **Revoke (2026-10-01):** `up-gas-relay.html` can turn 4337 off on a UP with one controller transaction. It removes the extension key, the EntryPoint's permissions and its entry in `AddressPermissions[]`, and the 4337 bit. It restores the UP exactly as before the setup.
-- **Open question for LUKSO:** the audit and production status of `Extension4337`, to be asked by the maintainer in the LUKSO dev chat. Until then, keep little value on UPs set up for 4337.
+- **Open question for LUKSO:** the audit and production status of `Extension4337`. The maintainer asked in the LUKSO dev chat (2026-10-01). Until there is an answer, keep little value on UPs set up for 4337.
+- **No EntryPoint on LUKSO mainnet (checked 2026-10-01):** both canonical addresses have no code, v0.6 `0x5FF137D4…2789` and v0.7 `0x00000000…a032`. So `Extension4337` is not in use on LUKSO mainnet with the standard EntryPoint, a strong hint that it never went to production.
+  - The EntryPoint v0.6 was deployed through Nick's factory, so it could be published on LUKSO at the same address by replaying its creation transaction from another chain. The publishing page would need to read that transaction from a chain other than LUKSO.
+  - Possible later: 4337 on LUKSO too, so the UP is operated the same way on every chain (same `personal_sign` flow, same relayer). Only an idea for now.
 - **Page usability:** the check runs its reads in parallel, so buttons react faster. A hint under section 4 says which account each step needs. If MetaMask does not report an account switch, pressing "Connect MetaMask" updates the page, and the signed operation is kept.
 - **Next:**
   1. Allowlist and set up the maintainer's personal UP (`0x328A…317b`) and Birra20venti's UP, then other chains (Polygon first).
