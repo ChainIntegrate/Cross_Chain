@@ -5,6 +5,13 @@
   "description": "Gas relayer for Universal Profiles on EVM chains (ERC-4337, EntryPoint v0.6). Experimental.",
   "license": "MIT",
   "main": "relay.js",
-  "engines": { "node": ">=18" },
-  "dependencies": { "ethers": "6.13.4" }
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ethers": "6.13.4"
+  },
+  "overrides": {
+    "ws": "8.22.0"
+  }
 }
