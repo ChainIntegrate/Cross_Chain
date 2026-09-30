@@ -61,7 +61,7 @@ LSP6 checks each payload when it runs, so the three steps work in one transactio
 
 `UPPaymaster.sol` is an [ERC-4337](https://eips.ethereum.org/EIPS/eip-4337) paymaster for EntryPoint v0.6. It pays the gas of user operations sent by Universal Profiles on its allowlist, and of nothing else. It is the "who pays?" contract of the planned gas relayer: controllers sign, a relayer sends, the paymaster pays from its deposit, and the controllers never need gas.
 
-**Status:** experimental and unaudited. Nothing is published yet; the first real test will use small amounts.
+**Status:** experimental and unaudited. Published on Base for the ChainIntegrate cassa (owner `0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9`): `0xb353565d1f801E7402DBC267b8C0E30E3540D4eD`, [source verified on Basescan](https://basescan.org/address/0xb353565d1f801E7402DBC267b8C0E30E3540D4eD#code). The first sponsored operation succeeded on 2026-09-30. Keep deposits small.
 
 **What it does**
 - `validatePaymasterUserOp` accepts an operation only if the sender UP is on the allowlist and the operation cannot cost more than `maxCostPerOp`. It reads only storage keyed by the sender.
@@ -132,7 +132,7 @@ It has no owner. Its constructor takes only the EntryPoint, so published through
 | EntryPoint | `0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789` |
 | Runtime code hash | `0x91968b95ee6f8e01a554060b775c13e8df3f0173d87a55a48ed54b8ff02c052d` |
 
-`up-gas-relay.html` publishes it when missing, and checks this code hash before using it. Its audit status is unknown to this project: treat it as experimental.
+Published on Base (2026-09-30). `up-gas-relay.html` publishes it when missing, and checks this code hash before using it. Its audit status is unknown to this project: treat it as experimental.
 
 **Verify it:**
 1. Compare `creationCode` with the `bytecode` of `artifacts/Extension4337.json` in the npm package `@lukso/lsp-smart-contracts@0.17.4`.
