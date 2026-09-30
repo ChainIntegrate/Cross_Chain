@@ -59,6 +59,15 @@
   .check-row input { width: auto; }
   .warn-box { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--err); border-radius: 8px; background: rgba(224,90,90,0.08); font-size: 13px; line-height: 1.5; }
   .plan { font-family: monospace; font-size: 12.5px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  /* While an action runs: a fixed box that says what is happening, so the wait before the wallet opens is never silent. */
+  #busyToast { display: none; position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 50;
+               width: calc(100% - 32px); max-width: 720px; background: #1d2330; border: 2px solid var(--warn); border-radius: 10px;
+               padding: 12px 16px; font-size: 14px; line-height: 1.5; color: var(--text); box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
+  #busyToast.on { display: flex; gap: 12px; align-items: center; }
+  #busyToast .spin { width: 18px; height: 18px; flex: 0 0 18px; border: 3px solid var(--warn); border-top-color: transparent; border-radius: 50%; animation: spin 0.9s linear infinite; }
+  #busyToast .msg { word-break: break-word; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { #busyToast .spin { animation: none; } }
   @media (max-width: 560px) { .kv { grid-template-columns: 1fr; } .row { flex-wrap: wrap; } .row button { width: 100%; } }
 </style>
 </head>
@@ -161,6 +170,8 @@
   <h2 data-i18n="logTitle">Registro</h2>
   <div id="log" class="line-dim"></div>
 </div>
+
+<div id="busyToast" role="status" aria-live="polite"><div class="spin"></div><div class="msg" id="busyMsg"></div></div>
 
 <div class="site-footer">
   <div class="footer-row">
@@ -343,6 +354,7 @@ const I18N = {
     simFail: (v) => `❌ Simulazione fallita: ${v.err}`,
     noGas: (v) => `❌ L'account attivo non ha abbastanza gas: servono circa ${v.need}, ha ${v.have}.`,
     sending: "Conferma in MetaMask...",
+    busyStart: "In corso: lettura dei dati e simulazione. Se serve una firma, MetaMask si apre tra qualche secondo.",
     txSent: (v) => `Transazione inviata: ${v.hash}`,
     waiting: "In attesa di conferma...",
     txOk: "✅ Confermata.",
@@ -485,6 +497,7 @@ const I18N = {
     simFail: (v) => `❌ Simulation failed: ${v.err}`,
     noGas: (v) => `❌ The active account does not have enough gas: about ${v.need} needed, it has ${v.have}.`,
     sending: "Confirm in MetaMask...",
+    busyStart: "Working: reading the data and simulating. If a signature is needed, MetaMask opens in a few seconds.",
     txSent: (v) => `Transaction sent: ${v.hash}`,
     waiting: "Waiting for confirmation...",
     txOk: "✅ Confirmed.",
@@ -553,7 +566,16 @@ function renderKv(id, rows) {
   }
   box.appendChild(grid);
 }
-function log(msg, cls) { const l = document.createElement("div"); if (cls) l.className = cls; l.textContent = msg; $("log").appendChild(l); }
+function log(msg, cls) {
+  const l = document.createElement("div"); if (cls) l.className = cls; l.textContent = msg; $("log").appendChild(l);
+  // While an action runs, the fixed box shows its latest step (first line only).
+  if (busy && !/^—— /.test(msg)) { const first = String(msg).split("\n")[0]; $("busyMsg").textContent = first.length > 200 ? first.slice(0, 200) + "…" : first; }
+}
+function syncBusyToast() {
+  const box = $("busyToast"), was = box.classList.contains("on");
+  if (busy && !was) $("busyMsg").textContent = t("busyStart");
+  box.classList.toggle("on", busy);
+}
 function logSeparator() { log(`—— ${new Date().toLocaleTimeString()} ——`, "line-dim"); }
 const riskAccepted = () => $("ackRisk").checked;
 async function estimateFees(provider) {
@@ -811,6 +833,7 @@ function render(s) {
   if (s.up.length) renderKv("upBox", s.up); else setStatus("upBox", t("notChecked"), "empty");
 }
 function updateButtons() {
+  syncBusyToast();
   const s = state, ok = !!(s && s.ok && riskAccepted() && !busy);
   $("publishPmBtn").disabled = !(ok && s.pmState === "missing" && s.factoryOk);
   $("fundBtn").disabled = !(ok && s.pmState === "ok");
