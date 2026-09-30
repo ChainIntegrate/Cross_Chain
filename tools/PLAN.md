@@ -105,17 +105,17 @@ The notes below are kept for reference.
     - cassa (paymaster owner): `0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9`;
     - paymaster: `0xb353565d1f801E7402DBC267b8C0E30E3540D4eD`, source verified on Basescan;
     - `Extension4337`: `0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2`.
-  - **Base transactions,** all done with `up-gas-relay.html`:
-    - paymaster published `0x2ea09cea…5e11`;
-    - top-up of 0.0005 ETH `0xfab74f97…889c`;
-    - cap 0.0003 ETH `0x2faf2305…5ef5`;
-    - ChainIntegrate UP allowlisted `0x5e8e4004…357e`;
-    - `Extension4337` published `0x55b5556f…0856`;
-    - ChainIntegrate UP set up by its controller `0x9C8F…5C9c` `0x22f697ef…b3d9`. Its permissions went from `0x7f3f06` to `0xff3f06`, and the EntryPoint became a controller with `0x500`.
-  - **First sponsored operation:** `0x4ca591a7…3721`. The UP sent 0.0001 ETH to the cassa, signed by the controller with `personal_sign`, relayed by the cassa.
+  - **Base transactions,** all done with `up-gas-relay.html`. The full page log is in `tools/logs/2026-09-30-base-gas-relay.txt`:
+    - paymaster published `0x2ea09cea4188716895642f077a56a8f6c37b41ecc7165cb11cafcbf9e6e45e11`;
+    - top-up of 0.0005 ETH `0xfab74f975c589d8494cf3a542e3abc45405461aacab74290b073004f44ac889c`;
+    - cap 0.0003 ETH `0x2faf23053f4f8d9dfa00cafe7b012ed14023c6b1853da705f14c58ecba205ef5`;
+    - ChainIntegrate UP allowlisted `0x5e8e400488a4b2501bf0f83d42436eb9f14c26095a80a31a3c681a0989b7357e`;
+    - `Extension4337` published `0x55b5556f03fe01cd0084785751c16c18459f077adb4f031fc2465cc2b6ae0856`;
+    - ChainIntegrate UP set up by its controller `0x9C8F…5C9c` `0x22f697efa2a63179170453933b1fbc457f309d29da7eb7e64c624139a72fb3d9`. Its permissions went from `0x7f3f06` to `0xff3f06`, and the EntryPoint became a controller with `0x500`.
+  - **First sponsored operation:** `0x4ca591a7ecfcb4a9aca8af9d78cf3b2901bacabc5cd6df6f9d9575e803403721`. The UP sent 0.0001 ETH to the cassa, signed by the controller with `personal_sign`, relayed by the cassa.
     - The controller's balance was unchanged.
     - The paymaster paid 0.0000012 ETH.
-  - **Stray paymaster:** `0x4D66c2d931ac6777CB6E64e20F6eBdFdc1030705` was published by mistake (tx `0x9811c6cc…4770`) with the personal controller `0x86F7…c6f2` as owner, because the page had filled in the owner from the account connected first. It is empty. Ignore it and never fund it.
+  - **Stray paymaster:** `0x4D66c2d931ac6777CB6E64e20F6eBdFdc1030705` was published by mistake (tx `0x9811c6cc00caa157213333432ed28741fd9a700012110b5746d64a45ebd04770`) with the personal controller `0x86F7…c6f2` as owner, because the page had filled in the owner from the account connected first. It is empty. Ignore it and never fund it.
 - **Lessons from the Base test,** fixed in `up-gas-relay.html` afterwards:
   - **The relayer paid about 2.1× its reimbursement.** Two causes:
     - a fixed `preVerificationGas` of 60,000, now computed with the reference bundler formula plus the L1 data fee from the OP-stack `GasPriceOracle`, plus 15%;

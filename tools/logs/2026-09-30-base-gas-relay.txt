@@ -1,0 +1,119 @@
+# up-gas-relay.html — first test on Base mainnet, 2026-09-30
+#
+# Page log as copied by the maintainer (Italian UI). Public data only: addresses and transaction
+# hashes, all visible on Basescan.
+#   cassa / paymaster owner:  0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9
+#   paymaster:                0xb353565d1f801E7402DBC267b8C0E30E3540D4eD
+#   Extension4337:            0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2
+#   ChainIntegrate UP:        0x4a2605796e0d91A9667d6E30365aEEC384C48c27 (Key Manager 0x309fcE7B6a96CeF8fCbF926a006CDc6f21Ff280e)
+#   UP controller:            0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c
+# The first entry (17:30:02) is the stray paymaster 0x4D66...0705, published with the wrong owner
+# (the personal controller 0x86F7...c6f2 that was connected first). It is empty: ignore it.
+# The "Verifica prima..." line at 17:40 is the click dropped during a pending transaction (fixed
+# afterwards). The relayer paid about 2.1x its reimbursement (fixed afterwards: computed
+# preVerificationGas, relay transaction at the operation's prices).
+
+Registro
+—— 17:30:02 ——
+Simulazione...
+✅ Simulazione riuscita (gas stimato 618867).
+Conferma in MetaMask...
+Transazione inviata: 0x9811c6cc00caa157213333432ed28741fd9a700012110b5746d64a45ebd04770
+https://basescan.org/tx/0x9811c6cc00caa157213333432ed28741fd9a700012110b5746d64a45ebd04770
+In attesa di conferma...
+✅ Confermata.
+✅ Pubblicato a 0x4D66c2d931ac6777CB6E64e20F6eBdFdc1030705, codice verificato.
+—— 17:30:59 ——
+Simulazione...
+✅ Simulazione riuscita (gas stimato 55928).
+Conferma in MetaMask...
+Errore: user rejected action
+—— 17:33:56 ——
+Simulazione...
+✅ Simulazione riuscita (gas stimato 618867).
+Conferma in MetaMask...
+Transazione inviata: 0x2ea09cea4188716895642f077a56a8f6c37b41ecc7165cb11cafcbf9e6e45e11
+https://basescan.org/tx/0x2ea09cea4188716895642f077a56a8f6c37b41ecc7165cb11cafcbf9e6e45e11
+In attesa di conferma...
+✅ Confermata.
+✅ Pubblicato a 0xb353565d1f801E7402DBC267b8C0E30E3540D4eD, codice verificato.
+—— 17:35:47 ——
+Simulazione...
+✅ Simulazione riuscita (gas stimato 55928).
+Conferma in MetaMask...
+Transazione inviata: 0xfab74f975c589d8494cf3a542e3abc45405461aacab74290b073004f44ac889c
+https://basescan.org/tx/0xfab74f975c589d8494cf3a542e3abc45405461aacab74290b073004f44ac889c
+In attesa di conferma...
+✅ Confermata.
+—— 17:37:27 ——
+Simulazione...
+✅ Simulazione riuscita (gas stimato 734648).
+Conferma in MetaMask...
+Transazione inviata: 0x55b5556f03fe01cd0084785751c16c18459f077adb4f031fc2465cc2b6ae0856
+https://basescan.org/tx/0x55b5556f03fe01cd0084785751c16c18459f077adb4f031fc2465cc2b6ae0856
+In attesa di conferma...
+✅ Confermata.
+✅ Pubblicato a 0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2, codice verificato.
+—— 17:39:45 ——
+Simulazione...
+✅ Simulazione riuscita (gas stimato 47222).
+Conferma in MetaMask...
+Transazione inviata: 0x2faf23053f4f8d9dfa00cafe7b012ed14023c6b1853da705f14c58ecba205ef5
+https://basescan.org/tx/0x2faf23053f4f8d9dfa00cafe7b012ed14023c6b1853da705f14c58ecba205ef5
+In attesa di conferma...
+—— 17:40:03 ——
+✅ Confermata.
+Verifica prima: rete, MetaMask e dati devono essere a posto.
+—— 17:42:19 ——
+Simulazione...
+✅ Simulazione riuscita (gas stimato 48213).
+Conferma in MetaMask...
+Transazione inviata: 0x5e8e400488a4b2501bf0f83d42436eb9f14c26095a80a31a3c681a0989b7357e
+https://basescan.org/tx/0x5e8e400488a4b2501bf0f83d42436eb9f14c26095a80a31a3c681a0989b7357e
+In attesa di conferma...
+✅ Confermata.
+—— 17:45:32 ——
+Configurazione della UP 0x4a2605796e0d91A9667d6E30365aEEC384C48c27
+Firma: 0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c · Key Manager: 0x309fcE7B6a96CeF8fCbF926a006CDc6f21Ff280e · una sola transazione (executeBatch):
+1. Permessi temporanei al controller: + ADDEXTENSIONS (0x7f3f06 → 0x7f3f0e)
+2. setDataBatch:
+   - estensione per validateUserOp (0x3a871cdd) → 0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2
+   - EntryPoint aggiunto all'elenco dei controller (posizione 2)
+   - permessi dell'EntryPoint 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789 → 0x000500 (SUPER_CALL, SUPER_TRANSFERVALUE; niente SETDATA)
+3. Permessi finali del controller: 0x7f3f06 → 0xff3f06 (quelli di prima + 4337, senza i permessi temporanei)
+Se una parte fallisce, l'intera transazione viene annullata e non cambia niente.
+Simulazione...
+✅ Simulazione riuscita (gas stimato 205631).
+Controlla l'elenco qui sopra, poi premi "Firma e invia".
+Simulazione...
+✅ Simulazione riuscita (gas stimato 205631).
+Conferma in MetaMask...
+Transazione inviata: 0x22f697efa2a63179170453933b1fbc457f309d29da7eb7e64c624139a72fb3d9
+https://basescan.org/tx/0x22f697efa2a63179170453933b1fbc457f309d29da7eb7e64c624139a72fb3d9
+In attesa di conferma...
+✅ Confermata.
+✅ Verifica finale: estensione registrata, EntryPoint con i permessi previsti, permesso 4337 al controller, nessun altro permesso cambiato.
+—— 17:49:54 ——
+Operazione (userOp) per l'EntryPoint 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789
+  La UP 0x4a2605796e0d91A9667d6E30365aEEC384C48c27 invia 0.0001 ETH a 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9
+  nonce 0 · paga il paymaster 0xb353565d1f801E7402DBC267b8C0E30E3540D4eD
+  costo massimo 0.00001551 ETH (tetto 0.0003 ETH, deposito 0.0005 ETH)
+
+Impronta da firmare (userOpHash):
+  0xb15f5a66f9eb78a6c67eac63cebff467c42cb7dc76f81934a1f3902bb7dfc436
+Firma in MetaMask: confronta il testo esadecimale con l'impronta qui sopra.
+✅ Firmata da 0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c (controller con permesso 4337). Ora passa in MetaMask all'account che farà da relayer e premi B.
+—— 17:52:04 ——
+Relayer: 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9. Anticipa il gas e lo riceve indietro dal paymaster.
+Simulazione...
+✅ Simulazione riuscita (gas stimato 696320).
+Conferma in MetaMask...
+Transazione inviata: 0x4ca591a7ecfcb4a9aca8af9d78cf3b2901bacabc5cd6df6f9d9575e803403721
+https://basescan.org/tx/0x4ca591a7ecfcb4a9aca8af9d78cf3b2901bacabc5cd6df6f9d9575e803403721
+In attesa di conferma...
+Risultato: ✅ riuscita
+  costo dell'operazione pagato dal paymaster: 0.000001207074 ETH
+  deposito del paymaster: 0.0005 ETH → 0.000498792926 ETH
+  saldo del relayer: 0.134189648223083657 ETH → 0.134288241856797548 ETH (gas della transazione 0.0000025913899642 ETH)
+  saldo del controller: 0.000489005019855369 ETH → 0.000489005019855369 ETH
+  destinatario: +0.000098593633713891 ETH
