@@ -217,6 +217,17 @@
   <b>Two different connections, two different jobs — this trips people up.</b> On the Test and Send tools, "Connect your Universal Profile" only reads your UP's address, on LUKSO, so you don't have to copy-paste it — no signature happens there. The wallet that actually <i>operates</i> the profile is the second connection, the "signing wallet" (MetaMask with the imported controller key), and it must be connected to the <b>destination chain</b> — the network where you redeployed the profile in steps 6–7 — not to LUKSO. It's completely normal to have both the UP extension and MetaMask active in the same browser at once: each one does a different job, on a different network. Both tools show you which network the signing wallet is currently on, right next to its address, and refuse to send anything if the wallet, the RPC and the network you selected are not the same chain — still, check it yourself before doing anything.
 </div>
 
+<div class="note">
+  <b>Sending tokens and NFTs with the Send tool.</b>
+  <ul>
+    <li><b>Finding what the profile holds.</b> Choose "Token or NFT", then press <i>"Find the UP's tokens and NFTs"</i>: the list comes from an external index (Alchemy; Blockscout as an alternative without a key). Click a row to fill in the contract and the token ID. If something is missing, paste the contract address yourself: you find it on the network's explorer, on your profile's page (tokens or NFTs tab), or on the marketplace, together with the token ID.</li>
+    <li><b>The list is only a shortcut.</b> Before enabling Send, the page reads everything again from the chain: what the contract is (ERC-20, ERC-721, ERC-1155, LSP7, LSP8), your balance or the NFT's owner, and a simulation of the transfer. An index can be incomplete or late; the chain is what counts.</li>
+    <li><b>"Flagged as spam" comes from the index, not from these tools.</b> Anyone can send tokens and NFTs to any address, often with a link or a website in their name to lure you. The index marks what it considers spam, but it can be wrong both ways: popular legitimate collections with millions of holders (Basenames, for example) can be flagged. Judge for yourself: never visit links or sites advertised in a token's name, and ignore tokens you did not ask for.</li>
+    <li><b>The recipient must be able to receive what you send.</b> NFTs use the "safe" transfer: if the recipient is a contract that cannot accept them, the simulation fails and nothing is sent. A profile redeployed on another chain needs <a href="up-nft-receiver.html">NFT reception</a> first. For an exchange deposit address, check that the exchange supports that token on that network.</li>
+    <li><b>Permissions.</b> Native currency needs TRANSFERVALUE on the controller; tokens and NFTs need CALL. The page tells you if one is missing.</li>
+  </ul>
+</div>
+
 <h2>What these tools do — and don't do</h2>
 <ul>
   <li>They never ask for a private key. The only thing you paste in is calldata — public on-chain data.</li>
@@ -235,7 +246,7 @@
   <li><a href="up-deploy-public.html">Deploy</a> — decode calldata, verify, and deploy a Universal Profile at its predicted address on another chain.</li>
   <li><a href="up-verify-only.html">Verify only</a> — check whether a deploy already exists on another chain. It only reads public data from an RPC: no wallet is required, but you can optionally connect your Universal Profile to auto-fill the address it checks for, instead of typing it by hand.</li>
   <li><a href="up-test-operazione.html">Test</a> — confirm your controller can operate the deployed profile.</li>
-  <li><a href="up-invia-fondi.html">Send</a> — transfer native currency, tokens (ERC-20) and NFTs (ERC-721, ERC-1155) from the profile to another address.</li>
+  <li><a href="up-invia-fondi.html">Send</a> — transfer native currency, tokens (ERC-20) and NFTs (ERC-721, ERC-1155) from the profile to another address. It can list what the profile holds on the selected network.</li>
   <li><a href="up-publish-implementation.html">Publish implementation</a> — if the Verify or Deploy tool reports that your profile's LSP0 or Key Manager implementation is missing on the target chain, publish it there at the same address, by replaying LUKSO's original deterministic deploy. Anyone can do it; it only costs gas.</li>
   <li><a href="up-wallet.html">UP Wallet</a> <i>(experimental)</i> — use the redeployed profile as your account on any dApp through WalletConnect: the page checks that profile and controller are compatible, shows and simulates every request, and signs only after your confirmation. Start in simulation mode, with small amounts.</li>
   <li><a href="up-nft-receiver.html">NFT reception</a> <i>(experimental)</i> — lets the redeployed profile receive ERC-721 / ERC-1155 NFTs (for example purchases on marketplaces), with one transaction that leaves the controller's permissions unchanged.</li>
@@ -390,6 +401,17 @@
   <b>Due collegamenti diversi, due compiti diversi — qui è facile confondersi.</b> Nelle pagine di Test e Invio, "Connetti la tua Universal Profile" serve solo a leggere l'indirizzo della tua UP, su LUKSO, così non devi copiarlo a mano — nessuna firma avviene in quel passaggio. Il wallet che <i>opera</i> davvero il profilo è il secondo collegamento, il "wallet firmatario" (MetaMask con la chiave del controller importata), e deve essere connesso alla <b>rete di destinazione</b> — quella dove hai rideployato il profilo ai passi 6–7 — non a LUKSO. È del tutto normale avere sia l'estensione UP che MetaMask attivi insieme nello stesso browser: ognuno fa un lavoro diverso, su una rete diversa. Entrambe le pagine mostrano su quale rete è connesso in questo momento il wallet firmatario, accanto al suo indirizzo, e si rifiutano di inviare qualsiasi cosa se wallet, RPC e rete selezionata non sono la stessa chain — controlla comunque tu stesso prima di fare qualsiasi cosa.
 </div>
 
+<div class="note">
+  <b>Inviare token e NFT con la pagina di Invio.</b>
+  <ul>
+    <li><b>Trovare cosa possiede il profilo.</b> Scegli "Token o NFT", poi premi <i>"Cerca token e NFT della UP"</i>: l'elenco arriva da un indice esterno (Alchemy; in alternativa Blockscout, senza chiave). Clicca una riga per compilare contratto e ID del token. Se manca qualcosa, incolla tu l'indirizzo del contratto: lo trovi sull'explorer della rete, nella pagina del tuo profilo (scheda token o NFT), oppure sul marketplace, insieme all'ID del token.</li>
+    <li><b>L'elenco è solo una scorciatoia.</b> Prima di abilitare Invia, la pagina rilegge tutto dalla blockchain: che contratto è (ERC-20, ERC-721, ERC-1155, LSP7, LSP8), il tuo saldo o il proprietario dell'NFT, e una simulazione del trasferimento. Un indice può essere incompleto o in ritardo; conta la blockchain.</li>
+    <li><b>"Segnalato come spam" lo dice l'indice, non questi strumenti.</b> Chiunque può mandare token e NFT a qualsiasi indirizzo, spesso con un link o un sito nel nome per attirarti. L'indice segna quello che ritiene spam, ma può sbagliare in entrambi i sensi: collezioni legittime e popolari con milioni di proprietari (Basenames, per esempio) possono essere segnalate. Valuta tu: non visitare mai link o siti pubblicizzati nel nome di un token, e ignora i token che non hai chiesto.</li>
+    <li><b>Il destinatario deve poter ricevere quello che invii.</b> Gli NFT usano il trasferimento "safe": se il destinatario è un contratto che non li accetta, la simulazione fallisce e non parte nulla. Un profilo rideployato su un'altra rete ha prima bisogno della <a href="up-nft-receiver.html">ricezione NFT</a>. Per un indirizzo di deposito di un exchange, controlla che l'exchange supporti quel token su quella rete.</li>
+    <li><b>Permessi.</b> La valuta nativa richiede TRANSFERVALUE sul controller; token e NFT richiedono CALL. La pagina ti avvisa se ne manca uno.</li>
+  </ul>
+</div>
+
 <h2>Cosa fanno questi strumenti — e cosa non fanno</h2>
 <ul>
   <li>Non chiedono mai una chiave privata. L'unica cosa che incolli è la calldata — dato pubblico on-chain.</li>
@@ -408,7 +430,7 @@
   <li><a href="up-deploy-public.html">Deploy</a> — decodifica la calldata, verifica e deploya una Universal Profile all'indirizzo predetto su un'altra rete.</li>
   <li><a href="up-verify-only.html">Sola verifica</a> — controlla se un deploy esiste già su un'altra rete. Legge solo dati pubblici da un RPC: non serve nessun wallet, ma puoi connettere facoltativamente la tua Universal Profile per compilare automaticamente l'indirizzo da controllare, invece di digitarlo a mano.</li>
   <li><a href="up-test-operazione.html">Test</a> — conferma che il tuo controller possa operare il profilo deployato.</li>
-  <li><a href="up-invia-fondi.html">Invio</a> — trasferisce valuta nativa, token (ERC-20) e NFT (ERC-721, ERC-1155) dal profilo a un altro indirizzo.</li>
+  <li><a href="up-invia-fondi.html">Invio</a> — trasferisce valuta nativa, token (ERC-20) e NFT (ERC-721, ERC-1155) dal profilo a un altro indirizzo. Può elencare cosa possiede il profilo sulla rete scelta.</li>
   <li><a href="up-publish-implementation.html">Pubblica implementazione</a> — se la pagina di Verifica o di Deploy segnala che l'implementazione LSP0 o Key Manager del tuo profilo manca sulla rete di destinazione, la pubblica lì allo stesso indirizzo, ripetendo il deploy deterministico originale di LUKSO. Può farlo chiunque, costa solo gas.</li>
   <li><a href="up-wallet.html">UP Wallet</a> <i>(sperimentale)</i> — usa il profilo rideployato come account su qualsiasi dApp tramite WalletConnect: la pagina verifica che profilo e controller siano compatibili, mostra e simula ogni richiesta e firma solo dopo la tua conferma. Parti in modalità simulazione, con importi piccoli.</li>
   <li><a href="up-nft-receiver.html">Ricezione NFT</a> <i>(sperimentale)</i> — permette al profilo rideployato di ricevere NFT ERC-721 / ERC-1155 (per esempio acquisti sui marketplace), con una sola transazione che lascia invariati i permessi del controller.</li>
