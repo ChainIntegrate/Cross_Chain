@@ -2,7 +2,7 @@
 
 Internal notes for the maintainer. They live in `tools/`, which is **not published on the website**: the server's sparse checkout excludes `tools/`, and the root `.htaccess` blocks it on Apache. Keep secrets, email credentials and private addresses out of this file anyway: the repository is public.
 
-Last update: 2026-09-29.
+Last update: 2026-09-30.
 
 ---
 
@@ -24,6 +24,9 @@ Last update: 2026-09-29.
 - **`tools/`** is never served.
 - **Contributors** fix their own branches (CONTRIBUTING rule 5); the maintainer reviews and merges.
 - **WalletConnect Project ID** only in the server's `config.js` (git-ignored), protected by the Reown domain allowlist.
+- **Alchemy API key** (free plan) only in the server's `config.js`, restricted to the site's domain in the Alchemy dashboard. Used by the Send page to list a UP's tokens and NFTs. Networks enabled in the Alchemy app: Ethereum, Polygon, Arbitrum, Base, Avalanche, Gnosis; others can be enabled in the dashboard without code changes.
+- **Finding a UP's holdings:** Alchemy first; Blockscout as the alternative without a key (its index proved incomplete on Polygon and Base); pasting the contract address always works. The `eth_getLogs` scan was tried and removed: public RPCs allow only small block ranges, hundreds of requests per search. The list is only a shortcut: the check reads everything again from the chain.
+- **Spam label:** only Alchemy's `isSpam` verdict (or Blockscout's reputation) marks a row; `spamClassifications` are signals, not a verdict. Alchemy flags Basenames as spam (false positive): accepted as is, explained in the guide. No allowlist of "trusted" contracts.
 - **No browser extension impersonating a wallet.**
 - **Security model of the bridge pages:** security comes from the architecture (Key Manager permissions, signing in the user's wallet) and from services (Reown Verify). Every step is shown; ChainIntegrate takes no responsibility for requests approved on unclear content.
 - **UP Wallet:** one network at a time; compatibility check between UP and controller as soon as network, UP and MetaMask are set, again on every change and before every request.
@@ -74,7 +77,7 @@ The notes below are kept for reference.
   3. Simulate the bridge transaction and compare the amount received on Base with the fees.
   4. Send only if the fees are acceptable. Check that the Base EURe address is the official Monerium one.
 - **Route 2 (fallback):** send EURe from the UP to the historical wallet **on Polygon** (plain transfer), then bridge with the Monerium app from the historical wallet. Only the historical wallet must be linked to the Monerium profile, on both networks; the UP does not.
-- **Done (2026-09-29):** the Send page (`up-invia-fondi.html`) now transfers ERC-20 tokens and NFTs (ERC-721, ERC-1155, LSP7/LSP8) as well as native currency, so a plain token or NFT transfer does not need an external dApp.
+- **Done (2026-09-29/30):** the Send page (`up-invia-fondi.html`) now transfers ERC-20 tokens and NFTs (ERC-721, ERC-1155, LSP7/LSP8) as well as native currency, so a plain token or NFT transfer does not need an external dApp. It lists what the UP holds through Alchemy (verified live on Polygon and Base) or Blockscout. PRs #37–#42.
 
 ### 2.3 Gas monitoring by email (to build)
 - **What:** a small read-only script on the VPS, run hourly by cron. It needs no private key.
