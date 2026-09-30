@@ -134,8 +134,11 @@
   <div id="tokenWrap" hidden>
     <label data-i18n="blockscoutLabel">Explorer Blockscout della rete (per cercare cosa possiede la UP)</label>
     <input type="text" id="blockscoutUrl" placeholder="https://....blockscout.com">
-    <div class="note" style="margin-top:8px;" data-i18n="blockscoutNote"></div>
-    <button id="discoverBtn" type="button" class="secondary" data-i18n="discoverBtn">Cerca token e NFT della UP</button>
+    <div class="note" style="margin-top:8px;" data-i18n-html="blockscoutNote"></div>
+    <div class="amount-row" style="margin-top:12px;">
+      <button id="discoverBtn" type="button" class="secondary" data-i18n="discoverBtn">Cerca con Blockscout (veloce)</button>
+      <button id="scanBtn" type="button" class="secondary" data-i18n="scanBtn">Cerca nella blockchain (lento)</button>
+    </div>
     <div id="discoverStatus" class="note" style="margin-top:8px;"></div>
     <div id="discoverList" class="asset-list"></div>
     <label data-i18n="tokenAddressLabel">Indirizzo del contratto (token o collezione NFT)</label>
@@ -215,8 +218,17 @@ const I18N = {
     logInitial: "In attesa dei collegamenti sopra.",
 
     blockscoutLabel: "Explorer Blockscout della rete (per cercare cosa possiede la UP)",
-    blockscoutNote: "Un nodo RPC non sa elencare i token di un indirizzo: lo sanno gli explorer. La ricerca usa l'API pubblica di Blockscout (senza chiave), solo quando premi il pulsante. Per le reti più diffuse l'indirizzo è già compilato; per le altre puoi inserire l'URL di un explorer Blockscout della rete, oppure incollare sotto l'indirizzo del contratto preso da un altro explorer. L'elenco è solo una scorciatoia: la verifica rilegge tutto dalla blockchain.",
-    discoverBtn: "Cerca token e NFT della UP",
+    blockscoutNote: "Due modi per trovare cosa possiede la UP. <b>Blockscout</b>: veloce, usa l'API pubblica dell'explorer (senza chiave), ma il suo indice può essere incompleto. <b>Blockchain</b>: più lenta, chiede al nodo RPC della rete tutti i trasferimenti verso la UP dalla sua creazione, poi legge da ogni contratto cosa possiede ancora; non dipende da nessun explorer (ERC-20, ERC-721, ERC-1155). In entrambi i casi l'elenco è solo una scorciatoia: la verifica rilegge tutto dalla blockchain. Puoi sempre incollare sotto l'indirizzo del contratto preso da un explorer.",
+    discoverBtn: "Cerca con Blockscout (veloce)",
+    scanBtn: "Cerca nella blockchain (lento)",
+    scanFindingStart: "Cerco il blocco in cui è stata creata la UP...",
+    scanFromCreation: (v) => `Dal blocco di creazione della UP (${v.block}).`,
+    scanFromDays: (v) => `Il nodo RPC non conserva lo stato storico: cerco negli ultimi ${v.days} giorni (dal blocco ${v.block}).`,
+    scanProgress: (v) => `Scansione eventi: ${v.pct}% — contratti trovati: ${v.contracts}.`,
+    scanReading: (v) => `Leggo cosa possiede ancora la UP in ${v.contracts} contratti...`,
+    scanFound: (v) => `La UP possiede ${v.n} elementi. Clicca su uno per sceglierlo. Diffida dei token che non riconosci: chiunque può mandarne a qualsiasi indirizzo.`,
+    scanEmpty: "Nessun token o NFT trovato negli eventi di trasferimento verso la UP.",
+    scanErr: (v) => `La ricerca nella blockchain è fallita (${v.err}). Il nodo RPC potrebbe limitare la ricerca degli eventi: prova con un altro RPC (Custom RPC) o copia l'indirizzo del contratto dall'explorer.`,
     discoverRunning: "Ricerca su Blockscout...",
     discoverErr: (v) => `Blockscout non ha risposto (${v.err}). Controlla l'URL, oppure copia l'indirizzo del contratto dall'explorer.`,
     discoverEmpty: "Blockscout non trova token né NFT per questa UP su questa rete.",
@@ -360,8 +372,17 @@ const I18N = {
     logInitial: "Waiting for the connections above.",
 
     blockscoutLabel: "The network's Blockscout explorer (to find what the UP holds)",
-    blockscoutNote: "An RPC node cannot list an address's tokens; explorers can. The search uses Blockscout's public API (no key), only when you press the button. For the most common networks the address is already filled in; for the others you can enter the URL of a Blockscout explorer for the network, or paste below the contract address taken from another explorer. The list is only a shortcut: the check reads everything again from the chain.",
-    discoverBtn: "Find the UP's tokens and NFTs",
+    blockscoutNote: "Two ways to find what the UP holds. <b>Blockscout</b>: fast, uses the explorer's public API (no key), but its index can be incomplete. <b>Blockchain</b>: slower, asks the network's RPC node for every transfer towards the UP since its creation, then reads from each contract what the UP still holds; it depends on no explorer (ERC-20, ERC-721, ERC-1155). Either way the list is only a shortcut: the check reads everything again from the chain. You can always paste below the contract address taken from an explorer.",
+    discoverBtn: "Search with Blockscout (fast)",
+    scanBtn: "Search the blockchain (slow)",
+    scanFindingStart: "Looking for the block where the UP was created...",
+    scanFromCreation: (v) => `From the UP's creation block (${v.block}).`,
+    scanFromDays: (v) => `The RPC node keeps no historical state: searching the last ${v.days} days (from block ${v.block}).`,
+    scanProgress: (v) => `Scanning events: ${v.pct}% — contracts found: ${v.contracts}.`,
+    scanReading: (v) => `Reading what the UP still holds in ${v.contracts} contracts...`,
+    scanFound: (v) => `The UP holds ${v.n} items. Click one to pick it. Be wary of tokens you don't recognise: anyone can send them to any address.`,
+    scanEmpty: "No tokens or NFTs found in the transfer events towards the UP.",
+    scanErr: (v) => `The blockchain search failed (${v.err}). The RPC node may limit event searches: try another RPC (Custom RPC) or copy the contract address from the explorer.`,
     discoverRunning: "Searching on Blockscout...",
     discoverErr: (v) => `Blockscout did not answer (${v.err}). Check the URL, or copy the contract address from the explorer.`,
     discoverEmpty: "Blockscout finds no tokens or NFTs for this UP on this network.",
@@ -1006,8 +1027,14 @@ $("discoverBtn").addEventListener("click", async () => {
   }
   if (requestId !== discoverRequestId) return;
   if (!rows.length) { status.textContent = t("discoverEmpty"); return; }
-  rows.sort((a, b) => (a.spam - b.spam));
   status.textContent = t("discoverFound", { n: rows.length });
+  renderDiscoverRows(rows);
+});
+
+function renderDiscoverRows(rows) {
+  const list = $("discoverList");
+  list.innerHTML = "";
+  rows.sort((a, b) => (a.spam - b.spam));
   rows.forEach(r => {
     const btn = document.createElement("button");
     btn.type = "button";
@@ -1027,6 +1054,146 @@ $("discoverBtn").addEventListener("click", async () => {
     });
     list.appendChild(btn);
   });
+}
+
+// Second way to find what the UP holds, with no explorer at all: ask the network's RPC node for
+// the transfer events towards the UP (ERC-20/721 Transfer, ERC-1155 TransferSingle/Batch) since
+// the UP was created, then read from each contract what the UP still holds. Slower, but it only
+// depends on the chain. Public RPCs limit the block range of eth_getLogs, so the range adapts.
+const TOPIC_TRANSFER = ethers.id("Transfer(address,address,uint256)");
+const TOPIC_1155_SINGLE = ethers.id("TransferSingle(address,address,address,uint256,uint256)");
+const TOPIC_1155_BATCH = ethers.id("TransferBatch(address,address,address,uint256[],uint256[])");
+const SCAN_FIRST_CHUNK = 10000, SCAN_MAX_CHUNK = 100000, SCAN_MIN_CHUNK = 10;
+const SCAN_FALLBACK_DAYS = 30;
+const SCAN_MAX_CONTRACTS = 100, SCAN_MAX_IDS = 50;
+const abiCoder = ethers.AbiCoder.defaultAbiCoder();
+
+// First block where the UP has code (binary search). Needs a node that serves old state: when it
+// does not, the caller falls back to the last SCAN_FALLBACK_DAYS days.
+async function findCreationBlock(provider, up, latest, isStale) {
+  let lo = 0, hi = latest;
+  while (lo < hi) {
+    if (isStale()) throw new Error("stale");
+    const mid = Math.floor((lo + hi) / 2);
+    if ((await provider.getCode(up, mid)) !== "0x") hi = mid; else lo = mid + 1;
+  }
+  return lo;
+}
+async function blocksForDays(provider, latest, days) {
+  const back = Math.min(latest, 10000);
+  const [a, b] = await Promise.all([provider.getBlock(latest - back), provider.getBlock(latest)]);
+  const perBlock = back > 0 && b.timestamp > a.timestamp ? (b.timestamp - a.timestamp) / back : 2;
+  return Math.ceil(days * 86400 / perBlock);
+}
+
+async function scanTransfersTo(provider, up, from, to, onProgress, isStale) {
+  const upTopic = ethers.zeroPadValue(up, 32).toLowerCase();
+  const found = new Map(); // contract -> { kind, ids: Set<string> }
+  const note = (addr, kind, id) => {
+    const a = ethers.getAddress(addr);
+    if (!found.has(a)) found.set(a, { kind, ids: new Set() });
+    if (id !== undefined && found.get(a).ids.size < SCAN_MAX_IDS) found.get(a).ids.add(id);
+  };
+  let chunk = SCAN_FIRST_CHUNK, start = from;
+  while (start <= to) {
+    if (isStale()) throw new Error("stale");
+    const end = Math.min(to, start + chunk - 1);
+    const range = { fromBlock: ethers.toQuantity(start), toBlock: ethers.toQuantity(end) };
+    let logs;
+    try {
+      const a = await provider.send("eth_getLogs", [{ ...range, topics: [TOPIC_TRANSFER, null, upTopic] }]);
+      const b = await provider.send("eth_getLogs", [{ ...range, topics: [[TOPIC_1155_SINGLE, TOPIC_1155_BATCH], null, null, upTopic] }]);
+      logs = a.concat(b);
+    } catch (e) {
+      if (chunk > SCAN_MIN_CHUNK) { chunk = Math.max(SCAN_MIN_CHUNK, Math.floor(chunk / 4)); continue; }
+      throw e;
+    }
+    for (const l of logs) {
+      try {
+        if (l.topics[0] === TOPIC_TRANSFER) {
+          // ERC-721 indexes the token ID (4 topics); ERC-20 puts the amount in data (3 topics).
+          if (l.topics.length === 4) note(l.address, "erc721", BigInt(l.topics[3]).toString());
+          else note(l.address, "erc20");
+        } else if (l.topics[0] === TOPIC_1155_SINGLE) {
+          const [id] = abiCoder.decode(["uint256", "uint256"], l.data);
+          note(l.address, "erc1155", id.toString());
+        } else {
+          const [ids] = abiCoder.decode(["uint256[]", "uint256[]"], l.data);
+          ids.forEach(id => note(l.address, "erc1155", id.toString()));
+        }
+      } catch (e) { /* malformed event: skip */ }
+    }
+    start = end + 1;
+    chunk = Math.min(SCAN_MAX_CHUNK, chunk * 2);
+    onProgress(start - from, to - from + 1, found.size);
+  }
+  return found;
+}
+
+// What the UP still holds of each contract found in the events.
+async function holdingsFromScan(provider, up, found, isStale) {
+  const rows = [];
+  let n = 0;
+  for (const [address, f] of found) {
+    if (isStale()) throw new Error("stale");
+    if (++n > SCAN_MAX_CONTRACTS) break;
+    const name = await tryRead(provider, address, "name", []);
+    const symbol = await tryRead(provider, address, "symbol", []);
+    if (f.kind === "erc20") {
+      const bal = await tryRead(provider, address, "balanceOf(address)", [up]);
+      if (!bal) continue;
+      const dec = Number(await tryRead(provider, address, "decimals", []) ?? 0);
+      rows.push({ address, type: "ERC-20", name, symbol, amount: ethers.formatUnits(bal, dec), spam: false });
+    } else if (f.kind === "erc721") {
+      for (const id of f.ids) {
+        const owner = await tryRead(provider, address, "ownerOf", [BigInt(id)]);
+        if (owner && owner.toLowerCase() === up.toLowerCase()) rows.push({ address, type: "ERC-721", name, symbol, id, spam: false });
+      }
+    } else {
+      for (const id of f.ids) {
+        const bal = await tryRead(provider, address, "balanceOf(address,uint256)", [up, BigInt(id)]);
+        if (bal) rows.push({ address, type: "ERC-1155", name, symbol, id, copies: bal.toString(), spam: false });
+      }
+    }
+  }
+  return rows;
+}
+
+$("scanBtn").addEventListener("click", async () => {
+  const requestId = ++discoverRequestId;
+  const isStale = () => requestId !== discoverRequestId;
+  const up = currentProfile().address;
+  const net = getNetwork();
+  const status = $("discoverStatus");
+  $("discoverList").innerHTML = "";
+  if (!ethers.isAddress(up)) { status.textContent = t("missingAddrErr"); return; }
+  if (!net || !net.rpc) { status.textContent = t("missingRpcLog"); return; }
+  try {
+    const provider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
+    const latest = await provider.getBlockNumber();
+    if ((await provider.getCode(up)) === "0x") { status.textContent = t("upNotDeployedErr"); return; }
+    status.textContent = t("scanFindingStart");
+    let from, fromNote;
+    try {
+      from = await findCreationBlock(provider, up, latest, isStale);
+      fromNote = t("scanFromCreation", { block: from });
+    } catch (e) {
+      if (isStale()) return;
+      from = Math.max(0, latest - await blocksForDays(provider, latest, SCAN_FALLBACK_DAYS));
+      fromNote = t("scanFromDays", { days: SCAN_FALLBACK_DAYS, block: from });
+    }
+    const found = await scanTransfersTo(provider, up, from, latest, (done, total, contracts) => {
+      if (!isStale()) status.textContent = `${fromNote} ${t("scanProgress", { pct: Math.floor(done * 100 / total), contracts })}`;
+    }, isStale);
+    status.textContent = `${fromNote} ${t("scanReading", { contracts: found.size })}`;
+    const rows = await holdingsFromScan(provider, up, found, isStale);
+    if (isStale()) return;
+    status.textContent = `${fromNote} ${rows.length ? t("scanFound", { n: rows.length }) : t("scanEmpty")}`;
+    renderDiscoverRows(rows);
+  } catch (e) {
+    if (isStale()) return;
+    status.textContent = t("scanErr", { err: e.shortMessage || e.message });
+  }
 });
 
 // "All": the whole balance. The controller pays the gas, not the UP, so the native balance can
