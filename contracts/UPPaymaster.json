@@ -397,5 +397,7 @@
       "stateMutability": "payable",
       "type": "receive"
     }
-  ]
+  ],
+  "runtimeCodeHash": "0x8754f54c34a8849f40e1156013a403e7308e0e1fbabd2c5a1a68f9ddeec6b25d",
+  "runtimeCodeHashNote": "keccak256 of the deployed code with the canonical EntryPoint v0.6; the same for every owner"
 }

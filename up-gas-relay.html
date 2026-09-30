@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>Gas pagato dal paymaster — ChainIntegrate</title>
+<link rel="icon" href="favicon.ico">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
+    --text: #e6e8ec; --text-dim: #9aa1ad;
+    --accent: #5b8cff; --ok: #3fbf6f; --warn: #e0a83c; --err: #e05a5a;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+         max-width: 760px; margin: 0 auto; padding: 32px 20px 80px; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .subtitle { color: var(--text-dim); font-size: 13px; margin-bottom: 28px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+  .panel h2 { font-size: 14px; margin: 0 0 14px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.03em; }
+  .panel h3 { font-size: 13px; margin: 18px 0 4px; color: var(--text); }
+  .note { font-size: 12.5px; color: var(--text-dim); line-height: 1.5; margin-bottom: 12px; }
+  label { display: block; font-size: 13px; color: var(--text-dim); margin: 14px 0 6px; }
+  select, input { width: 100%; background: #10131a; border: 1px solid var(--border); color: var(--text);
+                  border-radius: 6px; padding: 10px 12px; font-size: 14px; font-family: inherit; }
+  button { width: 100%; background: var(--accent); color: white; border: none; border-radius: 6px;
+           padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; }
+  button:disabled { background: #3a3f4b; cursor: not-allowed; }
+  button.danger { background: var(--err); }
+  button.secondary { background: #2a2f3a; }
+  .row { display: flex; gap: 8px; align-items: flex-end; }
+  .row > * { flex: 1; }
+  .row button { flex: 0 0 auto; width: auto; padding: 10px 14px; }
+  .status-box { background: #10131a; border: 1px solid var(--border); border-radius: 6px; padding: 12px;
+                font-family: monospace; font-size: 12.5px; margin-top: 12px; }
+  .status-box .empty { color: var(--text-dim); }
+  #log { font-family: monospace; font-size: 12.5px; white-space: pre-wrap; word-break: break-all; line-height: 1.6; }
+  .line-ok { color: var(--ok); } .line-warn { color: var(--warn); } .line-err { color: var(--err); } .line-dim { color: var(--text-dim); }
+  .line-compare { color: var(--warn); font-weight: 700; border: 1px solid var(--warn); border-radius: 6px; padding: 8px 10px; margin: 6px 0; }
+  .brand-row { margin-bottom: 24px; }
+  .brand-logo { display: block; width: 100%; height: auto; border-radius: 10px; }
+  .top-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .lang-btn { width: auto; background: #2a2f3a; padding: 6px 14px; font-size: 12px; margin-top: 0; flex-shrink: 0; }
+  .site-footer { margin-top: 40px; padding: 18px 20px; background: #f5f6f8; border: 1px solid #e3e5ea; border-radius: 10px; color: #4b4f58; }
+  .footer-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .footer-logo { height: 48px; width: auto; flex-shrink: 0; }
+  .footer-text { font-size: 13px; line-height: 1.6; }
+  .footer-li { display: inline-flex; vertical-align: middle; margin: 0 2px; }
+  .site-footer a { color: #2563eb; text-decoration: none; font-weight: 600; }
+  .kv { display: grid; grid-template-columns: 200px 1fr; gap: 6px 12px; font-size: 13px; }
+  .kv .k { color: var(--text-dim); }
+  .kv .v { font-family: monospace; word-break: break-all; white-space: pre-wrap; }
+  .kv .v.ok { color: var(--ok); } .kv .v.warn { color: var(--warn); } .kv .v.err { color: var(--err); }
+  .check-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 13.5px; }
+  .check-row input { width: auto; }
+  .warn-box { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--err); border-radius: 8px; background: rgba(224,90,90,0.08); font-size: 13px; line-height: 1.5; }
+  .plan { font-family: monospace; font-size: 12.5px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  @media (max-width: 560px) { .kv { grid-template-columns: 1fr; } .row { flex-wrap: wrap; } .row button { width: 100%; } }
+</style>
+</head>
+<body>
+
+<div class="brand-row">
+  <img src="banner.png" alt="ChainIntegrate" class="brand-logo" onerror="this.style.display='none'">
+</div>
+
+<div class="top-row">
+  <div>
+    <h1 data-i18n="h1">Gas pagato dal paymaster (sperimentale)</h1>
+    <div class="subtitle" data-i18n="subtitle"></div>
+  </div>
+  <button class="lang-btn" id="langToggle" data-i18n="langToggleBtn">English</button>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel0Title">0 · Come funziona</h2>
+  <div class="note" data-i18n-html="panel0Note"></div>
+  <div class="warn-box" data-i18n-html="disclaimer"></div>
+  <div class="check-row"><input type="checkbox" id="ackRisk"><label for="ackRisk" style="margin:0; color: var(--text);" data-i18n="ackLabel">Ho letto e accetto</label></div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel1Title">1 · Rete e MetaMask</h2>
+  <input type="text" id="networkFilter" data-i18n-placeholder="networkFilterPlaceholder" placeholder="Filtra per nome...">
+  <select id="network" style="margin-top:8px;"></select>
+  <div id="customRpcWrap" style="display:none;">
+    <label data-i18n="customRpcLabel">RPC URL custom</label>
+    <input type="text" id="customRpc" placeholder="https://...">
+    <label data-i18n="customExplorerLabel">Explorer URL custom (opzionale)</label>
+    <input type="text" id="customExplorer" placeholder="https://.../tx/">
+  </div>
+  <div class="note" style="margin-top:12px;" data-i18n="panel1Note"></div>
+  <button id="connectSigner" data-i18n="connectSignerBtn">Connetti MetaMask</button>
+  <div class="status-box" id="netBox"><span class="empty" data-i18n="notChecked">Non ancora verificato.</span></div>
+  <button id="recheckBtn" class="secondary" data-i18n="recheckBtn">Ricontrolla tutto</button>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel2Title">2 · Paymaster (con la cassa)</h2>
+  <div class="note" data-i18n-html="panel2Note"></div>
+  <label for="ownerAddress" data-i18n="ownerLabel">Proprietario del paymaster (la cassa)</label>
+  <input type="text" id="ownerAddress" placeholder="0x...">
+  <div class="status-box" id="pmBox"><span class="empty" data-i18n="notChecked">Non ancora verificato.</span></div>
+  <button id="publishPmBtn" disabled data-i18n="publishPmBtn">Pubblica il paymaster su questa rete</button>
+  <div class="row">
+    <div><label for="fundAmount" data-i18n="fundLabel">Ricarica (valuta nativa della rete)</label><input type="text" id="fundAmount" placeholder="0.001"></div>
+    <button id="fundBtn" disabled data-i18n="fundBtn">Ricarica</button>
+  </div>
+  <div class="row">
+    <div><label for="capAmount" data-i18n="capLabel">Tetto per operazione (valuta nativa)</label><input type="text" id="capAmount" placeholder="0.0003"></div>
+    <button id="capBtn" disabled data-i18n="capBtn">Imposta</button>
+  </div>
+  <div class="row">
+    <button id="sponsorBtn" disabled data-i18n="sponsorBtn">Aggiungi la UP (sezione 3) alla lista</button>
+    <button id="unsponsorBtn" class="secondary" disabled data-i18n="unsponsorBtn">Togli</button>
+  </div>
+  <div class="row">
+    <div><label for="withdrawTo" data-i18n="withdrawToLabel">Preleva verso</label><input type="text" id="withdrawTo" placeholder="0x..."></div>
+    <div><label for="withdrawAmount" data-i18n="withdrawAmountLabel">Importo</label><input type="text" id="withdrawAmount" placeholder="0.001"></div>
+    <button id="withdrawBtn" class="secondary" disabled data-i18n="withdrawBtn">Preleva</button>
+  </div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel3Title">3 · La UP (con il controller)</h2>
+  <div class="note" data-i18n-html="panel3Note"></div>
+  <button id="connectUp" class="secondary" data-i18n="connectUpBtn">Leggi l'indirizzo dall'estensione UP</button>
+  <label for="upAddress" data-i18n="upAddressLabel">Indirizzo della UP</label>
+  <input type="text" id="upAddress" placeholder="0x...">
+  <div class="status-box" id="upBox"><span class="empty" data-i18n="notChecked">Non ancora verificato.</span></div>
+  <button id="publishExtBtn" class="secondary" disabled data-i18n="publishExtBtn">Pubblica l'Extension4337 su questa rete</button>
+  <button id="prepareSetupBtn" disabled data-i18n="prepareSetupBtn">Prepara e simula la configurazione della UP</button>
+  <div class="status-box plan" id="setupPlanBox"><span class="empty" data-i18n="noPlan">Nessuna operazione preparata.</span></div>
+  <button id="sendSetupBtn" class="danger" disabled data-i18n="sendSetupBtn">Firma e invia la configurazione (una sola transazione)</button>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel4Title">4 · Operazione di prova</h2>
+  <div class="note" data-i18n-html="panel4Note"></div>
+  <label for="testTo" data-i18n="testToLabel">Destinatario</label>
+  <input type="text" id="testTo" placeholder="0x...">
+  <label for="testAmount" data-i18n="testAmountLabel">Importo che la UP invia (valuta nativa)</label>
+  <input type="text" id="testAmount" value="0.0001">
+  <button id="signOpBtn" disabled data-i18n="signOpBtn">A · Prepara e firma con il controller</button>
+  <div class="status-box plan" id="opBox"><span class="empty" data-i18n="noOp">Nessuna operazione firmata.</span></div>
+  <button id="relayBtn" class="danger" disabled data-i18n="relayBtn">B · Invia come relayer (account attivo in MetaMask)</button>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="logTitle">Registro</h2>
+  <div id="log" class="line-dim"></div>
+</div>
+
+<div class="site-footer">
+  <div class="footer-row">
+    <img src="logo.png" alt="ChainIntegrate" class="footer-logo" onerror="this.style.display='none'">
+    <div class="footer-text" data-i18n-html="footerHtml"></div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+// Same list as the other tool pages (copy; to be replaced by a shared chains.js).
+const CHAINS = [
+  { key: "0g", name: "0G", chainId: 16661, rpc: "https://evmrpc.0g.ai", explorer: "https://chainscan.0g.ai/tx/", currency: "0G" },
+  { key: "apechain", name: "ApeChain", chainId: 33139, rpc: "https://rpc.apechain.com", explorer: "https://apescan.io/tx/", currency: "APE" },
+  { key: "arbitrum-one", name: "Arbitrum One", chainId: 42161, rpc: "https://arb1.arbitrum.io/rpc", explorer: "https://arbiscan.io/tx/", currency: "ETH" },
+  { key: "avalanche-c-chain", name: "Avalanche C-Chain", chainId: 43114, rpc: "https://api.avax.network/ext/bc/C/rpc", explorer: "https://snowscan.xyz/tx/", currency: "AVAX" },
+  { key: "base", name: "Base", chainId: 8453, rpc: "https://mainnet.base.org", explorer: "https://basescan.org/tx/", currency: "ETH" },
+  { key: "berachain", name: "Berachain", chainId: 80094, rpc: "https://rpc.berachain.com", explorer: "https://berascan.com/tx/", currency: "BERA" },
+  { key: "blast", name: "Blast", chainId: 81457, rpc: "https://rpc.blast.io", explorer: "https://blastscan.io/tx/", currency: "ETH" },
+  { key: "bnb-smart-chain", name: "BNB Smart Chain", chainId: 56, rpc: "https://bsc-dataseed1.bnbchain.org", explorer: "https://bscscan.com/tx/", currency: "BNB" },
+  { key: "celo", name: "Celo", chainId: 42220, rpc: "https://forno.celo.org", explorer: "https://celoscan.io/tx/", currency: "CELO" },
+  { key: "chiliz", name: "Chiliz", chainId: 88888, rpc: "https://rpc.chiliz.com", explorer: "https://chiliscan.com/tx/", currency: "CHZ" },
+  { key: "conflux-evm-espace", name: "Conflux EVM eSpace", chainId: 1030, rpc: "https://evm.confluxrpc.com", explorer: "https://evm.confluxscan.net/tx/", currency: "CFX" },
+  { key: "core-blockchain", name: "Core Blockchain", chainId: 1116, rpc: "https://rpc.coredao.org", explorer: "https://scan.coredao.org/tx/", currency: "CORE" },
+  { key: "coti", name: "COTI", chainId: 2632500, rpc: "https://mainnet.coti.io/rpc", explorer: "https://mainnet.cotiscan.io/tx/", currency: "COTI" },
+  { key: "cronos", name: "Cronos", chainId: 25, rpc: "https://evm.cronos.org", explorer: "https://explorer.cronos.org/tx/", currency: "CRO" },
+  { key: "degen-chain", name: "Degen Chain", chainId: 666666666, rpc: "https://rpc.degen.tips", explorer: null, currency: "DEGEN" },
+  { key: "ethereum", name: "Ethereum", chainId: 1, rpc: "https://ethereum-rpc.publicnode.com", explorer: "https://etherscan.io/tx/", currency: "ETH" },
+  { key: "ethereum-classic", name: "Ethereum Classic", chainId: 61, rpc: "https://etc.rivet.link", explorer: "https://etc.blockscout.com/tx/", currency: "ETC" },
+  { key: "etherlink", name: "Etherlink", chainId: 42793, rpc: "https://node.mainnet.etherlink.com", explorer: "https://explorer.etherlink.com/tx/", currency: "XTZ" },
+  { key: "flare", name: "Flare", chainId: 14, rpc: "https://flare-api.flare.network/ext/C/rpc", explorer: "https://flare-explorer.flare.network/tx/", currency: "FLR" },
+  { key: "gnosis", name: "Gnosis", chainId: 100, rpc: "https://rpc.gnosischain.com", explorer: "https://gnosisscan.io/tx/", currency: "XDAI" },
+  { key: "gravity-alpha", name: "Gravity Alpha", chainId: 1625, rpc: "https://rpc.gravity.xyz", explorer: "https://explorer.gravity.xyz/tx/", currency: "G" },
+  { key: "hashkey-chain", name: "HashKey Chain", chainId: 177, rpc: "https://mainnet.hsk.xyz", explorer: "https://hsk.blockscout.com/tx/", currency: "HSK" },
+  { key: "immutable-zkevm", name: "Immutable zkEVM", chainId: 13371, rpc: "https://rpc.immutable.com", explorer: "https://explorer.immutable.com/tx/", currency: "IMX" },
+  { key: "ink", name: "Ink", chainId: 57073, rpc: "https://rpc-gel.inkonchain.com", explorer: "https://explorer.inkonchain.com/tx/", currency: "ETH" },
+  { key: "katana", name: "Katana", chainId: 747474, rpc: "https://rpc.katana.network", explorer: "https://katanascan.com/tx/", currency: "ETH" },
+  { key: "kava-evm", name: "Kava EVM", chainId: 2222, rpc: "https://evm.kava.io", explorer: "https://kavascan.com/tx/", currency: "KAVA" },
+  { key: "lens", name: "Lens", chainId: 232, rpc: "https://rpc.lens.xyz", explorer: "https://explorer.lens.xyz/tx/", currency: "GHO" },
+  { key: "linea", name: "Linea", chainId: 59144, rpc: "https://rpc.linea.build", explorer: "https://lineascan.build/tx/", currency: "ETH" },
+  { key: "mantle", name: "Mantle", chainId: 5000, rpc: "https://rpc.mantle.xyz", explorer: "https://mantlescan.xyz/tx/", currency: "MNT" },
+  { key: "megaeth", name: "MegaETH", chainId: 4326, rpc: "https://mainnet.megaeth.com/rpc", explorer: "https://mega.etherscan.io/tx/", currency: "ETH" },
+  { key: "mode", name: "Mode", chainId: 34443, rpc: "https://mainnet.mode.network", explorer: "https://explorer.mode.network/tx/", currency: "ETH" },
+  { key: "monad", name: "Monad", chainId: 143, rpc: "https://rpc.monad.xyz", explorer: "https://monadvision.com/tx/", currency: "MON" },
+  { key: "moonbeam", name: "Moonbeam", chainId: 1284, rpc: "https://rpc.api.moonbeam.network", explorer: "https://moonbeam.moonscan.io/tx/", currency: "GLMR" },
+  { key: "moonriver", name: "Moonriver", chainId: 1285, rpc: "https://rpc.api.moonriver.moonbeam.network", explorer: "https://moonriver.moonscan.io/tx/", currency: "MOVR" },
+  { key: "optimism", name: "Optimism", chainId: 10, rpc: "https://mainnet.optimism.io", explorer: "https://optimistic.etherscan.io/tx/", currency: "ETH" },
+  { key: "plasma", name: "Plasma", chainId: 9745, rpc: "https://rpc.plasma.to", explorer: "https://plasmascan.to/tx/", currency: "XPL" },
+  { key: "plume", name: "Plume", chainId: 98866, rpc: "https://rpc.plume.org", explorer: "https://explorer.plume.org/tx/", currency: "PLUME" },
+  { key: "polygon", name: "Polygon", chainId: 137, rpc: "https://polygon.drpc.org", explorer: "https://polygonscan.com/tx/", currency: "POL" },
+  { key: "pulsechain", name: "Pulsechain", chainId: 369, rpc: "https://rpc.pulsechain.com", explorer: "https://ipfs.scan.pulsechain.com/tx/", currency: "PLS" },
+  { key: "ronin", name: "Ronin", chainId: 2020, rpc: "https://api.roninchain.com/rpc", explorer: "https://app.roninchain.com/tx/", currency: "RON" },
+  { key: "scroll", name: "Scroll", chainId: 534352, rpc: "https://rpc.scroll.io", explorer: "https://scrollscan.com/tx/", currency: "ETH" },
+  { key: "somnia", name: "Somnia", chainId: 5031, rpc: "https://api.infra.mainnet.somnia.network", explorer: "https://mainnet.somnia.w3us.site/tx/", currency: "SOMI" },
+  { key: "soneium", name: "Soneium", chainId: 1868, rpc: "https://rpc.soneium.org", explorer: "https://soneium.blockscout.com/tx/", currency: "ETH" },
+  { key: "sonic", name: "Sonic", chainId: 146, rpc: "https://rpc.soniclabs.com", explorer: "https://sonicscan.org/tx/", currency: "S" },
+  { key: "stable", name: "Stable", chainId: 988, rpc: "https://rpc.stable.xyz", explorer: "https://stablescan.xyz/tx/", currency: "USDT0" },
+  { key: "story", name: "Story", chainId: 1514, rpc: "https://mainnet.datarpc.io", explorer: "https://datanetscan.io/tx/", currency: "DATA" },
+  { key: "stratis-xertra", name: "Stratis Xertra", chainId: 105105, rpc: "https://rpc.xertra.com", explorer: "https://explorer.xertra.com/tx/", currency: "STRAX" },
+  { key: "taiko-alethia", name: "Taiko Alethia", chainId: 167000, rpc: "https://rpc.mainnet.taiko.xyz", explorer: "https://taikoscan.io/tx/", currency: "ETH" },
+  { key: "telos-evm", name: "Telos EVM", chainId: 40, rpc: "https://rpc.telos.net", explorer: "https://teloscan.io/tx/", currency: "TLOS" },
+  { key: "tempo", name: "Tempo", chainId: 4217, rpc: "https://rpc.mainnet.tempo.xyz", explorer: "https://explore.tempo.xyz/tx/", currency: "USD" },
+  { key: "unichain", name: "Unichain", chainId: 130, rpc: "https://mainnet.unichain.org", explorer: "https://uniscan.xyz/tx/", currency: "ETH" },
+  { key: "world-chain", name: "World Chain", chainId: 480, rpc: "https://worldchain-mainnet.g.alchemy.com/public", explorer: "https://worldscan.org/tx/", currency: "ETH" },
+  { key: "x-layer", name: "X Layer", chainId: 196, rpc: "https://rpc.xlayer.tech", explorer: "https://www.oklink.com/xlayer/tx/", currency: "OKB" },
+  { key: "xai", name: "Xai", chainId: 660279, rpc: "https://xai-chain.net/rpc", explorer: "https://explorer.xai-chain.net/tx/", currency: "XAI" },
+  { key: "xdc-network", name: "XDC Network", chainId: 50, rpc: "https://erpc.xinfin.network", explorer: "https://xdcscan.com/tx/", currency: "XDC" },
+  { key: "zetachain", name: "ZetaChain", chainId: 7000, rpc: "https://zetachain-evm.blockpi.network/v1/rpc/public", explorer: "https://zetascan.com/tx/", currency: "ZETA" },
+  { key: "zksync", name: "zkSync", chainId: 324, rpc: "https://mainnet.era.zksync.io", explorer: "https://explorer.zksync.io/tx/", currency: "ETH" },
+  { key: "zora", name: "Zora", chainId: 7777777, rpc: "https://rpc.zora.energy", explorer: "https://explorer.zora.energy/tx/", currency: "ETH" },
+  { key: "arbitrum-sepolia", name: "Arbitrum Sepolia (testnet)", chainId: 421614, rpc: "https://sepolia-rollup.arbitrum.io/rpc", explorer: "https://sepolia.arbiscan.io/tx/", currency: "ETH" },
+  { key: "base-sepolia", name: "Base Sepolia (testnet)", chainId: 84532, rpc: "https://sepolia.base.org", explorer: "https://sepolia.basescan.org/tx/", currency: "ETH" },
+  { key: "ethereum-hoodi", name: "Ethereum Hoodi (testnet)", chainId: 560048, rpc: "https://rpc.hoodi.ethpandaops.io", explorer: "https://light-hoodi.beaconcha.in/tx/", currency: "ETH" },
+  { key: "ethereum-sepolia", name: "Ethereum Sepolia (testnet)", chainId: 11155111, rpc: "https://rpc.sepolia.org", explorer: "https://sepolia.etherscan.io/tx/", currency: "ETH" },
+  { key: "polygon-amoy", name: "Polygon Amoy (testnet)", chainId: 80002, rpc: "https://rpc-amoy.polygon.technology", explorer: "https://amoy.polygonscan.com/tx/", currency: "POL" },
+  { key: "zksync-sepolia", name: "zkSync Sepolia (testnet)", chainId: 300, rpc: "https://sepolia.era.zksync.dev", explorer: "https://sepolia.explorer.zksync.io/tx/", currency: "ETH" },
+  { key: "sei", name: "Sei", chainId: 1329, rpc: "https://evm-rpc.sei-apis.com", explorer: "https://seitrace.com/tx/", currency: "SEI" },
+  { key: "custom", name: "Custom RPC...", chainId: null, rpc: null, explorer: null, currency: "?" },
+];
+
+// ==================== CONTRACTS ====================
+// EntryPoint v0.6, canonical address on every chain that supports ERC-4337 v0.6.
+const ENTRY_POINT = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
+const NICK_FACTORY = "0x4e59b44847b379578588920cA78FbF26c0B4956C";
+const SALT = "0x0000000000000000000000000000000000000000000000000000000000000000";
+// contracts/Extension4337.json and contracts/UPPaymaster.json: creation code, expected runtime hashes.
+let EXT = null, PMJ = null;
+const PM_ABI = [
+  "function owner() view returns (address)", "function maxCostPerOp() view returns (uint256)",
+  "function sponsored(address) view returns (bool)", "function deposit() view returns (uint256)",
+  "function entryPoint() view returns (address)",
+  "function setSponsored(address account, bool enabled)", "function setMaxCostPerOp(uint256 maxCost)",
+  "function withdrawTo(address to, uint256 amount)",
+];
+const EP_IFACE = new ethers.Interface([
+  "function getNonce(address sender, uint192 key) view returns (uint256)",
+  "function balanceOf(address account) view returns (uint256)",
+  "function getUserOpHash((address sender,uint256 nonce,bytes initCode,bytes callData,uint256 callGasLimit,uint256 verificationGasLimit,uint256 preVerificationGas,uint256 maxFeePerGas,uint256 maxPriorityFeePerGas,bytes paymasterAndData,bytes signature) userOp) view returns (bytes32)",
+  "function handleOps((address sender,uint256 nonce,bytes initCode,bytes callData,uint256 callGasLimit,uint256 verificationGasLimit,uint256 preVerificationGas,uint256 maxFeePerGas,uint256 maxPriorityFeePerGas,bytes paymasterAndData,bytes signature)[] ops, address beneficiary)",
+  "event UserOperationEvent(bytes32 indexed userOpHash, address indexed sender, address indexed paymaster, uint256 nonce, bool success, uint256 actualGasCost, uint256 actualGasUsed)",
+  "event UserOperationRevertReason(bytes32 indexed userOpHash, address indexed sender, uint256 nonce, bytes revertReason)",
+  "error FailedOp(uint256 opIndex, string reason)",
+]);
+const UP_IFACE = new ethers.Interface([
+  "function execute(uint256 operationType, address target, uint256 value, bytes data) payable returns (bytes)",
+  "function setData(bytes32 dataKey, bytes dataValue)",
+  "function setDataBatch(bytes32[] dataKeys, bytes[] dataValues)",
+  "function getData(bytes32 dataKey) view returns (bytes)",
+  "function getDataBatch(bytes32[] dataKeys) view returns (bytes[])",
+  "function owner() view returns (address)",
+]);
+const KM_IFACE = new ethers.Interface([
+  "function execute(bytes payload) payable returns (bytes)",
+  "function executeBatch(uint256[] values, bytes[] payloads) payable returns (bytes[])",
+  "error NotAuthorised(address from, string permission)",
+  "error NoPermissionsSet(address from)",
+  "error InvalidDataValuesForDataKeys(bytes32 dataKey, bytes dataValue)",
+]);
+const LSP17_KEY = (selector) => "0xcee78b4094da860110960000" + selector.slice(2) + "00".repeat(16);
+const PERM_KEY = (a) => "0x4b80742de2bf82acb3630000" + a.slice(2).toLowerCase();
+const ARRAY_KEY = "0xdf30dba06db6a30e65354d9a64c609861f089545ca58c6b4dbe31a5f338cb0e3"; // AddressPermissions[]
+const ARRAY_INDEX_KEY = (i) => ARRAY_KEY.slice(0, 34) + ethers.toBeHex(i, 16).slice(2);
+const PERMISSION_BITS = [
+  "CHANGEOWNER","ADDCONTROLLER","EDITPERMISSIONS","ADDEXTENSIONS","CHANGEEXTENSIONS",
+  "ADDUNIVERSALRECEIVERDELEGATE","CHANGEUNIVERSALRECEIVERDELEGATE","REENTRANCY",
+  "SUPER_TRANSFERVALUE","TRANSFERVALUE","SUPER_CALL","CALL","SUPER_STATICCALL","STATICCALL",
+  "SUPER_DELEGATECALL","DELEGATECALL","DEPLOY","SUPER_SETDATA","SETDATA","ENCRYPT","DECRYPT",
+  "SIGN","EXECUTE_RELAY_CALL","ERC4337"
+];
+const P = Object.fromEntries(PERMISSION_BITS.map((n, i) => [n, 1n << BigInt(i)]));
+const permNames = (perms) => PERMISSION_BITS.filter((n) => perms & P[n]).join(", ") || "—";
+const permHex = (n) => "0x" + n.toString(16).padStart(6, "0");
+// The EntryPoint gets call and value-transfer rights, never SETDATA: permission changes can never
+// go through the relayer.
+const EP_PERMS = P.SUPER_CALL | P.SUPER_TRANSFERVALUE;
+// Gas limits of the test operation (EntryPoint v0.6 counts verification 3 times when a paymaster is used).
+const OP_GAS = { call: 150000n, verification: 400000n, preVerification: 60000n };
+
+// ==================== I18N ====================
+let LANG = "it";
+const I18N = {
+  it: {
+    pageTitle: "Gas pagato dal paymaster — ChainIntegrate",
+    h1: "Gas pagato dal paymaster (sperimentale)",
+    subtitle: "La tua UP opera senza che il controller abbia gas: il controller firma, un relayer invia, il tuo paymaster paga. ERC-4337 (EntryPoint v0.6).",
+    langToggleBtn: "English",
+    panel0Title: "0 · Come funziona",
+    panel0Note: "<b>2 · Paymaster:</b> un contratto tuo (<code>contracts/UPPaymaster.sol</code>), stesso indirizzo su ogni rete per lo stesso proprietario, che paga il gas <b>solo</b> per le UP nella sua lista e fino a un tetto per operazione. Lo ricarichi con un semplice invio; solo il proprietario gestisce lista, tetto e prelievi.<br><b>3 · UP:</b> una transazione del controller, una volta per rete: registra l'estensione <code>Extension4337</code> di LUKSO, aggiunge l'EntryPoint come controller (può chiamare e inviare valore, <b>non</b> modificare dati o permessi) e dà al controller il permesso 4337. Gli altri permessi del controller restano identici.<br><b>4 · Prova:</b> il controller firma un'operazione con <code>personal_sign</code> (nessun gas); poi un qualunque account in MetaMask la invia all'EntryPoint come relayer: anticipa il gas e viene rimborsato dal paymaster nella stessa transazione.",
+    disclaimer: "<b>⚠️ Leggi prima di usare questa pagina</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Strumento sperimentale, non sottoposto ad audit.</b> Il paymaster e l'<code>Extension4337</code> di LUKSO non sono stati verificati da terzi. Usa importi piccoli.</li><li><b>Modifica la configurazione della UP su questa rete:</b> l'EntryPoint diventa un controller con permessi di chiamata e invio. Esegue solo operazioni firmate da un controller con il permesso 4337 e nei limiti dei permessi di chi firma.</li><li><b>Il deposito del paymaster</b> si consuma a ogni operazione delle UP in lista: aggiungi solo UP di cui ti fidi e tieni il deposito basso.</li><li><b>Nessuna garanzia.</b> Software \"così com'è\" (licenza MIT): lo usi a tuo rischio. Nessuna affiliazione con LUKSO o altri.</li><li><b>Questa pagina non chiede mai chiavi private</b>: firmi tutto in MetaMask.</li></ul>",
+    ackLabel: "Ho letto e accetto",
+    panel1Title: "1 · Rete e MetaMask",
+    panel1Note: "Ogni sezione usa l'account attivo in MetaMask: la cassa per la sezione 2, il controller della UP per la sezione 3 e la firma della sezione 4, un account qualsiasi con un po' di gas per l'invio come relayer. Cambia account in MetaMask tra un passo e l'altro: la pagina se ne accorge.",
+    networkFilterPlaceholder: "Filtra per nome... (es. base, polygon)",
+    customRpcLabel: "RPC URL custom",
+    customExplorerLabel: "Explorer URL custom (opzionale)",
+    customNetName: "Rete custom",
+    connectSignerBtn: "Connetti MetaMask",
+    recheckBtn: "Ricontrolla tutto",
+    notChecked: "Non ancora verificato.",
+    checking: "Verifica in corso...",
+    panel2Title: "2 · Paymaster (con la cassa)",
+    panel2Note: "L'indirizzo del paymaster dipende solo dall'EntryPoint e dal proprietario: stesso proprietario, stesso indirizzo su ogni rete. <b>Scegli bene il proprietario</b>: si può cambiare solo in due passaggi (proposta e accettazione). Pubblicarlo può farlo chiunque; ricaricarlo anche; lista, tetto e prelievi solo il proprietario. Il tetto parte da 0: finché non lo imposti non paga niente.",
+    ownerLabel: "Proprietario del paymaster (la cassa)",
+    publishPmBtn: "Pubblica il paymaster su questa rete",
+    fundLabel: "Ricarica (valuta nativa della rete)",
+    fundBtn: "Ricarica",
+    capLabel: "Tetto per operazione (valuta nativa)",
+    capBtn: "Imposta",
+    sponsorBtn: "Aggiungi la UP (sezione 3) alla lista",
+    unsponsorBtn: "Togli",
+    withdrawToLabel: "Preleva verso",
+    withdrawAmountLabel: "Importo",
+    withdrawBtn: "Preleva",
+    panel3Title: "3 · La UP (con il controller)",
+    panel3Note: "Connetti in MetaMask il <b>controller</b> della UP. La configurazione è una sola transazione atomica del Key Manager: se una parte fallisce, non cambia niente. Prima di firmare vedi l'elenco delle operazioni e la simulazione.",
+    connectUpBtn: "Leggi l'indirizzo dall'estensione UP",
+    upAddressLabel: "Indirizzo della UP",
+    publishExtBtn: "Pubblica l'Extension4337 su questa rete",
+    prepareSetupBtn: "Prepara e simula la configurazione della UP",
+    noPlan: "Nessuna operazione preparata.",
+    sendSetupBtn: "Firma e invia la configurazione (una sola transazione)",
+    panel4Title: "4 · Operazione di prova",
+    panel4Note: "<b>A</b> · con il <b>controller</b> attivo in MetaMask: la pagina prepara un invio dalla UP e ti chiede di firmarne l'impronta (<code>userOpHash</code>). MetaMask mostrerà un testo esadecimale: confrontalo con l'impronta scritta qui sotto. Nessun gas.<br><b>B</b> · con <b>un altro account</b> (la cassa o qualunque account con un po' di gas): la pagina simula e invia l'operazione all'EntryPoint. Il gas anticipato torna a quell'account dal deposito del paymaster.",
+    testToLabel: "Destinatario",
+    testAmountLabel: "Importo che la UP invia (valuta nativa)",
+    signOpBtn: "A · Prepara e firma con il controller",
+    noOp: "Nessuna operazione firmata.",
+    relayBtn: "B · Invia come relayer (account attivo in MetaMask)",
+    logTitle: "Registro",
+    // status labels
+    kNetwork: "Rete", kRpc: "RPC", kWallet: "MetaMask", kEntryPoint: "EntryPoint v0.6",
+    kPmAddress: "Indirizzo del paymaster", kPmCode: "Codice", kPmOwner: "Proprietario", kPmDeposit: "Deposito", kPmCap: "Tetto per operazione", kPmUp: "UP in lista", kYou: "Account attivo",
+    kUp: "UP", kKm: "Key Manager", kPerms: "Permessi dell'account attivo", kExt: "Extension4337", kExtKey: "Estensione registrata", kEpPerms: "Permessi dell'EntryPoint", kSigner4337: "Permesso 4337 dell'account", kReady: "Stato",
+    rpcOk: (v) => `chainId ${v.id}`, rpcFail: (v) => `non risponde: ${v.err}`, rpcWrong: (v) => `chainId ${v.id}, atteso ${v.exp}`,
+    walletMissing: "non connesso", walletWrong: (v) => `${v.addr} è sulla rete ${v.id}, non ${v.exp}: cambia rete in MetaMask`, walletOk: (v) => `${v.addr} (chainId ${v.id})`,
+    epOk: "presente", epMissing: "ASSENTE su questa rete: qui la pagina non può funzionare",
+    pmMissing: "non ancora pubblicato", pmOk: "codice verificato", pmWrong: "codice DIVERSO dall'atteso: non usarlo",
+    ownerInvalid: "indirizzo del proprietario non valido", ownerMismatch: (v) => `${v.owner} (diverso da quello indicato)`,
+    youOwner: (v) => `${v.addr} — è il proprietario`, youNotOwner: (v) => `${v.addr} — non è il proprietario: gestione disabilitata`,
+    capZero: "0 — non paga niente finché non lo imposti",
+    yes: "sì", no: "no", upNotSet: "inserisci la UP nella sezione 3",
+    upMissing: "inserisci l'indirizzo della UP", upNotDeployed: "non deployata su questa rete", upOk: (v) => v.addr,
+    kmBad: (v) => `${v.addr} non è un contratto`, permsNone: "l'account attivo non è un controller di questa UP",
+    extMissing: (v) => `non pubblicata (${v.addr})`, extOk: (v) => `pubblicata, codice verificato (${v.addr})`, extWrong: (v) => `codice DIVERSO dall'atteso a ${v.addr}`,
+    keyEmpty: "no", keyOk: "sì", keyOther: (v) => `un'altra estensione: ${v.addr}`,
+    epPermsNone: "nessuno (da aggiungere)", epPermsOk: (v) => `${v.names} — corretti`, epPermsOther: (v) => `${v.names} — diversi dall'atteso`,
+    signer4337Yes: "sì", signer4337No: "no (da aggiungere)",
+    readyDone: "✅ UP configurata: pronta per le operazioni di prova.",
+    readyTodo: "Da configurare: prepara e simula qui sotto.",
+    readyNoEdit: (v) => `L'account non può configurare la UP: gli mancano ${v.missing} e non ha EDITPERMISSIONS.`,
+    readyNeedExt: "Pubblica prima l'Extension4337 su questa rete.",
+    readyEpOther: "L'EntryPoint ha già permessi diversi da quelli previsti: controlla prima di procedere (la configurazione li sovrascriverebbe).",
+    // actions
+    ackRequired: "Spunta \"Ho letto e accetto\" nella sezione 0.",
+    notReady: "Verifica prima: rete, MetaMask e dati devono essere a posto.",
+    notOwner: "L'account attivo in MetaMask non è il proprietario del paymaster.",
+    badAmount: "Importo non valido.",
+    badAddress: "Indirizzo non valido.",
+    simulating: "Simulazione...",
+    simOk: (v) => `✅ Simulazione riuscita (gas stimato ${v.gas}).`,
+    simFail: (v) => `❌ Simulazione fallita: ${v.err}`,
+    noGas: (v) => `❌ L'account attivo non ha abbastanza gas: servono circa ${v.need}, ha ${v.have}.`,
+    sending: "Conferma in MetaMask...",
+    txSent: (v) => `Transazione inviata: ${v.hash}`,
+    waiting: "In attesa di conferma...",
+    txOk: "✅ Confermata.",
+    txFailed: "❌ La transazione è fallita.",
+    genericError: (v) => `Errore: ${v.err}`,
+    publishedAt: (v) => `✅ Pubblicato a ${v.addr}, codice verificato.`,
+    publishCheckFail: (v) => `⚠️ Transazione confermata, ma a ${v.addr} il codice non è quello atteso.`,
+    planTitle: (v) => `Configurazione della UP ${v.up}\nFirma: ${v.signer} · Key Manager: ${v.km} · una sola transazione (executeBatch):`,
+    planGrant: (v) => `1. Permessi temporanei al controller: + ${v.bits} (${v.from} → ${v.to})`,
+    planData: (v) => `${v.n}. setDataBatch:\n   - estensione per validateUserOp (0x3a871cdd) → ${v.ext}${v.epList}\n   - permessi dell'EntryPoint ${v.ep} → ${v.epPerms} (SUPER_CALL, SUPER_TRANSFERVALUE; niente SETDATA)`,
+    planEpList: (v) => `\n   - EntryPoint aggiunto all'elenco dei controller (posizione ${v.i})`,
+    planFinal: (v) => `${v.n}. Permessi finali del controller: ${v.from} → ${v.to} (quelli di prima + 4337${v.extra})`,
+    planFinalExtra: ", senza i permessi temporanei",
+    planAtomic: "Se una parte fallisce, l'intera transazione viene annullata e non cambia niente.",
+    readyToSign: "Controlla l'elenco qui sopra, poi premi \"Firma e invia\".",
+    stale: "I dati sono cambiati dopo la preparazione: prepara di nuovo.",
+    setupOk: "✅ Verifica finale: estensione registrata, EntryPoint con i permessi previsti, permesso 4337 al controller, nessun altro permesso cambiato.",
+    setupBad: (v) => `⚠️ Verifica finale non riuscita: ${v.what}. Controlla sull'explorer.`,
+    opNeedsSetup: "La UP deve essere configurata (sezione 3) e l'account attivo deve essere un suo controller con il permesso 4337.",
+    opNeedsPm: "Serve un paymaster pubblicato, con la UP in lista e un tetto impostato (sezione 2).",
+    opPlan: (v) => `Operazione (userOp) per l'EntryPoint ${v.ep}\n  La UP ${v.up} invia ${v.amount} a ${v.to}\n  nonce ${v.nonce} · paga il paymaster ${v.pm}\n  costo massimo ${v.maxCost} (tetto ${v.cap}, deposito ${v.deposit})\n\nImpronta da firmare (userOpHash):\n  ${v.hash}`,
+    opOverCap: (v) => `❌ Il costo massimo (${v.maxCost}) supera il tetto del paymaster (${v.cap}): alza il tetto nella sezione 2.`,
+    opLowDeposit: (v) => `❌ Il deposito del paymaster (${v.deposit}) è inferiore al costo massimo (${v.maxCost}): ricaricalo.`,
+    signAsk: "Firma in MetaMask: confronta il testo esadecimale con l'impronta qui sopra.",
+    signedOk: (v) => `✅ Firmata da ${v.addr} (controller con permesso 4337). Ora passa in MetaMask all'account che farà da relayer e premi B.`,
+    signedBad: (v) => `❌ La firma risulta di ${v.addr}, che non è un controller con il permesso 4337.`,
+    relayWho: (v) => `Relayer: ${v.addr}. Anticipa il gas e lo riceve indietro dal paymaster.`,
+    relaySameAsSigner: "Nota: stai inviando con lo stesso account che ha firmato. Funziona, ma per la prova usa un altro account: così si vede che il controller non spende gas.",
+    result: (v) => `Risultato: ${v.success}\n  costo dell'operazione pagato dal paymaster: ${v.cost}\n  deposito del paymaster: ${v.depBefore} → ${v.depAfter}\n  saldo del relayer: ${v.relBefore} → ${v.relAfter} (gas della transazione ${v.relGas})\n  saldo del controller: ${v.ctlBefore} → ${v.ctlAfter}\n  destinatario: +${v.recv}`,
+    resultOk: "✅ riuscita", resultFail: "❌ eseguita ma fallita nella UP (il gas è stato pagato comunque)",
+    revertReason: (v) => `Motivo del fallimento nella UP: ${v.r}`,
+    footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a>`,
+  },
+  en: {
+    pageTitle: "Gas paid by the paymaster — ChainIntegrate",
+    h1: "Gas paid by the paymaster (experimental)",
+    subtitle: "Your UP operates while the controller holds no gas: the controller signs, a relayer sends, your paymaster pays. ERC-4337 (EntryPoint v0.6).",
+    langToggleBtn: "Italiano",
+    panel0Title: "0 · How it works",
+    panel0Note: "<b>2 · Paymaster:</b> a contract of yours (<code>contracts/UPPaymaster.sol</code>), at the same address on every chain for the same owner, that pays gas <b>only</b> for the UPs on its allowlist and up to a cap per operation. You fund it with a plain transfer; only the owner manages allowlist, cap and withdrawals.<br><b>3 · UP:</b> one controller transaction, once per chain: it registers LUKSO's <code>Extension4337</code>, adds the EntryPoint as a controller (it can call and send value, <b>not</b> change data or permissions) and gives the controller the 4337 permission. The controller's other permissions stay identical.<br><b>4 · Test:</b> the controller signs an operation with <code>personal_sign</code> (no gas); then any account in MetaMask sends it to the EntryPoint as the relayer: it advances the gas and is reimbursed by the paymaster in the same transaction.",
+    disclaimer: "<b>⚠️ Read before using this page</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Experimental tool, not audited.</b> The paymaster and LUKSO's <code>Extension4337</code> have not been reviewed by third parties. Use small amounts.</li><li><b>It changes the UP's configuration on this chain:</b> the EntryPoint becomes a controller with call and value-transfer permissions. It only executes operations signed by a controller with the 4337 permission, within the signer's own permissions.</li><li><b>The paymaster deposit</b> is spent by every operation of allowlisted UPs: add only UPs you trust and keep the deposit low.</li><li><b>No warranty.</b> Software \"as is\" (MIT licence): use it at your own risk. No affiliation with LUKSO or anyone else.</li><li><b>This page never asks for private keys</b>: you sign everything in MetaMask.</li></ul>",
+    ackLabel: "I have read and accept",
+    panel1Title: "1 · Network and MetaMask",
+    panel1Note: "Each section uses the account active in MetaMask: the cassa for section 2, the UP's controller for section 3 and the signature in section 4, any account with some gas to send as the relayer. Switch account in MetaMask between steps: the page notices.",
+    networkFilterPlaceholder: "Filter by name... (e.g. base, polygon)",
+    customRpcLabel: "Custom RPC URL",
+    customExplorerLabel: "Custom explorer URL (optional)",
+    customNetName: "Custom network",
+    connectSignerBtn: "Connect MetaMask",
+    recheckBtn: "Check everything again",
+    notChecked: "Not checked yet.",
+    checking: "Checking...",
+    panel2Title: "2 · Paymaster (with the cassa)",
+    panel2Note: "The paymaster's address depends only on the EntryPoint and the owner: same owner, same address on every chain. <b>Choose the owner carefully</b>: it can only be changed in two steps (proposal and acceptance). Anyone can publish it and fund it; only the owner manages allowlist, cap and withdrawals. The cap starts at 0: it pays nothing until you set it.",
+    ownerLabel: "Paymaster owner (the cassa)",
+    publishPmBtn: "Publish the paymaster on this network",
+    fundLabel: "Top up (network native currency)",
+    fundBtn: "Top up",
+    capLabel: "Cap per operation (native currency)",
+    capBtn: "Set",
+    sponsorBtn: "Add the UP (section 3) to the allowlist",
+    unsponsorBtn: "Remove",
+    withdrawToLabel: "Withdraw to",
+    withdrawAmountLabel: "Amount",
+    withdrawBtn: "Withdraw",
+    panel3Title: "3 · The UP (with the controller)",
+    panel3Note: "Connect the UP's <b>controller</b> in MetaMask. The setup is one atomic Key Manager transaction: if any part fails, nothing changes. Before signing you see the list of operations and the simulation.",
+    connectUpBtn: "Read the address from the UP extension",
+    upAddressLabel: "UP address",
+    publishExtBtn: "Publish Extension4337 on this network",
+    prepareSetupBtn: "Prepare and simulate the UP setup",
+    noPlan: "No operation prepared.",
+    sendSetupBtn: "Sign and send the setup (one transaction)",
+    panel4Title: "4 · Test operation",
+    panel4Note: "<b>A</b> · with the <b>controller</b> active in MetaMask: the page prepares a transfer from the UP and asks you to sign its fingerprint (<code>userOpHash</code>). MetaMask will show a hex text: compare it with the fingerprint written below. No gas.<br><b>B</b> · with <b>another account</b> (the cassa or any account with a little gas): the page simulates and sends the operation to the EntryPoint. The gas advanced goes back to that account from the paymaster deposit.",
+    testToLabel: "Recipient",
+    testAmountLabel: "Amount the UP sends (native currency)",
+    signOpBtn: "A · Prepare and sign with the controller",
+    noOp: "No operation signed.",
+    relayBtn: "B · Send as the relayer (account active in MetaMask)",
+    logTitle: "Log",
+    kNetwork: "Network", kRpc: "RPC", kWallet: "MetaMask", kEntryPoint: "EntryPoint v0.6",
+    kPmAddress: "Paymaster address", kPmCode: "Code", kPmOwner: "Owner", kPmDeposit: "Deposit", kPmCap: "Cap per operation", kPmUp: "UP on the allowlist", kYou: "Active account",
+    kUp: "UP", kKm: "Key Manager", kPerms: "Active account's permissions", kExt: "Extension4337", kExtKey: "Extension registered", kEpPerms: "EntryPoint's permissions", kSigner4337: "Account's 4337 permission", kReady: "Status",
+    rpcOk: (v) => `chainId ${v.id}`, rpcFail: (v) => `not answering: ${v.err}`, rpcWrong: (v) => `chainId ${v.id}, expected ${v.exp}`,
+    walletMissing: "not connected", walletWrong: (v) => `${v.addr} is on chain ${v.id}, not ${v.exp}: switch network in MetaMask`, walletOk: (v) => `${v.addr} (chainId ${v.id})`,
+    epOk: "present", epMissing: "MISSING on this network: the page cannot work here",
+    pmMissing: "not published yet", pmOk: "code verified", pmWrong: "code DIFFERENT from the expected one: do not use it",
+    ownerInvalid: "invalid owner address", ownerMismatch: (v) => `${v.owner} (different from the one entered)`,
+    youOwner: (v) => `${v.addr} — is the owner`, youNotOwner: (v) => `${v.addr} — not the owner: management disabled`,
+    capZero: "0 — pays nothing until you set it",
+    yes: "yes", no: "no", upNotSet: "enter the UP in section 3",
+    upMissing: "enter the UP address", upNotDeployed: "not deployed on this network", upOk: (v) => v.addr,
+    kmBad: (v) => `${v.addr} is not a contract`, permsNone: "the active account is not a controller of this UP",
+    extMissing: (v) => `not published (${v.addr})`, extOk: (v) => `published, code verified (${v.addr})`, extWrong: (v) => `code DIFFERENT from the expected one at ${v.addr}`,
+    keyEmpty: "no", keyOk: "yes", keyOther: (v) => `another extension: ${v.addr}`,
+    epPermsNone: "none (to add)", epPermsOk: (v) => `${v.names} — correct`, epPermsOther: (v) => `${v.names} — different from the expected ones`,
+    signer4337Yes: "yes", signer4337No: "no (to add)",
+    readyDone: "✅ UP set up: ready for test operations.",
+    readyTodo: "To set up: prepare and simulate below.",
+    readyNoEdit: (v) => `The account cannot set up the UP: it lacks ${v.missing} and has no EDITPERMISSIONS.`,
+    readyNeedExt: "Publish Extension4337 on this network first.",
+    readyEpOther: "The EntryPoint already has permissions different from the expected ones: check before going on (the setup would overwrite them).",
+    ackRequired: "Tick \"I have read and accept\" in section 0.",
+    notReady: "Check first: network, MetaMask and data must be in order.",
+    notOwner: "The account active in MetaMask is not the paymaster's owner.",
+    badAmount: "Invalid amount.",
+    badAddress: "Invalid address.",
+    simulating: "Simulating...",
+    simOk: (v) => `✅ Simulation succeeded (estimated gas ${v.gas}).`,
+    simFail: (v) => `❌ Simulation failed: ${v.err}`,
+    noGas: (v) => `❌ The active account does not have enough gas: about ${v.need} needed, it has ${v.have}.`,
+    sending: "Confirm in MetaMask...",
+    txSent: (v) => `Transaction sent: ${v.hash}`,
+    waiting: "Waiting for confirmation...",
+    txOk: "✅ Confirmed.",
+    txFailed: "❌ The transaction failed.",
+    genericError: (v) => `Error: ${v.err}`,
+    publishedAt: (v) => `✅ Published at ${v.addr}, code verified.`,
+    publishCheckFail: (v) => `⚠️ Transaction confirmed, but the code at ${v.addr} is not the expected one.`,
+    planTitle: (v) => `Setup of the UP ${v.up}\nSigner: ${v.signer} · Key Manager: ${v.km} · one transaction (executeBatch):`,
+    planGrant: (v) => `1. Temporary permissions for the controller: + ${v.bits} (${v.from} → ${v.to})`,
+    planData: (v) => `${v.n}. setDataBatch:\n   - extension for validateUserOp (0x3a871cdd) → ${v.ext}${v.epList}\n   - EntryPoint ${v.ep} permissions → ${v.epPerms} (SUPER_CALL, SUPER_TRANSFERVALUE; no SETDATA)`,
+    planEpList: (v) => `\n   - EntryPoint added to the controllers list (position ${v.i})`,
+    planFinal: (v) => `${v.n}. Controller's final permissions: ${v.from} → ${v.to} (the previous ones + 4337${v.extra})`,
+    planFinalExtra: ", without the temporary permissions",
+    planAtomic: "If any part fails, the whole transaction reverts and nothing changes.",
+    readyToSign: "Check the list above, then press \"Sign and send\".",
+    stale: "The data changed after preparation: prepare again.",
+    setupOk: "✅ Final check: extension registered, EntryPoint with the expected permissions, 4337 permission for the controller, no other permission changed.",
+    setupBad: (v) => `⚠️ Final check failed: ${v.what}. Check on the explorer.`,
+    opNeedsSetup: "The UP must be set up (section 3) and the active account must be one of its controllers with the 4337 permission.",
+    opNeedsPm: "A published paymaster is needed, with the UP on its allowlist and a cap set (section 2).",
+    opPlan: (v) => `Operation (userOp) for the EntryPoint ${v.ep}\n  The UP ${v.up} sends ${v.amount} to ${v.to}\n  nonce ${v.nonce} · paid by the paymaster ${v.pm}\n  maximum cost ${v.maxCost} (cap ${v.cap}, deposit ${v.deposit})\n\nFingerprint to sign (userOpHash):\n  ${v.hash}`,
+    opOverCap: (v) => `❌ The maximum cost (${v.maxCost}) exceeds the paymaster's cap (${v.cap}): raise the cap in section 2.`,
+    opLowDeposit: (v) => `❌ The paymaster deposit (${v.deposit}) is lower than the maximum cost (${v.maxCost}): top it up.`,
+    signAsk: "Sign in MetaMask: compare the hex text with the fingerprint above.",
+    signedOk: (v) => `✅ Signed by ${v.addr} (controller with the 4337 permission). Now switch MetaMask to the account that will act as the relayer and press B.`,
+    signedBad: (v) => `❌ The signature comes from ${v.addr}, which is not a controller with the 4337 permission.`,
+    relayWho: (v) => `Relayer: ${v.addr}. It advances the gas and gets it back from the paymaster.`,
+    relaySameAsSigner: "Note: you are sending with the same account that signed. It works, but for the test use another account: it shows that the controller spends no gas.",
+    result: (v) => `Result: ${v.success}\n  operation cost paid by the paymaster: ${v.cost}\n  paymaster deposit: ${v.depBefore} → ${v.depAfter}\n  relayer balance: ${v.relBefore} → ${v.relAfter} (transaction gas ${v.relGas})\n  controller balance: ${v.ctlBefore} → ${v.ctlAfter}\n  recipient: +${v.recv}`,
+    resultOk: "✅ succeeded", resultFail: "❌ executed but failed inside the UP (the gas was paid anyway)",
+    revertReason: (v) => `Why it failed inside the UP: ${v.r}`,
+    footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a>`,
+  },
+};
+function t(key, vars) { const e = I18N[LANG][key]; return typeof e === "function" ? e(vars || {}) : e; }
+const tr = (v) => Array.isArray(v) ? t(v[0], v[1]) : v;
+function applyI18n() {
+  document.documentElement.lang = LANG;
+  document.title = t("pageTitle");
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.getAttribute("data-i18n")); });
+  document.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.getAttribute("data-i18n-html")); });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => { el.placeholder = t(el.getAttribute("data-i18n-placeholder")); });
+  if (state) render(state);
+}
+$("langToggle").addEventListener("click", () => { LANG = LANG === "it" ? "en" : "it"; applyI18n(); });
+
+// ==================== HELPERS ====================
+// Data from wallets and RPCs is written with textContent, never innerHTML.
+function setStatus(id, text, cls) { const el = $(id); el.textContent = ""; const s = document.createElement("span"); if (cls) s.className = cls; s.textContent = text; el.appendChild(s); }
+function renderKv(id, rows) {
+  const box = $(id); box.textContent = "";
+  const grid = document.createElement("div"); grid.className = "kv";
+  for (const [k, v, cls] of rows) {
+    const kd = document.createElement("div"); kd.className = "k"; kd.textContent = t(k);
+    const vd = document.createElement("div"); vd.className = "v" + (cls ? " " + cls : ""); vd.textContent = tr(v);
+    grid.appendChild(kd); grid.appendChild(vd);
+  }
+  box.appendChild(grid);
+}
+function log(msg, cls) { const l = document.createElement("div"); if (cls) l.className = cls; l.textContent = msg; $("log").appendChild(l); }
+function logSeparator() { log(`—— ${new Date().toLocaleTimeString()} ——`, "line-dim"); }
+const riskAccepted = () => $("ackRisk").checked;
+async function estimateFees(provider) {
+  const gasPrice = BigInt(await provider.send("eth_gasPrice", []));
+  const block = await provider.send("eth_getBlockByNumber", ["latest", false]);
+  if (!block || !block.baseFeePerGas) return { maxFee: gasPrice, tip: gasPrice };
+  const baseFee = BigInt(block.baseFeePerGas);
+  const tip = gasPrice > baseFee ? gasPrice - baseFee : 0n;
+  return { maxFee: 2n * baseFee + tip, tip };
+}
+function revertReason(e) {
+  const data = e?.data || e?.info?.error?.data || e?.error?.data;
+  if (typeof data === "string" && data.length >= 10) {
+    for (const iface of [EP_IFACE, KM_IFACE]) { try { const d = iface.parseError(data); return `${d.name}(${d.args.map(String).join(", ")})`; } catch (x) { /* next */ } }
+  }
+  return e?.shortMessage || e?.reason || e?.message || String(e);
+}
+const fmt = (wei, cur) => `${ethers.formatEther(wei)} ${cur || ""}`.trim();
+const b32 = (n) => ethers.zeroPadValue(ethers.toBeHex(n), 32);
+const enc = (types, vals) => ethers.AbiCoder.defaultAbiCoder().encode(types, vals);
+
+// ==================== NETWORK + METAMASK ====================
+const networkSelectEl = $("network");
+function renderNetworkOptions(filter) {
+  const f = (filter || "").toLowerCase();
+  networkSelectEl.innerHTML = "";
+  CHAINS.filter(c => c.name.toLowerCase().includes(f)).forEach(c => {
+    const o = document.createElement("option"); o.value = c.key; o.textContent = c.chainId ? `${c.name} (chainId ${c.chainId})` : c.name; networkSelectEl.appendChild(o);
+  });
+}
+renderNetworkOptions("");
+const params = new URLSearchParams(location.search);
+if (params.get("network") && CHAINS.some(c => c.key === params.get("network"))) networkSelectEl.value = params.get("network");
+if (params.get("owner")) $("ownerAddress").value = params.get("owner");
+if (params.get("up")) $("upAddress").value = params.get("up");
+function getNetwork() {
+  const c = CHAINS.find(x => x.key === networkSelectEl.value);
+  if (!c) return null;
+  if (c.key === "custom") return { key: "custom", name: t("customNetName"), chainId: null, rpc: $("customRpc").value.trim(), explorer: $("customExplorer").value.trim() || null, currency: "" };
+  return { ...c };
+}
+let signerProvider = null, signerAddress = null;
+const discoveredProviders = [];
+window.addEventListener("eip6963:announceProvider", (e) => discoveredProviders.push(e.detail));
+window.dispatchEvent(new Event("eip6963:requestProvider"));
+$("connectSigner").addEventListener("click", async () => {
+  let candidate = discoveredProviders.find(p => !/lukso|universal profile/i.test(p.info.name))?.provider;
+  if (!candidate && window.ethereum && window.ethereum !== window.lukso) candidate = window.ethereum;
+  if (!candidate) { setStatus("netBox", "MetaMask?", "line-err"); return; }
+  try {
+    const acc = await candidate.request({ method: "eth_requestAccounts" });
+    signerAddress = acc[0] ? ethers.getAddress(acc[0]) : null;
+    if (signerProvider !== candidate && candidate.on) {
+      candidate.on("accountsChanged", (a) => { signerAddress = a?.[0] ? ethers.getAddress(a[0]) : null; scheduleCheck(0); });
+      candidate.on("chainChanged", () => scheduleCheck(0));
+    }
+    signerProvider = candidate;
+    if (!$("ownerAddress").value.trim() && signerAddress) $("ownerAddress").value = signerAddress;
+    scheduleCheck(0);
+  } catch (e) { setStatus("netBox", e.shortMessage || e.message, "line-err"); }
+});
+$("connectUp").addEventListener("click", async () => {
+  if (!window.lukso) return;
+  try { const a = await window.lukso.request({ method: "eth_requestAccounts" }); $("upAddress").value = a[0]; scheduleCheck(); } catch (e) { /* rejected */ }
+});
+function onInputsChanged() { $("customRpcWrap").style.display = networkSelectEl.value === "custom" ? "block" : "none"; scheduleCheck(); }
+$("networkFilter").addEventListener("input", (e) => { renderNetworkOptions(e.target.value); onInputsChanged(); });
+networkSelectEl.addEventListener("change", onInputsChanged);
+["customRpc", "ownerAddress", "upAddress"].forEach(id => $(id).addEventListener("input", () => scheduleCheck()));
+["testTo", "testAmount"].forEach(id => $(id).addEventListener("input", () => { signedOp = null; setStatus("opBox", t("noOp"), "empty"); updateButtons(); }));
+$("recheckBtn").addEventListener("click", () => scheduleCheck(0));
+$("ackRisk").addEventListener("change", updateButtons);
+
+// ==================== STATE ====================
+let state = null, checkRun = 0, checkTimer = null, setupPlan = null, signedOp = null;
+function scheduleCheck(delay = 500) {
+  state = null; setupPlan = null;
+  setStatus("setupPlanBox", t("noPlan"), "empty");
+  updateButtons();
+  clearTimeout(checkTimer);
+  checkTimer = setTimeout(runCheck, delay);
+}
+async function runCheck() {
+  const run = ++checkRun;
+  setStatus("netBox", t("checking"), "empty");
+  const s = await computeState();
+  if (run !== checkRun) return null;
+  state = s;
+  render(s);
+  updateButtons();
+  return s;
+}
+async function freshState() { clearTimeout(checkTimer); return runCheck(); }
+
+async function computeState() {
+  const s = { net: [], pm: [], up: [], ok: false };
+  const net = getNetwork();
+  if (!EXT || !PMJ) { s.net.push(["kNetwork", "contracts/*.json ?", "err"]); return s; }
+  if (!net || !net.rpc) { s.net.push(["kNetwork", "RPC ?", "err"]); return s; }
+  let provider, rpcId;
+  try {
+    rpcId = Number(await new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 }).send("eth_chainId", []));
+    provider = new ethers.JsonRpcProvider(net.rpc, rpcId, { staticNetwork: true, batchMaxCount: 1 });
+  } catch (e) { s.net.push(["kRpc", ["rpcFail", { err: e.shortMessage || e.message }], "err"]); return s; }
+  const chainId = net.chainId || rpcId;
+  if (!net.chainId) net.name = `${t("customNetName")} (chainId ${rpcId})`;
+  s.net.push(["kNetwork", net.name, ""]);
+  if (rpcId !== chainId) { s.net.push(["kRpc", ["rpcWrong", { id: rpcId, exp: chainId }], "err"]); return s; }
+  s.net.push(["kRpc", ["rpcOk", { id: rpcId }], "ok"]);
+  Object.assign(s, { provider, chainId, netInfo: net, cur: net.currency || "" });
+  if (!signerProvider || !signerAddress) { s.net.push(["kWallet", ["walletMissing"], "err"]); return s; }
+  let walletId;
+  try { walletId = parseInt(await signerProvider.request({ method: "eth_chainId" }), 16); } catch (e) { walletId = -1; }
+  if (walletId !== chainId) { s.net.push(["kWallet", ["walletWrong", { addr: signerAddress, id: walletId, exp: chainId }], "err"]); return s; }
+  s.net.push(["kWallet", ["walletOk", { addr: signerAddress, id: walletId }], "ok"]);
+  s.signer = signerAddress;
+  s.epOk = (await provider.getCode(ENTRY_POINT)) !== "0x";
+  s.net.push(["kEntryPoint", s.epOk ? ["epOk"] : ["epMissing"], s.epOk ? "ok" : "err"]);
+  if (!s.epOk) return s;
+  s.factoryOk = (await provider.getCode(NICK_FACTORY)) !== "0x";
+  s.ok = true;
+
+  // ---- paymaster
+  const rawOwner = $("ownerAddress").value.trim();
+  if (!ethers.isAddress(rawOwner)) { s.pm.push(["kPmOwner", ["ownerInvalid"], "err"]); }
+  else {
+    const owner = ethers.getAddress(rawOwner);
+    const pmInit = ethers.concat([PMJ.creationCode, enc(["address", "address"], [ENTRY_POINT, owner])]);
+    const pmAddr = ethers.getCreate2Address(NICK_FACTORY, SALT, ethers.keccak256(pmInit));
+    Object.assign(s, { owner, pmInit, pmAddr });
+    s.pm.push(["kPmAddress", pmAddr, ""]);
+    const code = await provider.getCode(pmAddr);
+    s.pmState = code === "0x" ? "missing" : ethers.keccak256(code) === PMJ.runtimeCodeHash ? "ok" : "wrong";
+    s.pm.push(["kPmCode", [s.pmState === "ok" ? "pmOk" : s.pmState === "missing" ? "pmMissing" : "pmWrong"], s.pmState === "ok" ? "ok" : s.pmState === "missing" ? "warn" : "err"]);
+    if (s.pmState === "ok") {
+      const pm = new ethers.Contract(pmAddr, PM_ABI, provider);
+      const [onChainOwner, cap, dep] = await Promise.all([pm.owner(), pm.maxCostPerOp(), pm.deposit()]);
+      Object.assign(s, { pmOwner: onChainOwner, cap, deposit: dep });
+      s.pm.push(["kPmOwner", onChainOwner === owner ? owner : ["ownerMismatch", { owner: onChainOwner }], onChainOwner === owner ? "" : "err"]);
+      s.pm.push(["kPmDeposit", fmt(dep, s.cur), dep > 0n ? "" : "warn"]);
+      s.pm.push(["kPmCap", cap > 0n ? fmt(cap, s.cur) : ["capZero"], cap > 0n ? "" : "warn"]);
+      s.isOwner = onChainOwner === signerAddress;
+      s.pm.push(["kYou", [s.isOwner ? "youOwner" : "youNotOwner", { addr: signerAddress }], s.isOwner ? "ok" : "warn"]);
+    }
+  }
+
+  // ---- UP
+  const extCode = await provider.getCode(EXT.address);
+  s.extState = extCode === "0x" ? "missing" : ethers.keccak256(extCode) === EXT.runtimeCodeHash ? "ok" : "wrong";
+  const rawUp = $("upAddress").value.trim();
+  if (!ethers.isAddress(rawUp)) { s.up.push(["kUp", ["upMissing"], "warn"]); s.up.push(["kExt", [s.extState === "ok" ? "extOk" : s.extState === "missing" ? "extMissing" : "extWrong", { addr: EXT.address }], s.extState === "ok" ? "ok" : s.extState === "missing" ? "warn" : "err"]); return s; }
+  try {
+    const up = ethers.getAddress(rawUp);
+    s.upAddr = up;
+    if ((await provider.getCode(up)) === "0x") { s.up.push(["kUp", ["upNotDeployed"], "err"]); return s; }
+    s.up.push(["kUp", ["upOk", { addr: up }], "ok"]);
+    if (s.pmState === "ok") {
+      s.sponsored = await new ethers.Contract(s.pmAddr, PM_ABI, provider).sponsored(up);
+      s.pm.push(["kPmUp", s.sponsored ? ["yes"] : ["no"], s.sponsored ? "ok" : "warn"]);
+    }
+    const upC = new ethers.Contract(up, UP_IFACE, provider);
+    const km = ethers.getAddress(await upC.owner());
+    if ((await provider.getCode(km)) === "0x") { s.up.push(["kKm", ["kmBad", { addr: km }], "err"]); return s; }
+    s.up.push(["kKm", km, "ok"]);
+    s.up.push(["kExt", [s.extState === "ok" ? "extOk" : s.extState === "missing" ? "extMissing" : "extWrong", { addr: EXT.address }], s.extState === "ok" ? "ok" : s.extState === "missing" ? "warn" : "err"]);
+    const [permRaw, extVal, epRaw, lenRaw] = await upC.getDataBatch([PERM_KEY(signerAddress), LSP17_KEY(EXT.validateUserOpSelector), PERM_KEY(ENTRY_POINT), ARRAY_KEY]);
+    const perms = permRaw && permRaw !== "0x" ? BigInt(permRaw) : 0n;
+    const epPerms = epRaw && epRaw !== "0x" ? BigInt(epRaw) : 0n;
+    const len = lenRaw && lenRaw !== "0x" ? Number(BigInt(lenRaw)) : 0;
+    const extKey = !extVal || extVal === "0x" ? "empty" : (ethers.dataLength(extVal) === 20 && extVal.toLowerCase() === EXT.address.toLowerCase()) ? "ok" : "other";
+    // Is the EntryPoint already in AddressPermissions[]? (read up to 50 entries)
+    let epListed = false;
+    if (len > 0 && len <= 50) {
+      const items = await upC.getDataBatch(Array.from({ length: len }, (_, i) => ARRAY_INDEX_KEY(i)));
+      epListed = items.some(v => v && v.toLowerCase() === ENTRY_POINT.toLowerCase());
+    }
+    Object.assign(s, { upC, km, permKey: PERM_KEY(signerAddress), permRaw, perms, epPerms, len, extKey, extVal, epListed });
+    if (perms === 0n) { s.up.push(["kPerms", ["permsNone"], "err"]); return s; }
+    s.up.push(["kPerms", `${permHex(perms)} — ${permNames(perms)}`, ""]);
+    s.up.push(["kExtKey", extKey === "ok" ? ["keyOk"] : extKey === "empty" ? ["keyEmpty"] : ["keyOther", { addr: extVal }], extKey === "ok" ? "ok" : "warn"]);
+    const epState = epPerms === 0n ? "none" : epPerms === EP_PERMS ? "ok" : "other";
+    s.up.push(["kEpPerms", epState === "none" ? ["epPermsNone"] : [epState === "ok" ? "epPermsOk" : "epPermsOther", { names: `${permHex(epPerms)} ${permNames(epPerms)}` }], epState === "ok" ? "ok" : "warn"]);
+    const has4337 = (perms & P.ERC4337) !== 0n;
+    s.up.push(["kSigner4337", has4337 ? ["signer4337Yes"] : ["signer4337No"], has4337 ? "ok" : "warn"]);
+    Object.assign(s, { epState, has4337 });
+    s.upDone = extKey === "ok" && epState === "ok" && has4337;
+    // What the controller needs to do the setup in one batch
+    let needed = 0n;
+    if (extKey === "empty") needed |= P.ADDEXTENSIONS;
+    if (extKey === "other") needed |= P.CHANGEEXTENSIONS;
+    if (epState === "none" || !epListed) needed |= P.ADDCONTROLLER;
+    if (epState === "other" || !has4337) needed |= P.EDITPERMISSIONS;
+    const grantable = needed & (P.ADDEXTENSIONS | P.CHANGEEXTENSIONS);
+    s.missingTemp = grantable & ~perms;
+    const missingHard = (needed & ~grantable & ~perms) | (s.missingTemp && !(perms & P.EDITPERMISSIONS) ? P.EDITPERMISSIONS : 0n);
+    if (s.upDone) s.up.push(["kReady", ["readyDone"], "ok"]);
+    else if (missingHard) s.up.push(["kReady", ["readyNoEdit", { missing: permNames(missingHard) }], "err"]);
+    else if (s.extState !== "ok") s.up.push(["kReady", ["readyNeedExt"], "warn"]);
+    else s.up.push(["kReady", [epState === "other" ? "readyEpOther" : "readyTodo"], "warn"]);
+    s.canSetup = !s.upDone && !missingHard && s.extState === "ok" && ethers.dataLength(permRaw) === 32;
+  } catch (e) { s.up.push(["kUp", ["genericError", { err: e.shortMessage || e.message }], "err"]); }
+  return s;
+}
+function render(s) {
+  renderKv("netBox", s.net);
+  if (s.pm.length) renderKv("pmBox", s.pm); else setStatus("pmBox", t("notChecked"), "empty");
+  if (s.up.length) renderKv("upBox", s.up); else setStatus("upBox", t("notChecked"), "empty");
+}
+function updateButtons() {
+  const s = state, ok = !!(s && s.ok && riskAccepted());
+  $("publishPmBtn").disabled = !(ok && s.pmState === "missing" && s.factoryOk);
+  $("fundBtn").disabled = !(ok && s.pmState === "ok");
+  const own = ok && s.pmState === "ok" && s.isOwner;
+  $("capBtn").disabled = !own;
+  $("withdrawBtn").disabled = !own;
+  $("sponsorBtn").disabled = !(own && s.upAddr && !s.sponsored);
+  $("unsponsorBtn").disabled = !(own && s.upAddr && s.sponsored);
+  $("publishExtBtn").disabled = !(ok && s.extState === "missing" && s.factoryOk);
+  $("prepareSetupBtn").disabled = !(ok && s.canSetup);
+  $("sendSetupBtn").disabled = !(ok && setupPlan);
+  $("signOpBtn").disabled = !(ok && s.upDone && s.pmState === "ok" && s.sponsored);
+  $("relayBtn").disabled = !(ok && signedOp);
+}
+
+// ==================== SENDING ====================
+async function sendTx(tx, label) {
+  const s = await freshState();
+  if (!s || !s.ok) { log(t("notReady"), "line-err"); return null; }
+  log(t("simulating"), "line-dim");
+  let gas;
+  try { await s.provider.call({ from: s.signer, ...tx }); gas = await s.provider.estimateGas({ from: s.signer, ...tx }); }
+  catch (e) { log(t("simFail", { err: revertReason(e) }), "line-err"); return null; }
+  log(t("simOk", { gas: gas.toString() }), "line-ok");
+  const gasLimit = gas + gas / 4n;
+  const need = gasLimit * (await estimateFees(s.provider)).maxFee + (tx.value || 0n);
+  const bal = await s.provider.getBalance(s.signer);
+  if (bal < need) { log(t("noGas", { need: fmt(need, s.cur), have: fmt(bal, s.cur) }), "line-err"); return null; }
+  const signer = await new ethers.BrowserProvider(signerProvider).getSigner();
+  if (signer.address !== s.signer) { log(t("stale"), "line-err"); return null; }
+  log(t("sending"), "line-dim");
+  const sent = await signer.sendTransaction({ ...tx, gasLimit });
+  log(t("txSent", { hash: sent.hash }), "line-dim");
+  if (s.netInfo.explorer) log(s.netInfo.explorer + sent.hash, "line-dim");
+  log(t("waiting"), "line-dim");
+  const receipt = await s.provider.waitForTransaction(sent.hash);
+  if (!receipt || receipt.status !== 1) { log(t("txFailed"), "line-err"); return null; }
+  log(t("txOk"), "line-ok");
+  return { s, receipt };
+}
+// recheck: false for steps that only prepare something (a new check would discard it).
+async function guarded(fn, recheck = true) {
+  if (!riskAccepted()) { log(t("ackRequired"), "line-err"); return; }
+  logSeparator();
+  try { await fn(); } catch (e) { log(t("genericError", { err: revertReason(e) }), "line-err"); }
+  finally { if (recheck) scheduleCheck(0); else updateButtons(); }
+}
+async function codeHashAt(provider, addr, blockTag) {
+  for (let i = 0; i < 6; i++) { if (i) await new Promise(r => setTimeout(r, 1500)); const c = await provider.getCode(addr, blockTag); if (c !== "0x") return ethers.keccak256(c); }
+  return null;
+}
+const amountWei = (id) => { try { const v = ethers.parseEther($(id).value.trim()); return v > 0n ? v : null; } catch (e) { return null; } };
+
+$("publishPmBtn").addEventListener("click", () => guarded(async () => {
+  const s = state; if (!s || s.pmState !== "missing") return;
+  const r = await sendTx({ to: NICK_FACTORY, data: ethers.concat([SALT, s.pmInit]) });
+  if (!r) return;
+  const h = await codeHashAt(r.s.provider, s.pmAddr, r.receipt.blockNumber);
+  log(h === PMJ.runtimeCodeHash ? t("publishedAt", { addr: s.pmAddr }) : t("publishCheckFail", { addr: s.pmAddr }), h === PMJ.runtimeCodeHash ? "line-ok" : "line-warn");
+}));
+$("publishExtBtn").addEventListener("click", () => guarded(async () => {
+  const s = state; if (!s || s.extState !== "missing") return;
+  const r = await sendTx({ to: NICK_FACTORY, data: ethers.concat([SALT, EXT.initCode]) });
+  if (!r) return;
+  const h = await codeHashAt(r.s.provider, EXT.address, r.receipt.blockNumber);
+  log(h === EXT.runtimeCodeHash ? t("publishedAt", { addr: EXT.address }) : t("publishCheckFail", { addr: EXT.address }), h === EXT.runtimeCodeHash ? "line-ok" : "line-warn");
+}));
+$("fundBtn").addEventListener("click", () => guarded(async () => {
+  const v = amountWei("fundAmount"); if (!v) { log(t("badAmount"), "line-err"); return; }
+  await sendTx({ to: state.pmAddr, value: v });
+}));
+const pmData = (fn, args) => new ethers.Interface(PM_ABI).encodeFunctionData(fn, args);
+async function ownerTx(data) {
+  if (!state || !state.isOwner) { log(t("notOwner"), "line-err"); return; }
+  await sendTx({ to: state.pmAddr, data });
+}
+$("capBtn").addEventListener("click", () => guarded(async () => {
+  let v; try { v = ethers.parseEther($("capAmount").value.trim()); } catch (e) { v = null; }
+  if (v === null || v < 0n) { log(t("badAmount"), "line-err"); return; }
+  await ownerTx(pmData("setMaxCostPerOp", [v]));
+}));
+$("sponsorBtn").addEventListener("click", () => guarded(() => ownerTx(pmData("setSponsored", [state.upAddr, true]))));
+$("unsponsorBtn").addEventListener("click", () => guarded(() => ownerTx(pmData("setSponsored", [state.upAddr, false]))));
+$("withdrawBtn").addEventListener("click", () => guarded(async () => {
+  const to = $("withdrawTo").value.trim(), v = amountWei("withdrawAmount");
+  if (!ethers.isAddress(to)) { log(t("badAddress"), "line-err"); return; }
+  if (!v) { log(t("badAmount"), "line-err"); return; }
+  await ownerTx(pmData("withdrawTo", [ethers.getAddress(to), v]));
+}));
+
+// ---- UP setup: one atomic executeBatch
+function buildSetup(s) {
+  const keys = [], vals = [];
+  if (s.extKey !== "ok") { keys.push(LSP17_KEY(EXT.validateUserOpSelector)); vals.push(EXT.address); }
+  let epIndex = null;
+  if (!s.epListed) { epIndex = s.len; keys.push(ARRAY_KEY, ARRAY_INDEX_KEY(s.len)); vals.push(ethers.toBeHex(s.len + 1, 16), ENTRY_POINT); }
+  if (s.epState !== "ok") { keys.push(PERM_KEY(ENTRY_POINT)); vals.push(b32(EP_PERMS)); }
+  const finalPerms = s.perms | P.ERC4337;
+  const payloads = [];
+  if (s.missingTemp) payloads.push(UP_IFACE.encodeFunctionData("setData", [s.permKey, b32(s.perms | s.missingTemp)]));
+  if (keys.length) payloads.push(UP_IFACE.encodeFunctionData("setDataBatch", [keys, vals]));
+  if (finalPerms !== s.perms || s.missingTemp) payloads.push(UP_IFACE.encodeFunctionData("setData", [s.permKey, b32(finalPerms)]));
+  return { payloads, epIndex, finalPerms };
+}
+$("prepareSetupBtn").addEventListener("click", () => guarded(async () => {
+  setupPlan = null;
+  const s = await freshState();
+  if (!s || !s.canSetup) { log(t("notReady"), "line-err"); return; }
+  const { payloads, epIndex, finalPerms } = buildSetup(s);
+  const lines = [t("planTitle", { up: s.upAddr, signer: s.signer, km: s.km })];
+  let n = 1;
+  if (s.missingTemp) { lines.push(t("planGrant", { bits: permNames(s.missingTemp), from: permHex(s.perms), to: permHex(s.perms | s.missingTemp) })); n++; }
+  lines.push(t("planData", { n, ext: EXT.address, ep: ENTRY_POINT, epPerms: permHex(EP_PERMS), epList: epIndex !== null ? t("planEpList", { i: epIndex }) : "" })); n++;
+  lines.push(t("planFinal", { n, from: permHex(s.perms), to: permHex(finalPerms), extra: s.missingTemp ? t("planFinalExtra") : "" }));
+  lines.push(t("planAtomic"));
+  setStatus("setupPlanBox", lines.join("\n"), "");
+  log(lines.join("\n"), "line-compare");
+  const data = KM_IFACE.encodeFunctionData("executeBatch", [payloads.map(() => 0), payloads]);
+  log(t("simulating"), "line-dim");
+  try { await s.provider.call({ from: s.signer, to: s.km, data }); } catch (e) { log(t("simFail", { err: revertReason(e) }), "line-err"); return; }
+  log(t("simOk", { gas: (await s.provider.estimateGas({ from: s.signer, to: s.km, data })).toString() }), "line-ok");
+  setupPlan = { data, s, finalPerms };
+  log(t("readyToSign"), "line-warn");
+}, false));
+$("sendSetupBtn").addEventListener("click", async () => {
+  if (!setupPlan) return;
+  const p = setupPlan;
+  if (!riskAccepted()) { log(t("ackRequired"), "line-err"); return; }
+  try {
+    const s = await freshState();
+    const same = s && s.canSetup && s.upAddr === p.s.upAddr && s.km === p.s.km && s.signer === p.s.signer && s.permRaw === p.s.permRaw &&
+      s.extKey === p.s.extKey && s.epState === p.s.epState && s.len === p.s.len && s.epListed === p.s.epListed;
+    if (!same) { log(t("stale"), "line-err"); return; }
+    setupPlan = p; // freshState cleared it
+    const r = await sendTx({ to: p.s.km, data: p.data });
+    setupPlan = null;
+    if (!r) return;
+    const at = { blockTag: r.receipt.blockNumber };
+    let problems = ["not read"];
+    for (let i = 0; i < 6 && problems.length; i++) {
+      if (i) await new Promise(res => setTimeout(res, 1500));
+      try {
+        const [ext, ep, mine] = await p.s.upC.getDataBatch([LSP17_KEY(EXT.validateUserOpSelector), PERM_KEY(ENTRY_POINT), p.s.permKey], at);
+        problems = [];
+        if (String(ext).toLowerCase() !== EXT.address.toLowerCase()) problems.push("extension key");
+        if (BigInt(ep || "0x0") !== EP_PERMS) problems.push("EntryPoint permissions");
+        if (mine !== b32(p.finalPerms)) problems.push(`controller permissions ${mine}`);
+      } catch (e) { problems = [e.shortMessage || e.message]; }
+    }
+    log(problems.length ? t("setupBad", { what: problems.join(", ") }) : t("setupOk"), problems.length ? "line-warn" : "line-ok");
+  } catch (e) { log(t("genericError", { err: revertReason(e) }), "line-err"); }
+  finally { scheduleCheck(0); }
+});
+
+// ---- test operation: A (controller signs), B (relayer sends)
+$("signOpBtn").addEventListener("click", () => guarded(async () => {
+  signedOp = null;
+  setStatus("opBox", t("noOp"), "empty");
+  const s = await freshState();
+  if (!s || !s.upDone || !s.has4337) { log(t("opNeedsSetup"), "line-err"); return; }
+  if (s.pmState !== "ok" || !s.sponsored || !(s.cap > 0n)) { log(t("opNeedsPm"), "line-err"); return; }
+  const to = $("testTo").value.trim() || s.owner;
+  if (!ethers.isAddress(to)) { log(t("badAddress"), "line-err"); return; }
+  const amount = amountWei("testAmount"); if (!amount) { log(t("badAmount"), "line-err"); return; }
+  const ep = new ethers.Contract(ENTRY_POINT, EP_IFACE, s.provider);
+  const fees = await estimateFees(s.provider);
+  const op = {
+    sender: s.upAddr, nonce: await ep.getNonce(s.upAddr, 0), initCode: "0x",
+    callData: UP_IFACE.encodeFunctionData("execute", [0, ethers.getAddress(to), amount, "0x"]),
+    callGasLimit: OP_GAS.call, verificationGasLimit: OP_GAS.verification, preVerificationGas: OP_GAS.preVerification,
+    maxFeePerGas: fees.maxFee, maxPriorityFeePerGas: fees.tip < fees.maxFee ? fees.tip : fees.maxFee,
+    paymasterAndData: s.pmAddr, signature: "0x",
+  };
+  const maxCost = (OP_GAS.call + OP_GAS.verification * 3n + OP_GAS.preVerification) * fees.maxFee;
+  if (maxCost > s.cap) { log(t("opOverCap", { maxCost: fmt(maxCost, s.cur), cap: fmt(s.cap, s.cur) }), "line-err"); return; }
+  if (maxCost > s.deposit) { log(t("opLowDeposit", { maxCost: fmt(maxCost, s.cur), deposit: fmt(s.deposit, s.cur) }), "line-err"); return; }
+  const hash = await ep.getUserOpHash(op);
+  const text = t("opPlan", { ep: ENTRY_POINT, up: s.upAddr, amount: fmt(amount, s.cur), to: ethers.getAddress(to), nonce: op.nonce.toString(), pm: s.pmAddr,
+    maxCost: fmt(maxCost, s.cur), cap: fmt(s.cap, s.cur), deposit: fmt(s.deposit, s.cur), hash });
+  setStatus("opBox", text, "");
+  log(text, "line-compare");
+  log(t("signAsk"), "line-warn");
+  const signer = await new ethers.BrowserProvider(signerProvider).getSigner();
+  op.signature = await signer.signMessage(ethers.getBytes(hash)); // personal_sign, as Extension4337 expects
+  const who = ethers.verifyMessage(ethers.getBytes(hash), op.signature);
+  const permRaw = await s.upC.getData(PERM_KEY(who));
+  const ok = permRaw && permRaw !== "0x" && (BigInt(permRaw) & P.ERC4337) !== 0n;
+  if (!ok) { log(t("signedBad", { addr: who }), "line-err"); return; }
+  signedOp = { op, hash, signerAddr: who, chainId: s.chainId, up: s.upAddr, pm: s.pmAddr, to: ethers.getAddress(to), amount };
+  log(t("signedOk", { addr: who }), "line-ok");
+}, false));
+$("relayBtn").addEventListener("click", async () => {
+  if (!signedOp || !riskAccepted()) return;
+  const so = signedOp;
+  logSeparator();
+  try {
+    const s = await freshState();
+    if (!s || !s.ok || s.chainId !== so.chainId) { log(t("stale"), "line-err"); return; }
+    signedOp = so; updateButtons();
+    log(t("relayWho", { addr: s.signer }), "line-dim");
+    if (s.signer === so.signerAddr) log(t("relaySameAsSigner"), "line-warn");
+    const ep = new ethers.Contract(ENTRY_POINT, EP_IFACE, s.provider);
+    const data = EP_IFACE.encodeFunctionData("handleOps", [[so.op], s.signer]);
+    const [depBefore, relBefore, ctlBefore, recvBefore] = await Promise.all([ep.balanceOf(so.pm), s.provider.getBalance(s.signer), s.provider.getBalance(so.signerAddr), s.provider.getBalance(so.to)]);
+    log(t("simulating"), "line-dim");
+    let gas;
+    try { await s.provider.call({ from: s.signer, to: ENTRY_POINT, data }); gas = await s.provider.estimateGas({ from: s.signer, to: ENTRY_POINT, data }); }
+    catch (e) { log(t("simFail", { err: revertReason(e) }), "line-err"); return; }
+    log(t("simOk", { gas: gas.toString() }), "line-ok");
+    const gasLimit = gas + gas / 4n;
+    const need = gasLimit * (await estimateFees(s.provider)).maxFee;
+    if (relBefore < need) { log(t("noGas", { need: fmt(need, s.cur), have: fmt(relBefore, s.cur) }), "line-err"); return; }
+    const signer = await new ethers.BrowserProvider(signerProvider).getSigner();
+    if (signer.address !== s.signer) { log(t("stale"), "line-err"); return; }
+    log(t("sending"), "line-dim");
+    const sent = await signer.sendTransaction({ to: ENTRY_POINT, data, gasLimit });
+    signedOp = null; setStatus("opBox", t("noOp"), "empty"); updateButtons();
+    log(t("txSent", { hash: sent.hash }), "line-dim");
+    if (s.netInfo.explorer) log(s.netInfo.explorer + sent.hash, "line-dim");
+    log(t("waiting"), "line-dim");
+    const rc = await s.provider.waitForTransaction(sent.hash);
+    if (!rc || rc.status !== 1) { log(t("txFailed"), "line-err"); return; }
+    let ev = null, why = null;
+    for (const l of rc.logs) {
+      try { const p = EP_IFACE.parseLog(l); if (p?.name === "UserOperationEvent") ev = p; if (p?.name === "UserOperationRevertReason") why = p.args.revertReason; } catch (e) { /* other contracts' logs */ }
+    }
+    const at = rc.blockNumber;
+    const [depAfter, relAfter, ctlAfter, recvAfter] = await Promise.all([ep.balanceOf(so.pm, { blockTag: at }), s.provider.getBalance(s.signer, at), s.provider.getBalance(so.signerAddr, at), s.provider.getBalance(so.to, at)]);
+    const relGas = rc.gasUsed * (rc.gasPrice || rc.effectiveGasPrice || 0n);
+    log(t("result", { success: ev && ev.args.success ? t("resultOk") : t("resultFail"), cost: ev ? fmt(ev.args.actualGasCost, s.cur) : "?",
+      depBefore: fmt(depBefore, s.cur), depAfter: fmt(depAfter, s.cur), relBefore: fmt(relBefore, s.cur), relAfter: fmt(relAfter, s.cur), relGas: fmt(relGas, s.cur),
+      ctlBefore: fmt(ctlBefore, s.cur), ctlAfter: fmt(ctlAfter, s.cur), recv: fmt(recvAfter - recvBefore, s.cur) }), ev && ev.args.success ? "line-ok" : "line-err");
+    if (why) log(t("revertReason", { r: revertReason({ data: why }) }), "line-warn");
+  } catch (e) { log(t("genericError", { err: revertReason(e) }), "line-err"); }
+  finally { scheduleCheck(0); }
+});
+
+// ==================== START ====================
+applyI18n();
+Promise.all([fetch("contracts/Extension4337.json").then(r => r.json()), fetch("contracts/UPPaymaster.json").then(r => r.json())])
+  .then(([e, p]) => { EXT = e; PMJ = p; onInputsChanged(); })
+  .catch((e) => setStatus("netBox", "contracts/*.json: " + e.message, "line-err"));
+</script>
+
+</body>
+</html>
