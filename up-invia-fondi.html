@@ -1157,7 +1157,9 @@ $("alchemyBtn").addEventListener("click", async () => {
         let id;
         try { id = BigInt(n.tokenId).toString(); } catch (e) { continue; }
         rows.push({ address: ethers.getAddress(c.address), type, name: c.name || (c.openSeaMetadata && c.openSeaMetadata.collectionName), symbol: c.symbol,
-          id, copies: n.balance || null, spam: !!(c.isSpam || (c.spamClassifications && c.spamClassifications.length)) });
+          // Only Alchemy's verdict counts: spamClassifications lists signals (e.g. many owners) that
+          // popular, legitimate collections also have.
+          id, copies: n.balance || null, spam: c.isSpam === true || c.isSpam === "true" });
       }
       pageKey = res.pageKey;
       if (!pageKey) break;
