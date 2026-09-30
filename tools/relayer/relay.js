@@ -25,6 +25,22 @@ const EP_IFACE = new ethers.Interface([
   "function handleOps((address sender,uint256 nonce,bytes initCode,bytes callData,uint256 callGasLimit,uint256 verificationGasLimit,uint256 preVerificationGas,uint256 maxFeePerGas,uint256 maxPriorityFeePerGas,bytes paymasterAndData,bytes signature)[] ops, address beneficiary)",
   "error FailedOp(uint256 opIndex, string reason)",
 ]);
+// Errors of the LUKSO UP (LSP0) and Key Manager (LSP6) that an execution can revert with.
+const LSP_IFACE = new ethers.Interface([
+  "error ERC725X_InsufficientBalance(uint256 balance, uint256 value)",
+  "error ERC725X_UnknownOperationType(uint256 operationTypeProvided)",
+  "error ERC725X_MsgValueDisallowedInStaticCall()",
+  "error ERC725X_MsgValueDisallowedInDelegateCall()",
+  "error LSP20CallVerificationFailed(bool postCall, bytes4 returnedStatus)",
+  "error LSP20CallingVerifierFailed(bool postCall)",
+  "error NoExtensionFoundForFunctionSelector(bytes4 functionSelector)",
+  "error NotAuthorised(address from, string permission)",
+  "error NoPermissionsSet(address from)",
+  "error NoCallsAllowed(address from)",
+  "error NotAllowedCall(address from, address to, bytes4 selector)",
+  "error DelegateCallDisallowedViaKeyManager()",
+  "error InvalidPayload(bytes payload)",
+]);
 const ORACLE_IFACE = new ethers.Interface(["function getL1Fee(bytes) view returns (uint256)"]);
 
 // Hard limits on what an operation may ask. They bound what one handleOps can cost the relayer.
@@ -151,7 +167,15 @@ async function minPreVerificationGas(chain, op) {
 function revertReason(e) {
   const data = e?.data || e?.info?.error?.data || e?.error?.data;
   if (typeof data === "string" && data.length >= 10) {
-    try { const d = EP_IFACE.parseError(data); if (d) return `${d.name}(${d.args.map(String).join(", ")})`; } catch (x) { /* unknown error */ }
+    for (const iface of [EP_IFACE, LSP_IFACE]) {
+      let d = null;
+      try { d = iface.parseError(data); } catch (x) { /* not this contract's error */ }
+      if (!d) continue;
+      if (d.name === "ERC725X_InsufficientBalance") {
+        return `the UP has ${ethers.formatEther(d.args.balance)} and the operation sends ${ethers.formatEther(d.args.value)} (native currency): top up the UP or send less`;
+      }
+      return `${d.name}(${d.args.map(String).join(", ")})`;
+    }
   }
   return e?.shortMessage || e?.reason || e?.message || String(e);
 }

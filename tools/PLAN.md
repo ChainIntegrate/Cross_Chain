@@ -139,7 +139,15 @@ The notes below are kept for reference.
        - Cassa transactions: allowlist `0x0483703823f3141228573f5cef7ae4493de7c442008e642b71e7e7c3e747b9bc`, cap `0xcc722322ae744d8be695aa9be6c9ac3e01cbfb350ccd9361f5145addce9c7017`.
        - Setup by the controller `0x86F7…c6f2` (Key Manager `0x25d0…A222`): `0xba9605614d28f25cb8f84cc8679f1dc80e5e565124439605eee712e84fa3f0cd`. Permissions `0x7f3f06` → `0xff3f06`; final check passed.
        - First operation through the site relayer: `0xd6b6916b3ce0c05bce9cfd84f972643ee46bbf3fdefc177f54d7966457b039b7`. Controller unchanged, paymaster paid 0.0000012 ETH, relayer +0.00000015 ETH.
-     - Birra20venti's UP: to do. Its controller must sign the setup.
+     - **Birra20venti's UP `0x1d62B8d2c63B942095AD3C7FFc7e845195D9E718`: allowlisted and set up on Base (2026-09-30).** Page log in `tools/logs/2026-09-30-base-birra20venti-up.txt`.
+       - Allowlisted by the cassa: `0xdbe267b10f969a217cf526fe25e3a2e7fbfe2dae12c7f299b841b08e01993006`.
+       - Setup by its controller `0x4346…9d4c` (Key Manager `0x595D…4feE`): `0x5b327db2833bbcdb5d3e780b526cec0eca4a2bfcb4e8d917fbbce17a12ad040d`. Permissions `0x7f3f06` → `0xff3f06`; final check passed.
+       - First test operation (0.0001 ETH to the cassa) refused by the site relayer before sending: the execution simulation reverted with a UP custom error, most likely `ERC725X_InsufficientBalance` (no ETH on the UP on Base). Nothing was spent. The relayer now decodes UP and Key Manager errors, and the page checks the UP balance before signing.
+     - Feedback from the second run, fixed in `up-gas-relay.html`:
+       - plain-words explanation at the top ("read on, then read this again");
+       - the allowlist moved to section 3, next to the UP address, with its own status box and a note that MetaMask asks the cassa to confirm a transaction;
+       - the owner field is no longer taken from the first connected account: it is filled from the site relayer's paymaster owner and remembered in the browser; notes say it must always be the cassa and that all paymaster operations are done with the cassa;
+       - the "B with a MetaMask account" button is removed: B always goes through the site relayer.
      - Feedback from this run, fixed in `up-gas-relay.html`: about 20 seconds with no visible sign between a click and the MetaMask popup (a fixed status box now shows each step), and a step-by-step guide in section 0 (roles, connecting several MetaMask accounts, what to redo after a reload, order of the steps).
   2. Check whether gas.zip can deliver directly to the paymaster.
   3. The relayer service on the VPS: **installed and working (2026-09-30).** It is `tools/relayer/`, installed as described in its README.

@@ -1,6 +1,6 @@
 # tools/relayer — gas relayer service (experimental)
 
-A small Node.js service that sends ERC-4337 user operations for Universal Profiles, so their controllers need no gas. It is the server version of button **B** in `up-gas-relay.html`. The page gets a second button, **"B · Send through the site relayer"**, which posts the operation signed in step A to this service.
+A small Node.js service that sends ERC-4337 user operations for Universal Profiles, so their controllers need no gas. It is what button **B · Send (through the site relayer)** of `up-gas-relay.html` uses: the page posts the operation signed in step A to this service.
 
 **How it works.**
 - The controller signs the operation in the page (step A, `personal_sign`).
@@ -17,7 +17,7 @@ Only operations that:
 - have an empty `initCode` (the UP already exists), a 65-byte signature, gas limits within fixed bounds, and at most 16 KB of `callData`;
 - have `maxFeePerGas` at least the current base fee;
 - have `preVerificationGas` at least the reference formula, plus the L1 data fee on OP-stack chains. It is the same rule as the page, without the page's 15% margin, so the reimbursement covers the relayer's transaction;
-- pass two simulations: the whole `handleOps`, and the execution alone as the EntryPoint will call it. The second one matters because `handleOps` does not revert when only the execution fails: the paymaster would pay for an operation that does nothing.
+- pass two simulations: the whole `handleOps`, and the execution alone as the EntryPoint will call it. The second one matters because `handleOps` does not revert when only the execution fails: the paymaster would pay for an operation that does nothing. Errors of the UP and the Key Manager are reported in plain words, e.g. "the UP has 0.0 and the operation sends 0.0001: top up the UP or send less".
 
 The relay transaction uses the operation's own fee fields, so the relayer never pays a higher price than it gets back.
 
@@ -119,7 +119,7 @@ It shows the relayer address, the chains and the balance on each chain. In `up-g
 ```bash
 cd /opt/crosschain-relayer && sudo git pull && (cd tools/relayer && sudo npm ci --omit=dev) && sudo systemctl restart crosschain-relayer
 journalctl -u crosschain-relayer -f       # each send, its confirmation, refusals, low-balance warnings
-sudo systemctl stop crosschain-relayer    # the page falls back to "not reachable"; B with MetaMask keeps working
+sudo systemctl stop crosschain-relayer    # the page shows "not reachable" and B stays off
 ```
 
 To add a chain or a paymaster, edit `config.json` and restart. At start the service checks that the RPC is on the right chain and that the EntryPoint and each paymaster have code.
