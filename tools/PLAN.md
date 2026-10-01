@@ -15,6 +15,7 @@ Last update: 2026-09-30.
 | `up-wallet.html` — UP Wallet | Experimental. Tested live on Base and Polygon (OpenSea sign-in, EURe swap, LI.FI, Basenames). Audited (AUDIT.md §7). |
 | `up-walletconnect-basenames.html` | Experimental demo, superseded by the UP Wallet (AUDIT R-07: decide whether to keep it). |
 | `up-nft-receiver.html` + `contracts/NFTReceiverExtension.sol` | Experimental, merged (PR #33, #36). Tested on a local chain with LUKSO UP/LSP6 0.12.1 and 0.14.0 and on Base mainnet. The page only enables the extension; publishing it on a new chain is done in `up-publish-implementation.html` (shortcut chip), with any wallet. |
+| Deploy tool section 5 + `backup-check.js` — backup controller | Add a backup controller or remove a lost one, per network; alert on Send, Test and UP Wallet when the backup is missing. Tested on a local chain with LUKSO UP/LSP6 0.12.1 and 0.14.0 (47 checks each). |
 
 ### Decisions already taken (do not reopen without a reason)
 - **Language:** code, comments, commits and docs in English; chat in Italian.
@@ -32,6 +33,7 @@ Last update: 2026-09-30.
 - **UP Wallet:** one network at a time; compatibility check between UP and controller as soon as network, UP and MetaMask are set, again on every change and before every request.
 - **NFT reception:** own stateless extension at the same address on every chain (`0x7F68e74483867058C806218aa05aB5527984C03e`); enabled with one atomic `executeBatch` that restores the controller's exact permission bytes.
 - **Gas:** **no automatic top-ups.** When a balance falls below a threshold, send an email ("network running low"); the maintainer tops up by hand.
+- **Backup controller (key loss, not theft):** the genesis key (the one extracted from the UP extension) is the only controller a UP is born with on every new network. Losing it without a second admin controller locks the user out of the UP on that network. Detection rule: at least two listed controllers with identical permissions that include ADDCONTROLLER and EDITPERMISSIONS (ERC4337 bit ignored; EntryPoint and URD never count). The backup gets exactly the signer's permissions (and AllowedCalls / AllowedERC725YDataKeys). Added or removed per network from section 5 of the Deploy tool; on LUKSO, LUKSO's own tools. The alert is shown on Send, Test and UP Wallet only, for the network in use; not on `up-gas-relay.html` (operator page). Both setups are the user's choice: genesis key used daily with the backup aside, or genesis key offline with a daily second controller. Never custodial: the backup is always the user's own key; the operator's cassa is never a controller of other people's UPs.
 
 ---
 

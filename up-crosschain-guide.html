@@ -203,10 +203,27 @@
   </div>
 </div>
 
+<div class="step">
+  <div class="step-num">9</div>
+  <div class="step-body">
+    <h3>Add a backup controller — in case you lose the key</h3>
+    <p>The key you extracted in step 1 is your profile's <b>genesis key</b>: on every network where you redeploy, the profile is born controlled by that key alone. This step is about <b>losing</b> it, not about having it stolen: a broken computer, a key string you never saved, a forgotten password. If you lose the genesis key and no other controller has the same permissions, you are locked out of the profile on that network for good, with everything it holds. No one can fix it — not LUKSO, not us.</p>
+    <ul>
+      <li><b>What a backup is:</b> a second account, for example another MetaMask account, with <b>exactly the same permissions</b> as the genesis key, added to the profile on the network. Section 5 of the <a href="up-deploy-public.html#backup">Deploy tool</a> adds it, signed by the genesis key, and copies its permissions.</li>
+      <li><b>Yes, it is one more secret to keep:</b> the backup's seed phrase (MetaMask creates one). Keep it apart from the genesis key: not in the same place, not in the same wallet.</li>
+      <li><b>If you lose the backup:</b> with the genesis key you add a new one, and remove the lost one (same section).</li>
+      <li><b>If you lose the genesis key:</b> with the backup you keep signing, add a new backup and remove the lost key. The only thing you lose for good is deploying on new networks: there the profile is born with the genesis key only.</li>
+      <li><b>On every network, after every new deploy:</b> each network has its own controller list, and a new network starts without the backup. On LUKSO, add it with LUKSO's own tools.</li>
+      <li>The Send, Test and UP Wallet pages show a warning when the profile has no backup on the selected network.</li>
+    </ul>
+    <div class="note">Theft is a different problem with a different answer: if you think a key has been <i>stolen</i>, move the funds to a safe account right away and replace that key on every network (see step 1).</div>
+  </div>
+</div>
+
 <div class="note">
   <b>💡 Funds: two addresses, both yours — don't forget the controller.</b>
   <ul>
-    <li><b>Your UP address</b> (the same on every chain) is your <i>account</i>. Send funds to it <b>only after</b> the deploy (step 7) and the test with the Test tool (step 8) have both succeeded. If something goes wrong — the wrong controller key, a failed deploy — funds sent earlier would stay stuck at that address.</li>
+    <li><b>Your UP address</b> (the same on every chain) is your <i>account</i>. Send funds to it <b>only after</b> the deploy (step 7) and the test with the Test tool (step 8) have both succeeded, and preferably after adding the backup (step 9). If something goes wrong — the wrong controller key, a failed deploy — funds sent earlier would stay stuck at that address.</li>
     <li><b>The controller address</b> (the account you imported into MetaMask in step 8) is the <i>key</i> that signs. Every operation — test, transfer, anything — costs a small fee (gas), and <b>the controller pays it, not the UP</b>.</li>
     <li>👉 So on the new chain send some funds <b>to the controller too</b> (e.g. POL on Polygon, ETH on Base or Arbitrum): at least enough for a few transactions. Without them the controller cannot sign anything, even if the UP is full.</li>
   </ul>
@@ -243,8 +260,9 @@
   <ul>
     <li>Whoever holds the controller key controls the profile, with or without the gas relay: the key in MetaMask and in the UP extension is a hot key, exposed like any wallet connected to the internet. Keep on the profile only what you are prepared to lose if that key were stolen, or move the controller to a hardware wallet (see below).</li>
     <li>One key controls the profile at the same address on every network: if it is stolen, all of them are exposed at once.</li>
-    <li><b>The original controller can never be retired.</b> Every redeploy replays your profile's original creation, so on every new network the profile is born controlled by that original key, whatever you changed elsewhere. Keep it safe for good: ideally offline, used only to deploy on new networks.</li>
-    <li>For daily use you can add a second controller on each network, for example a hardware wallet used through MetaMask, and keep the original key aside.</li>
+    <li><b>The genesis key can never be retired for new networks.</b> Every redeploy replays your profile's original creation, so on every new network the profile is born controlled by that key alone, whatever you changed elsewhere. Losing it means no more deploys on new networks, and, without a backup, losing the profile on every network (step 9).</li>
+    <li><b>Two setups, your choice.</b> (A) The genesis key is your everyday controller, for example your main MetaMask account, and the backup stays aside. (B) The genesis key stays offline and a second controller, for example a hardware wallet, is used every day. Either way, a backup exists only when a second controller has the same permissions: a daily controller with fewer permissions is not a backup.</li>
+    <li>Every extra controller is one more key that could be stolen: keep the backup offline and use it only to recover.</li>
     <li>The gas relay adds one specific risk: its LUKSO extension (<code>Extension4337</code>) has never been audited by a professional firm. An independent AI-assisted review found no issue; the details are in the project's AUDIT.md, section 8.</li>
   </ul>
 </div>
@@ -264,7 +282,7 @@
 
 <h2>Tools</h2>
 <ul>
-  <li><a href="up-deploy-public.html">Deploy</a> — decode calldata, verify, and deploy a Universal Profile at its predicted address on another chain.</li>
+  <li><a href="up-deploy-public.html">Deploy</a> — decode calldata, verify, and deploy a Universal Profile at its predicted address on another chain. Section 5 adds a backup controller, or removes a lost one, on any network where the profile exists.</li>
   <li><a href="up-verify-only.html">Verify only</a> — check whether a deploy already exists on another chain. It only reads public data from an RPC: no wallet is required, but you can optionally connect your Universal Profile to auto-fill the address it checks for, instead of typing it by hand.</li>
   <li><a href="up-test-operazione.html">Test</a> — confirm your controller can operate the deployed profile.</li>
   <li><a href="up-invia-fondi.html">Send</a> — transfer native currency, tokens (ERC-20) and NFTs (ERC-721, ERC-1155) from the profile to another address. It can list what the profile holds on the selected network.</li>
@@ -409,10 +427,27 @@
   </div>
 </div>
 
+<div class="step">
+  <div class="step-num">9</div>
+  <div class="step-body">
+    <h3>Aggiungi un controller di backup — nel caso perdi la chiave</h3>
+    <p>La chiave che hai estratto al passo 1 è la <b>chiave di genesi</b> del tuo profilo: su ogni rete dove rifai il deploy, il profilo nasce controllato solo da quella chiave. Questo passo riguarda la <b>perdita</b>, non il furto: un computer rotto, una stringa mai salvata, una password dimenticata. Se perdi la chiave di genesi e nessun altro controller ha gli stessi permessi, resti fuori dal profilo su quella rete per sempre, con tutto quello che contiene. Nessuno può rimediare — né LUKSO né noi.</p>
+    <ul>
+      <li><b>Cos'è un backup:</b> un secondo account, per esempio un altro account MetaMask, con <b>esattamente gli stessi permessi</b> della chiave di genesi, aggiunto al profilo sulla rete. Lo aggiunge la sezione 5 dello <a href="up-deploy-public.html#backup">strumento di Deploy</a>, con la firma della chiave di genesi, copiandone i permessi.</li>
+      <li><b>Sì, è un segreto in più da custodire:</b> la seed del backup (MetaMask ne crea una). Tienila separata dalla chiave di genesi: non nello stesso posto, non nello stesso wallet.</li>
+      <li><b>Se perdi il backup:</b> con la chiave di genesi ne aggiungi un altro e rimuovi quello perso (stessa sezione).</li>
+      <li><b>Se perdi la chiave di genesi:</b> con il backup continui a firmare, aggiungi un nuovo backup e rimuovi la chiave persa. L'unica cosa che perdi per sempre è il deploy su reti nuove: lì il profilo nasce solo con la chiave di genesi.</li>
+      <li><b>Su ogni rete, dopo ogni nuovo deploy:</b> ogni rete ha la sua lista di controller, e una rete nuova parte senza backup. Su LUKSO aggiungilo con gli strumenti di LUKSO.</li>
+      <li>Le pagine Invio, Test e UP Wallet mostrano un avviso quando il profilo non ha un backup sulla rete scelta.</li>
+    </ul>
+    <div class="note">Il furto è un altro problema, con un'altra risposta: se pensi che una chiave ti sia stata <i>rubata</i>, sposta subito i fondi su un account sicuro e sostituisci quella chiave su ogni rete (vedi il passo 1).</div>
+  </div>
+</div>
+
 <div class="note">
   <b>💡 I fondi: due indirizzi, tutti e due tuoi — non dimenticare il controller.</b>
   <ul>
-    <li><b>L'indirizzo della tua UP</b> (uguale su tutte le reti) è il tuo <i>conto</i>. Mandaci fondi <b>solo dopo</b> che il deploy (passo 7) e il test con la pagina di Test (passo 8) sono andati entrambi a buon fine. Se qualcosa va storto — chiave del controller sbagliata, deploy fallito — i fondi mandati prima resterebbero bloccati a quell'indirizzo.</li>
+    <li><b>L'indirizzo della tua UP</b> (uguale su tutte le reti) è il tuo <i>conto</i>. Mandaci fondi <b>solo dopo</b> che il deploy (passo 7) e il test con la pagina di Test (passo 8) sono andati entrambi a buon fine, e meglio ancora dopo aver aggiunto il backup (passo 9). Se qualcosa va storto — chiave del controller sbagliata, deploy fallito — i fondi mandati prima resterebbero bloccati a quell'indirizzo.</li>
     <li><b>L'indirizzo del controller</b> (l'account che hai importato in MetaMask al passo 8) è la <i>chiave</i> che firma. Ogni operazione — test, invio, qualsiasi cosa — costa una piccola commissione (gas), e <b>la paga il controller, non la UP</b>.</li>
     <li>👉 Quindi sulla nuova rete manda un po' di fondi <b>anche al controller</b> (es. POL su Polygon, ETH su Base o Arbitrum): almeno quanto basta per qualche transazione. Senza, il controller non può firmare nulla, anche se la UP è piena.</li>
   </ul>
@@ -449,8 +484,9 @@
   <ul>
     <li>Chi ha la chiave del controller controlla il profilo, con o senza il gas pagato dal paymaster: la chiave in MetaMask e nell'estensione UP è una chiave "calda", esposta come qualunque wallet collegato a internet. Tieni sul profilo solo quello che saresti disposto a perdere se quella chiave venisse rubata, oppure sposta il controller su un hardware wallet (vedi sotto).</li>
     <li>Una sola chiave controlla il profilo allo stesso indirizzo su tutte le reti: se viene rubata, sono esposte tutte insieme.</li>
-    <li><b>Il controller originale non si può mai dismettere.</b> Ogni redeploy ripete la creazione originale del profilo, quindi su ogni nuova rete il profilo nasce controllato da quella chiave originale, qualunque cosa tu abbia cambiato altrove. Custodiscila per sempre: meglio offline, usata solo per i deploy su nuove reti.</li>
-    <li>Per l'uso quotidiano puoi aggiungere su ogni rete un secondo controller, per esempio un hardware wallet usato tramite MetaMask, e tenere da parte la chiave originale.</li>
+    <li><b>La chiave di genesi non si può mai dismettere per le reti nuove.</b> Ogni redeploy ripete la creazione originale del profilo, quindi su ogni nuova rete il profilo nasce controllato solo da quella chiave, qualunque cosa tu abbia cambiato altrove. Perderla vuol dire niente più deploy su reti nuove e, senza un backup, perdere il profilo su tutte le reti (passo 9).</li>
+    <li><b>Due configurazioni, scegli tu.</b> (A) La chiave di genesi è il controller di tutti i giorni, per esempio il tuo account MetaMask principale, e il backup sta da parte. (B) La chiave di genesi resta offline e un secondo controller, per esempio un hardware wallet, si usa tutti i giorni. In entrambi i casi il backup c'è solo se un secondo controller ha gli stessi permessi: un controller quotidiano con meno permessi non è un backup.</li>
+    <li>Ogni controller in più è una chiave in più che può essere rubata: tieni il backup offline e usalo solo per recuperare.</li>
     <li>Il gas pagato dal paymaster aggiunge un rischio specifico: la sua estensione LUKSO (<code>Extension4337</code>) non è mai stata verificata da una società specializzata. Una revisione indipendente assistita da AI non ha trovato problemi; i dettagli sono nel file AUDIT.md del progetto, sezione 8.</li>
   </ul>
 </div>
@@ -470,7 +506,7 @@
 
 <h2>Strumenti</h2>
 <ul>
-  <li><a href="up-deploy-public.html">Deploy</a> — decodifica la calldata, verifica e deploya una Universal Profile all'indirizzo predetto su un'altra rete.</li>
+  <li><a href="up-deploy-public.html">Deploy</a> — decodifica la calldata, verifica e deploya una Universal Profile all'indirizzo predetto su un'altra rete. La sezione 5 aggiunge un controller di backup, o rimuove uno perso, su qualsiasi rete dove il profilo esiste.</li>
   <li><a href="up-verify-only.html">Sola verifica</a> — controlla se un deploy esiste già su un'altra rete. Legge solo dati pubblici da un RPC: non serve nessun wallet, ma puoi connettere facoltativamente la tua Universal Profile per compilare automaticamente l'indirizzo da controllare, invece di digitarlo a mano.</li>
   <li><a href="up-test-operazione.html">Test</a> — conferma che il tuo controller possa operare il profilo deployato.</li>
   <li><a href="up-invia-fondi.html">Invio</a> — trasferisce valuta nativa, token (ERC-20) e NFT (ERC-721, ERC-1155) dal profilo a un altro indirizzo. Può elencare cosa possiede il profilo sulla rete scelta.</li>
