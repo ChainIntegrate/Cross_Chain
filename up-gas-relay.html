@@ -184,6 +184,13 @@
 </div>
 
 <div class="panel">
+  <h2 data-i18n="panel5Title">5 · Verifica della configurazione</h2>
+  <div class="note" data-i18n-html="panel5Note"></div>
+  <button id="checkCfgBtn" class="secondary" disabled data-i18n="checkCfgBtn">Verifica la configurazione (sola lettura)</button>
+  <div class="status-box" id="cfgBox"><span class="empty" data-i18n="cfgNone">Nessuna verifica eseguita.</span></div>
+</div>
+
+<div class="panel">
   <h2 data-i18n="logTitle">Registro</h2>
   <div id="log" class="line-dim"></div>
 </div>
@@ -383,6 +390,25 @@ const I18N = {
     readyToSignRevoke: "Controlla l'elenco qui sopra, poi premi \"Firma e invia la disattivazione\".",
     revokeOk: "✅ Verifica finale: estensione rimossa, EntryPoint senza permessi e fuori dall'elenco, permesso 4337 tolto all'account, nessun altro permesso cambiato.",
     panel4Title: "4 · Operazione di prova",
+    panel5Title: "5 · Verifica della configurazione",
+    panel5Note: "Sola lettura: nessuna firma, nessun gas, va bene qualunque account. Controlla che la UP, l'estensione, l'EntryPoint, i controller, il paymaster e il relayer del sito siano configurati come previsto. Il punto più importante: l'EntryPoint deve avere esattamente i permessi <code>0x000500</code> (chiamare e inviare valore, niente modifica di dati o permessi). Rifalla dopo ogni modifica alla UP e su ogni rete.",
+    checkCfgBtn: "Verifica la configurazione (sola lettura)", cfgNone: "Nessuna verifica eseguita.",
+    cfgSummaryOk: "✅ Configurazione in ordine: nessun problema trovato.",
+    cfgSummary: (v) => `${v.err ? "❌" : "⚠️"} ${v.err} problemi, ${v.warn} avvisi: leggi le righe segnate.`,
+    cfgUp: "UP", cfgUpOk: (v) => `contratto presente (${v.addr})`, cfgUpMissing: "nessun contratto a questo indirizzo su questa rete",
+    cfgKm: "Proprietario (Key Manager)", cfgKmOk: (v) => `contratto ${v.addr}`, cfgKmBad: (v) => `${v.addr} non è un contratto: la UP non è governata da un Key Manager`,
+    cfgExt: "Estensione validateUserOp", cfgExtOk: (v) => `${v.addr}, codice uguale a quello atteso`, cfgExtNone: "nessuna: il 4337 non è attivo su questa UP", cfgExtOther: (v) => `punta a ${v.addr}, non all'Extension4337 attesa`, cfgExtCode: (v) => `${v.addr} registrata, ma il codice a quell'indirizzo non è quello atteso`,
+    cfgEp: "Permessi dell'EntryPoint", cfgEpOk: "0x000500 (SUPER_CALL, SUPER_TRANSFERVALUE): corretto", cfgEpNone: "nessuno: il 4337 non è attivo su questa UP", cfgEpBad: (v) => `${v.hex} (${v.names}): diversi da 0x000500. Se includono permessi di modifica, operazioni passate dal relayer potrebbero cambiare la UP. Disattiva il 4337 e rifai la configurazione.`,
+    cfgEpList: "EntryPoint nell'elenco dei controller", cfgEpListOk: (v) => `presente una volta (posizione ${v.i})`, cfgEpListMissing: "ha permessi ma non è nell'elenco AddressPermissions[]", cfgEpListDup: "presente più di una volta",
+    cfgArray: "Elenco dei controller", cfgArrayOk: (v) => `${v.n} voci, nessun doppione`, cfgArrayBad: (v) => `${v.n} voci, con problemi: ${v.why}`,
+    cfgCtl: (v) => `Controller ${v.i}`, cfgCtlLine: (v) => `${v.addr}${v.label} · ${v.hex} ${v.names}`,
+    cfgCtlFlag: (v) => ` · da controllare: ${v.flags}`, cfgFlagTemp: "permesso sulle estensioni rimasto (la configurazione lo toglie)", cfgFlagOwner: "può cambiare il proprietario", cfgFlagDelegate: "DELEGATECALL", cfgFlagEmpty: "nessun permesso (voce rimasta nell'elenco)",
+    cfgLabelEp: " (EntryPoint)", cfgLabelUrd: " (Universal Receiver Delegate)", cfgLabel4337: " (firma operazioni 4337)",
+    cfgNo4337: "Firmatari 4337", cfgNo4337Msg: "estensione attiva ma nessun controller ha il permesso 4337",
+    cfgPm: "Paymaster", cfgPmOk: (v) => `${v.addr}: codice verificato, proprietario ${v.owner}`, cfgPmBad: (v) => `${v.addr}: ${v.why}`, cfgPmNone: "indirizzo del proprietario mancante (sezione 2)",
+    cfgPmCap: "Tetto e deposito", cfgPmCapOk: (v) => `tetto ${v.cap}, deposito ${v.dep}`, cfgPmCapZero: "tetto 0: il paymaster non paga niente", cfgPmDepLow: (v) => `deposito ${v.dep} sotto il tetto ${v.cap}: ricarica il paymaster`,
+    cfgPmUp: "UP nella lista del paymaster", cfgYes: "sì", cfgNoList: "no: il paymaster non paga per questa UP",
+    cfgSvc: "Relayer del sito", cfgSvcOk: (v) => `${v.addr}, serve questa rete e questo paymaster, saldo ${v.bal}`, cfgSvcNo: "non raggiungibile, oppure non serve questa rete o questo paymaster",
     panel4Note: "<b>A</b> · con il <b>controller</b> attivo in MetaMask: la pagina prepara un invio dalla UP e ti chiede di firmarne l'impronta (<code>userOpHash</code>). MetaMask mostrerà un testo esadecimale: confrontalo con l'impronta scritta qui sotto. Nessun gas.<br><b>B</b> · il <b>relayer del sito</b> invia l'operazione firmata: nessun cambio di account, nessuna firma. Anticipa il gas e lo riceve indietro dal paymaster.<br>La UP deve avere l'importo da inviare: il paymaster paga solo il gas.",
     testToLabel: "Destinatario",
     testAmountLabel: "Importo che la UP invia (valuta nativa)",
@@ -589,6 +615,25 @@ const I18N = {
     readyToSignRevoke: "Check the list above, then press \"Sign and send turning it off\".",
     revokeOk: "✅ Final check: extension removed, EntryPoint without permissions and out of the list, 4337 permission removed from the account, no other permission changed.",
     panel4Title: "4 · Test operation",
+    panel5Title: "5 · Configuration check",
+    panel5Note: "Read-only: no signature, no gas, any account will do. It checks that the UP, the extension, the EntryPoint, the controllers, the paymaster and the site relayer are set up as expected. The key point: the EntryPoint must have exactly the permissions <code>0x000500</code> (call and send value, no change of data or permissions). Run it again after any change to the UP and on every network.",
+    checkCfgBtn: "Check the configuration (read-only)", cfgNone: "No check run yet.",
+    cfgSummaryOk: "✅ Configuration in order: no problem found.",
+    cfgSummary: (v) => `${v.err ? "❌" : "⚠️"} ${v.err} problems, ${v.warn} warnings: read the marked rows.`,
+    cfgUp: "UP", cfgUpOk: (v) => `contract present (${v.addr})`, cfgUpMissing: "no contract at this address on this network",
+    cfgKm: "Owner (Key Manager)", cfgKmOk: (v) => `contract ${v.addr}`, cfgKmBad: (v) => `${v.addr} is not a contract: the UP is not governed by a Key Manager`,
+    cfgExt: "validateUserOp extension", cfgExtOk: (v) => `${v.addr}, code as expected`, cfgExtNone: "none: 4337 is not active on this UP", cfgExtOther: (v) => `points to ${v.addr}, not to the expected Extension4337`, cfgExtCode: (v) => `${v.addr} registered, but the code at that address is not the expected one`,
+    cfgEp: "EntryPoint's permissions", cfgEpOk: "0x000500 (SUPER_CALL, SUPER_TRANSFERVALUE): correct", cfgEpNone: "none: 4337 is not active on this UP", cfgEpBad: (v) => `${v.hex} (${v.names}): not 0x000500. If they include rights to change data, operations sent through the relayer could change the UP. Turn 4337 off and set it up again.`,
+    cfgEpList: "EntryPoint in the controller list", cfgEpListOk: (v) => `present once (position ${v.i})`, cfgEpListMissing: "has permissions but is not in AddressPermissions[]", cfgEpListDup: "present more than once",
+    cfgArray: "Controller list", cfgArrayOk: (v) => `${v.n} entries, no duplicates`, cfgArrayBad: (v) => `${v.n} entries, with problems: ${v.why}`,
+    cfgCtl: (v) => `Controller ${v.i}`, cfgCtlLine: (v) => `${v.addr}${v.label} · ${v.hex} ${v.names}`,
+    cfgCtlFlag: (v) => ` · to check: ${v.flags}`, cfgFlagTemp: "extension permission left over (the setup removes it)", cfgFlagOwner: "can change the owner", cfgFlagDelegate: "DELEGATECALL", cfgFlagEmpty: "no permission (entry left in the list)",
+    cfgLabelEp: " (EntryPoint)", cfgLabelUrd: " (Universal Receiver Delegate)", cfgLabel4337: " (signs 4337 operations)",
+    cfgNo4337: "4337 signers", cfgNo4337Msg: "extension active but no controller has the 4337 permission",
+    cfgPm: "Paymaster", cfgPmOk: (v) => `${v.addr}: code verified, owner ${v.owner}`, cfgPmBad: (v) => `${v.addr}: ${v.why}`, cfgPmNone: "owner address missing (section 2)",
+    cfgPmCap: "Cap and deposit", cfgPmCapOk: (v) => `cap ${v.cap}, deposit ${v.dep}`, cfgPmCapZero: "cap 0: the paymaster pays nothing", cfgPmDepLow: (v) => `deposit ${v.dep} below the cap ${v.cap}: top up the paymaster`,
+    cfgPmUp: "UP on the paymaster allowlist", cfgYes: "yes", cfgNoList: "no: the paymaster does not pay for this UP",
+    cfgSvc: "Site relayer", cfgSvcOk: (v) => `${v.addr}, serves this network and this paymaster, balance ${v.bal}`, cfgSvcNo: "not reachable, or it does not serve this network or this paymaster",
     panel4Note: "<b>A</b> · with the <b>controller</b> active in MetaMask: the page prepares a transfer from the UP and asks you to sign its fingerprint (<code>userOpHash</code>). MetaMask will show a hex text: compare it with the fingerprint written below. No gas.<br><b>B</b> · the <b>site relayer</b> sends the signed operation: no account switch, no signature. It advances the gas and gets it back from the paymaster.<br>The UP must hold the amount it sends: the paymaster pays only the gas.",
     testToLabel: "Recipient",
     testAmountLabel: "Amount the UP sends (native currency)",
@@ -1002,6 +1047,7 @@ function updateButtons() {
   $("signOpBtn").disabled = !(ok && s.upDone && s.pmState === "ok" && s.sponsored);
   const svcOk = !!(signedOp && svcServes(signedOp.chainId, signedOp.pm));
   $("relaySvcBtn").disabled = !(ok && svcOk);
+  $("checkCfgBtn").disabled = !(s && s.ok && s.upAddr && !busy);
   $("svcInfo").textContent = svcLine(s);
   // Which account each step needs, so a grey button is never a mystery.
   let hint = "";
@@ -1346,6 +1392,113 @@ async function relaySigned() {
   finally { busy = false; loadSvc(); scheduleCheck(0); }
 }
 $("relaySvcBtn").addEventListener("click", relaySigned);
+
+// ==================== CONFIGURATION CHECK ====================
+// Read-only check of everything the gas relay depends on (AUDIT.md 8, G-M2): above all, the EntryPoint
+// must hold exactly 0x500, so nothing sent through the relayer can change the UP.
+const URD_KEY = "0x0cfc51aec37c55a4d0b1a65c6255c4bf2fbdf6277f3cc0730c45b828b6db8b47";
+function renderRows(id, rows) {
+  const box = $(id); box.textContent = "";
+  const grid = document.createElement("div"); grid.className = "kv";
+  for (const [k, v, cls] of rows) {
+    const kd = document.createElement("div"); kd.className = "k"; kd.textContent = k;
+    const vd = document.createElement("div"); vd.className = "v" + (cls ? " " + cls : ""); vd.textContent = v;
+    grid.appendChild(kd); grid.appendChild(vd);
+  }
+  box.appendChild(grid);
+}
+async function checkConfig() {
+  const s = await freshState();
+  if (!s || !s.ok) { setStatus("cfgBox", t("hintCheck"), "line-err"); return; }
+  const rows = []; let err = 0, warn = 0;
+  const add = (k, v, cls) => { rows.push([k, v, cls]); if (cls === "err") err++; if (cls === "warn") warn++; };
+  const pv = s.provider, up = s.upAddr;
+  if (!up) { setStatus("cfgBox", t("upMissing"), "line-err"); return; }
+  if ((await pv.getCode(up)) === "0x") { add(t("cfgUp"), t("cfgUpMissing"), "err"); return finish(); }
+  add(t("cfgUp"), t("cfgUpOk", { addr: up }), "ok");
+  const upC = new ethers.Contract(up, UP_IFACE, pv);
+  const km = ethers.getAddress(await upC.owner());
+  const kmOk = (await pv.getCode(km)) !== "0x";
+  add(t("cfgKm"), t(kmOk ? "cfgKmOk" : "cfgKmBad", { addr: km }), kmOk ? "ok" : "err");
+  const [extVal, epRaw, lenRaw, urdRaw] = await upC.getDataBatch([LSP17_KEY(EXT.validateUserOpSelector), PERM_KEY(ENTRY_POINT), ARRAY_KEY, URD_KEY]);
+  // extension
+  const extOn = extVal && extVal !== "0x";
+  if (!extOn) add(t("cfgExt"), t("cfgExtNone"), "warn");
+  else if (ethers.dataLength(extVal) !== 20 || extVal.toLowerCase() !== EXT.address.toLowerCase()) add(t("cfgExt"), t("cfgExtOther", { addr: extVal }), "err");
+  else {
+    const code = await pv.getCode(EXT.address);
+    const same = code !== "0x" && ethers.keccak256(code) === EXT.runtimeCodeHash;
+    add(t("cfgExt"), t(same ? "cfgExtOk" : "cfgExtCode", { addr: EXT.address }), same ? "ok" : "err");
+  }
+  // EntryPoint permissions: the invariant everything rests on
+  const epPerms = epRaw && epRaw !== "0x" ? BigInt(epRaw) : 0n;
+  if (epPerms === 0n) add(t("cfgEp"), t("cfgEpNone"), extOn ? "err" : "warn");
+  else if (epPerms === EP_PERMS) add(t("cfgEp"), t("cfgEpOk"), "ok");
+  else add(t("cfgEp"), t("cfgEpBad", { hex: permHex(epPerms), names: permNames(epPerms) }), "err");
+  // controller list
+  const len = lenRaw && lenRaw !== "0x" ? Number(BigInt(lenRaw)) : 0;
+  const items = len > 0 && len <= 50 ? await upC.getDataBatch(Array.from({ length: len }, (_, i) => ARRAY_INDEX_KEY(i))) : [];
+  const addrs = items.map(v => v && ethers.dataLength(v) === 20 ? ethers.getAddress(v) : null);
+  const problems = [];
+  if (len > 50) problems.push("> 50");
+  if (addrs.some(a => !a)) problems.push("malformed entry");
+  const dup = addrs.filter((a, i) => a && addrs.indexOf(a) !== i);
+  if (dup.length) problems.push("duplicates " + [...new Set(dup)].join(", "));
+  add(t("cfgArray"), problems.length ? t("cfgArrayBad", { n: len, why: problems.join("; ") }) : t("cfgArrayOk", { n: len }), problems.length ? "err" : "ok");
+  const epIdx = addrs.map((a, i) => a === ENTRY_POINT ? i : -1).filter(i => i >= 0);
+  if (epPerms !== 0n || epIdx.length) {
+    if (epIdx.length === 1) add(t("cfgEpList"), t("cfgEpListOk", { i: epIdx[0] }), "ok");
+    else add(t("cfgEpList"), t(epIdx.length ? "cfgEpListDup" : "cfgEpListMissing"), "err");
+  }
+  const urd = urdRaw && ethers.dataLength(urdRaw) === 20 ? ethers.getAddress(urdRaw) : null;
+  const valid = addrs.filter(Boolean);
+  const perms = valid.length ? await upC.getDataBatch(valid.map(a => PERM_KEY(a))) : [];
+  let signers4337 = 0;
+  valid.forEach((a, n) => {
+    if (a === ENTRY_POINT) return;
+    const p = perms[n] && perms[n] !== "0x" ? BigInt(perms[n]) : 0n;
+    const flags = [];
+    if (p === 0n) flags.push(t("cfgFlagEmpty"));
+    if (p & (P.ADDEXTENSIONS | P.CHANGEEXTENSIONS)) flags.push(t("cfgFlagTemp"));
+    if (p & P.CHANGEOWNER) flags.push(t("cfgFlagOwner"));
+    if (p & (P.DELEGATECALL | P.SUPER_DELEGATECALL)) flags.push(t("cfgFlagDelegate"));
+    if (p & P.ERC4337) signers4337++;
+    const label = a === urd ? t("cfgLabelUrd") : (p & P.ERC4337) ? t("cfgLabel4337") : "";
+    add(t("cfgCtl", { i: addrs.indexOf(a) }), t("cfgCtlLine", { addr: a, label, hex: permHex(p), names: permNames(p) }) + (flags.length ? t("cfgCtlFlag", { flags: flags.join("; ") }) : ""), flags.length ? "warn" : "");
+  });
+  if (extOn && signers4337 === 0) add(t("cfgNo4337"), t("cfgNo4337Msg"), "warn");
+  // paymaster
+  if (!s.pmAddr) add(t("cfgPm"), t("cfgPmNone"), "warn");
+  else if (s.pmState !== "ok") add(t("cfgPm"), t("cfgPmBad", { addr: s.pmAddr, why: t(s.pmState === "missing" ? "pmMissing" : "pmWrong") }), "err");
+  else {
+    add(t("cfgPm"), t("cfgPmOk", { addr: s.pmAddr, owner: s.pmOwner }), "ok");
+    if (!(s.cap > 0n)) add(t("cfgPmCap"), t("cfgPmCapZero"), "err");
+    else if (s.deposit < s.cap) add(t("cfgPmCap"), t("cfgPmDepLow", { dep: fmt(s.deposit, s.cur), cap: fmt(s.cap, s.cur) }), "warn");
+    else add(t("cfgPmCap"), t("cfgPmCapOk", { dep: fmt(s.deposit, s.cur), cap: fmt(s.cap, s.cur) }), "ok");
+    add(t("cfgPmUp"), s.sponsored ? t("cfgYes") : t("cfgNoList"), s.sponsored ? "ok" : "warn");
+    // site relayer
+    if (svcServes(s.chainId, s.pmAddr)) {
+      const bal = svc.chains[String(s.chainId)].balance;
+      add(t("cfgSvc"), t("cfgSvcOk", { addr: svc.relayer, bal: bal == null ? "?" : fmt(BigInt(bal), s.cur) }), "ok");
+    } else add(t("cfgSvc"), t("cfgSvcNo"), "warn");
+  }
+  return finish();
+  function finish() {
+    renderRows("cfgBox", rows);
+    const sum = document.createElement("div"); sum.style.margin = "0 0 12px"; sum.style.fontWeight = "700";
+    sum.className = err ? "line-err" : warn ? "line-warn" : "line-ok";
+    sum.textContent = err || warn ? t("cfgSummary", { err, warn }) : t("cfgSummaryOk");
+    $("cfgBox").prepend(sum);
+    log(sum.textContent, sum.className);
+    rows.filter(r => r[2] === "err" || r[2] === "warn").forEach(r => log(`  ${r[0]}: ${r[1]}`, r[2] === "err" ? "line-err" : "line-warn"));
+  }
+}
+$("checkCfgBtn").addEventListener("click", async () => {
+  if (busy) return;
+  busy = true; updateButtons(); logSeparator();
+  try { await checkConfig(); } catch (e) { log(t("genericError", { err: revertReason(e) }), "line-err"); }
+  finally { busy = false; updateButtons(); }
+});
 
 // ==================== START ====================
 applyI18n();
