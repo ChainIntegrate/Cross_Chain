@@ -146,7 +146,8 @@ The notes below are kept for reference.
      - **Birra20venti's UP `0x1d62B8d2c63B942095AD3C7FFc7e845195D9E718`: allowlisted and set up on Base (2026-09-30).** Page log in `tools/logs/2026-09-30-base-birra20venti-up.txt`.
        - Allowlisted by the cassa: `0xdbe267b10f969a217cf526fe25e3a2e7fbfe2dae12c7f299b841b08e01993006`.
        - Setup by its controller `0x4346…9d4c` (Key Manager `0x595D…4feE`): `0x5b327db2833bbcdb5d3e780b526cec0eca4a2bfcb4e8d917fbbce17a12ad040d`. Permissions `0x7f3f06` → `0xff3f06`; final check passed.
-       - First test operation (0.0001 ETH to the cassa) refused by the site relayer before sending: the execution simulation reverted with a UP custom error, most likely `ERC725X_InsufficientBalance` (no ETH on the UP on Base). Nothing was spent. The relayer now decodes UP and Key Manager errors, and the page checks the UP balance before signing.
+       - First successful operation through the site relayer, after funding the UP: `0x2273f39b52b819e0c26cf3ed8d00c3761acf12979db42a67b2897a7617943393` (nonce 1). Controller unchanged, paymaster paid 0.0000011 ETH, relayer +0.00000014 ETH. Log appended to the same file.
+       - Earlier first test operation (0.0001 ETH to the cassa) refused by the site relayer before sending: the execution simulation reverted with a UP custom error, most likely `ERC725X_InsufficientBalance` (no ETH on the UP on Base). Nothing was spent. The relayer now decodes UP and Key Manager errors, and the page checks the UP balance before signing.
      - Feedback from the second run, fixed in `up-gas-relay.html`:
        - plain-words explanation at the top ("read on, then read this again");
        - the allowlist moved to section 3, next to the UP address, with its own status box and a note that MetaMask asks the cassa to confirm a transaction;
