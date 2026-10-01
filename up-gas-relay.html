@@ -337,8 +337,11 @@ const I18N = {
 <h4>Mentre aspetti</h4>
 <ul>
 <li>Dopo ogni clic compare un riquadro in basso con lo stato. Prima di aprire MetaMask la pagina legge i dati e simula: possono passare alcuni secondi. <b>Non cliccare di nuovo.</b></li>
+<li>Anche quando cambi account o rete in MetaMask compare il riquadro <b>Aggiornamento dei dati</b>: la pagina rilegge tutto e per qualche secondo i pulsanti restano grigi. Aspetta che sparisca.</li>
 <li>Se MetaMask non compare, apri l'estensione: la richiesta può essere in attesa lì.</li>
 </ul>
+<h4>Verificare la configurazione</h4>
+<ul><li>Sezione 5, <b>Verifica la configurazione</b>: sola lettura, nessuna firma, nessun wallet. Bastano la rete, l'indirizzo della UP e il proprietario del paymaster. Ogni voce risulta ✅, ⚠️ o ❌; la più importante è <b>Permessi dell'EntryPoint = 0x000500</b>. Rifalla dopo ogni modifica alla UP e su ogni rete. Anche il server la ripete ogni ora e manda una mail al gestore se qualcosa cambia.</li></ul>
 <h4>Tornare indietro</h4>
 <ul><li>Sezione 3, <b>Disattivare il 4337 su questa UP</b>: una transazione del controller riporta la UP com'era. Sezione 3, <b>Togli dalla lista</b>, con la cassa.</li></ul>`,
     panel0Note: "<b>Dettagli tecnici.</b><br><b>2 · Paymaster:</b> un contratto tuo (<code>contracts/UPPaymaster.sol</code>), stesso indirizzo su ogni rete per lo stesso proprietario, che paga il gas <b>solo</b> per le UP nella sua lista e fino a un tetto per operazione. Lo ricarichi con un semplice invio; solo il proprietario gestisce lista, tetto e prelievi.<br><b>3 · UP:</b> la cassa la mette nella lista del paymaster; poi una transazione del controller, una volta per rete: registra l'estensione <code>Extension4337</code> di LUKSO, aggiunge l'EntryPoint come controller (può chiamare e inviare valore, <b>non</b> modificare dati o permessi) e dà al controller il permesso 4337. Gli altri permessi del controller restano identici.<br><b>4 · Prova:</b> il controller firma un'operazione con <code>personal_sign</code> (nessun gas); poi il relayer del sito la invia all'EntryPoint: anticipa il gas e viene rimborsato dal paymaster nella stessa transazione.",
@@ -391,7 +394,8 @@ const I18N = {
     revokeOk: "✅ Verifica finale: estensione rimossa, EntryPoint senza permessi e fuori dall'elenco, permesso 4337 tolto all'account, nessun altro permesso cambiato.",
     panel4Title: "4 · Operazione di prova",
     panel5Title: "5 · Verifica della configurazione",
-    panel5Note: "Sola lettura: nessuna firma, nessun gas, va bene qualunque account. Controlla che la UP, l'estensione, l'EntryPoint, i controller, il paymaster e il relayer del sito siano configurati come previsto. Il punto più importante: l'EntryPoint deve avere esattamente i permessi <code>0x000500</code> (chiamare e inviare valore, niente modifica di dati o permessi). Rifalla dopo ogni modifica alla UP e su ogni rete.",
+    cfgNoRpc: "Scegli una rete con un RPC che risponde (sezione 1).", checkingToast: "Aggiornamento dei dati: account o rete cambiati, la pagina rilegge tutto. Attendi qualche secondo, non serve cliccare di nuovo.", accountChanged: (v) => `Account attivo in MetaMask: ${v.addr}`,
+    panel5Note: "Sola lettura: nessuna firma, nessun gas. Bastano la rete (sezione 1), l'indirizzo della UP (sezione 3) e, per il paymaster, il proprietario (sezione 2); MetaMask non serve. Controlla che la UP, l'estensione, l'EntryPoint, i controller, il paymaster e il relayer del sito siano configurati come previsto. Il punto più importante: l'EntryPoint deve avere esattamente i permessi <code>0x000500</code> (chiamare e inviare valore, niente modifica di dati o permessi). Rifalla dopo ogni modifica alla UP e su ogni rete.",
     checkCfgBtn: "Verifica la configurazione (sola lettura)", cfgNone: "Nessuna verifica eseguita.",
     cfgSummaryOk: "✅ Configurazione in ordine: nessun problema trovato.",
     cfgSummary: (v) => `${v.err ? "❌" : "⚠️"} ${v.err} problemi, ${v.warn} avvisi: leggi le righe segnate.`,
@@ -562,8 +566,11 @@ const I18N = {
 <h4>While you wait</h4>
 <ul>
 <li>After each click a box at the bottom shows the status. Before MetaMask opens the page reads the data and simulates: it can take a few seconds. <b>Do not click again.</b></li>
+<li>When you switch account or network in MetaMask, the box <b>Updating the data</b> appears too: the page reads everything again and the buttons stay grey for a few seconds. Wait until it goes away.</li>
 <li>If MetaMask does not appear, open the extension: the request may be waiting there.</li>
 </ul>
+<h4>Checking the configuration</h4>
+<ul><li>Section 5, <b>Check the configuration</b>: read-only, no signature, no wallet. It needs only the network, the UP address and the paymaster owner. Each item shows ✅, ⚠️ or ❌; the most important one is <b>EntryPoint's permissions = 0x000500</b>. Run it after any change to the UP and on every network. The server also repeats it every hour and emails the operator if something changes.</li></ul>
 <h4>Going back</h4>
 <ul><li>Section 3, <b>Turning 4337 off on this UP</b>: one controller transaction restores the UP as it was. Section 3, <b>Remove from the allowlist</b>, with the cassa.</li></ul>`,
     panel0Note: "<b>Technical details.</b><br><b>2 · Paymaster:</b> a contract of yours (<code>contracts/UPPaymaster.sol</code>), at the same address on every chain for the same owner, that pays gas <b>only</b> for the UPs on its allowlist and up to a cap per operation. You fund it with a plain transfer; only the owner manages allowlist, cap and withdrawals.<br><b>3 · UP:</b> the cassa puts it on the paymaster allowlist; then one controller transaction, once per chain: it registers LUKSO's <code>Extension4337</code>, adds the EntryPoint as a controller (it can call and send value, <b>not</b> change data or permissions) and gives the controller the 4337 permission. The controller's other permissions stay identical.<br><b>4 · Test:</b> the controller signs an operation with <code>personal_sign</code> (no gas); then the site relayer sends it to the EntryPoint: it advances the gas and is reimbursed by the paymaster in the same transaction.",
@@ -616,7 +623,8 @@ const I18N = {
     revokeOk: "✅ Final check: extension removed, EntryPoint without permissions and out of the list, 4337 permission removed from the account, no other permission changed.",
     panel4Title: "4 · Test operation",
     panel5Title: "5 · Configuration check",
-    panel5Note: "Read-only: no signature, no gas, any account will do. It checks that the UP, the extension, the EntryPoint, the controllers, the paymaster and the site relayer are set up as expected. The key point: the EntryPoint must have exactly the permissions <code>0x000500</code> (call and send value, no change of data or permissions). Run it again after any change to the UP and on every network.",
+    cfgNoRpc: "Choose a network whose RPC answers (section 1).", checkingToast: "Updating the data: account or network changed, the page is reading everything again. Wait a few seconds, no need to click again.", accountChanged: (v) => `Account active in MetaMask: ${v.addr}`,
+    panel5Note: "Read-only: no signature, no gas. It needs only the network (section 1), the UP address (section 3) and, for the paymaster, the owner (section 2); MetaMask is not needed. It checks that the UP, the extension, the EntryPoint, the controllers, the paymaster and the site relayer are set up as expected. The key point: the EntryPoint must have exactly the permissions <code>0x000500</code> (call and send value, no change of data or permissions). Run it again after any change to the UP and on every network.",
     checkCfgBtn: "Check the configuration (read-only)", cfgNone: "No check run yet.",
     cfgSummaryOk: "✅ Configuration in order: no problem found.",
     cfgSummary: (v) => `${v.err ? "❌" : "⚠️"} ${v.err} problems, ${v.warn} warnings: read the marked rows.`,
@@ -755,10 +763,21 @@ function log(msg, cls) {
   // While an action runs, the fixed box shows its latest step (first line only).
   if (busy && !/^—— /.test(msg)) { const first = String(msg).split("\n")[0]; $("busyMsg").textContent = first.length > 200 ? first.slice(0, 200) + "…" : first; }
 }
+// While the page re-reads the state (after an account or network change, or a slow check), the same
+// box says so, so a few grey seconds never look like nothing is happening.
+let checking = 0, checkingTimer = null;
+function showChecking(on, delay = 700) {
+  clearTimeout(checkingTimer);
+  if (!on) { checking = 0; syncBusyToast(); return; }
+  checkingTimer = setTimeout(() => { checking = 1; syncBusyToast(); }, delay);
+}
 function syncBusyToast() {
   const box = $("busyToast"), was = box.classList.contains("on");
-  if (busy && !was) $("busyMsg").textContent = t("busyStart");
-  box.classList.toggle("on", busy);
+  const on = busy || checking > 0;
+  if (busy && (!was || box.dataset.mode !== "busy")) { $("busyMsg").textContent = t("busyStart"); box.dataset.mode = "busy"; }
+  else if (!busy && checking > 0 && box.dataset.mode !== "checking") { $("busyMsg").textContent = t("checkingToast"); box.dataset.mode = "checking"; }
+  if (!on) box.dataset.mode = "";
+  box.classList.toggle("on", on);
 }
 function logSeparator() { log(`—— ${new Date().toLocaleTimeString()} ——`, "line-dim"); }
 const riskAccepted = () => $("ackRisk").checked;
@@ -838,7 +857,12 @@ $("connectSigner").addEventListener("click", async () => {
     const acc = await candidate.request({ method: "eth_requestAccounts" });
     signerAddress = acc[0] ? ethers.getAddress(acc[0]) : null;
     if (signerProvider !== candidate && candidate.on) {
-      candidate.on("accountsChanged", (a) => { signerAddress = a?.[0] ? ethers.getAddress(a[0]) : null; scheduleCheck(0); });
+      candidate.on("accountsChanged", (a) => {
+        signerAddress = a?.[0] ? ethers.getAddress(a[0]) : null;
+        if (signerAddress) log(t("accountChanged", { addr: signerAddress }), "line-dim");
+        if (!busy) showChecking(true, 0);
+        scheduleCheck(0);
+      });
       candidate.on("chainChanged", () => scheduleCheck(0));
     }
     signerProvider = candidate;
@@ -872,7 +896,10 @@ function scheduleCheck(delay = 500) {
 async function runCheck() {
   const run = ++checkRun;
   setStatus("netBox", t("checking"), "empty");
-  const s = await computeState();
+  if (!busy && !checking) showChecking(true);
+  let s;
+  try { s = await computeState(); }
+  finally { if (run === checkRun) showChecking(false); }
   if (run !== checkRun) return null;
   state = s;
   render(s);
@@ -1047,7 +1074,7 @@ function updateButtons() {
   $("signOpBtn").disabled = !(ok && s.upDone && s.pmState === "ok" && s.sponsored);
   const svcOk = !!(signedOp && svcServes(signedOp.chainId, signedOp.pm));
   $("relaySvcBtn").disabled = !(ok && svcOk);
-  $("checkCfgBtn").disabled = !(s && s.ok && s.upAddr && !busy);
+  $("checkCfgBtn").disabled = !(s && s.provider && ethers.isAddress($("upAddress").value.trim()) && !busy);
   $("svcInfo").textContent = svcLine(s);
   // Which account each step needs, so a grey button is never a mystery.
   let hint = "";
@@ -1408,12 +1435,15 @@ function renderRows(id, rows) {
   box.appendChild(grid);
 }
 async function checkConfig() {
+  // Needs only the network and the UP address: no wallet, no signature.
   const s = await freshState();
-  if (!s || !s.ok) { setStatus("cfgBox", t("hintCheck"), "line-err"); return; }
+  if (!s || !s.provider) { setStatus("cfgBox", t("cfgNoRpc"), "line-err"); return; }
   const rows = []; let err = 0, warn = 0;
   const add = (k, v, cls) => { rows.push([k, v, cls]); if (cls === "err") err++; if (cls === "warn") warn++; };
-  const pv = s.provider, up = s.upAddr;
-  if (!up) { setStatus("cfgBox", t("upMissing"), "line-err"); return; }
+  const pv = s.provider;
+  const rawUp = $("upAddress").value.trim();
+  if (!ethers.isAddress(rawUp)) { setStatus("cfgBox", t("upMissing"), "line-err"); return; }
+  const up = ethers.getAddress(rawUp);
   if ((await pv.getCode(up)) === "0x") { add(t("cfgUp"), t("cfgUpMissing"), "err"); return finish(); }
   add(t("cfgUp"), t("cfgUpOk", { addr: up }), "ok");
   const upC = new ethers.Contract(up, UP_IFACE, pv);
@@ -1467,17 +1497,23 @@ async function checkConfig() {
     add(t("cfgCtl", { i: addrs.indexOf(a) }), t("cfgCtlLine", { addr: a, label, hex: permHex(p), names: permNames(p) }) + (flags.length ? t("cfgCtlFlag", { flags: flags.join("; ") }) : ""), flags.length ? "warn" : "");
   });
   if (extOn && signers4337 === 0) add(t("cfgNo4337"), t("cfgNo4337Msg"), "warn");
-  // paymaster
-  if (!s.pmAddr) add(t("cfgPm"), t("cfgPmNone"), "warn");
-  else if (s.pmState !== "ok") add(t("cfgPm"), t("cfgPmBad", { addr: s.pmAddr, why: t(s.pmState === "missing" ? "pmMissing" : "pmWrong") }), "err");
+  // paymaster: from the owner field (section 2), read directly so no wallet is needed
+  const rawOwner = $("ownerAddress").value.trim();
+  const pmAddr = ethers.isAddress(rawOwner) ? ethers.getCreate2Address(NICK_FACTORY, SALT, ethers.keccak256(ethers.concat([PMJ.creationCode, enc(["address", "address"], [ENTRY_POINT, ethers.getAddress(rawOwner)])]))) : null;
+  const pmCode = pmAddr ? await pv.getCode(pmAddr) : "0x";
+  const pmState = !pmAddr ? null : pmCode === "0x" ? "missing" : ethers.keccak256(pmCode) === PMJ.runtimeCodeHash ? "ok" : "wrong";
+  if (!pmAddr) add(t("cfgPm"), t("cfgPmNone"), "warn");
+  else if (pmState !== "ok") add(t("cfgPm"), t("cfgPmBad", { addr: pmAddr, why: t(pmState === "missing" ? "pmMissing" : "pmWrong") }), "err");
   else {
-    add(t("cfgPm"), t("cfgPmOk", { addr: s.pmAddr, owner: s.pmOwner }), "ok");
-    if (!(s.cap > 0n)) add(t("cfgPmCap"), t("cfgPmCapZero"), "err");
-    else if (s.deposit < s.cap) add(t("cfgPmCap"), t("cfgPmDepLow", { dep: fmt(s.deposit, s.cur), cap: fmt(s.cap, s.cur) }), "warn");
-    else add(t("cfgPmCap"), t("cfgPmCapOk", { dep: fmt(s.deposit, s.cur), cap: fmt(s.cap, s.cur) }), "ok");
-    add(t("cfgPmUp"), s.sponsored ? t("cfgYes") : t("cfgNoList"), s.sponsored ? "ok" : "warn");
+    const pmC = new ethers.Contract(pmAddr, PM_ABI, pv);
+    const [pmOwner, cap, deposit, sponsored] = await Promise.all([pmC.owner(), pmC.maxCostPerOp(), pmC.deposit(), pmC.sponsored(up)]);
+    add(t("cfgPm"), t("cfgPmOk", { addr: pmAddr, owner: pmOwner }), "ok");
+    if (!(cap > 0n)) add(t("cfgPmCap"), t("cfgPmCapZero"), "err");
+    else if (deposit < cap) add(t("cfgPmCap"), t("cfgPmDepLow", { dep: fmt(deposit, s.cur), cap: fmt(cap, s.cur) }), "warn");
+    else add(t("cfgPmCap"), t("cfgPmCapOk", { dep: fmt(deposit, s.cur), cap: fmt(cap, s.cur) }), "ok");
+    add(t("cfgPmUp"), sponsored ? t("cfgYes") : t("cfgNoList"), sponsored ? "ok" : "warn");
     // site relayer
-    if (svcServes(s.chainId, s.pmAddr)) {
+    if (svcServes(s.chainId, pmAddr)) {
       const bal = svc.chains[String(s.chainId)].balance;
       add(t("cfgSvc"), t("cfgSvcOk", { addr: svc.relayer, bal: bal == null ? "?" : fmt(BigInt(bal), s.cur) }), "ok");
     } else add(t("cfgSvc"), t("cfgSvcNo"), "warn");

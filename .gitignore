@@ -17,3 +17,6 @@ node_modules/
 
 # Site configuration, created on the server from config.example.js
 config.js
+
+# Monitor SMTP credentials (server only)
+smtp.env

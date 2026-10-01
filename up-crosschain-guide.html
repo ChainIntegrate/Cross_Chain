@@ -228,6 +228,27 @@
   </ul>
 </div>
 
+<div class="note">
+  <b>Operating without gas on the controller (experimental).</b> On networks where the site runs it, the <a href="up-gas-relay.html">Gas relay</a> page lets a profile operate while its controller holds no gas: the controller only signs, the site's relayer sends, and a paymaster owned by the site operator pays the fee. It works only for profiles the operator has put on the paymaster's list.
+  <ul>
+    <li><b>Once per profile and network:</b> the operator lists the profile; the controller signs one setup transaction (it pays a little gas this one time). A button turns it all off again with one transaction.</li>
+    <li><b>Every operation:</b> the controller signs a message in MetaMask (no gas) and the site's relayer sends it.</li>
+    <li><b>Check it any time:</b> section 5 of the page verifies the whole configuration, read-only, with no wallet needed. Run it after any change to the profile.</li>
+    <li>The page has a plain-words explanation and a step-by-step guide at the top. Read them first.</li>
+  </ul>
+</div>
+
+<div class="note danger">
+  <b>Your funds depend on the controller key, on every network.</b>
+  <ul>
+    <li>Whoever holds the controller key controls the profile, with or without the gas relay: the key in MetaMask and in the UP extension is a hot key, exposed like any wallet connected to the internet. Keep on the profile only what you are prepared to lose if that key were stolen, or move the controller to a hardware wallet (see below).</li>
+    <li>One key controls the profile at the same address on every network: if it is stolen, all of them are exposed at once.</li>
+    <li><b>The original controller can never be retired.</b> Every redeploy replays your profile's original creation, so on every new network the profile is born controlled by that original key, whatever you changed elsewhere. Keep it safe for good: ideally offline, used only to deploy on new networks.</li>
+    <li>For daily use you can add a second controller on each network, for example a hardware wallet used through MetaMask, and keep the original key aside.</li>
+    <li>The gas relay adds one specific risk: its LUKSO extension (<code>Extension4337</code>) has never been audited by a professional firm. An independent AI-assisted review found no issue; the details are in the project's AUDIT.md, section 8.</li>
+  </ul>
+</div>
+
 <h2>What these tools do — and don't do</h2>
 <ul>
   <li>They never ask for a private key. The only thing you paste in is calldata — public on-chain data.</li>
@@ -250,6 +271,7 @@
   <li><a href="up-publish-implementation.html">Publish implementation</a> — if the Verify or Deploy tool reports that your profile's LSP0 or Key Manager implementation is missing on the target chain, publish it there at the same address, by replaying LUKSO's original deterministic deploy. Anyone can do it; it only costs gas.</li>
   <li><a href="up-wallet.html">UP Wallet</a> <i>(experimental)</i> — use the redeployed profile as your account on any dApp through WalletConnect: the page checks that profile and controller are compatible, shows and simulates every request, and signs only after your confirmation. Start in simulation mode, with small amounts.</li>
   <li><a href="up-nft-receiver.html">NFT reception</a> <i>(experimental)</i> — lets the redeployed profile receive ERC-721 / ERC-1155 NFTs (for example purchases on marketplaces), with one transaction that leaves the controller's permissions unchanged.</li>
+  <li><a href="up-gas-relay.html">Gas relay</a> <i>(experimental)</i> — operate the profile while its controller holds no gas: the controller signs, the site's relayer sends, the site operator's paymaster pays. Only for profiles on the paymaster's list. Includes a read-only configuration check.</li>
 </ul>
 
 <div class="site-footer">
@@ -412,6 +434,27 @@
   </ul>
 </div>
 
+<div class="note">
+  <b>Operare senza gas sul controller (sperimentale).</b> Sulle reti dove il sito lo offre, la pagina <a href="up-gas-relay.html">Gas pagato dal paymaster</a> permette a un profilo di operare senza che il controller abbia gas: il controller firma soltanto, il relayer del sito invia e un paymaster del gestore del sito paga la tassa. Funziona solo per i profili che il gestore ha messo nella lista del paymaster.
+  <ul>
+    <li><b>Una volta per profilo e per rete:</b> il gestore mette il profilo in lista; il controller firma una transazione di configurazione (solo questa volta paga un po' di gas). Un pulsante disattiva tutto con una sola transazione.</li>
+    <li><b>Ogni operazione:</b> il controller firma un messaggio in MetaMask (nessun gas) e il relayer del sito lo invia.</li>
+    <li><b>Verificalo quando vuoi:</b> la sezione 5 della pagina controlla tutta la configurazione, in sola lettura e senza wallet. Rifallo dopo ogni modifica al profilo.</li>
+    <li>In cima alla pagina ci sono una spiegazione in parole semplici e una guida passo passo: leggile prima di iniziare.</li>
+  </ul>
+</div>
+
+<div class="note danger">
+  <b>I tuoi fondi dipendono dalla chiave del controller, su tutte le reti.</b>
+  <ul>
+    <li>Chi ha la chiave del controller controlla il profilo, con o senza il gas pagato dal paymaster: la chiave in MetaMask e nell'estensione UP è una chiave "calda", esposta come qualunque wallet collegato a internet. Tieni sul profilo solo quello che saresti disposto a perdere se quella chiave venisse rubata, oppure sposta il controller su un hardware wallet (vedi sotto).</li>
+    <li>Una sola chiave controlla il profilo allo stesso indirizzo su tutte le reti: se viene rubata, sono esposte tutte insieme.</li>
+    <li><b>Il controller originale non si può mai dismettere.</b> Ogni redeploy ripete la creazione originale del profilo, quindi su ogni nuova rete il profilo nasce controllato da quella chiave originale, qualunque cosa tu abbia cambiato altrove. Custodiscila per sempre: meglio offline, usata solo per i deploy su nuove reti.</li>
+    <li>Per l'uso quotidiano puoi aggiungere su ogni rete un secondo controller, per esempio un hardware wallet usato tramite MetaMask, e tenere da parte la chiave originale.</li>
+    <li>Il gas pagato dal paymaster aggiunge un rischio specifico: la sua estensione LUKSO (<code>Extension4337</code>) non è mai stata verificata da una società specializzata. Una revisione indipendente assistita da AI non ha trovato problemi; i dettagli sono nel file AUDIT.md del progetto, sezione 8.</li>
+  </ul>
+</div>
+
 <h2>Cosa fanno questi strumenti — e cosa non fanno</h2>
 <ul>
   <li>Non chiedono mai una chiave privata. L'unica cosa che incolli è la calldata — dato pubblico on-chain.</li>
@@ -434,6 +477,7 @@
   <li><a href="up-publish-implementation.html">Pubblica implementazione</a> — se la pagina di Verifica o di Deploy segnala che l'implementazione LSP0 o Key Manager del tuo profilo manca sulla rete di destinazione, la pubblica lì allo stesso indirizzo, ripetendo il deploy deterministico originale di LUKSO. Può farlo chiunque, costa solo gas.</li>
   <li><a href="up-wallet.html">UP Wallet</a> <i>(sperimentale)</i> — usa il profilo rideployato come account su qualsiasi dApp tramite WalletConnect: la pagina verifica che profilo e controller siano compatibili, mostra e simula ogni richiesta e firma solo dopo la tua conferma. Parti in modalità simulazione, con importi piccoli.</li>
   <li><a href="up-nft-receiver.html">Ricezione NFT</a> <i>(sperimentale)</i> — permette al profilo rideployato di ricevere NFT ERC-721 / ERC-1155 (per esempio acquisti sui marketplace), con una sola transazione che lascia invariati i permessi del controller.</li>
+  <li><a href="up-gas-relay.html">Gas pagato dal paymaster</a> <i>(sperimentale)</i> — opera il profilo senza che il controller abbia gas: il controller firma, il relayer del sito invia, il paymaster del gestore paga. Solo per i profili nella lista del paymaster. Include una verifica della configurazione in sola lettura.</li>
 </ul>
 
 <div class="site-footer">

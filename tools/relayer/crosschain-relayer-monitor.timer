@@ -1,0 +1,12 @@
+# Runs crosschain-relayer-monitor.service every hour.
+[Unit]
+Description=Hourly Cross_Chain gas relay monitor
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=1h
+RandomizedDelaySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

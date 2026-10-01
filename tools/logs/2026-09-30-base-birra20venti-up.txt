@@ -45,3 +45,29 @@ Firma in MetaMask: confronta il testo esadecimale con l'impronta qui sopra.
 Relayer: 0xbb683923c2Df0269996C0E2F276A5097cE863C2F. Anticipa il gas e lo riceve indietro dal paymaster.
 Invio dell'operazione firmata al relayer del sito...
 Il relayer del sito ha rifiutato l'operazione: the operation would fail: execution reverted (unknown custom error)
+
+—— 2026-10-01, after funding the UP: first successful operation ——
+—— 16:45:07 ——
+Operazione (userOp) per l'EntryPoint 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789
+  La UP 0x1d62B8d2c63B942095AD3C7FFc7e845195D9E718 invia 0.0001 ETH a 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9
+  nonce 1 · paga il paymaster 0xb353565d1f801E7402DBC267b8C0E30E3540D4eD
+  preVerificationGas 52944 (base della transazione, dati, costo L1 dove c'è)
+  costo massimo 0.000015432384 ETH (tetto 0.0003 ETH, deposito 0.000493242848 ETH)
+
+Impronta da firmare (userOpHash):
+  0xb8642223924d3c9c27563ced4f84ad70735f5c8c003c63668c37e7a04fd5b37f
+Firma in MetaMask: confronta il testo esadecimale con l'impronta qui sopra.
+✅ Firmata da 0x434667A8840E18628Cbd7B3a51D7cEE207fD9d4c (controller con permesso 4337). Ora premi "B · Invia".
+—— 16:45:36 ——
+Relayer: 0xbb683923c2Df0269996C0E2F276A5097cE863C2F. Anticipa il gas e lo riceve indietro dal paymaster.
+Invio dell'operazione firmata al relayer del sito...
+Transazione inviata: 0x2273f39b52b819e0c26cf3ed8d00c3761acf12979db42a67b2897a7617943393
+https://basescan.org/tx/0x2273f39b52b819e0c26cf3ed8d00c3761acf12979db42a67b2897a7617943393
+In attesa di conferma...
+Risultato: ✅ riuscita
+  costo dell'operazione pagato dal paymaster: 0.000001077138 ETH
+  deposito del paymaster: 0.000493242848 ETH → 0.00049216571 ETH
+  saldo del relayer: 0.00100044372655321 ETH → 0.001000580913639632 ETH (gas della transazione 0.000000939950913578 ETH)
+  saldo del controller: 0.000497619839472701 ETH → 0.000497619839472701 ETH
+  destinatario: +0.0001 ETH
+Bilancio del relayer per questa operazione (rimborso − gas, costo L1 incluso): +0.000000137187086422 ETH

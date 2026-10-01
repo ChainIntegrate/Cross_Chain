@@ -1,13 +1,38 @@
 {
   "keyFile": "/etc/crosschain-relayer/relayer.key",
-  "listen": { "host": "127.0.0.1", "port": 8787 },
-  "allowedOrigins": ["https://crosschain-lukso.chainintegrate.it"],
-  "limits": { "perIpPerMinute": 6, "perSenderPerMinute": 3 },
+  "listen": {
+    "host": "127.0.0.1",
+    "port": 8787
+  },
+  "allowedOrigins": [
+    "https://crosschain-lukso.chainintegrate.it"
+  ],
+  "limits": {
+    "perIpPerMinute": 6,
+    "perSenderPerMinute": 3
+  },
   "chains": {
     "8453": {
       "rpc": "https://mainnet.base.org",
-      "paymasters": ["0xb353565d1f801E7402DBC267b8C0E30E3540D4eD"],
+      "paymasters": [
+        "0xb353565d1f801E7402DBC267b8C0E30E3540D4eD"
+      ],
       "minBalanceWarn": "0.0005"
+    }
+  },
+  "monitor": {
+    "relayerInfoUrl": "http://127.0.0.1:8787/relay/info",
+    "paymasterOwner": "0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9",
+    "minPaymasterDeposit": "0.0002",
+    "reminderHours": 24,
+    "chains": {
+      "8453": {
+        "ups": [
+          "0x4a2605796e0d91A9667d6E30365aEEC384C48c27",
+          "0x328A19Ab63744AAF3d0AeBfB8e6Dc5246fAf317b",
+          "0x1d62B8d2c63B942095AD3C7FFc7e845195D9E718"
+        ]
+      }
     }
   }
 }
