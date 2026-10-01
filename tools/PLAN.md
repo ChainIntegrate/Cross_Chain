@@ -129,6 +129,9 @@ The notes below are kept for reference.
   - The paymaster paid about 0.0000011 ETH per operation, less than half a cent. The 0.0005 ETH deposit covers about 450 operations.
 - **Revoke (2026-10-01):** `up-gas-relay.html` can turn 4337 off on a UP with one controller transaction. It removes the extension key, the EntryPoint's permissions and its entry in `AddressPermissions[]`, and the 4337 bit. It restores the UP exactly as before the setup.
 - **Open question for LUKSO:** the audit and production status of `Extension4337`. The maintainer asked in the LUKSO dev chat (2026-10-01). Until there is an answer, keep little value on UPs set up for 4337.
+- **Independent AI-assisted review (2026-10-01):** `AUDIT.md` section 8, full report in `tools/audits/2026-10-01-extension4337-ups.md`. P1–P5 hold on the three Base UPs; verdict "reasonable for small amounts" for each.
+  - G-L3 fixed: the relayer also refuses an inflated `preVerificationGas`.
+  - G-M2 → next step: a configuration checker for every UP and chain (EntryPoint exactly `0x500`, extension key and code hash, controller 4337 bit, allowlist, paymaster owner/cap/deposit, relayer balance), usable on demand and by the periodic email monitor.
 - **No EntryPoint on LUKSO mainnet (checked 2026-10-01):** both canonical addresses have no code, v0.6 `0x5FF137D4…2789` and v0.7 `0x00000000…a032`. So `Extension4337` is not in use on LUKSO mainnet with the standard EntryPoint, a strong hint that it never went to production.
   - The EntryPoint v0.6 was deployed through Nick's factory, so it could be published on LUKSO at the same address by replaying its creation transaction from another chain. The publishing page would need to read that transaction from a chain other than LUKSO.
   - Possible later: 4337 on LUKSO too, so the UP is operated the same way on every chain (same `personal_sign` flow, same relayer). Only an idea for now.

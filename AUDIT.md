@@ -17,6 +17,7 @@
 5. [Residual risks and recommendations](#5-residual-risks-and-recommendations)
 6. [How the fixes were verified](#6-how-the-fixes-were-verified)
 7. [Rev. 4 — WalletConnect pages (UP Wallet and Basenames demo)](#7-rev-4--walletconnect-pages-up-wallet-and-basenames-demo)
+8. [Rev. 5 — Gas relay: Extension4337, paymaster, relayer](#8-rev-5--gas-relay-extension4337-paymaster-relayer)
 
 ---
 
@@ -31,7 +32,7 @@ The tools are static, client-side pages. They never ask for a private key: every
 | Low | 12 | 11 | 1 |
 | Informational | 13 | 2 | 11 (documented / accepted / planned) |
 
-Rev. 4 (section 7) adds M-09, L-10 to L-12 and I-07 to I-13. The pages it covers are **experimental**: unlike the other tools, they sign messages and send arbitrary transactions on behalf of the profile, so their residual risk is inherently higher and depends on the user reading what is shown.
+Rev. 4 (section 7) adds M-09, L-10 to L-12 and I-07 to I-13. Rev. 5 (section 8, 2026-10-01) covers the experimental gas relay (ERC-4337) with its own numbering, G-H1 to G-I3. The pages it covers are **experimental**: unlike the other tools, they sign messages and send arbitrary transactions on behalf of the profile, so their residual risk is inherently higher and depends on the user reading what is shown.
 
 Severity scale: **High** means funds can be lost or sent to the wrong place, or personal data is exposed. **Medium** means the page gives a wrong or misleading security result, or there is a realistic injection or supply-chain vector. **Low** means a robustness or UX flaw with limited impact. **Informational** covers hardening advice and accepted design risks.
 
@@ -448,3 +449,52 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
   - Polygon: Sign-In with OpenSea (ERC-1271 accepted by OpenSea), a POL → EURe swap through 0x AllowanceHolder (tx `0x390a2feb…`), a transaction to LI.FI (tx `0x5a61bb4f…`);
   - blocks observed in practice: wrong MetaMask account (not a controller), insufficient controller gas, message-signing formats refused;
   - an OpenSea session left half-open after reloading the dApp was fixed by disconnecting and reconnecting (no issue in the bridge).
+
+---
+
+## 8. Rev. 5 — Gas relay: Extension4337, paymaster, relayer
+
+| | |
+|---|---|
+| **Date** | 2026-10-01 |
+| **Scope** | LUKSO `Extension4337` (deployed bytecode = `@lukso/lsp17-contracts` 0.17.3 = `@lukso/lsp-smart-contracts` 0.17.4) integrated with the official LUKSO `UniversalProfile` / `LSP6KeyManager` 0.14.0 and 0.12.1 and EntryPoint v0.6; `contracts/UPPaymaster.sol`; `tools/relayer/relay.js`; the setup and revoke batches built by `up-gas-relay.html`; the three UPs set up on Base (ChainIntegrate `0x4a26…8c27`, personal `0x328A…317b`, Birra20venti `0x1d62…E718`) |
+| **Method** | Independent AI-assisted review on a separate account, with the exact npm sources, read-only on-chain reports of the three UPs and a local chain running the real EntryPoint v0.6, LUKSO 0.14.0 / 0.12.1 bytecode, the deployed `Extension4337` creation code and `UPPaymaster` compiled from source (41 property checks, 6 adversarial probes, both versions). Cross-checked by the maintainer's assistant against the project's own local tests. **Not a professional audit.** Full report: `tools/audits/2026-10-01-extension4337-ups.md` (not published on the website) |
+
+### 8.1 How authority is enforced
+
+An operation is checked twice, on two different principals, against the same `callData`:
+- **validation** checks the **signer**: `Extension4337` requires the 4337 bit, then asks the Key Manager (`lsp20VerifyCall`, read-only branch) whether the signer's own permissions and AllowedCalls allow the call;
+- **execution** checks the **EntryPoint**: the UP is called with `msg.sender` = EntryPoint, whose permissions are exactly `0x500` (SUPER_CALL | SUPER_TRANSFERVALUE).
+
+Both must allow the call. Nothing that needs SETDATA, CHANGEOWNER, extensions or DELEGATECALL can pass the second check.
+
+### 8.2 Properties
+
+| Property | Verdict |
+|---|---|
+| P1 — only a 4337 controller gets an op validated, within its own permissions and AllowedCalls | Holds |
+| P2 — nothing through the EntryPoint changes UP data, permissions, extensions or owner | Holds, on one invariant (G-M2) |
+| P3 — no replay across chains, UPs, nonces or EntryPoints | Holds (`userOpHash` binds all four) |
+| P4 — the paymaster pays only for allowlisted UPs within the cap; only the owner moves the deposit; the relayer cannot redirect funds | Holds (griefing nuance: G-M1) |
+| P5 — the revoke batch restores the pre-setup state exactly | Holds |
+
+The three UPs are configured identically and as documented: `AddressPermissions[]` = URD (`0x060080`), controller (`0xff3f06`), EntryPoint (`0x500`); no AllowedCalls; extension key → `0x6D37…d4B2`. **Verdict for each: reasonable for small amounts.**
+
+### 8.3 Findings
+
+| # | Severity | Finding | Status |
+|---|---|---|---|
+| G-H1 | High (operational, by design) | A compromised 4337 controller key can drain its UP **without holding gas**, with a MetaMask-signable signature. It grants nothing the key could not already do, but removes the "fund the key first" friction | **Accepted.** Keep small balances on 4337 UPs; optional: a separate 4337 key with minimal permissions and AllowedCalls |
+| G-M1 | Medium | An allowlisted UP can grief the paymaster: an op that passes validation and reverts at execution is still charged, and anyone can submit it to the EntryPoint directly, bypassing our relayer's execution simulation | **Accepted with mitigations:** small deposit, per-op cap, allowlist only trusted UPs, remove a UP that misbehaves. Optional later: staked paymaster with `postOp` throttling |
+| G-M2 | Medium | P2 rests on a single invariant: EntryPoint permissions = `0x500`. If a batch ever granted it SETDATA, the relayer path could rewrite the UP | **Planned:** a configuration checker that verifies, on every UP and chain, EntryPoint = `0x500`, the extension key and code hash, the controller's 4337 bit, the allowlist and the paymaster |
+| G-L1 | Low | `UPPaymaster` is unstaked and has no `postOp` accounting | Accepted (private use, EntryPoint v0.6) |
+| G-L2 | Low | The URD holds REENTRANCY + SUPER_SETDATA (stock LUKSO URD permissions); not reachable through the 4337 path | Accepted |
+| G-L3 | Low | The relayer bounded `preVerificationGas` only from below; an inflated value is charged to the paymaster up to the cap | **Fixed:** `relay.js` also refuses values above 3 × the minimum + 20,000 (tested) |
+| G-I1 | Info | `value: 0` in the extension's `lsp20VerifyCall` is correct: TRANSFERVALUE is checked on the value inside `execute` | No action |
+| G-I2 | Info | The extension does pre-verification only; safe because execution re-runs `lsp20VerifyCall` for the EntryPoint | No action |
+| G-I3 | Info | No EntryPoint on LUKSO mainnet: the extension has probably never run in production; its upstream audit status is unknown | Asked in the LUKSO dev chat; open |
+
+### 8.4 Privilege escalation
+
+Fourteen paths were attacked: self-calls to the UP, calls to the Key Manager, ownership functions, `batchCalls`, DELEGATECALL, calls to the EntryPoint and the paymaster, other LSP17 extensions, SUPER_TRANSFERVALUE beyond the signer's rights, callData decoded differently in the two phases, and replay. Each is blocked by a specific check (file and line in the full report). No path gives an operation more rights than its signer already has.
+

@@ -22,6 +22,10 @@ Working notes for the maintainer: decisions already taken and next steps (NFT re
 
 The gas relayer service (experimental): the server version of button B in `up-gas-relay.html`. It runs on the server from **its own clone outside the web root**, never from the site folder. Installation and rules: [relayer/README.md](relayer/README.md).
 
+## `audits/`
+
+Full reports of external or AI-assisted reviews, kept as evidence. The findings and their status are summarised in the main `AUDIT.md`. Not published on the website.
+
 ## `logs/`
 
 Page logs of live tests on mainnet, kept as evidence of what was done and what happened. They contain public data only (addresses, transaction hashes). Not published on the website.
