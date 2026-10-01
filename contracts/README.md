@@ -132,11 +132,28 @@ It has no owner. Its constructor takes only the EntryPoint, so published through
 | EntryPoint | `0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789` |
 | Runtime code hash | `0x91968b95ee6f8e01a554060b775c13e8df3f0173d87a55a48ed54b8ff02c052d` |
 
-Published on Base (2026-09-30). `up-gas-relay.html` publishes it when missing, and checks this code hash before using it. Its audit status is unknown to this project: treat it as experimental.
+Published on Base (2026-09-30) and Polygon (2026-10-01). `up-gas-relay.html` publishes it when missing, and checks this code hash before using it. Its audit status is unknown to this project: treat it as experimental.
 
 **Verify it:**
 1. Compare `creationCode` with the `bytecode` of `artifacts/Extension4337.json` in the npm package `@lukso/lsp-smart-contracts@0.17.4`.
 2. `initCode` is `creationCode ++ abi.encode(entryPoint)`.
 3. The address is `keccak256(0xff ++ factory ++ salt ++ keccak256(initCode))`, last 20 bytes.
+
+**Source verification on the explorers.** `Extension4337.input.json` is a standard JSON input rebuilt by this project, because LUKSO's own build input is not published. Recompiled, it gives **exactly the published code**, creation and runtime. Only the metadata hash at the end differs: it depends on file names and dependency versions in LUKSO's build, whose metadata file could not be found on IPFS (`QmPGdxjQQTessJj93jxjX6gxt4hWEMrDrx3xduUCvmuLXD`).
+
+| Setting | Value |
+|---|---|
+| Compiler | `v0.8.17+commit.8df45f5f` |
+| Optimizer | enabled, 1000 runs |
+| EVM version | `london` |
+| Contract | `project/contracts/Extension4337.sol:Extension4337` |
+| Constructor arguments | `0000000000000000000000005ff137d4b0fdcd49dca30c7cf57e578a026d2789` (the EntryPoint) |
+| License | Apache-2.0 (LUKSO's) |
+
+Sources: `@lukso/lsp17-contracts` 0.17.3 (the Extension4337 source), `@lukso/lsp14-contracts` 0.16.3, `@lukso/lsp17contractextension-contracts` 0.17.2, `@lukso/lsp20-contracts` 0.16.2, `@lukso/lsp6-contracts` 0.16.3, `@lukso/lsp1-contracts` 0.16.3, `@lukso/lsp2-contracts` 0.16.2, `@erc725/smart-contracts` 7.0.0, `@openzeppelin/contracts` 4.9.6, `@account-abstraction/contracts` 0.6.0, `solidity-bytes-utils` 0.8.0, named as Hardhat 3 names them (`project/…`, `npm/<package>@<version>/…`).
+
+To verify:
+1. **Basescan / Polygonscan:** contract page → Contract → Verify and Publish → "Solidity (Standard-Json-Input)", the compiler above, upload `Extension4337.input.json`, the constructor arguments above. Since the metadata hash differs, the explorer may refuse with "bytecode mismatch"; in that case use Sourcify.
+2. **Sourcify** (sourcify.dev): choose the chain (Base 8453, Polygon 137), the address, and import the standard JSON. A code-identical contract with different metadata is accepted as a **partial match**, publicly visible.
 
 `UPPaymaster.json` also records the paymaster's runtime code hash with the canonical EntryPoint. It is the same for every owner, because the owner lives in storage and the EntryPoint in an immutable. The page checks it the same way.
