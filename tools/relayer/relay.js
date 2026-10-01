@@ -227,6 +227,10 @@ async function checkAndSend(chain, id, op, pm, hash) {
   if (!legacy && op.maxFeePerGas < block.baseFeePerGas) throw new Refused("maxFeePerGas below the current base fee: prepare and sign the operation again");
   const minPvg = await minPreVerificationGas(chain, op);
   if (op.preVerificationGas < minPvg) throw new Refused(`preVerificationGas too low (${op.preVerificationGas} < ${minPvg}): prepare and sign the operation again`);
+  // Upper side too: the EntryPoint charges the paymaster the whole preVerificationGas, used or not.
+  // Three times the minimum leaves room for the L1 fee falling between signing and sending.
+  const maxPvg = minPvg * 3n + 20_000n;
+  if (op.preVerificationGas > maxPvg) throw new Refused(`preVerificationGas too high (${op.preVerificationGas} > ${maxPvg}): prepare and sign the operation again`);
 
   const from = chain.signer.address;
   const data = EP_IFACE.encodeFunctionData("handleOps", [[opTuple(op)], from]);
