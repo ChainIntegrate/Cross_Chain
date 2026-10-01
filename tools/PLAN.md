@@ -167,7 +167,7 @@ The notes below are kept for reference.
      - The page has a second B button, "Send through the site relayer". It stays off, with a note, while `relay/info` does not answer.
      - To install: `node -v`, the web server type, then the README steps. The relayer address is generated on the server and funded with about 0.001 ETH on Base.
   4. UP Wallet and Send page option "gas paid by the relayer".
-  5. Optional: verify `Extension4337`'s source. `contracts/Extension4337.input.json` (rebuilt: identical code, different metadata hash, since LUKSO's metadata file is not on IPFS); try Basescan/Polygonscan, else Sourcify partial match. See `contracts/README.md`.
+  5. ~~Verify `Extension4337`'s source~~ **Done (2026-10-01):** verified on Basescan and Polygonscan with `contracts/Extension4337.input.json` (rebuilt: identical code; LUKSO's metadata file is not on IPFS), both "Exact Match". See `contracts/README.md`.
 
 The notes below are the earlier LSP25 design, kept for reference.
 - **Goal:** controllers never need gas on any network. They sign; a relayer submits through `KeyManager.executeRelayCall` (LSP25). The signature binds nonce, chainId and validity window.
