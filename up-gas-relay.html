@@ -885,6 +885,7 @@ $("ackRisk").addEventListener("change", updateButtons);
 let state = null, checkRun = 0, checkTimer = null, setupPlan = null, signedOp = null, revokePlan = null;
 // One action at a time: every action button is disabled while one is running.
 let busy = false;
+let svcLoadedAt = 0;
 let svc = null; // site relayer, from GET relay/info: { relayer, entryPoint, chains: { [chainId]: { paymasters, balance } } }
 function scheduleCheck(delay = 500) {
   state = null; setupPlan = null; revokePlan = null;
@@ -904,6 +905,7 @@ async function runCheck() {
   state = s;
   render(s);
   updateButtons();
+  if (s.ok && s.pmAddr && !svcServes(s.chainId, s.pmAddr) && Date.now() - svcLoadedAt > 5000) loadSvc();
   return s;
 }
 // A check started meanwhile (e.g. by a confirmation or an account switch) makes runCheck return null:
@@ -1073,6 +1075,7 @@ function updateButtons() {
   $("sendRevokeBtn").disabled = !(ok && revokePlan);
   $("signOpBtn").disabled = !(ok && s.upDone && s.pmState === "ok" && s.sponsored);
   const svcOk = !!(signedOp && svcServes(signedOp.chainId, signedOp.pm));
+  if (signedOp && !svcOk && Date.now() - svcLoadedAt > 5000) loadSvc();
   $("relaySvcBtn").disabled = !(ok && svcOk);
   $("checkCfgBtn").disabled = !(s && s.provider && ethers.isAddress($("upAddress").value.trim()) && !busy);
   $("svcInfo").textContent = svcLine(s);
@@ -1346,7 +1349,10 @@ $("signOpBtn").addEventListener("click", () => guarded(async () => {
   log(t("signedOk", { addr: who }), "line-ok");
 }, false));
 // ---- site relayer (tools/relayer), reached on the same site at relay/
+// The site relayer's list of chains is read again when it does not serve the chain in use (it may have
+// gained one since the page was opened), at most every 5 seconds, and right before sending.
 async function loadSvc() {
+  svcLoadedAt = Date.now();
   try {
     const r = await fetch("relay/info", { cache: "no-store" });
     const j = r.ok ? await r.json() : null;
@@ -1378,6 +1384,7 @@ async function relaySigned() {
     const s = await freshState();
     if (!s || !s.ok || s.chainId !== so.chainId) { log(t("stale"), "line-err"); return; }
     signedOp = so; updateButtons();
+    if (!svcServes(so.chainId, so.pm)) await loadSvc();
     if (!svcServes(so.chainId, so.pm)) { log(t(svc ? "svcNotServed" : "svcNone"), "line-err"); return; }
     const relayer = svc.relayer;
     log(t("relayWho", { addr: relayer }), "line-dim");

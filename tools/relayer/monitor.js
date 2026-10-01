@@ -94,7 +94,8 @@ async function checkChain(id, chain, mon, info, out) {
   }
   // The relayer, as the running service reports it.
   const svc = info && info.chains && info.chains[id];
-  if (!svc) out.push({ level: "error", where: `${where0}, relayer`, msg: "the relayer service does not serve this chain" });
+  if (!svc && info && (info.unavailable || []).includes(id)) out.push({ level: "warning", where: `${where0}, relayer`, msg: "the relayer cannot reach this chain's RPC right now; it retries every minute" });
+  else if (!svc) out.push({ level: "error", where: `${where0}, relayer`, msg: "the relayer service does not serve this chain" });
   else if (svc.balance != null && chain.minBalanceWarn && BigInt(svc.balance) < chain.minBalanceWarn) out.push({ level: "warning", where: `${where0}, relayer ${info.relayer}`, msg: `balance ${eth(BigInt(svc.balance))} below ${eth(chain.minBalanceWarn)}` });
   for (const up of mon.ups || []) {
     try { await checkUp(provider, ethers.getAddress(up), chain.paymasters, out, `${where0}, UP ${ethers.getAddress(up)}`); }
@@ -113,8 +114,15 @@ async function runChecks(config) {
   } catch (e) { out.push({ level: "error", where: "relayer service", msg: `not reachable (${e.message})` }); }
   for (const [id, chain] of Object.entries(config.chains)) {
     const monChain = { ...mon, ...((mon.chains || {})[id] || {}) };
-    try { await checkChain(id, chain, monChain, info, out); }
-    catch (e) { out.push({ level: "error", where: `chain ${id}`, msg: `check failed: ${e.shortMessage || e.message}` }); }
+    // Public RPCs are sometimes overloaded for a moment: retry a failed check twice before reporting it.
+    let last = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt) await new Promise((r) => setTimeout(r, (mon.retryDelaySeconds ?? 15) * 1000));
+      const found = [];
+      try { await checkChain(id, chain, monChain, info, found); out.push(...found); last = null; break; }
+      catch (e) { last = e; }
+    }
+    if (last) out.push({ level: "error", where: `chain ${id}`, msg: `check failed: ${last.shortMessage || last.message}` });
   }
   return out;
 }

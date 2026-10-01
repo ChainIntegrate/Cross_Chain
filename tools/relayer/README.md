@@ -122,7 +122,7 @@ It shows the relayer address, the chains and the balance on each chain. In `up-g
 - `Extension4337` code on the chain;
 - the relayer service: it answers on `relay/info` and its balance is above `minBalanceWarn`.
 
-It emails only when the set of findings changes (a new problem, or "all clear" when everything is fixed), and repeats a reminder every `monitor.reminderHours` (default 24) while problems remain. The first run with everything in order sends nothing.
+A chain check that fails on an RPC error is retried twice, 15 seconds apart, before it is reported; a chain the relayer currently cannot reach is a warning, not a problem. It emails only when the set of findings changes (a new problem, or "all clear" when everything is fixed), and repeats a reminder every `monitor.reminderHours` (default 24) while problems remain. The first run with everything in order sends nothing.
 
 **Install** (after the relayer):
 
@@ -155,15 +155,17 @@ journalctl -u crosschain-relayer -f       # each send, its confirmation, refusal
 sudo systemctl stop crosschain-relayer    # the page shows "not reachable" and B stays off
 ```
 
+**An RPC that does not answer does not stop the service.** At start, a configuration mistake (the RPC is on another chain, no EntryPoint, no contract at a paymaster) stops it, because it must be fixed by hand. An RPC that is down or overloaded only marks that chain as unavailable: the other chains work, `relay/info` lists it under `unavailable`, operations for it get "temporarily unavailable" (503), and the chain is retried every `chainRetrySeconds` (default 60) until it answers. Prefer reliable RPCs anyway (on Polygon, `https://polygon.drpc.org` works; `polygon-bor-rpc.publicnode.com` answered "upstream overloaded" on 2026-10-01).
+
 To add a chain or a paymaster, edit `config.json` and restart. To watch another UP, add it to `monitor.chains.<chainId>.ups` (no restart needed: the monitor reads the file at every run). At start the service checks that the RPC is on the right chain and that the EntryPoint and each paymaster have code.
 
 ## Tests
 
-Tested on a local chain with the real EntryPoint v0.6, the LUKSO `UniversalProfile` and `LSP6KeyManager` (0.12.1 and 0.14.0), `Extension4337` 0.17.4 and `UPPaymaster` (34 of 34 checks on each version):
+Tested on a local chain with the real EntryPoint v0.6, the LUKSO `UniversalProfile` and `LSP6KeyManager` (0.12.1 and 0.14.0), `Extension4337` 0.17.4 and `UPPaymaster` (37 of 37 checks on each version, including an RPC that is overloaded at start and recovers):
 - a sponsored operation is relayed, and the relayer ends with at least what it started with;
 - each refusal case above is rejected without any transaction;
 - the start-up checks: key file mode, wrong RPC chain, missing paymaster.
 
-The page test (`up-gas-relay.html` in Chromium, with this service behind `relay/`) passes 59 of 59 on each version.
+The page test (`up-gas-relay.html` in Chromium, with this service behind `relay/`) passes 63 of 63 on each version.
 
 The monitor test (19 of 19 on each version) runs it against a UP laid out like the Base ones, with the real contracts at their real addresses and a fake SMTP server: no finding and no email on a correct setup; an EntryPoint given SETDATA is an error and sends one email, no repeat on the next run, a reminder after 24 hours, "all clear" once fixed; extension elsewhere, leftover extension permission, no 4337 signer, UP off the allowlist, low deposit, low relayer balance, relayer down and wrong paymaster owner are all reported; `--test-email` and `--dry-run` work.
