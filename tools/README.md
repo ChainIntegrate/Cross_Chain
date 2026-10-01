@@ -26,6 +26,10 @@ The gas relayer service (experimental): the server version of button B in `up-ga
 
 Full reports of external or AI-assisted reviews, kept as evidence. The findings and their status are summarised in the main `AUDIT.md`. Not published on the website.
 
+## `ideas/`
+
+Ideas discussed but not started, kept so they are not lost. `gas-service.md`: offering the gas abstraction as a paid service with prepaid USDC credit per network. Not published on the website.
+
 ## `logs/`
 
 Page logs of live tests on mainnet, kept as evidence of what was done and what happened. They contain public data only (addresses, transaction hashes). Not published on the website.
