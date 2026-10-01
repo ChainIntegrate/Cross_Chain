@@ -478,13 +478,13 @@ Both must allow the call. Nothing that needs SETDATA, CHANGEOWNER, extensions or
 | P4 — the paymaster pays only for allowlisted UPs within the cap; only the owner moves the deposit; the relayer cannot redirect funds | Holds (griefing nuance: G-M1) |
 | P5 — the revoke batch restores the pre-setup state exactly | Holds |
 
-The three UPs are configured identically and as documented: `AddressPermissions[]` = URD (`0x060080`), controller (`0xff3f06`), EntryPoint (`0x500`); no AllowedCalls; extension key → `0x6D37…d4B2`. **Verdict for each: reasonable for small amounts.**
+The three UPs are configured identically and as documented: `AddressPermissions[]` = URD (`0x060080`), controller (`0xff3f06`), EntryPoint (`0x500`); no AllowedCalls; extension key → `0x6D37…d4B2`. **Verdict for each: the 4337 setup adds no way to move funds beyond what the controller key already allows** (see 8.5 on what the "small amounts" advice really refers to).
 
 ### 8.3 Findings
 
 | # | Severity | Finding | Status |
 |---|---|---|---|
-| G-H1 | High (operational, by design) | A compromised 4337 controller key can drain its UP **without holding gas**, with a MetaMask-signable signature. It grants nothing the key could not already do, but removes the "fund the key first" friction | **Accepted.** Keep small balances on 4337 UPs; optional: a separate 4337 key with minimal permissions and AllowedCalls |
+| G-H1 | High (operational, by design) | A compromised 4337 controller key can drain its UP **without holding gas**, with a MetaMask-signable signature. It grants nothing the key could not already do, but removes the "fund the key first" friction | **Accepted.** The exposure is the controller key itself, with or without 4337 (see 8.5); optional: a separate daily controller with minimal permissions and AllowedCalls |
 | G-M1 | Medium | An allowlisted UP can grief the paymaster: an op that passes validation and reverts at execution is still charged, and anyone can submit it to the EntryPoint directly, bypassing our relayer's execution simulation | **Accepted with mitigations:** small deposit, per-op cap, allowlist only trusted UPs, remove a UP that misbehaves. Optional later: staked paymaster with `postOp` throttling |
 | G-M2 | Medium | P2 rests on a single invariant: EntryPoint permissions = `0x500`. If a batch ever granted it SETDATA, the relayer path could rewrite the UP | **Planned:** a configuration checker that verifies, on every UP and chain, EntryPoint = `0x500`, the extension key and code hash, the controller's 4337 bit, the allowlist and the paymaster |
 | G-L1 | Low | `UPPaymaster` is unstaked and has no `postOp` accounting | Accepted (private use, EntryPoint v0.6) |
@@ -497,4 +497,14 @@ The three UPs are configured identically and as documented: `AddressPermissions[
 ### 8.4 Privilege escalation
 
 Fourteen paths were attacked: self-calls to the UP, calls to the Key Manager, ownership functions, `batchCalls`, DELEGATECALL, calls to the EntryPoint and the paymaster, other LSP17 extensions, SUPER_TRANSFERVALUE beyond the signer's rights, callData decoded differently in the two phases, and replay. Each is blocked by a specific check (file and line in the full report). No path gives an operation more rights than its signer already has.
+
+### 8.5 Context: where the risk to funds really is
+
+The review's advice to keep "small amounts" on these UPs must not be read as "4337 makes a UP risky". The maintainer's analysis, recorded here:
+
+- **The main risk is the controller key, and it exists without 4337.** The controller (`0xff3f06`) can move any value and any token. Its private key is a hot key: imported in MetaMask and also held by the UP browser extension. Whoever steals it can empty the UP, exactly as with any address whose key sits in a connected wallet. Without 4337 the thief only had to send a few cents of gas to the key first, which stops nobody. So the funds on a UP are exposed to the same degree whether 4337 is on or off.
+- **What 4337 really adds is contract risk.** An ordinary address has no code; a UP is code (UP, Key Manager and, with 4337, `Extension4337` and the EntryPoint). The UP and Key Manager are LUKSO's long-used contracts. `Extension4337` is the least proven part: its upstream audit status is unknown and it has probably never run on LUKSO mainnet. A bug that nobody has found could in theory move funds without the key. The review found none. This, not the key, is the risk specific to 4337.
+- **One key, every chain.** The same controller controls the UP at the same address on every chain, so a stolen key exposes all of them at once, as for an ordinary address reused across chains.
+- **The original controller cannot be retired.** A redeploy replays LUKSO's original deployment calldata, which sets the original controller. On every future chain the UP is born controlled by that key, whatever was changed elsewhere. Rotating keys therefore helps only on chains already deployed; the original key stays the root for new ones.
+- **What actually reduces the exposure:** keep the original controller key offline and use it only for new deployments; for daily use, add a second controller on each chain, ideally a hardware wallet used through MetaMask (it signs `personal_sign`, so it works with 4337), possibly with AllowedCalls; keep in the hot key only what you are prepared to lose. These measures apply to every UP, with or without 4337.
 
