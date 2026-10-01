@@ -152,8 +152,10 @@ Published on Base (2026-09-30) and Polygon (2026-10-01). `up-gas-relay.html` pub
 
 Sources: `@lukso/lsp17-contracts` 0.17.3 (the Extension4337 source), `@lukso/lsp14-contracts` 0.16.3, `@lukso/lsp17contractextension-contracts` 0.17.2, `@lukso/lsp20-contracts` 0.16.2, `@lukso/lsp6-contracts` 0.16.3, `@lukso/lsp1-contracts` 0.16.3, `@lukso/lsp2-contracts` 0.16.2, `@erc725/smart-contracts` 7.0.0, `@openzeppelin/contracts` 4.9.6, `@account-abstraction/contracts` 0.6.0, `solidity-bytes-utils` 0.8.0, named as Hardhat 3 names them (`project/…`, `npm/<package>@<version>/…`).
 
+**Verified on Basescan and Polygonscan (2026-10-01) with this file: both show "Contract Source Code Verified (Exact Match)".** The explorers accepted it although the metadata hash differs, so the steps below are for other chains or for checking it yourself.
+
 To verify:
-1. **Basescan / Polygonscan:** contract page → Contract → Verify and Publish → "Solidity (Standard-Json-Input)", the compiler above, upload `Extension4337.input.json`, the constructor arguments above. Since the metadata hash differs, the explorer may refuse with "bytecode mismatch"; in that case use Sourcify.
+1. **Basescan / Polygonscan:** contract page → Contract → Verify and Publish → "Solidity (Standard-Json-Input)", the compiler above, upload `Extension4337.input.json`, the constructor arguments above. On Base and Polygon it was accepted as an exact match; if another explorer refuses it with "bytecode mismatch" because of the metadata hash, use Sourcify.
 2. **Sourcify** (sourcify.dev): choose the chain (Base 8453, Polygon 137), the address, and import the standard JSON. A code-identical contract with different metadata is accepted as a **partial match**, publicly visible.
 
 `UPPaymaster.json` also records the paymaster's runtime code hash with the canonical EntryPoint. It is the same for every owner, because the owner lives in storage and the EntryPoint in an immutable. The page checks it the same way.
