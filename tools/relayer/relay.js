@@ -193,20 +193,41 @@ class RateLimiter {
   }
 }
 
+// A configuration mistake (wrong chain, no EntryPoint, no paymaster contract) stops the service: it must
+// be fixed by hand. An RPC that does not answer is not a mistake: the chain is retried later and the
+// other chains keep working meanwhile.
+class ConfigError extends Error {}
+
+async function setupChain(id, ch, wallet) {
+  const chainId = BigInt(id);
+  const provider = new ethers.JsonRpcProvider(ch.rpc, Number(chainId), { staticNetwork: true });
+  provider.pollingInterval = 1000; // receipts are noticed within a second, so a UP is unblocked quickly
+  const rpcChainId = BigInt(await provider.send("eth_chainId", []));
+  if (rpcChainId !== chainId) throw new ConfigError(`chain ${id}: the rpc answers chainId ${rpcChainId}`);
+  if ((await provider.getCode(ENTRY_POINT)) === "0x") throw new ConfigError(`chain ${id}: no EntryPoint v0.6 at ${ENTRY_POINT}`);
+  for (const pm of ch.paymasters) if ((await provider.getCode(pm)) === "0x") throw new ConfigError(`chain ${id}: no contract at paymaster ${pm}`);
+  const opStack = (await provider.getCode(OP_GAS_ORACLE)) !== "0x";
+  const balance = await provider.getBalance(wallet.address);
+  log(`chain ${id}: ready${opStack ? " (OP stack)" : ""}, paymasters ${ch.paymasters.join(", ")}, relayer balance ${ethers.formatEther(balance)}`);
+  return { ...ch, chainId, provider, signer: wallet.connect(provider), opStack, queue: Promise.resolve(), recent: new Map(), pendingSender: new Map() };
+}
+
 async function setupChains(config, wallet) {
   const chains = new Map();
-  for (const [id, ch] of Object.entries(config.chains)) {
-    const chainId = BigInt(id);
-    const provider = new ethers.JsonRpcProvider(ch.rpc, Number(chainId), { staticNetwork: true });
-    provider.pollingInterval = 1000; // receipts are noticed within a second, so a UP is unblocked quickly
-    const rpcChainId = BigInt(await provider.send("eth_chainId", []));
-    if (rpcChainId !== chainId) throw new Error(`chain ${id}: the rpc answers chainId ${rpcChainId}`);
-    if ((await provider.getCode(ENTRY_POINT)) === "0x") throw new Error(`chain ${id}: no EntryPoint v0.6 at ${ENTRY_POINT}`);
-    for (const pm of ch.paymasters) if ((await provider.getCode(pm)) === "0x") throw new Error(`chain ${id}: no contract at paymaster ${pm}`);
-    const opStack = (await provider.getCode(OP_GAS_ORACLE)) !== "0x";
-    chains.set(id, { ...ch, chainId, provider, signer: wallet.connect(provider), opStack, queue: Promise.resolve(), recent: new Map(), pendingSender: new Map() });
-    log(`chain ${id}: ready${opStack ? " (OP stack)" : ""}, paymasters ${ch.paymasters.join(", ")}, relayer balance ${ethers.formatEther(await provider.getBalance(wallet.address))}`);
-  }
+  chains.unavailable = new Set();
+  const retryMs = (config.chainRetrySeconds || 60) * 1000;
+  const attempt = async (id, ch) => {
+    try {
+      chains.set(id, await setupChain(id, ch, wallet));
+      chains.unavailable.delete(id);
+    } catch (e) {
+      if (e instanceof ConfigError) throw e;
+      chains.unavailable.add(id);
+      log(`chain ${id}: not ready (${e.shortMessage || e.message}), retrying in ${retryMs / 1000} s; the other chains keep working`);
+      setTimeout(() => attempt(id, ch).catch((x) => log(`chain ${id}: ${x.message}; not retried, fix the configuration`)), retryMs).unref();
+    }
+  };
+  for (const [id, ch] of Object.entries(config.chains)) await attempt(id, ch);
   return chains;
 }
 
@@ -315,7 +336,7 @@ function makeServer(config, wallet, chains) {
       const origin = req.headers.origin;
       if (origin && config.allowedOrigins.length && !config.allowedOrigins.includes(origin)) throw new Refused("origin not allowed", 403);
       if (req.method === "GET" && path === "/info") {
-        const out = { relayer: wallet.address, entryPoint: ENTRY_POINT, chains: {} };
+        const out = { relayer: wallet.address, entryPoint: ENTRY_POINT, chains: {}, unavailable: [...chains.unavailable] };
         await Promise.all([...chains].map(async ([id, ch]) => {
           let balance = null;
           try { balance = (await ch.provider.getBalance(wallet.address)).toString(); } catch (e) { /* rpc down */ }
@@ -330,6 +351,7 @@ function makeServer(config, wallet, chains) {
         try { body = JSON.parse(await readBody(req)); } catch (e) { if (e instanceof Refused) throw e; throw new Refused("body is not JSON"); }
         const id = String(body.chainId ?? "");
         const chain = chains.get(id);
+        if (!chain && chains.unavailable.has(id)) throw new Refused(`chain ${id} is temporarily unavailable (its RPC does not answer): try again in a few minutes`, 503);
         if (!chain) throw new Refused(`chain ${id || "?"} is not served by this relayer`, 404);
         const op = parseOp(body.op);
         if (!perSender.allow(`${id}:${op.sender}`)) throw new Refused("too many operations for this UP, try again in a minute", 429);

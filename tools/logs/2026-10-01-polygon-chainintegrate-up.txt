@@ -1,0 +1,77 @@
+ChainIntegrate UP on Polygon mainnet, 2026-10-01: paymaster and Extension4337 published, UP set up,
+configuration check, first operation through the site relayer. Page: up-gas-relay.html.
+
+—— 17:39:59 ——   (cassa: publish the paymaster)
+Simulazione...
+✅ Simulazione riuscita (gas stimato 622281).
+Conferma in MetaMask...
+Transazione inviata: 0x36a6476ae9e27c925287b0e0d52b18662862c695a2242a4eb32cff66babd1f9d
+https://polygonscan.com/tx/0x36a6476ae9e27c925287b0e0d52b18662862c695a2242a4eb32cff66babd1f9d
+In attesa di conferma...
+✅ Confermata.
+✅ Pubblicato a 0xb353565d1f801E7402DBC267b8C0E30E3540D4eD, codice verificato.
+—— 17:40:46 ——   (cassa: cap or allowlist)
+Simulazione...
+✅ Simulazione riuscita (gas stimato 55346).
+Conferma in MetaMask...
+Transazione inviata: 0x754cb37c0cd66beda11113127855df189f68bd10c68c34033e6d09335354d790
+https://polygonscan.com/tx/0x754cb37c0cd66beda11113127855df189f68bd10c68c34033e6d09335354d790
+In attesa di conferma...
+✅ Confermata.
+—— 17:41:28 ——   (publish Extension4337)
+Simulazione...
+✅ Simulazione riuscita (gas stimato 734648).
+Conferma in MetaMask...
+Transazione inviata: 0xd661f795a36b8ccf462738cb0ccd88d9554f3977e8a04f311a33465037242488
+https://polygonscan.com/tx/0xd661f795a36b8ccf462738cb0ccd88d9554f3977e8a04f311a33465037242488
+In attesa di conferma...
+✅ Confermata.
+✅ Pubblicato a 0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2, codice verificato.
+Account attivo in MetaMask: 0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c
+—— 17:42:19 ——
+Configurazione della UP 0x4a2605796e0d91A9667d6E30365aEEC384C48c27
+Firma: 0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c · Key Manager: 0x309fcE7B6a96CeF8fCbF926a006CDc6f21Ff280e · una sola transazione (executeBatch):
+1. Permessi temporanei al controller: + ADDEXTENSIONS (0x7f3f06 → 0x7f3f0e)
+2. setDataBatch:
+   - estensione per validateUserOp (0x3a871cdd) → 0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2
+   - EntryPoint aggiunto all'elenco dei controller (posizione 2)
+   - permessi dell'EntryPoint 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789 → 0x000500 (SUPER_CALL, SUPER_TRANSFERVALUE; niente SETDATA)
+3. Permessi finali del controller: 0x7f3f06 → 0xff3f06 (quelli di prima + 4337, senza i permessi temporanei)
+Se una parte fallisce, l'intera transazione viene annullata e non cambia niente.
+Simulazione...
+✅ Simulazione riuscita (gas stimato 238277).
+Conferma in MetaMask...
+Transazione inviata: 0xa82258fce91b4917a09d9585b5cf92b8b37cb2b9c6be073b96ffe0555832280d
+https://polygonscan.com/tx/0xa82258fce91b4917a09d9585b5cf92b8b37cb2b9c6be073b96ffe0555832280d
+In attesa di conferma...
+✅ Confermata.
+✅ Verifica finale: estensione registrata, EntryPoint con i permessi previsti, permesso 4337 al controller, nessun altro permesso cambiato.
+
+Relayer funded with 1 POL by the cassa: 0x6513766e2c9bd9d25350cc711e7898bfae2f8e1b112951c02d251d000eaaee70
+Paymaster deposit 3 POL, cap 1 POL (cassa).
+
+—— 18:02:03 ——
+✅ Configurazione in ordine: nessun problema trovato.
+—— 18:10:03 ——
+Operazione (userOp) per l'EntryPoint 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789
+  La UP 0x4a2605796e0d91A9667d6E30365aEEC384C48c27 invia 0.0001 POL a 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9
+  nonce 0 · paga il paymaster 0xb353565d1f801E7402DBC267b8C0E30E3540D4eD
+  preVerificationGas 51418 (base della transazione, dati, costo L1 dove c'è)
+  costo massimo 0.719983788794702896 POL (tetto 1.0 POL, deposito 3.0 POL)
+
+Impronta da firmare (userOpHash):
+  0xc5490ac4299335bfbf24b56d5b8863e2d4c0f7059cb92279225cc22e0fc5911e
+✅ Firmata da 0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c (controller con permesso 4337). Ora premi "B · Invia".
+—— 18:10:12 ——
+Relayer: 0xbb683923c2Df0269996C0E2F276A5097cE863C2F. Anticipa il gas e lo riceve indietro dal paymaster.
+Invio dell'operazione firmata al relayer del sito...
+Transazione inviata: 0x8b282033a806d063c6dcb08f62f4e9ce95138f5e16ad37681399e485b83131b1
+https://polygonscan.com/tx/0x8b282033a806d063c6dcb08f62f4e9ce95138f5e16ad37681399e485b83131b1
+In attesa di conferma...
+Risultato: ✅ riuscita
+  costo dell'operazione pagato dal paymaster: 0.065174250609239758 POL
+  deposito del paymaster: 3.0 POL → 2.934825749390760242 POL
+  saldo del relayer: 1.0 POL → 1.006059076794768032 POL (gas della transazione 0.059115173814471726 POL)
+  saldo del controller: 0.690850321423852672 POL → 0.690850321423852672 POL
+  destinatario: +0.0001 POL
+Bilancio del relayer per questa operazione (rimborso − gas, costo L1 incluso): +0.006059076794768032 POL
