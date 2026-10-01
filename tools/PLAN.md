@@ -190,6 +190,20 @@ The notes below are the earlier LSP25 design, kept for reference.
   - whether Hyperlane has opened stablecoin routes to LUKSO;
   - ERC-4337 via LUKSO's `Extension4337` with a USDC paymaster, as an alternative to our own relayer.
 
+### 2.5 UP identity viewer across chains (next, after the backup controller)
+A page that reads and shows a UP's LSP3 identity on any network where it is deployed (Base, Polygon, …), not only on LUKSO. The page itself is the interpreter: no claim that the chain or third parties recognise the standard.
+- **Phase 1, read only (first):**
+  - input: UP address and network (`chains.js`, same pattern as the other pages);
+  - `getData` of `LSP3Profile` = `keccak256("LSP3Profile")` = `0x5ef83ad9559033e6e941db7d7c495acdce616347d28e90c7ce47cbfcfcad3bc5`; decode the VerifiableURI (LSP2), fetch the JSON, **check its hash against the declared one** before showing anything; show name, description, images, links, tags;
+  - IPFS through ChainIntegrate's own node `ipfs.chainintegrate.it` (public gateway for reading; uploads only from allowlisted IPs), a public gateway only as fallback. To check: the gateway sends CORS headers for the site's origin;
+  - **compare with LUKSO:** a redeploy copies only the data in the original creation, so on other networks `LSP3Profile` is the creation-time value, or empty. Show the value on the chosen network next to the current one on LUKSO and say when they differ;
+  - controllers and permissions from `backup-check.js` (already written), including the backup status.
+  - No VerifiableURI / IPFS code exists in the repo yet (not in `up-wallet.html` either): written new, shared if reused.
+- **Phase 2, publish (only once phase 1 is solid):** write `LSP3Profile` on that network (for example, align it with LUKSO's), only if the connected controller has SETDATA there (checked, not assumed).
+  - **Not through the gas relay as it is:** writing data through 4337 needs SETDATA on the EntryPoint, which breaks the G-M2 invariant (EntryPoint exactly `0x500`). The controller signs and pays gas, as on the other pages. A gasless alternative (e.g. LSP25 `executeRelayCall` sent by a relayer) would be a new mechanism, to be designed and audited separately.
+  - Security-sensitive: AUDIT.md entry and a log in `tools/logs/` after a real test.
+- **Rules:** EN/IT texts in plain language; an explicit note that this is ChainIntegrate's reading of ERC725Y data, not native recognition by the chain or third parties; never suggest sending funds before reading and writing have been verified.
+
 ---
 
 ## 3. Other open items
