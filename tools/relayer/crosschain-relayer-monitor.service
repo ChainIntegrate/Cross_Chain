@@ -1,0 +1,28 @@
+# Hourly configuration and balance check of the gas relay (run by crosschain-relayer-monitor.timer).
+# Install: see tools/relayer/README.md, "Monitor".
+[Unit]
+Description=Cross_Chain gas relay monitor (read-only checks, email on change)
+After=network-online.target crosschain-relayer.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=up-relayer
+Group=up-relayer
+WorkingDirectory=/opt/crosschain-relayer/tools/relayer
+EnvironmentFile=/etc/crosschain-relayer/smtp.env
+ExecStart=/usr/bin/env node monitor.js --config /etc/crosschain-relayer/config.json
+# /var/lib/crosschain-relayer: remembers the last findings, so email is sent only when they change.
+StateDirectory=crosschain-relayer
+StateDirectoryMode=0700
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6

@@ -44,10 +44,10 @@ In `op`, the numbers are decimal or hex strings and the bytes are 0x-hex strings
 
 The site's git clone does not contain `tools/` (sparse checkout, see the main README). So the service runs from **its own clone, outside the web root**, and its key and configuration live in `/etc`. Replace `apache2`/`nginx` below with the web server in use.
 
-**1. Node.js 18 or later, installed system-wide.**
+**1. Node.js 20 or later, installed system-wide.**
 
 ```bash
-node -v          # v18 or later
+node -v          # v20 or later
 which node       # e.g. /usr/bin/node: not under /root or /home (the service cannot read those)
 ```
 
@@ -114,6 +114,39 @@ curl -s https://crosschain-lukso.chainintegrate.it/relay/info
 
 It shows the relayer address, the chains and the balance on each chain. In `up-gas-relay.html`, section 4 now says "Site relayer: 0x… · balance on this network: …".
 
+## Monitor (hourly checks, email on change)
+
+`monitor.js` checks every hour, read-only and without the relayer key, everything the gas relay depends on:
+- for each UP listed in `monitor.chains.<chainId>.ups`: UP and Key Manager code, the `validateUserOp` extension (→ `Extension4337`), **EntryPoint permissions exactly `0x000500`** (AUDIT.md G-M2), the EntryPoint listed once, the controller list (duplicates, empty entries, leftover extension permissions, CHANGEOWNER, DELEGATECALL, at least one 4337 signer), the paymaster allowlist;
+- for each paymaster: code, owner (`monitor.paymasterOwner`), cap, deposit (warning below `monitor.minPaymasterDeposit`, default 0.0002);
+- `Extension4337` code on the chain;
+- the relayer service: it answers on `relay/info` and its balance is above `minBalanceWarn`.
+
+It emails only when the set of findings changes (a new problem, or "all clear" when everything is fixed), and repeats a reminder every `monitor.reminderHours` (default 24) while problems remain. The first run with everything in order sends nothing.
+
+**Install** (after the relayer):
+
+1. Add the `monitor` section of `config.example.json` to `/etc/crosschain-relayer/config.json`, with the UPs to watch.
+2. SMTP settings in a file only the service can read; write the password there, never in the repository:
+   ```bash
+   sudo install -m 600 -o up-relayer -g up-relayer /opt/crosschain-relayer/tools/relayer/smtp.env.example /etc/crosschain-relayer/smtp.env
+   sudo nano /etc/crosschain-relayer/smtp.env      # SMTP_PASS and NOTIFICATION_EMAIL
+   ```
+3. Try it:
+   ```bash
+   cd /opt/crosschain-relayer/tools/relayer
+   sudo -u up-relayer bash -c 'set -a; . /etc/crosschain-relayer/smtp.env; node monitor.js --test-email'
+   sudo -u up-relayer node monitor.js --config /etc/crosschain-relayer/config.json --dry-run
+   ```
+4. Timer:
+   ```bash
+   sudo cp /opt/crosschain-relayer/tools/relayer/crosschain-relayer-monitor.{service,timer} /etc/systemd/system/
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now crosschain-relayer-monitor.timer
+   systemctl list-timers crosschain-relayer-monitor.timer
+   journalctl -u crosschain-relayer-monitor -n 30 --no-pager
+   ```
+
 ## Update, logs, stop
 
 ```bash
@@ -122,13 +155,15 @@ journalctl -u crosschain-relayer -f       # each send, its confirmation, refusal
 sudo systemctl stop crosschain-relayer    # the page shows "not reachable" and B stays off
 ```
 
-To add a chain or a paymaster, edit `config.json` and restart. At start the service checks that the RPC is on the right chain and that the EntryPoint and each paymaster have code.
+To add a chain or a paymaster, edit `config.json` and restart. To watch another UP, add it to `monitor.chains.<chainId>.ups` (no restart needed: the monitor reads the file at every run). At start the service checks that the RPC is on the right chain and that the EntryPoint and each paymaster have code.
 
 ## Tests
 
-Tested on a local chain with the real EntryPoint v0.6, the LUKSO `UniversalProfile` and `LSP6KeyManager` (0.12.1 and 0.14.0), `Extension4337` 0.17.4 and `UPPaymaster` (33 of 33 checks on each version):
+Tested on a local chain with the real EntryPoint v0.6, the LUKSO `UniversalProfile` and `LSP6KeyManager` (0.12.1 and 0.14.0), `Extension4337` 0.17.4 and `UPPaymaster` (34 of 34 checks on each version):
 - a sponsored operation is relayed, and the relayer ends with at least what it started with;
 - each refusal case above is rejected without any transaction;
 - the start-up checks: key file mode, wrong RPC chain, missing paymaster.
 
-The page test (`up-gas-relay.html` in Chromium, with this service behind `relay/`) passes 47 of 47 on each version.
+The page test (`up-gas-relay.html` in Chromium, with this service behind `relay/`) passes 59 of 59 on each version.
+
+The monitor test (19 of 19 on each version) runs it against a UP laid out like the Base ones, with the real contracts at their real addresses and a fake SMTP server: no finding and no email on a correct setup; an EntryPoint given SETDATA is an error and sends one email, no repeat on the next run, a reminder after 24 hours, "all clear" once fixed; extension elsewhere, leftover extension permission, no 4337 signer, UP off the allowlist, low deposit, low relayer balance, relayer down and wrong paymaster owner are all reported; `--test-email` and `--dry-run` work.
