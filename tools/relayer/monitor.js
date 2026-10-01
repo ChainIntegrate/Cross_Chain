@@ -134,7 +134,7 @@ function report(findings) {
   const lines = findings.length
     ? findings.map((f) => `${f.level === "error" ? "PROBLEM" : "warning"} - ${f.where}: ${f.msg}`)
     : ["Every check passed: EntryPoint permissions 0x000500, extension, controllers, allowlist, paymaster code, cap and deposit, relayer service and balance."];
-  return { subject, text: lines.join("\n") + `\n\nChecked at ${new Date().toISOString()}. Manual check: up-gas-relay.html, section 5.\n` };
+  return { subject, text: lines.join("\n") + `\n\nChecked at ${new Date().toISOString()}. Manual check: up-gas-relay.html, section 2.\n` };
 }
 
 async function sendMail(subject, text) {
