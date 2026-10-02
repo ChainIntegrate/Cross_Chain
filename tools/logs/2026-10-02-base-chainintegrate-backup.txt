@@ -1,0 +1,19 @@
+ChainIntegrate UP 0x4a2605796e0d91A9667d6E30365aEEC384C48c27 on Base mainnet, 2026-10-02: backup controller
+added from section 5 of up-deploy-public.html. Signed by the genesis controller 0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c;
+backup = the maintainer's cassa 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9 (own UP, so acceptable; never for
+other people's UPs). The backup copies the signer's permissions, ERC4337 bit included (the genesis key has it
+from the gas relay setup).
+
+Piano (una transazione, firmata da 0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c tramite il Key Manager 0x309fcE7B6a96CeF8fCbF926a006CDc6f21Ff280e):
+- AddressPermissions[] da 3 a 4 voci, posizione 3 → 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9
+- permessi del backup → 0xff3f06 (identici a quelli di chi firma: ADDCONTROLLER, EDITPERMISSIONS, SUPER_TRANSFERVALUE, TRANSFERVALUE, SUPER_CALL, CALL, SUPER_STATICCALL, STATICCALL, DEPLOY, SUPER_SETDATA, SETDATA, ENCRYPT, DECRYPT, SIGN, EXECUTE_RELAY_CALL, ERC4337)
+Simulazione...
+✅ Simulazione riuscita. Conferma la transazione in MetaMask.
+Tx: 0xe082a1033cd3e2a325ccfaec73e8572b8a3122fd19fd2bcdd7cbf64d3c9575e2
+In attesa di conferma...
+https://basescan.org/tx/0xe082a1033cd3e2a325ccfaec73e8572b8a3122fd19fd2bcdd7cbf64d3c9575e2
+✅ Backup registrato: 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9 ha gli stessi permessi del controller che ha firmato. Custodisci la sua seed a parte, mai insieme alla chiave di genesi.
+
+Notes from the test: the signer had to be connected in section 2 (titled "Wallet che paga il deploy"), which is
+easy to miss; and the progress shown only in the log at the bottom of the section went unnoticed. Both fixed in
+the follow-up: a connect button in section 5, section 2 renamed, and the fixed progress box of the gas relay page.
