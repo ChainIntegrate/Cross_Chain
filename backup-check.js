@@ -72,7 +72,10 @@
   // alert in `el` only when the backup is missing. Checks again when they change, when the page
   // becomes visible again and when the language changes (re-render only).
   function attach({ el, getNetwork, getUp }) {
-    let last = null, seq = 0, sig = "";
+    let last = null, seq = 0, sig = "", timer = null;
+    // Checks start a moment after a change, so they do not hit a public RPC together with the page's
+    // own reads (public RPCs answer 429 "too many requests" to bursts).
+    const later = () => { clearTimeout(timer); timer = setTimeout(refresh, 1500); };
     el.style.cssText = "display:none; margin-top:12px; padding:12px 14px; border:1px solid var(--warn); border-radius:8px; background:rgba(224,168,60,0.1); color:var(--text); font-size:13px; line-height:1.5;";
     const lang = () => (document.documentElement.lang === "en" ? "en" : "it");
     function render() {
@@ -123,10 +126,10 @@
     function poll() {
       const net = getNetwork();
       const s = (net ? net.rpc + "|" + (net.chainId || "") : "") + "|" + (getUp() || "").trim().toLowerCase();
-      if (s !== sig) { sig = s; refresh(); }
+      if (s !== sig) { sig = s; later(); }
     }
     setInterval(poll, 1000);
-    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") refresh(); });
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") later(); });
     new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
     poll();
     return { refresh, render };

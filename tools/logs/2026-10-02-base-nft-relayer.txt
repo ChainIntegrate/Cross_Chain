@@ -1,0 +1,57 @@
+Base mainnet, 2026-10-02: ERC-1155 NFT through the relayer option of the Send page, signed by the backup controller
+(the cassa). The first attempt was stopped by the simulation: the recipient, the Birra20venti UP, could not receive
+ERC-1155 yet. NFT reception was enabled on it with up-nft-receiver.html (one transaction, controller pays gas: data
+changes never go through the relayer), then the transfer went through. The paymaster paid 0.000001300986 ETH.
+Contract loading was slow because the public Base RPC answered 429 (too many requests); fixed afterwards by starting
+the pages' background checks a moment after their own reads.
+
+—— attempt 1 (Send page) ——
+UP: 0x328A19Ab63744AAF3d0AeBfB8e6Dc5246fAf317b
+Rete: Base
+Destinatario: 0x1d62B8d2c63B942095AD3C7FFc7e845195D9E718
+Wallet firmatario (controller): 0x6c5d0fa04ae90371e809114e9c3932ea7a3715c9
+✅ Wallet firmatario e RPC sulla stessa rete (chainId 8453).
+Key Manager: 0x25d0591a83508cE6C937DBB173B00c5A17A6A222
+Contratto: ERC-1155 — 0xBa5e05cb26b78eDa3A2f8e3b3814726305dcAc83
+ID del token: 665
+Copie dell'ID 665 possedute dalla UP: 1
+✅ La UP possiede quello che vuoi inviare.
+Trasferimento "safe": se il destinatario è un contratto che non accetta NFT, la transazione fallisce invece di perdere l'NFT. La simulazione qui sotto lo verifica.
+La simulazione (EntryPoint → UP) fallisce: Error(ERC1155: transfer to non-ERC1155Receiver implementer). Niente è stato firmato.
+Il destinatario è un contratto e probabilmente non accetta questo NFT. Se è una Universal Profile su una rete diversa da LUKSO, abilita prima la ricezione degli NFT con la pagina up-nft-receiver.html.
+
+—— NFT reception on the Birra20venti UP (up-nft-receiver.html) ——
+Rete: Base (chainId 8453) · MetaMask 0x6c5d0fa04ae90371e809114e9c3932ea7a3715c9
+Estensione su questa rete: ✅ pubblicata (0x7F68e74483867058C806218aa05aB5527984C03e), codice verificato
+UP: 0x1d62B8d2c63B942095AD3C7FFc7e845195D9E718 · Key Manager: 0x595DCd1cd30146FA21186bcE639625C9026C4feE
+Permessi del controller: 0xff3f06
+Stato sulla UP: onERC721Received, onERC1155Received, onERC1155BatchReceived, supportsInterface: da aggiungere
+Operazioni in UNA transazione, firmata dal controller 0x6c5d0fa04ae90371e809114e9c3932ea7a3715c9 e inviata al Key Manager 0x595DCd1cd30146FA21186bcE639625C9026C4feE:
+1. Concede temporaneamente al controller: ADDEXTENSIONS (permessi 0xff3f06 → 0xff3f0e)
+2. Registra l'estensione 0x7F68e74483867058C806218aa05aB5527984C03e sulla UP per: onERC721Received, onERC1155Received, onERC1155BatchReceived, supportsInterface
+3. Riporta i permessi del controller esattamente a 0xff3f06
+✅ Simulazione riuscita. Gas stimato: 208984.
+Tx inviata: 0xc1cd44f1714a8e07044c225662a87827017f922de3bb6553d49eb9f5cf746be2
+https://basescan.org/tx/0xc1cd44f1714a8e07044c225662a87827017f922de3bb6553d49eb9f5cf746be2
+✅✅ Fatto: la UP ora può ricevere NFT ERC-721 ed ERC-1155 su questa rete, e i permessi del controller sono uguali a prima.
+
+—— attempt 2 (Send page) ——
+UP: 0x328A19Ab63744AAF3d0AeBfB8e6Dc5246fAf317b
+Rete: Base
+Destinatario: 0x1d62B8d2c63B942095AD3C7FFc7e845195D9E718
+Wallet firmatario (controller): 0x6c5d0fa04ae90371e809114e9c3932ea7a3715c9
+Contratto: ERC-1155 — 0xBa5e05cb26b78eDa3A2f8e3b3814726305dcAc83
+ID del token: 665
+Copie dell'ID 665 possedute dalla UP: 1
+✅ Simulazione riuscita sul percorso del relayer (EntryPoint → UP): il controller non paga gas.
+Gas: relayer del sito. Paymaster 0xb353565d1f801E7402DBC267b8C0E30E3540D4eD, costo massimo 0.000016031268 ETH (tetto 0.0003 ETH); limite di gas dell'esecuzione 203129.
+Riepilogo: la UP invierà 1 copie di ERC-1155, ID 665 a 0x1d62B8d2c63B942095AD3C7FFc7e845195D9E718.
+Gas: relayer del sito. Paymaster 0xb353565d1f801E7402DBC267b8C0E30E3540D4eD, costo massimo 0.00001603195 ETH (tetto 0.0003 ETH); limite di gas dell'esecuzione 203129.
+Firma il messaggio in MetaMask (nessun gas)...
+✅ Messaggio firmato da 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9 (il controller). Hash dell'operazione firmato: 0x02d2754b5636dcd6e570ab40984e7865a866f8c7728edf9710ffe33971110a62
+Invio al relayer del sito...
+Transazione del relayer: 0x7e2866176f240e78e40d42d95717b2c32c01aa68291f43304c577a58748e1079
+https://basescan.org/tx/0x7e2866176f240e78e40d42d95717b2c32c01aa68291f43304c577a58748e1079
+✅ Operazione eseguita. Costo pagato dal paymaster: 0.000001300986 ETH.
+✅✅ Trasferimento confermato.
+Copie rimaste alla UP per questo ID: 0

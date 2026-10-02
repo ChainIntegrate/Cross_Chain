@@ -62,7 +62,12 @@
       overCap: (v) => `Costo massimo ${v.max}, oltre il tetto del paymaster (${v.cap}).`,
       lowDeposit: (v) => `Costo massimo ${v.max}, oltre il deposito del paymaster (${v.dep}).`,
       plan: (v) => `Gas: relayer del sito. Paymaster ${v.pm}, costo massimo ${v.max} (tetto ${v.cap}); limite di gas dell'esecuzione ${v.gas}.`,
-      signAsk: "Firma il messaggio in MetaMask (nessun gas)...",
+      signAsk: (v) => `Firma in MetaMask il messaggio ${v.hash} (nessun gas): deve essere identico a quello mostrato da MetaMask.`,
+      signBoxTitle: "Firma in MetaMask",
+      signBoxMsg: "MetaMask mostra un messaggio da firmare. Deve essere esattamente questo:",
+      signBoxAccount: (v) => `Account che firma: ${v.addr} (il controller)`,
+      signBoxSite: (v) => `Richiesta dal sito: ${v.site}`,
+      signBoxNoGas: "È solo una firma: nessuna transazione e nessun gas. Se il messaggio è diverso, rifiuta in MetaMask.",
       signed: (v) => `✅ Messaggio firmato da ${v.who} (il controller). Hash dell'operazione firmato: ${v.hash}`,
       wrongSigner: (v) => `Ha firmato ${v.who}, non il controller atteso ${v.exp}: niente è stato inviato.`,
       sending: "Invio al relayer del sito...",
@@ -90,7 +95,12 @@
       overCap: (v) => `Maximum cost ${v.max}, above the paymaster's cap (${v.cap}).`,
       lowDeposit: (v) => `Maximum cost ${v.max}, above the paymaster's deposit (${v.dep}).`,
       plan: (v) => `Gas: site relayer. Paymaster ${v.pm}, maximum cost ${v.max} (cap ${v.cap}); execution gas limit ${v.gas}.`,
-      signAsk: "Sign the message in MetaMask (no gas)...",
+      signAsk: (v) => `Sign the message ${v.hash} in MetaMask (no gas): it must be identical to the one MetaMask shows.`,
+      signBoxTitle: "Sign in MetaMask",
+      signBoxMsg: "MetaMask shows a message to sign. It must be exactly this:",
+      signBoxAccount: (v) => `Signing account: ${v.addr} (the controller)`,
+      signBoxSite: (v) => `Requested by: ${v.site}`,
+      signBoxNoGas: "It is only a signature: no transaction and no gas. If the message differs, reject it in MetaMask.",
       signed: (v) => `✅ Message signed by ${v.who} (the controller). Operation hash signed: ${v.hash}`,
       wrongSigner: (v) => `Signed by ${v.who}, not the expected controller ${v.exp}: nothing was sent.`,
       sending: "Sending to the site relayer...",
@@ -214,14 +224,34 @@
     return { op, hash, maxCost, plan: text("plan", { pm: ready.pm, max: fmt(maxCost), cap: fmt(ready.cap), gas: callGas.toString() }) };
   }
 
+  // While MetaMask asks for the signature: a box with what MetaMask must show, to compare before signing.
+  function showSignBox({ hash, signer }) {
+    const box = document.createElement("div");
+    box.id = "relaySignBox";
+    box.setAttribute("role", "dialog");
+    box.style.cssText = "position:fixed; left:50%; top:16px; transform:translateX(-50%); z-index:60; width:calc(100% - 32px); max-width:620px; background:#1d2330; border:2px solid var(--accent, #5b8cff); border-radius:10px; padding:14px 16px; color:var(--text, #e6e8ec); font-size:13.5px; line-height:1.5; box-shadow:0 6px 24px rgba(0,0,0,0.5);";
+    const line = (txt, css) => { const d = document.createElement("div"); d.textContent = txt; if (css) d.style.cssText = css; box.appendChild(d); return d; };
+    line(text("signBoxTitle"), "font-weight:700; font-size:14.5px;");
+    line(text("signBoxMsg"), "margin-top:6px;");
+    // The hash in groups of 8, so it can be compared by eye with MetaMask's message.
+    line(hash.slice(0, 2) + " " + hash.slice(2).match(/.{1,8}/g).join(" "), "margin-top:6px; font-family:monospace; font-size:15px; word-break:break-all; color:var(--ok, #3fbf6f);");
+    line(text("signBoxAccount", { addr: signer }), "margin-top:8px;");
+    line(text("signBoxSite", { site: location.host }), "margin-top:2px;");
+    line(text("signBoxNoGas"), "margin-top:8px; color:var(--text-dim, #9aa1ad);");
+    document.body.appendChild(box);
+    return box;
+  }
+
   const opJson = (op) => Object.fromEntries(Object.entries(op).map(([k, v]) => [k, typeof v === "bigint" ? v.toString() : v]));
 
   // The controller signs the operation hash (personal_sign, as Extension4337 expects); the site relayer
   // sends it. Returns the relayer's transaction hash. `log(msg, cls)` reports each step.
   async function signAndSend(signerProvider, { chainId, prep, signer, log }) {
-    log(text("signAsk"), "line-warn");
+    log(text("signAsk", { hash: prep.hash }), "line-warn");
     const s = await new ethers.BrowserProvider(signerProvider).getSigner();
-    prep.op.signature = await s.signMessage(ethers.getBytes(prep.hash));
+    const box = showSignBox({ hash: prep.hash, signer });
+    try { prep.op.signature = await s.signMessage(ethers.getBytes(prep.hash)); }
+    finally { box.remove(); }
     const who = ethers.verifyMessage(ethers.getBytes(prep.hash), prep.op.signature);
     if (who.toLowerCase() !== signer.toLowerCase()) throw new Error(text("wrongSigner", { who, exp: signer }));
     log(text("signed", { who, hash: prep.hash }), "line-ok");
@@ -263,7 +293,10 @@
   // a short note with what is missing when the UP is listed but not ready; nothing otherwise.
   // onChange() is called when the option is turned on or off, or stops being available.
   function attach({ box, getNetwork, getUp, getSigner, onChange }) {
-    let state = { state: "none" }, seq = 0, sig = "";
+    let state = { state: "none" }, seq = 0, sig = "", timer = null;
+    // Starts a moment after a change, after the page's own reads and the backup check: public RPCs answer
+    // 429 "too many requests" to bursts.
+    const later = () => { clearTimeout(timer); timer = setTimeout(refresh, 2500); };
     box.innerHTML = "";
     const row = document.createElement("label");
     row.style.cssText = "display:flex; gap:8px; align-items:flex-start; font-size:13px; color:var(--text); margin-top:12px; cursor:pointer;";
@@ -317,10 +350,10 @@
     function poll() {
       const net = getNetwork();
       const s = (net ? net.rpc + "|" + (net.chainId || "") : "") + "|" + (getUp() || "").trim().toLowerCase() + "|" + String(getSigner() || "").toLowerCase();
-      if (s !== sig) { sig = s; refresh(); }
+      if (s !== sig) { sig = s; later(); }
     }
     setInterval(poll, 1000);
-    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") refresh(); });
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") later(); });
     new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
     render(); poll();
     return { enabled: () => state.state === "ready" && cb.checked, refresh, state: () => state };
