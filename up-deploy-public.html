@@ -77,6 +77,15 @@
   #backupLog { font-family: monospace; font-size: 12.5px; white-space: pre-wrap; word-break: break-all; line-height: 1.6; margin-top: 10px; }
   .next-box { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--warn); border-radius: 8px; background: rgba(224,168,60,0.1); font-size: 13px; }
   .next-box a { color: var(--warn); font-weight: 700; text-decoration: none; }
+  /* While a backup action runs: a fixed box that says what is happening, so the wait before the wallet opens is never silent. */
+  #busyToast { display: none; position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 50;
+               width: calc(100% - 32px); max-width: 720px; background: #1d2330; border: 2px solid var(--warn); border-radius: 10px;
+               padding: 12px 16px; font-size: 14px; line-height: 1.5; color: var(--text); box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
+  #busyToast.on { display: flex; gap: 12px; align-items: center; }
+  #busyToast .spin { width: 18px; height: 18px; flex: 0 0 18px; border: 3px solid var(--warn); border-top-color: transparent; border-radius: 50%; animation: spin 0.9s linear infinite; }
+  #busyToast .msg { word-break: break-word; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { #busyToast .spin { animation: none; } }
 </style>
 </head>
 <body>
@@ -118,7 +127,7 @@
 </div>
 
 <div class="panel">
-  <h2 data-i18n="panel2Title">2 · Wallet che paga il deploy</h2>
+  <h2 data-i18n="panel2Title">2 · Wallet firmatario (deploy e backup)</h2>
   <div class="note" data-i18n="panel2Note"></div>
   <button id="connectSigner" data-i18n="connectSignerBtn">Connetti wallet firmatario (es. MetaMask)</button>
   <div class="status-box" id="signerStatus"><span class="empty" data-i18n="notConnected">Non connesso.</span></div>
@@ -154,6 +163,8 @@
   <h2 data-i18n="panelBackupTitle">5 · Controller di backup</h2>
   <div class="note" data-i18n-html="backupNote"></div>
   <div class="note" data-i18n-html="backupHowNote"></div>
+  <button id="connectSigner5" class="secondary" data-i18n="connectSigner5Btn">Connetti il controller (MetaMask)</button>
+  <div class="status-box" id="signerStatus5"><span class="empty" data-i18n="notConnected">Non connesso.</span></div>
   <button id="readCtrlBtn" class="secondary" data-i18n="readCtrlBtn">Leggi i controller della UP su questa rete</button>
   <div class="status-box" id="backupStatus"><span class="empty" data-i18n="backupNotRead">Controller non ancora letti.</span></div>
   <div id="backupList"></div>
@@ -179,6 +190,8 @@
   <button id="donateBtn" class="secondary" data-i18n="donateBtn">Dona in LYX con la tua UP</button>
   <div id="donateLog" class="line-dim" style="margin-top:10px;"></div>
 </div>
+
+<div id="busyToast" role="status" aria-live="polite"><div class="spin"></div><div class="msg" id="busyMsg"></div></div>
 
 <div class="site-footer">
   <div class="footer-row">
@@ -223,7 +236,7 @@ const I18N = {
     placeholderCalldata: "0x6a66a753...",
     decodeBtn: "Decodifica calldata",
     notDecodedYet: "Non ancora decodificato.",
-    panel2Title: "2 · Wallet che paga il deploy",
+    panel2Title: "2 · Wallet firmatario (deploy e backup)",
     panel2Note: "Per il deploy può essere un account qualsiasi: paga solo il gas della transazione, non diventa controller della UP. Chi controllerà la UP è deciso esclusivamente dalla calldata originale — verificato al punto 1. Per la sezione 5 (controller di backup) invece serve un controller amministratore della UP.",
     connectSignerBtn: "Connetti wallet firmatario (es. MetaMask)",
     panel3Title: "3 · Rete di destinazione",
@@ -339,8 +352,10 @@ const I18N = {
 
     panelBackupTitle: "5 · Controller di backup",
     backupNote: "<b>Il problema non è il furto, è la perdita.</b> Su ogni rete dove rifai il deploy, la UP nasce controllata solo dalla <b>chiave di genesi</b>: la stringa che hai estratto dall'estensione Universal Profile. Se la perdi (computer rotto, stringa mai salvata, password dimenticata) e non c'è un altro controller con gli stessi permessi, resti fuori da questa UP su questa rete per sempre, con tutto quello che contiene. Nessuno può rimediare. Un <b>controller di backup</b> è un secondo account (per esempio un altro account MetaMask, con la sua seed custodita a parte) con <b>esattamente gli stessi permessi</b> del controller che firma qui. Se perdi una delle due chiavi, con l'altra continui a firmare, aggiungi un nuovo backup e rimuovi quella persa. Se perdi proprio la chiave di genesi, l'unica cosa che non potrai più fare è il deploy su reti nuove, perché lì la UP nasce solo con lei.",
-    backupHowNote: "Usa l'indirizzo della UP (sezione 1), la rete (sezione 3) e il wallet della sezione 2, che qui <b>deve essere un controller amministratore della UP</b> (con ADDCONTROLLER ed EDITPERMISSIONS): su una UP appena deployata è la chiave di genesi importata in MetaMask. Funziona anche per una UP deployata in passato. Va fatto <b>su ogni rete</b>, perché ogni rete ha la sua lista di controller. Su LUKSO si fa con gli strumenti di LUKSO.",
+    backupHowNote: "Usa l'indirizzo della UP (sezione 1), la rete (sezione 3) e il wallet connesso qui sotto (è lo stesso della sezione 2), che qui <b>deve essere un controller amministratore della UP</b> (con ADDCONTROLLER ed EDITPERMISSIONS): su una UP appena deployata è la chiave di genesi importata in MetaMask. Funziona anche per una UP deployata in passato. Va fatto <b>su ogni rete</b>, perché ogni rete ha la sua lista di controller. Su LUKSO si fa con gli strumenti di LUKSO.",
     readCtrlBtn: "Leggi i controller della UP su questa rete",
+    connectSigner5Btn: "Connetti il controller (MetaMask)",
+    busyStart: "In corso: lettura dei dati e simulazione. Se serve una firma, MetaMask si apre tra qualche secondo.",
     backupNotRead: "Controller non ancora letti.",
     backupAddrLabel: "Indirizzo del controller di backup (un account MetaMask diverso, custodito a parte)",
     addBackupBtn: "Aggiungi il controller di backup",
@@ -423,7 +438,7 @@ const I18N = {
     placeholderCalldata: "0x6a66a753...",
     decodeBtn: "Decode calldata",
     notDecodedYet: "Not decoded yet.",
-    panel2Title: "2 · Wallet paying for the deploy",
+    panel2Title: "2 · Signing wallet (deploy and backup)",
     panel2Note: "For the deploy this can be any account: it only pays the transaction gas and does not become a controller of the UP. Who controls the UP is decided exclusively by the original calldata — verified in step 1. Section 5 (backup controller) instead needs an admin controller of the UP.",
     connectSignerBtn: "Connect signing wallet (e.g. MetaMask)",
     panel3Title: "3 · Target network",
@@ -539,8 +554,10 @@ const I18N = {
 
     panelBackupTitle: "5 · Backup controller",
     backupNote: "<b>The risk here is loss, not theft.</b> On every network where you redeploy, the UP is born controlled only by the <b>genesis key</b>: the key string you extracted from the Universal Profile extension. If you lose it (a broken computer, a key never saved, a forgotten password) and no other controller has the same permissions, you are locked out of this UP on this network for good, with everything it holds. No one can fix it. A <b>backup controller</b> is a second account (for example another MetaMask account, with its own seed phrase kept separately) with <b>exactly the same permissions</b> as the controller signing here. If you lose one of the two keys, the other one still signs: it adds a new backup and removes the lost key. If the one you lose is the genesis key, the only thing you can no longer do is deploy on new networks, because there the UP is born with that key only.",
-    backupHowNote: "It uses the UP address (section 1), the network (section 3) and the wallet of section 2, which here <b>must be an admin controller of the UP</b> (with ADDCONTROLLER and EDITPERMISSIONS): on a UP you just deployed, that is the genesis key imported into MetaMask. It also works for a UP deployed earlier. Do it <b>on every network</b>: each network has its own controller list. On LUKSO, use LUKSO's own tools.",
+    backupHowNote: "It uses the UP address (section 1), the network (section 3) and the wallet connected below (the same as in section 2), which here <b>must be an admin controller of the UP</b> (with ADDCONTROLLER and EDITPERMISSIONS): on a UP you just deployed, that is the genesis key imported into MetaMask. It also works for a UP deployed earlier. Do it <b>on every network</b>: each network has its own controller list. On LUKSO, use LUKSO's own tools.",
     readCtrlBtn: "Read the UP's controllers on this network",
+    connectSigner5Btn: "Connect the controller (MetaMask)",
+    busyStart: "Working: reading the data and simulating. If a signature is needed, MetaMask opens in a few seconds.",
     backupNotRead: "Controllers not read yet.",
     backupAddrLabel: "Backup controller address (a different MetaMask account, kept separately)",
     addBackupBtn: "Add the backup controller",
@@ -613,7 +630,7 @@ function applyI18n() {
   $("langToggle").textContent = t("langToggleBtn");
 
   if (!upAddressConnected) $("upStatus").innerHTML = `<span class="empty">${t("notConnected")}</span>`;
-  if (!signerAddress) $("signerStatus").innerHTML = `<span class="empty">${t("notConnected")}</span>`;
+  if (!signerAddress) setSignerStatus(`<span class="empty">${t("notConnected")}</span>`);
   $("donateAddressBox").textContent = `${t("donateAddressPrefix")} ${DONATE_ADDRESS}`;
   if (bk) renderBackup(); else if (!$("backupStatus").textContent.trim() || $("backupStatus").querySelector("[data-i18n]")) $("backupStatus").innerHTML = `<span class="empty">${t("backupNotRead")}</span>`;
   if (decoded) {
@@ -971,12 +988,14 @@ const discoveredProviders = [];
 window.addEventListener("eip6963:announceProvider", (e) => discoveredProviders.push(e.detail));
 window.dispatchEvent(new Event("eip6963:requestProvider"));
 
-$("connectSigner").addEventListener("click", async () => {
+// Sections 2 and 5 connect the same wallet: both status boxes show it.
+function setSignerStatus(html) { $("signerStatus").innerHTML = html; $("signerStatus5").innerHTML = html; }
+async function connectSignerWallet() {
   let candidate = discoveredProviders.find(p => !/lukso|universal profile/i.test(p.info.name))?.provider;
   if (!candidate && window.ethereum && window.ethereum !== window.lukso) candidate = window.ethereum;
   if (!candidate) {
-    $("signerStatus").innerHTML = `<span class="badge err">${t("noSignerFound")}</span>`;
-    return;
+    setSignerStatus(`<span class="badge err">${t("noSignerFound")}</span>`);
+    return false;
   }
   try {
     const accounts = await candidate.request({ method: "eth_requestAccounts" });
@@ -988,11 +1007,14 @@ $("connectSigner").addEventListener("click", async () => {
       const chainIdHex = await candidate.request({ method: "eth_chainId" });
       netLabel = ` · ${chainDisplayName(parseInt(chainIdHex, 16))}`;
     } catch (e) { /* se non si riesce a leggere la rete, si mostra comunque l'indirizzo */ }
-    $("signerStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${escapeHtml(signerAddress + netLabel)}`;
+    setSignerStatus(`<span class="badge ok">${t("connectedBadge")}</span> ${escapeHtml(signerAddress + netLabel)}`);
+    return true;
   } catch (e) {
-    $("signerStatus").innerHTML = `<span class="badge err">${t("connectionRejected")}</span>`;
+    setSignerStatus(`<span class="badge err">${t("connectionRejected")}</span>`);
+    return false;
   }
-});
+}
+$("connectSigner").addEventListener("click", connectSignerWallet);
 
 // --- 5. Donazione — indipendente dal resto della pagina, nessun deploy richiesto ---
 function donateLog(msg, cls) {
@@ -1332,6 +1354,14 @@ function bkLog(msg, cls) {
   if (cls) l.className = cls;
   l.textContent = msg;
   $("backupLog").appendChild(l);
+  // While an action runs, the fixed box shows its latest step (first line only).
+  if (bkBusy) { const first = String(msg).split("\n")[0]; $("busyMsg").textContent = first.length > 200 ? first.slice(0, 200) + "…" : first; }
+}
+function setBusy(on) {
+  bkBusy = on;
+  if (on) $("busyMsg").textContent = t("busyStart");
+  $("busyToast").classList.toggle("on", on);
+  updateBackupButtons();
 }
 function setBackupStatus(text, cls) {
   const el = $("backupStatus");
@@ -1366,6 +1396,7 @@ function updateBackupButtons() {
   $("addBackupBtn").disabled = !ok;
   $("removeBtn").disabled = !ok || !$("removeSelect").value;
   $("readCtrlBtn").disabled = bkBusy;
+  $("connectSigner5").disabled = bkBusy;
 }
 function renderBackup() {
   if (!bk) return;
@@ -1449,7 +1480,20 @@ async function readBackup() {
     return null;
   }
 }
-$("readCtrlBtn").addEventListener("click", () => { $("backupLog").innerHTML = ""; readBackup(); });
+$("readCtrlBtn").addEventListener("click", async () => {
+  if (bkBusy) return;
+  $("backupLog").innerHTML = "";
+  setBusy(true); $("busyMsg").textContent = t("bkReading");
+  try { await readBackup(); } finally { setBusy(false); }
+});
+// Connecting from section 5 reads the controllers right away when UP and network are set.
+$("connectSigner5").addEventListener("click", async () => {
+  if (bkBusy) return;
+  if (!(await connectSignerWallet())) return;
+  if (!ethers.isAddress($("expectedAddress").value.trim())) return;
+  setBusy(true); $("busyMsg").textContent = t("bkReading");
+  try { await readBackup(); } finally { setBusy(false); }
+});
 $("removeSelect").addEventListener("change", updateBackupButtons);
 
 // A fresh read, then the checks every write needs: admin signer, wallet on the same chain.
@@ -1496,8 +1540,8 @@ async function sendBackupTx(b, data, verify) {
 
 $("addBackupBtn").addEventListener("click", async () => {
   if (bkBusy) return;
-  bkBusy = true; updateBackupButtons();
   $("backupLog").innerHTML = "";
+  setBusy(true);
   try {
     const b = await freshAdminState();
     if (!b) return;
@@ -1534,7 +1578,7 @@ $("addBackupBtn").addEventListener("click", async () => {
   } catch (e) {
     bkLog(t("bkError", { err: e.shortMessage || e.message }), "line-err");
   } finally {
-    bkBusy = false; updateBackupButtons();
+    setBusy(false);
   }
 });
 
@@ -1544,7 +1588,7 @@ $("removeBtn").addEventListener("click", async () => {
   if (!$("removeAck").checked) { bkLog(t("bkAckRequired"), "line-err"); return; }
   const chosen = $("removeSelect").value;
   if (!chosen) { bkLog(t("bkPickRemove"), "line-err"); return; }
-  bkBusy = true; updateBackupButtons();
+  setBusy(true);
   try {
     const b = await freshAdminState();
     if (!b) return;
@@ -1585,7 +1629,7 @@ $("removeBtn").addEventListener("click", async () => {
   } catch (e) {
     bkLog(t("bkError", { err: e.shortMessage || e.message }), "line-err");
   } finally {
-    bkBusy = false; updateBackupButtons();
+    setBusy(false);
   }
 });
 
