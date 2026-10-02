@@ -15,7 +15,7 @@ Last update: 2026-09-30.
 | `up-wallet.html` — UP Wallet | Experimental. Tested live on Base and Polygon (OpenSea sign-in, EURe swap, LI.FI, Basenames). Audited (AUDIT.md §7). |
 | `up-walletconnect-basenames.html` | Experimental demo, superseded by the UP Wallet (AUDIT R-07: decide whether to keep it). |
 | `up-nft-receiver.html` + `contracts/NFTReceiverExtension.sol` | Experimental, merged (PR #33, #36). Tested on a local chain with LUKSO UP/LSP6 0.12.1 and 0.14.0 and on Base mainnet. The page only enables the extension; publishing it on a new chain is done in `up-publish-implementation.html` (shortcut chip), with any wallet. |
-| Deploy tool section 5 + `backup-check.js` — backup controller | Add a backup controller or remove a lost one, per network; alert on Send, Test and UP Wallet when the backup is missing. Tested on a local chain with LUKSO UP/LSP6 0.12.1 and 0.14.0 (47 checks each). |
+| Deploy tool section 5 + `backup-check.js` — backup controller | Add a backup controller or remove a lost one, per network; alert on Send, Test and UP Wallet when the backup is missing. Tested on a local chain with LUKSO UP/LSP6 0.12.1 and 0.14.0. Live 2026-10-02: the three maintainer UPs (ChainIntegrate, personal, Birra20venti) have a backup controller on Base and Polygon (logs in `tools/logs/2026-10-02-*-backup.txt`). |
 
 ### Decisions already taken (do not reopen without a reason)
 - **Language:** code, comments, commits and docs in English; chat in Italian.

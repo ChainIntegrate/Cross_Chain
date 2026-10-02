@@ -1,0 +1,23 @@
+Maintainer's personal UP 0x328A19Ab63744AAF3d0AeBfB8e6Dc5246fAf317b on Polygon mainnet, 2026-10-02: backup controller added from section 5 of
+up-deploy-public.html. The transaction log was lost (the page cleared the log at each action; fixed since). Below, the
+read-only check of section 5 afterwards, with no wallet connected: genesis controller 0x86F72AF152E8b502E8Dc7CF87A115Ec94490c6f2 and the backup (the
+maintainer's cassa 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9, own UP) hold the same permissions.
+
+✅ Backup presente su Polygon: 2 controller con gli stessi permessi di amministrazione.
+Collega il wallet della sezione 3: deve essere un controller amministratore di questa UP.
+[0] 0x7870C5B8BC9572A8001C3f96f7ff59961B23500D
+Universal Receiver Delegate: infrastruttura, non è un controller per firmare
+Serve a tenere aggiornata, nei dati della UP, la lista dei token e degli NFT LUKSO (LSP7/LSP8) che la UP riceve. Non firma operazioni e non può spostare fondi né cambiare i controller.
+0x60080 — REENTRANCY, SUPER_SETDATA, SETDATA
+[1] 0x86F72AF152E8b502E8Dc7CF87A115Ec94490c6f2
+controller amministratore chiave di genesi (dalla calldata originale)
+Controller amministratore: può firmare qualsiasi operazione della UP e aggiungere o togliere altri controller. Ha gli stessi permessi di un altro amministratore: se perdi una delle due chiavi, l'altra fa da backup. È la chiave di genesi: su ogni nuova rete la UP nasce controllata solo da lei.
+0xff3f06 — ADDCONTROLLER, EDITPERMISSIONS, SUPER_TRANSFERVALUE, TRANSFERVALUE, SUPER_CALL, CALL, SUPER_STATICCALL, STATICCALL, DEPLOY, SUPER_SETDATA, SETDATA, ENCRYPT, DECRYPT, SIGN, EXECUTE_RELAY_CALL, ERC4337
+[2] 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789
+EntryPoint 4337 (gas relay): non è un controller per firmare
+Serve al gas relay: esegue le operazioni che il tuo controller ha firmato, così il controller non deve avere gas. Può solo chiamare contratti e inviare fondi per conto di una firma valida di un tuo controller; non può cambiare i dati, i permessi o i controller della UP.
+0x500 — SUPER_TRANSFERVALUE, SUPER_CALL
+[3] 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9
+controller amministratore
+Controller amministratore: può firmare qualsiasi operazione della UP e aggiungere o togliere altri controller. Ha gli stessi permessi di un altro amministratore: se perdi una delle due chiavi, l'altra fa da backup.
+0xff3f06 — ADDCONTROLLER, EDITPERMISSIONS, SUPER_TRANSFERVALUE, TRANSFERVALUE, SUPER_CALL, CALL, SUPER_STATICCALL, STATICCALL, DEPLOY, SUPER_SETDATA, SETDATA, ENCRYPT, DECRYPT, SIGN, EXECUTE_RELAY_CALL, ERC4337
