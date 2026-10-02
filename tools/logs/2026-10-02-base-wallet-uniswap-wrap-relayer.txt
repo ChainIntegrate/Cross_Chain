@@ -35,3 +35,7 @@ Inviata: la UP paga 0.001 ETH a 0x4200000000000000000000000000000000000006 (WETH
 https://basescan.org/tx/0xde9ce08c60105947c5f2091b3b754f5bbc1131d1b881caf2e88f1a3862dc0795
 In attesa di conferma...
 ✅ Operazione eseguita. Costo pagato dal paymaster: 0.000001205034 ETH.
+
+Outcome on Uniswap's side: the transaction was shown as confirmed, although the relayer's transaction goes to the
+EntryPoint and not to the UP. RPC test the same day: https://base-rpc.publicnode.com gave no 429 where
+mainnet.base.org did; it became the pages' RPC for Base.
