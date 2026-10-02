@@ -382,6 +382,14 @@ const I18N = {
     bkRoleCtrl: "controller",
     bkRoleBad: "voce non valida nella lista",
     bkAdmin: "amministratore",
+    bkWhyAdmin: "Controller amministratore: può firmare qualsiasi operazione della UP e aggiungere o togliere altri controller.",
+    bkWhyLimited: "Controller con permessi limitati: può fare solo quello che dicono i permessi qui sotto; non può gestire gli altri controller, quindi non fa da backup.",
+    bkWhyPair: "Ha gli stessi permessi di un altro amministratore: se perdi una delle due chiavi, l'altra fa da backup.",
+    bkWhyGenesis: "È la chiave di genesi: su ogni nuova rete la UP nasce controllata solo da lei.",
+    bkWhyYou: "È il wallet connesso adesso: firmerà le operazioni di questa sezione.",
+    bkWhyUrd: "Serve a tenere aggiornata, nei dati della UP, la lista dei token e degli NFT LUKSO (LSP7/LSP8) che la UP riceve. Non firma operazioni e non può spostare fondi né cambiare i controller.",
+    bkWhyEp: "Serve al gas relay: esegue le operazioni che il tuo controller ha firmato, così il controller non deve avere gas. Può solo chiamare contratti e inviare fondi per conto di una firma valida di un tuo controller; non può cambiare i dati, i permessi o i controller della UP.",
+    bkWhyBad: "Questa voce della lista non contiene un indirizzo valido: non è un controller funzionante.",
     bkGenesis: "chiave di genesi (dalla calldata originale)",
     bkSignerNone: "Collega il wallet della sezione 3: deve essere un controller amministratore di questa UP.",
     bkSignerNotCtrl: (v) => `Il wallet connesso (${v.addr}) non è un controller di questa UP su questa rete: collega in MetaMask un controller amministratore (per una UP appena deployata, la chiave di genesi importata).`,
@@ -584,6 +592,14 @@ const I18N = {
     bkRoleCtrl: "controller",
     bkRoleBad: "invalid entry in the list",
     bkAdmin: "admin",
+    bkWhyAdmin: "Admin controller: it can sign any operation of the UP and add or remove other controllers.",
+    bkWhyLimited: "Controller with limited permissions: it can only do what the permissions below say; it cannot manage the other controllers, so it is not a backup.",
+    bkWhyPair: "It has the same permissions as another admin: if you lose one of the two keys, the other one is the backup.",
+    bkWhyGenesis: "It is the genesis key: on every new network the UP is born controlled by this key only.",
+    bkWhyYou: "It is the wallet connected now: it will sign the operations of this section.",
+    bkWhyUrd: "It keeps the list of LUKSO tokens and NFTs (LSP7/LSP8) the UP receives up to date, in the UP's data. It does not sign operations and cannot move funds or change the controllers.",
+    bkWhyEp: "It is used by the gas relay: it runs the operations your controller signed, so the controller needs no gas. It can only call contracts and send funds on behalf of a valid signature by one of your controllers; it cannot change the UP's data, permissions or controllers.",
+    bkWhyBad: "This entry of the list holds no valid address: it is not a working controller.",
     bkGenesis: "genesis key (from the original calldata)",
     bkSignerNone: "Connect the wallet of section 3: it must be an admin controller of this UP.",
     bkSignerNotCtrl: (v) => `The connected wallet (${v.addr}) is not a controller of this UP on this network: connect an admin controller in MetaMask (for a UP you just deployed, the imported genesis key).`,
@@ -1429,10 +1445,25 @@ function renderBackup() {
       if (bk.genesis.includes(c.address.toLowerCase())) badges.push(["warn", t("bkGenesis")]);
     }
     badges.forEach(([cls, text]) => { const s = document.createElement("span"); s.className = "badge " + cls; s.style.marginRight = "6px"; s.textContent = text; role.appendChild(s); });
+    // What it is for, in plain words.
+    const why = [];
+    if (c.role === "entrypoint") why.push(t("bkWhyEp"));
+    else if (c.role === "urd") why.push(t("bkWhyUrd"));
+    else if (c.role === "malformed") why.push(t("bkWhyBad"));
+    else {
+      const admin = (c.perms & BK.ADMIN) === BK.ADMIN;
+      why.push(t(admin ? "bkWhyAdmin" : "bkWhyLimited"));
+      if (admin && r.admins.some(o => o !== c && (o.perms & ~BK.ERC4337) === (c.perms & ~BK.ERC4337))) why.push(t("bkWhyPair"));
+      if (bk.genesis.includes(c.address.toLowerCase())) why.push(t("bkWhyGenesis"));
+      if (bk.signer && c.address.toLowerCase() === bk.signer.toLowerCase()) why.push(t("bkWhyYou"));
+    }
+    const whyEl = document.createElement("div");
+    whyEl.style.cssText = "font-size:12.5px; color:var(--text); margin-top:6px; line-height:1.5;";
+    whyEl.textContent = why.join(" ");
     const flags = document.createElement("div");
     flags.className = "flags";
     flags.textContent = `${permHex(c.perms)} — ${permNames(c.perms)}`;
-    card.append(a, role, flags);
+    card.append(a, role, whyEl, flags);
     box.appendChild(card);
   });
   const sel = $("removeSelect");
