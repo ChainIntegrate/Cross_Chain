@@ -1,0 +1,33 @@
+Send page (up-invia-fondi.html) with "Pay the gas with the site relayer", Polygon mainnet, 2026-10-02: ERC-20 (USDC)
+through the relayer. The maintainer's personal UP sends all its USDC (0.363768) to the cassa; the signer is the cassa
+itself, which is the UP's backup controller (same permissions as the genesis key, ERC4337 included): the account that
+signs is also the recipient, and it spends no POL. The paymaster paid 0.074570301273973512 POL. The recipient warning
+"is a contract" appears because the cassa is a MetaMask account delegated through EIP-7702 on Polygon.
+
+UP: 0x328A19Ab63744AAF3d0AeBfB8e6Dc5246fAf317b
+Rete: Polygon
+Destinatario: 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9
+Wallet firmatario (controller): 0x6c5d0fa04ae90371e809114e9c3932ea7a3715c9
+Nota: la validità dei permessi del controller viene verificata sotto tramite la stima del gas — se il wallet connesso non ha i permessi giusti sulla UP, la stima fallirà.
+✅ Wallet firmatario e RPC sulla stessa rete (chainId 137).
+Key Manager: 0x25d0591a83508cE6C937DBB173B00c5A17A6A222
+Contratto: ERC-20 USD Coin (USDC) — 0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359
+Saldo della UP: 0.363768 USDC
+✅ Saldo della UP sufficiente per l'importo richiesto.
+⚠️ Il destinatario è un contratto, non un normale wallet: assicurati che possa gestire quello che riceve (per esempio un'altra UP o un indirizzo di deposito di un exchange che supporta questa rete).
+✅ Simulazione riuscita sul percorso del relayer (EntryPoint → UP): il controller non paga gas.
+Gas: relayer del sito. Paymaster 0xb353565d1f801E7402DBC267b8C0E30E3540D4eD, costo massimo 0.7830872423058685 POL (tetto 1.0 POL); limite di gas dell'esecuzione 241794.
+
+Riepilogo: la UP invierà 0.363768 USDC a 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9.
+
+Pronto. Premendo Invia, MetaMask chiede di firmare un messaggio (nessun gas); il relayer del sito invia. Il trasferimento è irreversibile.
+Gas: relayer del sito. Paymaster 0xb353565d1f801E7402DBC267b8C0E30E3540D4eD, costo massimo 0.797941100457755568 POL (tetto 1.0 POL); limite di gas dell'esecuzione 241794.
+Firma il messaggio in MetaMask (nessun gas)...
+✅ Messaggio firmato da 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9 (il controller). Hash dell'operazione firmato: 0x9e9d80a1e7a6e6bd227386d4881c543d933cb2d6f4921c74642d8001d518dd36
+Invio al relayer del sito...
+Transazione del relayer: 0x22fc10b8be680c75cd03d2181f3d9ab69cdf90555daf88b84f34266029824366
+https://polygonscan.com/tx/0x22fc10b8be680c75cd03d2181f3d9ab69cdf90555daf88b84f34266029824366
+In attesa di conferma...
+✅ Operazione eseguita. Costo pagato dal paymaster: 0.074570301273973512 POL.
+✅✅ Trasferimento confermato.
+Saldo della UP dopo l'invio: 0.0 USDC
