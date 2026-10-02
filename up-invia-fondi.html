@@ -1369,7 +1369,10 @@ $("checkBtn").addEventListener("click", withBusy(async () => {
       return;
     }
 
-    const recipientIsContract = (await provider.getCode(recipient)) !== "0x";
+    // An account delegated through EIP-7702 (code 0xef0100 + address, e.g. a MetaMask smart account)
+    // is still a wallet: only real contract code counts as a contract here.
+    const recipientCode = (await provider.getCode(recipient)).toLowerCase();
+    const recipientIsContract = recipientCode !== "0x" && !recipientCode.startsWith("0xef0100");
     const plan = await planTransfer(provider, profile.address, recipient, recipientIsContract);
     if (plan.err) { log(plan.err, "line-err"); return; }
 
