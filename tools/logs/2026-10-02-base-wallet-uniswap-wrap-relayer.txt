@@ -1,0 +1,37 @@
+UP Wallet with Uniswap over WalletConnect, Base mainnet, 2026-10-02: wrap 0.001 ETH → WETH through the relayer
+option (personal UP, signed by the backup controller). First in simulation-only mode, then real: the controller
+signed a message only; the paymaster paid 0.000001205034 ETH; the dApp received the relayer's transaction hash once
+the UP's operation had succeeded. deposit() on WETH is now recognised as a wrap. Unwrapping (WETH9 withdraw, which
+returns ETH with transfer() and 2300 gas) cannot work into a UP and was not attempted through the page.
+
+—— 17:55:39 ——
+Richiesta di connessione da: Uniswap (https://app.uniswap.org) — verifica del dominio: VALID
+—— 17:56:07 ——
+Richiesta dalla dApp: eth_sendTransaction
+✅ Verifica del dominio WalletConnect: VALID.
+✅ RPC e MetaMask sulla rete scelta; controller verificato.
+Riepilogo: verso 0x4200000000000000000000000000000000000006 (WETH) · valore dalla UP: 0.001 ETH · operazione: deposit()
+ℹ️ Destinatario noto: WETH — token 1:1 della valuta nativa della rete (wrap/unwrap). Il nome dice chi riceve la chiamata, non cosa fa: controlla importi e rete sul sito.
+ℹ️ Conversione: 0.001 ETH della UP diventano WETH (wrap, 1:1).
+Simulazione della transazione incapsulata...
+✅ Simulazione riuscita sul percorso del relayer (EntryPoint → UP): il controller non paga gas.
+Gas: relayer del sito. Paymaster 0xb353565d1f801E7402DBC267b8C0E30E3540D4eD, costo massimo 0.00001578962 ETH (tetto 0.0003 ETH); limite di gas dell'esecuzione 182414.
+Modalità simulazione: niente inviato. Alla dApp è stato risposto che si tratta di una simulazione.
+—— 17:57:20 ——
+Richiesta dalla dApp: eth_sendTransaction
+✅ Verifica del dominio WalletConnect: VALID.
+✅ RPC e MetaMask sulla rete scelta; controller verificato.
+Riepilogo: verso 0x4200000000000000000000000000000000000006 (WETH) · valore dalla UP: 0.001 ETH · operazione: deposit()
+ℹ️ Conversione: 0.001 ETH della UP diventano WETH (wrap, 1:1).
+✅ Simulazione riuscita sul percorso del relayer (EntryPoint → UP): il controller non paga gas.
+Gas: relayer del sito. Paymaster 0xb353565d1f801E7402DBC267b8C0E30E3540D4eD, costo massimo 0.000015789356 ETH (tetto 0.0003 ETH); limite di gas dell'esecuzione 182414.
+Pronto. Controlla i dati sopra, poi premi "Firma e invia": MetaMask chiede di firmare un messaggio (nessun gas) e il relayer del sito invia. Alla dApp torna l'hash solo quando l'operazione della UP è riuscita.
+Gas: relayer del sito. Paymaster 0xb353565d1f801E7402DBC267b8C0E30E3540D4eD, costo massimo 0.000015787893 ETH (tetto 0.0003 ETH); limite di gas dell'esecuzione 182414.
+Firma in MetaMask il messaggio 0x2f4685caeb83d72803b74a921d43dd7a1caad11f003b8e2c729c393e0a67cac3 (nessun gas): deve essere identico a quello mostrato da MetaMask.
+✅ Messaggio firmato da 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9 (il controller). Hash dell'operazione firmato: 0x2f4685caeb83d72803b74a921d43dd7a1caad11f003b8e2c729c393e0a67cac3
+Invio al relayer del sito...
+Transazione del relayer: 0xde9ce08c60105947c5f2091b3b754f5bbc1131d1b881caf2e88f1a3862dc0795
+Inviata: la UP paga 0.001 ETH a 0x4200000000000000000000000000000000000006 (WETH) (il gas lo paga il paymaster del sito).
+https://basescan.org/tx/0xde9ce08c60105947c5f2091b3b754f5bbc1131d1b881caf2e88f1a3862dc0795
+In attesa di conferma...
+✅ Operazione eseguita. Costo pagato dal paymaster: 0.000001205034 ETH.
