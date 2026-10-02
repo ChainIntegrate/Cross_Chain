@@ -1,0 +1,33 @@
+UP Wallet (up-wallet.html) with Uniswap (app.uniswap.org) over WalletConnect, Base mainnet, 2026-10-02: wrap
+0.001 ETH → WETH from the maintainer's personal UP. Sent on the controller path (the relayer option was left off
+by mistake: the controller paid the gas). Connection and request processing took about a minute each, in silence:
+the public Base RPC answered 429 (too many requests). Fixed afterwards: progress box in the UP Wallet, fewer RPC
+calls in the compatibility check (NFT hooks in one getDataBatch), WETH deposit()/withdraw() recognised, and a hint
+in the confirmation window when the relayer is available but the option is off.
+
+—— 17:21:15 ——
+Richiesta di connessione da: Uniswap (https://app.uniswap.org) — verifica del dominio: VALID
+—— 17:22:56 ——   (simulation only)
+Richiesta dalla dApp: eth_sendTransaction
+✅ Verifica del dominio WalletConnect: VALID.
+✅ RPC e MetaMask sulla rete scelta; controller verificato.
+Riepilogo: verso 0x4200000000000000000000000000000000000006 · valore dalla UP: 0.001 ETH · operazione: Chiamata non riconosciuta (selettore 0xd0e30db0)
+⚠️ La pagina non riconosce questa chiamata: non può dirti cosa fa. Se non lo sai con certezza, rifiuta.
+Simulazione della transazione incapsulata...
+✅ Simulazione riuscita. Gas stimato: 111649.
+Modalità simulazione: niente inviato. Alla dApp è stato risposto che si tratta di una simulazione.
+
+—— (real) ——
+Richiesta dalla dApp: eth_sendTransaction
+Riepilogo: verso 0x4200000000000000000000000000000000000006 · valore dalla UP: 0.001 ETH · operazione: Chiamata non riconosciuta (selettore 0xd0e30db0)
+Mittente (UP): 0x328A19Ab63744AAF3d0AeBfB8e6Dc5246fAf317b
+Dati grezzi: 0xd0e30db0756e697800000000000c
+Tramite Key Manager: 0x25d0591a83508cE6C937DBB173B00c5A17A6A222
+Firma (controller): 0x6c5d0fa04ae90371e809114e9c3932ea7a3715c9
+✅ Simulazione riuscita. Gas stimato: 111649.
+Invio della transazione incapsulata (conferma in MetaMask)...
+Tx inviata: 0x9ad576f2494017b8e0aff7d72a8c683e073bfc0ad6215d5abf3f94ecd39b4040
+Inviata: la UP paga 0.001 ETH a 0x4200000000000000000000000000000000000006 (più il gas, pagato dal controller).
+https://basescan.org/tx/0x9ad576f2494017b8e0aff7d72a8c683e073bfc0ad6215d5abf3f94ecd39b4040
+In attesa di conferma...
+✅✅ Transazione confermata.
