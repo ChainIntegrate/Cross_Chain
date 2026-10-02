@@ -63,6 +63,7 @@
       lowDeposit: (v) => `Costo massimo ${v.max}, oltre il deposito del paymaster (${v.dep}).`,
       plan: (v) => `Gas: relayer del sito. Paymaster ${v.pm}, costo massimo ${v.max} (tetto ${v.cap}); limite di gas dell'esecuzione ${v.gas}.`,
       signAsk: "Firma il messaggio in MetaMask (nessun gas)...",
+      signed: (v) => `✅ Messaggio firmato da ${v.who} (il controller). Hash dell'operazione firmato: ${v.hash}`,
       wrongSigner: (v) => `Ha firmato ${v.who}, non il controller atteso ${v.exp}: niente è stato inviato.`,
       sending: "Invio al relayer del sito...",
       refused: (v) => `Il relayer ha rifiutato l'operazione: ${v.err}`,
@@ -90,6 +91,7 @@
       lowDeposit: (v) => `Maximum cost ${v.max}, above the paymaster's deposit (${v.dep}).`,
       plan: (v) => `Gas: site relayer. Paymaster ${v.pm}, maximum cost ${v.max} (cap ${v.cap}); execution gas limit ${v.gas}.`,
       signAsk: "Sign the message in MetaMask (no gas)...",
+      signed: (v) => `✅ Message signed by ${v.who} (the controller). Operation hash signed: ${v.hash}`,
       wrongSigner: (v) => `Signed by ${v.who}, not the expected controller ${v.exp}: nothing was sent.`,
       sending: "Sending to the site relayer...",
       refused: (v) => `The relayer refused the operation: ${v.err}`,
@@ -222,6 +224,7 @@
     prep.op.signature = await s.signMessage(ethers.getBytes(prep.hash));
     const who = ethers.verifyMessage(ethers.getBytes(prep.hash), prep.op.signature);
     if (who.toLowerCase() !== signer.toLowerCase()) throw new Error(text("wrongSigner", { who, exp: signer }));
+    log(text("signed", { who, hash: prep.hash }), "line-ok");
     log(text("sending"), "line-dim");
     let r, j;
     try {

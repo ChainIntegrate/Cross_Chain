@@ -1,0 +1,29 @@
+Send page (up-invia-fondi.html) with "Pay the gas with the site relayer", Base mainnet, 2026-10-02: first live
+transfer through the option. ChainIntegrate UP sends 0.001 ETH to the maintainer's personal UP; the controller only
+signs a message; the site relayer sends; the site paymaster pays 0.000001170324 ETH. (The "message signed" line was
+added to the log afterwards.)
+
+UP: 0x4a2605796e0d91A9667d6E30365aEEC384C48c27
+Rete: Base
+Destinatario: 0x328A19Ab63744AAF3d0AeBfB8e6Dc5246fAf317b
+Wallet firmatario (controller): 0x9c8fd044a4c777f9f97c6cfc127c91f86b795c9c
+Nota: la validità dei permessi del controller viene verificata sotto tramite la stima del gas — se il wallet connesso non ha i permessi giusti sulla UP, la stima fallirà.
+✅ Wallet firmatario e RPC sulla stessa rete (chainId 8453).
+Key Manager: 0x309fcE7B6a96CeF8fCbF926a006CDc6f21Ff280e
+Saldo attuale della UP: 0.0045000227776888
+✅ Saldo della UP sufficiente per l'importo richiesto.
+⚠️ Il destinatario è un contratto, non un normale wallet: assicurati che possa gestire quello che riceve (per esempio un'altra UP o un indirizzo di deposito di un exchange che supporta questa rete).
+✅ Simulazione riuscita sul percorso del relayer (EntryPoint → UP): il controller non paga gas.
+Gas: relayer del sito. Paymaster 0xb353565d1f801E7402DBC267b8C0E30E3540D4eD, costo massimo 0.000015701928 ETH (tetto 0.0003 ETH); limite di gas dell'esecuzione 174141.
+
+Riepilogo: la UP invierà 0.001 di valuta nativa a 0x328A19Ab63744AAF3d0AeBfB8e6Dc5246fAf317b.
+
+Pronto. Premendo Invia, MetaMask chiede di firmare un messaggio (nessun gas); il relayer del sito invia. Il trasferimento è irreversibile.
+Gas: relayer del sito. Paymaster 0xb353565d1f801E7402DBC267b8C0E30E3540D4eD, costo massimo 0.000015701785 ETH (tetto 0.0003 ETH); limite di gas dell'esecuzione 174141.
+Firma il messaggio in MetaMask (nessun gas)...
+Invio al relayer del sito...
+Transazione del relayer: 0x96f0bb51b05aec037902af3dfd36fca084a43e46c4caa59ecfef14b778a63f44
+https://basescan.org/tx/0x96f0bb51b05aec037902af3dfd36fca084a43e46c4caa59ecfef14b778a63f44
+In attesa di conferma...
+✅ Operazione eseguita. Costo pagato dal paymaster: 0.000001170324 ETH.
+✅✅ Trasferimento confermato.
