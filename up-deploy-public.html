@@ -108,7 +108,19 @@
 </div>
 
 <div class="panel">
-  <h2 data-i18n="panel1Title">1 · Profilo da replicare</h2>
+  <h2 data-i18n="panel3Title">1 · Rete di destinazione</h2>
+  <input type="text" id="networkFilter" data-i18n-placeholder="networkFilterPlaceholder" placeholder="Filtra per nome... (es. base, polygon, arbitrum)">
+  <select id="network" style="margin-top:8px;"></select>
+  <div id="customRpcWrap" style="display:none;">
+    <label data-i18n="customRpcLabel">RPC URL custom</label>
+    <input type="text" id="customRpc" data-i18n-placeholder="customRpcPlaceholder" placeholder="https://...">
+    <label data-i18n="customExplorerLabel">Explorer URL custom (opzionale)</label>
+    <input type="text" id="customExplorer" data-i18n-placeholder="customExplorerPlaceholder" placeholder="https://.../address/">
+  </div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel1Title">2 · Profilo da replicare</h2>
   <button id="connectUp" data-i18n="connectUpBtn">Connetti la tua Universal Profile</button>
   <div class="status-box" id="upStatus"><span class="empty" data-i18n="notConnected">Non connesso.</span></div>
   <div class="note" data-i18n="connectUpRequiredNote"></div>
@@ -127,23 +139,12 @@
 </div>
 
 <div class="panel">
-  <h2 data-i18n="panel2Title">2 · Wallet firmatario (deploy e backup)</h2>
+  <h2 data-i18n="panel2Title">3 · Wallet firmatario (deploy e backup)</h2>
   <div class="note" data-i18n="panel2Note"></div>
   <button id="connectSigner" data-i18n="connectSignerBtn">Connetti wallet firmatario (es. MetaMask)</button>
   <div class="status-box" id="signerStatus"><span class="empty" data-i18n="notConnected">Non connesso.</span></div>
 </div>
 
-<div class="panel">
-  <h2 data-i18n="panel3Title">3 · Rete di destinazione</h2>
-  <input type="text" id="networkFilter" data-i18n-placeholder="networkFilterPlaceholder" placeholder="Filtra per nome... (es. base, polygon, arbitrum)">
-  <select id="network" style="margin-top:8px;"></select>
-  <div id="customRpcWrap" style="display:none;">
-    <label data-i18n="customRpcLabel">RPC URL custom</label>
-    <input type="text" id="customRpc" data-i18n-placeholder="customRpcPlaceholder" placeholder="https://...">
-    <label data-i18n="customExplorerLabel">Explorer URL custom (opzionale)</label>
-    <input type="text" id="customExplorer" data-i18n-placeholder="customExplorerPlaceholder" placeholder="https://.../address/">
-  </div>
-</div>
 
 <div class="panel">
   <h2 data-i18n="panel4Title">4 · Verifica e deploy</h2>
@@ -218,7 +219,7 @@ const I18N = {
     customNetName: "Rete custom",
     panel0Title: "0 · Cos'è e cosa serve",
     panel0Note: "Questa pagina ripete, su un'altra rete, l'identica transazione di creazione della tua Universal Profile — per questo l'indirizzo risultante è lo stesso. Ti servono due cose: (1) l'estensione della Universal Profile installata e connessa con il profilo che vuoi replicare; (2) la <b>calldata di deploy originale</b> della tua UP (una lunga stringa esadecimale che inizia con <code>0x6a66a753...</code>), che la pagina recupera in automatico dall'explorer di LUKSO appena connetti la UP (oppure puoi copiarla a mano, vedi la guida). La pagina non firma nulla per conto tuo: chiama sempre il tuo wallet per la conferma.",
-    panel1Title: "1 · Profilo da replicare",
+    panel1Title: "2 · Profilo da replicare",
     connectUpBtn: "Connetti la tua Universal Profile",
     connectUpRequiredNote: "Decodifica e verifica sono disponibili solo dopo aver connesso qui la tua Universal Profile. Non è una firma né un controllo crittografico — nessuna transazione viene fatta a questo punto — è solo un promemoria che questa pagina è pensata per rideployare il tuo profilo, non quello di qualcun altro.",
     notConnected: "Non connesso.",
@@ -236,10 +237,10 @@ const I18N = {
     placeholderCalldata: "0x6a66a753...",
     decodeBtn: "Decodifica calldata",
     notDecodedYet: "Non ancora decodificato.",
-    panel2Title: "2 · Wallet firmatario (deploy e backup)",
-    panel2Note: "Per il deploy può essere un account qualsiasi: paga solo il gas della transazione, non diventa controller della UP. Chi controllerà la UP è deciso esclusivamente dalla calldata originale — verificato al punto 1. Per la sezione 5 (controller di backup) invece serve un controller amministratore della UP.",
+    panel2Title: "3 · Wallet firmatario (deploy e backup)",
+    panel2Note: "Per il deploy può essere un account qualsiasi: paga solo il gas della transazione, non diventa controller della UP. Chi controllerà la UP è deciso esclusivamente dalla calldata originale — verificato al punto 2. Per la sezione 5 (controller di backup) invece serve un controller amministratore della UP.",
     connectSignerBtn: "Connetti wallet firmatario (es. MetaMask)",
-    panel3Title: "3 · Rete di destinazione",
+    panel3Title: "1 · Rete di destinazione",
     networkFilterPlaceholder: "Filtra per nome... (es. base, polygon, arbitrum)",
     customRpcLabel: "RPC URL custom",
     customRpcPlaceholder: "https://...",
@@ -264,7 +265,7 @@ const I18N = {
     differsFromExpected: (v) => `diversa dall'atteso ${v.impl}`,
     matchOk: "✅ CORRISPONDE all'indirizzo atteso",
     matchFail: (v) => `❌ NON corrisponde all'indirizzo atteso (${v.expected})`,
-    noExpectedWarn: "⚠️ Nessun indirizzo atteso inserito — connetti la tua UP al punto 1 o inseriscilo a mano per il controllo bloccante",
+    noExpectedWarn: "⚠️ Nessun indirizzo atteso inserito — connetti la tua UP al punto 2 o inseriscilo a mano per il controllo bloccante",
     controllersFoundLabel: "Controller trovati nella calldata (chi otterrà il controllo della UP)",
     notAutoDecodable: (v) => `Non decodificabile automaticamente`,
     notAutoDecodableDetail: (v) => `${v.err}. Verifica manualmente il controller prima di procedere.`,
@@ -284,10 +285,10 @@ const I18N = {
     knownLsp1Label: "LSP1UniversalReceiverDelegateUP (contratto ufficiale LUKSO)",
     knownLsp1Note: "Gestisce automaticamente la ricezione di asset (LSP7/LSP8) e vault (LSP9) da parte della UP, aggiornando le liste LSP5ReceivedAssets/LSP10Vaults nello storage. I permessi che riceve (tipicamente SETDATA, SUPER_SETDATA, REENTRANCY) servono esclusivamente a questo — non includono TRANSFERVALUE, CALL né ADDCONTROLLER: non può muovere fondi, eseguire chiamate arbitrarie o cambiare i controller. È lo stesso indirizzo su ogni rete/profilo perché è infrastruttura condivisa, non specifica al tuo profilo.",
 
-    decodeCalldataFirstLog: "Decodifica prima la calldata (pannello 1).",
+    decodeCalldataFirstLog: "Decodifica prima la calldata (pannello 2).",
     blockingMismatch: "❌ BLOCCANTE — l'indirizzo predetto dalla calldata non corrisponde all'indirizzo atteso. Non procedere: rischio di deployare la UP sbagliata o con calldata sbagliata.",
-    connectSignerFirstLog: "Collega prima il wallet firmatario (pannello 2).",
-    missingRpcLog: "Manca l'RPC della rete (pannello 3).",
+    connectSignerFirstLog: "Collega prima il wallet firmatario (pannello 3).",
+    missingRpcLog: "Manca l'RPC della rete (pannello 1).",
     walletWrongNetwork: (v) => `❌ BLOCCANTE — il wallet firmatario è connesso alla rete con chainId ${v.walletChainId}, ma qui hai selezionato ${v.netName} (chainId ${v.chainId}). Cambia rete in MetaMask prima di continuare.`,
     walletCorrectNetwork: (v) => `✅ Il wallet firmatario è connesso alla rete corretta (chainId ${v.chainId}).`,
     walletNetworkCheckFailed: (v) => `⚠️ Non è stato possibile verificare la rete del wallet firmatario — controlla tu stesso che MetaMask sia su ${v.netName} prima di procedere.`,
@@ -352,7 +353,7 @@ const I18N = {
 
     panelBackupTitle: "5 · Controller di backup",
     backupNote: "<b>Il problema non è il furto, è la perdita.</b> Su ogni rete dove rifai il deploy, la UP nasce controllata solo dalla <b>chiave di genesi</b>: la stringa che hai estratto dall'estensione Universal Profile. Se la perdi (computer rotto, stringa mai salvata, password dimenticata) e non c'è un altro controller con gli stessi permessi, resti fuori da questa UP su questa rete per sempre, con tutto quello che contiene. Nessuno può rimediare. Un <b>controller di backup</b> è un secondo account (per esempio un altro account MetaMask, con la sua seed custodita a parte) con <b>esattamente gli stessi permessi</b> del controller che firma qui. Se perdi una delle due chiavi, con l'altra continui a firmare, aggiungi un nuovo backup e rimuovi quella persa. Se perdi proprio la chiave di genesi, l'unica cosa che non potrai più fare è il deploy su reti nuove, perché lì la UP nasce solo con lei.",
-    backupHowNote: "Usa l'indirizzo della UP (sezione 1), la rete (sezione 3) e il wallet connesso qui sotto (è lo stesso della sezione 2), che qui <b>deve essere un controller amministratore della UP</b> (con ADDCONTROLLER ed EDITPERMISSIONS): su una UP appena deployata è la chiave di genesi importata in MetaMask. Funziona anche per una UP deployata in passato. Va fatto <b>su ogni rete</b>, perché ogni rete ha la sua lista di controller. Su LUKSO si fa con gli strumenti di LUKSO.",
+    backupHowNote: "Usa l'indirizzo della UP (sezione 2), la rete (sezione 1) e il wallet connesso qui sotto (è lo stesso della sezione 3), che qui <b>deve essere un controller amministratore della UP</b> (con ADDCONTROLLER ed EDITPERMISSIONS): su una UP appena deployata è la chiave di genesi importata in MetaMask. Funziona anche per una UP deployata in passato. Va fatto <b>su ogni rete</b>, perché ogni rete ha la sua lista di controller. Su LUKSO si fa con gli strumenti di LUKSO.",
     readCtrlBtn: "Leggi i controller della UP su questa rete",
     connectSigner5Btn: "Connetti il controller (MetaMask)",
     busyStart: "In corso: lettura dei dati e simulazione. Se serve una firma, MetaMask si apre tra qualche secondo.",
@@ -367,8 +368,8 @@ const I18N = {
     backupNextText: "Prossimo passo: aggiungi un controller di backup su questa rete. Se perdi la chiave di genesi senza un backup, resti fuori da questa UP per sempre.",
     backupNextLink: "→ Sezione 5 · Controller di backup",
     bkReading: "Lettura dei controller...",
-    bkNeedUp: "Inserisci prima l'indirizzo della UP (sezione 1).",
-    bkNeedNet: "Scegli prima la rete (sezione 3).",
+    bkNeedUp: "Inserisci prima l'indirizzo della UP (sezione 2).",
+    bkNeedNet: "Scegli prima la rete (sezione 1).",
     bkLukso: "Su LUKSO il backup si aggiunge con gli strumenti di LUKSO (estensione Universal Profile): questa pagina lavora sulle reti di destinazione.",
     bkNotDeployed: (v) => `La UP ${v.up} non è deployata su questa rete.`,
     bkReadFail: (v) => `Lettura non riuscita: ${v.err}`,
@@ -377,12 +378,12 @@ const I18N = {
     bkSummaryNoAdmin: (v) => `❌ Su ${v.net} nessun controller ha ADDCONTROLLER ed EDITPERMISSIONS: da qui non si può aggiungere un backup.`,
     bkRoleEp: "EntryPoint 4337 (gas relay): non è un controller per firmare",
     bkRoleUrd: "Universal Receiver Delegate: infrastruttura, non è un controller per firmare",
-    bkRoleYou: "il wallet connesso (sezione 2)",
+    bkRoleYou: "il wallet connesso (sezione 3)",
     bkRoleCtrl: "controller",
     bkRoleBad: "voce non valida nella lista",
     bkAdmin: "amministratore",
     bkGenesis: "chiave di genesi (dalla calldata originale)",
-    bkSignerNone: "Collega il wallet della sezione 2: deve essere un controller amministratore di questa UP.",
+    bkSignerNone: "Collega il wallet della sezione 3: deve essere un controller amministratore di questa UP.",
     bkSignerNotCtrl: (v) => `Il wallet connesso (${v.addr}) non è un controller di questa UP su questa rete: collega in MetaMask un controller amministratore (per una UP appena deployata, la chiave di genesi importata).`,
     bkSignerNotAdmin: (v) => `Il wallet connesso (${v.addr}) è un controller, ma non ha ADDCONTROLLER ed EDITPERMISSIONS: non può aggiungere né rimuovere controller.`,
     bkSignerOk: (v) => `Firmerà il wallet connesso: ${v.addr} (amministratore).`,
@@ -420,7 +421,7 @@ const I18N = {
     customNetName: "Custom network",
     panel0Title: "0 · What this is and what you need",
     panel0Note: "This page repeats, on another network, the exact same transaction that created your Universal Profile — that's why the resulting address is identical. You need two things: (1) the Universal Profile browser extension, installed and connected with the profile you want to replicate; (2) the <b>original deployment calldata</b> of your UP (a long hex string starting with <code>0x6a66a753...</code>), which the page fetches automatically from the LUKSO explorer as soon as you connect your UP (or you can copy it by hand, see the guide). This page never signs anything on your behalf: it always calls your wallet for confirmation.",
-    panel1Title: "1 · Profile to replicate",
+    panel1Title: "2 · Profile to replicate",
     connectUpBtn: "Connect your Universal Profile",
     connectUpRequiredNote: "Decoding and verification are only available after you connect your Universal Profile here. This is not a signature or a cryptographic check — no transaction happens at this point — it's just a reminder that this page is meant to redeploy your own profile, not someone else's.",
     notConnected: "Not connected.",
@@ -438,10 +439,10 @@ const I18N = {
     placeholderCalldata: "0x6a66a753...",
     decodeBtn: "Decode calldata",
     notDecodedYet: "Not decoded yet.",
-    panel2Title: "2 · Signing wallet (deploy and backup)",
-    panel2Note: "For the deploy this can be any account: it only pays the transaction gas and does not become a controller of the UP. Who controls the UP is decided exclusively by the original calldata — verified in step 1. Section 5 (backup controller) instead needs an admin controller of the UP.",
+    panel2Title: "3 · Signing wallet (deploy and backup)",
+    panel2Note: "For the deploy this can be any account: it only pays the transaction gas and does not become a controller of the UP. Who controls the UP is decided exclusively by the original calldata — verified in step 2. Section 5 (backup controller) instead needs an admin controller of the UP.",
     connectSignerBtn: "Connect signing wallet (e.g. MetaMask)",
-    panel3Title: "3 · Target network",
+    panel3Title: "1 · Target network",
     networkFilterPlaceholder: "Filter by name... (e.g. base, polygon, arbitrum)",
     customRpcLabel: "Custom RPC URL",
     customRpcPlaceholder: "https://...",
@@ -466,7 +467,7 @@ const I18N = {
     differsFromExpected: (v) => `differs from expected ${v.impl}`,
     matchOk: "✅ MATCHES the expected address",
     matchFail: (v) => `❌ does NOT match the expected address (${v.expected})`,
-    noExpectedWarn: "⚠️ No expected address entered — connect your UP in step 1 or enter it manually for the blocking check",
+    noExpectedWarn: "⚠️ No expected address entered — connect your UP in step 2 or enter it manually for the blocking check",
     controllersFoundLabel: "Controllers found in the calldata (who will get control of the UP)",
     notAutoDecodable: (v) => `Not automatically decodable`,
     notAutoDecodableDetail: (v) => `${v.err}. Verify the controller manually before proceeding.`,
@@ -486,10 +487,10 @@ const I18N = {
     knownLsp1Label: "LSP1UniversalReceiverDelegateUP (official LUKSO contract)",
     knownLsp1Note: "Automatically handles the UP's receipt of assets (LSP7/LSP8) and vaults (LSP9), updating the LSP5ReceivedAssets/LSP10Vaults lists in storage. The permissions it receives (typically SETDATA, SUPER_SETDATA, REENTRANCY) serve only this purpose — they don't include TRANSFERVALUE, CALL or ADDCONTROLLER: it cannot move funds, make arbitrary calls, or change controllers. It's the same address on every network/profile because it's shared infrastructure, not specific to your profile.",
 
-    decodeCalldataFirstLog: "Decode the calldata first (panel 1).",
+    decodeCalldataFirstLog: "Decode the calldata first (panel 2).",
     blockingMismatch: "❌ BLOCKING — the address predicted from the calldata does not match the expected address. Do not proceed: risk of deploying the wrong UP or with the wrong calldata.",
-    connectSignerFirstLog: "Connect the signing wallet first (panel 2).",
-    missingRpcLog: "Missing network RPC (panel 3).",
+    connectSignerFirstLog: "Connect the signing wallet first (panel 3).",
+    missingRpcLog: "Missing network RPC (panel 1).",
     walletWrongNetwork: (v) => `❌ BLOCKING — the signing wallet is connected to chainId ${v.walletChainId}, but you selected ${v.netName} (chainId ${v.chainId}) here. Switch network in MetaMask before continuing.`,
     walletCorrectNetwork: (v) => `✅ The signing wallet is connected to the correct network (chainId ${v.chainId}).`,
     walletNetworkCheckFailed: (v) => `⚠️ Could not verify the signing wallet's network — check yourself that MetaMask is on ${v.netName} before proceeding.`,
@@ -554,7 +555,7 @@ const I18N = {
 
     panelBackupTitle: "5 · Backup controller",
     backupNote: "<b>The risk here is loss, not theft.</b> On every network where you redeploy, the UP is born controlled only by the <b>genesis key</b>: the key string you extracted from the Universal Profile extension. If you lose it (a broken computer, a key never saved, a forgotten password) and no other controller has the same permissions, you are locked out of this UP on this network for good, with everything it holds. No one can fix it. A <b>backup controller</b> is a second account (for example another MetaMask account, with its own seed phrase kept separately) with <b>exactly the same permissions</b> as the controller signing here. If you lose one of the two keys, the other one still signs: it adds a new backup and removes the lost key. If the one you lose is the genesis key, the only thing you can no longer do is deploy on new networks, because there the UP is born with that key only.",
-    backupHowNote: "It uses the UP address (section 1), the network (section 3) and the wallet connected below (the same as in section 2), which here <b>must be an admin controller of the UP</b> (with ADDCONTROLLER and EDITPERMISSIONS): on a UP you just deployed, that is the genesis key imported into MetaMask. It also works for a UP deployed earlier. Do it <b>on every network</b>: each network has its own controller list. On LUKSO, use LUKSO's own tools.",
+    backupHowNote: "It uses the UP address (section 2), the network (section 1) and the wallet connected below (the same as in section 3), which here <b>must be an admin controller of the UP</b> (with ADDCONTROLLER and EDITPERMISSIONS): on a UP you just deployed, that is the genesis key imported into MetaMask. It also works for a UP deployed earlier. Do it <b>on every network</b>: each network has its own controller list. On LUKSO, use LUKSO's own tools.",
     readCtrlBtn: "Read the UP's controllers on this network",
     connectSigner5Btn: "Connect the controller (MetaMask)",
     busyStart: "Working: reading the data and simulating. If a signature is needed, MetaMask opens in a few seconds.",
@@ -569,8 +570,8 @@ const I18N = {
     backupNextText: "Next step: add a backup controller on this network. If you lose the genesis key with no backup, you are locked out of this UP for good.",
     backupNextLink: "→ Section 5 · Backup controller",
     bkReading: "Reading the controllers...",
-    bkNeedUp: "Enter the UP address first (section 1).",
-    bkNeedNet: "Choose the network first (section 3).",
+    bkNeedUp: "Enter the UP address first (section 2).",
+    bkNeedNet: "Choose the network first (section 1).",
     bkLukso: "On LUKSO the backup is added with LUKSO's own tools (Universal Profile extension): this page works on the destination networks.",
     bkNotDeployed: (v) => `The UP ${v.up} is not deployed on this network.`,
     bkReadFail: (v) => `Reading failed: ${v.err}`,
@@ -579,12 +580,12 @@ const I18N = {
     bkSummaryNoAdmin: (v) => `❌ On ${v.net} no controller has ADDCONTROLLER and EDITPERMISSIONS: a backup cannot be added from here.`,
     bkRoleEp: "4337 EntryPoint (gas relay): not a controller that signs",
     bkRoleUrd: "Universal Receiver Delegate: infrastructure, not a controller that signs",
-    bkRoleYou: "the connected wallet (section 2)",
+    bkRoleYou: "the connected wallet (section 3)",
     bkRoleCtrl: "controller",
     bkRoleBad: "invalid entry in the list",
     bkAdmin: "admin",
     bkGenesis: "genesis key (from the original calldata)",
-    bkSignerNone: "Connect the wallet of section 2: it must be an admin controller of this UP.",
+    bkSignerNone: "Connect the wallet of section 3: it must be an admin controller of this UP.",
     bkSignerNotCtrl: (v) => `The connected wallet (${v.addr}) is not a controller of this UP on this network: connect an admin controller in MetaMask (for a UP you just deployed, the imported genesis key).`,
     bkSignerNotAdmin: (v) => `The connected wallet (${v.addr}) is a controller, but it lacks ADDCONTROLLER and EDITPERMISSIONS: it cannot add or remove controllers.`,
     bkSignerOk: (v) => `The connected wallet will sign: ${v.addr} (admin).`,
