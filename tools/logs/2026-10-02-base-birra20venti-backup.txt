@@ -1,0 +1,14 @@
+Birra20venti UP 0x1d62B8d2c63B942095AD3C7FFc7e845195D9E718 on Base mainnet, 2026-10-02: backup controller added
+from section 5 of up-deploy-public.html. Signed by the genesis controller 0x434667A8840E18628Cbd7B3a51D7cEE207fD9d4c;
+backup = the maintainer's cassa 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9 (own UP). Permissions copied, ERC4337 bit
+included.
+
+Piano (una transazione, firmata da 0x434667A8840E18628Cbd7B3a51D7cEE207fD9d4c tramite il Key Manager 0x595DCd1cd30146FA21186bcE639625C9026C4feE):
+- AddressPermissions[] da 3 a 4 voci, posizione 3 → 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9
+- permessi del backup → 0xff3f06 (identici a quelli di chi firma: ADDCONTROLLER, EDITPERMISSIONS, SUPER_TRANSFERVALUE, TRANSFERVALUE, SUPER_CALL, CALL, SUPER_STATICCALL, STATICCALL, DEPLOY, SUPER_SETDATA, SETDATA, ENCRYPT, DECRYPT, SIGN, EXECUTE_RELAY_CALL, ERC4337)
+Simulazione...
+✅ Simulazione riuscita. Conferma la transazione in MetaMask.
+Tx: 0xe0914cfbf6992f3f3cccd22fd4ed22c4f655761d3d7ce55aba07d23176c1e4fb
+In attesa di conferma...
+https://basescan.org/tx/0xe0914cfbf6992f3f3cccd22fd4ed22c4f655761d3d7ce55aba07d23176c1e4fb
+✅ Backup registrato: 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9 ha gli stessi permessi del controller che ha firmato. Custodisci la sua seed a parte, mai insieme alla chiave di genesi.

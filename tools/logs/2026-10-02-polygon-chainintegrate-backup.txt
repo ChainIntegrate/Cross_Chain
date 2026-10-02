@@ -1,0 +1,15 @@
+ChainIntegrate UP 0x4a2605796e0d91A9667d6E30365aEEC384C48c27 on Polygon mainnet, 2026-10-02: backup controller
+added from section 5 of up-deploy-public.html. Signed by the genesis controller 0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c;
+backup = the maintainer's cassa 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9 (own UP). Permissions copied, ERC4337 bit
+included. The personal and Birra20venti UPs were backed up on Polygon in the same session, but the page cleared the
+log at each action, so only this one was kept (fixed afterwards: the log now keeps every action).
+
+Piano (una transazione, firmata da 0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c tramite il Key Manager 0x309fcE7B6a96CeF8fCbF926a006CDc6f21Ff280e):
+- AddressPermissions[] da 3 a 4 voci, posizione 3 → 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9
+- permessi del backup → 0xff3f06 (identici a quelli di chi firma: ADDCONTROLLER, EDITPERMISSIONS, SUPER_TRANSFERVALUE, TRANSFERVALUE, SUPER_CALL, CALL, SUPER_STATICCALL, STATICCALL, DEPLOY, SUPER_SETDATA, SETDATA, ENCRYPT, DECRYPT, SIGN, EXECUTE_RELAY_CALL, ERC4337)
+Simulazione...
+✅ Simulazione riuscita. Conferma la transazione in MetaMask.
+Tx: 0x399ab9e7d4acd46f6a50a9b1ecbbde0a42cea4163c75f65fac0cc7db5d9755c4
+In attesa di conferma...
+https://polygonscan.com/tx/0x399ab9e7d4acd46f6a50a9b1ecbbde0a42cea4163c75f65fac0cc7db5d9755c4
+✅ Backup registrato: 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9 ha gli stessi permessi del controller che ha firmato. Custodisci la sua seed a parte, mai insieme alla chiave di genesi.
