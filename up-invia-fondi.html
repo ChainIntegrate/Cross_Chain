@@ -20,6 +20,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="chains.js"></script>
 <script src="backup-check.js"></script>
+<script src="gas-relay-client.js"></script>
 <style>
   :root {
     --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
@@ -169,6 +170,7 @@
       <button id="maxBtn" type="button" class="secondary" data-i18n="maxBtn">Tutto</button>
     </div>
   </div>
+  <div id="relayBox"></div>
   <button id="checkBtn" data-i18n="checkBtn">Verifica</button>
   <button id="sendBtn" class="danger" disabled data-i18n="sendBtn">Invia (irreversibile)</button>
   <div id="log" class="line-dim" style="margin-top:10px;"><span data-i18n="logInitial">In attesa dei collegamenti sopra.</span></div>
@@ -327,6 +329,9 @@ const I18N = {
     signerGasOkLog: "✅ Il wallet firmatario ha gas sufficiente.",
     readyWarnLog: "Pronto. Controlla ancora una volta il riepilogo (cosa, quanto, a chi) prima di premere Invia — è irreversibile.",
     verifyErrorLog: (v) => `Errore durante la verifica: ${v.err}`,
+    relayNotReadyLog: "Il relayer del sito non è più utilizzabile per questa UP: vedi la nota sopra il pulsante Verifica.",
+    relaySimOkLog: "✅ Simulazione riuscita sul percorso del relayer (EntryPoint → UP): il controller non paga gas.",
+    readyRelayLog: "\nPronto. Premendo Invia, MetaMask chiede di firmare un messaggio (nessun gas); il relayer del sito invia. Il trasferimento è irreversibile.",
     sendingTxLog: "Invio transazione (conferma nel wallet)...",
     txHashLog: (v) => `Tx: ${v.hash}`,
     waitingConfirmLog: "In attesa di conferma...",
@@ -481,6 +486,9 @@ const I18N = {
     signerGasOkLog: "✅ The signing wallet has enough gas.",
     readyWarnLog: "Ready. Double-check the summary (what, how much, to whom) before pressing Send — it's irreversible.",
     verifyErrorLog: (v) => `Error during verification: ${v.err}`,
+    relayNotReadyLog: "The site relayer can no longer be used for this UP: see the note above the Check button.",
+    relaySimOkLog: "✅ Simulation passed on the relayer path (EntryPoint → UP): the controller pays no gas.",
+    readyRelayLog: "\nReady. When you press Send, MetaMask asks you to sign a message (no gas); the site relayer sends it. The transfer is irreversible.",
     sendingTxLog: "Sending transaction (confirm in your wallet)...",
     txHashLog: (v) => `Tx: ${v.hash}`,
     waitingConfirmLog: "Waiting for confirmation...",
@@ -641,6 +649,10 @@ function getNetwork() {
 
 // Alert shown only when this UP has no backup controller on the selected network (read-only).
 BackupCheck.attach({ el: $("backupAlert"), getNetwork, getUp: () => $("profileAddress").value });
+
+// "Pay the gas with the site relayer": shown only when the relayer can be used for this UP, network
+// and controller (gas-relay-client.js). Turning it on or off invalidates the last Check.
+const relayOption = GasRelayClient.attach({ box: $("relayBox"), getNetwork, getUp: () => $("profileAddress").value, getSigner: () => signerAddress, onChange: () => invalidateCheck() });
 
 let balanceRequestId = 0;
 async function checkBalance() {
@@ -1338,6 +1350,31 @@ $("checkBtn").addEventListener("click", async () => {
     const plan = await planTransfer(provider, profile.address, recipient, recipientIsContract);
     if (plan.err) { log(plan.err, "line-err"); return; }
 
+    if (relayOption.enabled()) {
+      // Through the site relayer: the EntryPoint calls the UP, the paymaster pays, the controller only signs.
+      const ready = await GasRelayClient.check(provider, { chainId: chains.chainId, up: ethers.getAddress(profile.address), signer: ethers.getAddress(signerAddress) });
+      if (ready.state !== "ready") { log(t("relayNotReadyLog"), "line-err"); relayOption.refresh(); return; }
+      const fmtCur = (w) => `${ethers.formatEther(w)} ${net.currency || ""}`.trim();
+      let prep;
+      try { prep = await GasRelayClient.prepare(provider, { up: ethers.getAddress(profile.address), ready, to: plan.to, value: plan.value, data: plan.data, fmt: fmtCur }); }
+      catch (e) {
+        log(e.message, "line-err");
+        if (NFT_KINDS.includes(plan.kind) && recipientIsContract) log(t("nftRecipientHint"), "line-warn");
+        return;
+      }
+      log(t("relaySimOkLog"), "line-ok");
+      log(prep.plan, "line-dim");
+      log(t("summaryLog", { what: plan.describe, to: recipient }), "line-warn");
+      lastCheckOk = true;
+      lastKeyManager = null;
+      lastExecuteCalldata = null;
+      lastPlan = { ...plan, up: ethers.getAddress(profile.address), recipient, relay: true };
+      checkedContext = { rpc: net.rpc, chainId: chains.chainId, signer: signerAddress };
+      $("sendBtn").disabled = false;
+      log(t("readyRelayLog"), "line-warn");
+      return;
+    }
+
     // UP.execute(CALL, to, value, data) wrapped in KeyManager.execute(bytes)
     const upIface = new ethers.Interface(["function execute(uint256,address,uint256,bytes)"]);
     const innerCalldata = upIface.encodeFunctionData("execute", [0, plan.to, plan.value, plan.data]);
@@ -1399,6 +1436,27 @@ $("sendBtn").addEventListener("click", async () => {
     const signerObj = await browserProvider.getSigner();
     if (signerObj.address.toLowerCase() !== checkedContext.signer.toLowerCase()) {
       log(t("signerChangedErr", { now: signerObj.address, checked: checkedContext.signer }), "line-err");
+      return;
+    }
+
+    if (plan.relay) {
+      // Built again now, with current fees and nonce, then signed (no gas) and sent by the site relayer.
+      const provider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
+      const fmtCur = (w) => `${ethers.formatEther(w)} ${net.currency || ""}`.trim();
+      const ready = await GasRelayClient.check(provider, { chainId: checkedContext.chainId, up: plan.up, signer: ethers.getAddress(checkedContext.signer) });
+      if (ready.state !== "ready") { log(t("relayNotReadyLog"), "line-err"); return; }
+      const prep = await GasRelayClient.prepare(provider, { up: plan.up, ready, to: plan.to, value: plan.value, data: plan.data, fmt: fmtCur });
+      log(prep.plan, "line-dim");
+      const hash = await GasRelayClient.signAndSend(signerProvider, { chainId: checkedContext.chainId, prep, signer: checkedContext.signer, log });
+      const explorerUrl = getExplorerUrl(net, EXPLORER_PATH, hash);
+      if (explorerUrl) log(explorerUrl, "line-dim");
+      const res = await GasRelayClient.waitResult(provider, hash, prep.hash, { log, fmt: fmtCur });
+      if (res.success) {
+        log(t("transferConfirmedLog"), "line-ok");
+        await verifyAfterSend(provider, plan, plan.up, plan.recipient);
+      }
+      checkBalance();
+      if (plan.kind !== "native") readAssetForUi();
       return;
     }
 

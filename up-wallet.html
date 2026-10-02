@@ -10,6 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="chains.js"></script>
 <script src="backup-check.js"></script>
+<script src="gas-relay-client.js"></script>
 <script src="vendor/walletkit-1.6.0.min.js"></script>
 <!-- Site configuration, created on the server from config.example.js (not in the repository). -->
 <script src="config.js"></script>
@@ -127,6 +128,7 @@
   <button id="connectSigner" data-i18n="connectSignerBtn">Connetti MetaMask (controller)</button>
   <div class="status-box" id="complianceBox"><span class="empty" data-i18n="complianceIdle">La verifica parte da sola quando rete, UP e MetaMask sono impostati.</span></div>
   <button id="recheckBtn" class="secondary" data-i18n="recheckBtn">Ricontrolla</button>
+  <div id="relayBox"></div>
 </div>
 
 <div class="panel">
@@ -372,6 +374,10 @@ const I18N = {
     simFail: (v) => `❌ La simulazione fallisce: ${v.err}. Niente viene inviato.`,
     signerNoGas: (v) => `❌ Il controller non ha abbastanza fondi per il gas: servono circa ${v.need}, ne ha ${v.have}.`,
     simOnlyDone: "Modalità simulazione: niente inviato. Alla dApp è stato risposto che si tratta di una simulazione.",
+    readyToSendRelay: "Pronto. Controlla i dati sopra, poi premi \"Firma e invia\": MetaMask chiede di firmare un messaggio (nessun gas) e il relayer del sito invia. Alla dApp torna l'hash solo quando l'operazione della UP è riuscita.",
+    relaySimOk: "✅ Simulazione riuscita sul percorso del relayer (EntryPoint → UP): il controller non paga gas.",
+    relayNotReady: "Il relayer del sito non è più utilizzabile per questa UP: vedi la nota nella sezione 3.",
+    kGas: "Gas",
     readyToSend: "Pronto. Controlla i dati sopra, poi premi \"Firma e invia\". In MetaMask vedrai come destinatario il Key Manager della UP e nessun valore: è corretto, è l'incapsulamento (il valore esce dalla UP).",
     signerChanged: "❌ L'account attivo in MetaMask non è quello verificato: rifiutata.",
     sending: "Invio della transazione incapsulata (conferma in MetaMask)...",
@@ -533,6 +539,10 @@ const I18N = {
     simFail: (v) => `❌ The simulation fails: ${v.err}. Nothing is sent.`,
     signerNoGas: (v) => `❌ The controller does not have enough funds for gas: about ${v.need} needed, it has ${v.have}.`,
     simOnlyDone: "Simulation mode: nothing sent. The dApp was told this was a simulation.",
+    readyToSendRelay: "Ready. Check the data above, then press \"Sign and send\": MetaMask asks you to sign a message (no gas) and the site relayer sends it. The dApp gets the hash only once the UP's operation has succeeded.",
+    relaySimOk: "✅ Simulation passed on the relayer path (EntryPoint → UP): the controller pays no gas.",
+    relayNotReady: "The site relayer can no longer be used for this UP: see the note in section 3.",
+    kGas: "Gas",
     readyToSend: "Ready. Check the data above, then press \"Sign and send\". MetaMask will show the UP's Key Manager as the recipient and no value: that is correct, it is the wrapping (the value comes from the UP).",
     signerChanged: "❌ The active MetaMask account is not the verified one: rejected.",
     sending: "Sending the wrapped transaction (confirm in MetaMask)...",
@@ -734,6 +744,9 @@ $("recheckBtn").addEventListener("click", () => scheduleCompliance(0));
 
 // The result of the last check. Pairing and every request need a green one.
 let compliance = null, lastCompliance = null, complianceRun = 0, complianceTimer = null;
+// "Pay the gas with the site relayer": shown only when the relayer can be used for this UP, network and
+// controller (gas-relay-client.js). Applies to transactions; message signatures are unchanged.
+const relayOption = GasRelayClient.attach({ box: $("relayBox"), getNetwork, getUp: () => $("upAddress").value, getSigner: () => signerAddress, onChange: () => {} });
 
 function scheduleCompliance(delay = 500) {
   compliance = null;
@@ -1187,6 +1200,29 @@ async function handleSendTransaction(topic, id, c, tx, validation, reject) {
     const upBal = await c.provider.getBalance(c.up);
     if (upBal < value) return reject(t("upNoFunds", { need: `${ethers.formatEther(value)} ${cur}`, have: `${ethers.formatEther(upBal)} ${cur}` }));
 
+    if (relayOption.enabled()) {
+      // Through the site relayer: the EntryPoint calls the UP (msg.sender for the dApp is still the UP),
+      // the paymaster pays, the controller only signs a message.
+      const ready = await GasRelayClient.check(c.provider, { chainId: c.chainId, up: c.up, signer: c.signer });
+      if (ready.state !== "ready") return reject(t("relayNotReady"));
+      log(t("simulating"), "line-dim");
+      let prep;
+      try { prep = await GasRelayClient.prepare(c.provider, { up: c.up, ready, to, value, data, fmt: (w) => `${ethers.formatEther(w)} ${cur}`.trim() }); }
+      catch (e) { return reject(e.message); }
+      log(t("relaySimOk"), "line-ok");
+      log(prep.plan, "line-dim");
+      rows.push([t("kGas"), prep.plan, { cls: "ok" }]);
+      renderKv("requestBox", rows);
+      if ($("simulateOnly").checked) {
+        log(t("simOnlyDone"), "line-warn");
+        return respondError(topic, id, "Simulation only: transaction not sent", 5000);
+      }
+      pending = { kind: "tx", relay: true, topic, id, c, to: toLabel, valueText, target: to, value, data };
+      log(t("readyToSendRelay"), "line-warn");
+      showRequestModal("tx", t("actionTitleTx", { site: sessionPeer(topic) }), rows);
+      return;
+    }
+
     // Wrap: KeyManager.execute(UP.execute(CALL, to, value, data)): the dApp sees msg.sender = UP.
     const inner = UP_IFACE.encodeFunctionData("execute", [0, to, value, data]);
     const wrapped = KM_IFACE.encodeFunctionData("execute", [inner]);
@@ -1232,6 +1268,31 @@ $("sendBtn").addEventListener("click", async () => {
     if (c.signer.toLowerCase() !== p.c.signer.toLowerCase()) return fail(t("signerChanged"), "Signer changed");
     const signer = await new ethers.BrowserProvider(signerProvider).getSigner();
     if (signer.address.toLowerCase() !== p.c.signer.toLowerCase()) return fail(t("signerChanged"), "Signer changed");
+    if (p.relay) {
+      // Built again now (fees, nonce), signed (no gas), sent by the site relayer. The dApp gets the hash
+      // only once the UP's operation itself has succeeded: the relayer's transaction succeeds even when
+      // the operation inside it fails, and a dApp reading only the receipt status would show a false success.
+      const fmtCur = (w) => `${ethers.formatEther(w)} ${c.net.currency || ""}`.trim();
+      const ready = await GasRelayClient.check(c.provider, { chainId: c.chainId, up: c.up, signer: c.signer });
+      if (ready.state !== "ready") return fail(t("relayNotReady"), "Relayer not available");
+      let prep, hash;
+      try {
+        prep = await GasRelayClient.prepare(c.provider, { up: c.up, ready, to: p.target, value: p.value, data: p.data, fmt: fmtCur });
+        log(prep.plan, "line-dim");
+        hash = await GasRelayClient.signAndSend(signerProvider, { chainId: c.chainId, prep, signer: c.signer, log });
+      } catch (e) { return fail(e.message, "Relayed operation not sent"); }
+      log(t("txSentSummary", { value: p.valueText, to: p.to }), "line-dim");
+      const explorerUrl = getExplorerUrl(c.net, EXPLORER_PATH, hash);
+      if (explorerUrl) log(explorerUrl, "line-dim");
+      // From here the operation exists on-chain: never ask to repeat it.
+      clearPending();
+      const res = await GasRelayClient.waitResult(c.provider, hash, prep.hash, { log, fmt: fmtCur });
+      try {
+        if (res.success) await respondResult(p.topic, p.id, hash);
+        else await respondError(p.topic, p.id, `Operation failed${res.why ? ": " + res.why : ""}`, 5000);
+      } catch (e) { log(t("txNotDelivered", { err: e.message || String(e) }), "line-danger"); }
+      return;
+    }
     log(t("sending"), "line-dim");
     const sent = await signer.sendTransaction({ to: p.c.km, data: p.wrapped, gasLimit: p.gasLimit });
     log(t("txSent", { hash: sent.hash }), "line-dim");
