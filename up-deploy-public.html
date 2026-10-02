@@ -180,6 +180,7 @@
   <label class="check-row"><input type="checkbox" id="removeAck"> <span data-i18n="removeAck">Confermo: questa chiave è persa o non mi serve più. Il controller connesso nel wallet resta e continua a gestire la UP.</span></label>
   <button id="removeBtn" class="danger" disabled data-i18n="removeBtn">Rimuovi il controller selezionato</button>
   <div id="backupLog"></div>
+  <button id="copyBackupLog" class="secondary" data-i18n="copyLogBtn">Copia il log</button>
 </div>
 
 <div class="panel">
@@ -356,6 +357,8 @@ const I18N = {
     backupHowNote: "Usa l'indirizzo della UP (sezione 2), la rete (sezione 1) e il wallet connesso qui sotto (è lo stesso della sezione 3), che qui <b>deve essere un controller amministratore della UP</b> (con ADDCONTROLLER ed EDITPERMISSIONS): su una UP appena deployata è la chiave di genesi importata in MetaMask. Funziona anche per una UP deployata in passato. Va fatto <b>su ogni rete</b>, perché ogni rete ha la sua lista di controller. Su LUKSO si fa con gli strumenti di LUKSO.",
     readCtrlBtn: "Leggi i controller della UP su questa rete",
     connectSigner5Btn: "Connetti il controller (MetaMask)",
+    copyLogBtn: "Copia il log",
+    copiedLog: "Log copiato.",
     busyStart: "In corso: lettura dei dati e simulazione. Se serve una firma, MetaMask si apre tra qualche secondo.",
     backupNotRead: "Controller non ancora letti.",
     backupAddrLabel: "Indirizzo del controller di backup (un account MetaMask diverso, custodito a parte)",
@@ -566,6 +569,8 @@ const I18N = {
     backupHowNote: "It uses the UP address (section 2), the network (section 1) and the wallet connected below (the same as in section 3), which here <b>must be an admin controller of the UP</b> (with ADDCONTROLLER and EDITPERMISSIONS): on a UP you just deployed, that is the genesis key imported into MetaMask. It also works for a UP deployed earlier. Do it <b>on every network</b>: each network has its own controller list. On LUKSO, use LUKSO's own tools.",
     readCtrlBtn: "Read the UP's controllers on this network",
     connectSigner5Btn: "Connect the controller (MetaMask)",
+    copyLogBtn: "Copy the log",
+    copiedLog: "Log copied.",
     busyStart: "Working: reading the data and simulating. If a signature is needed, MetaMask opens in a few seconds.",
     backupNotRead: "Controllers not read yet.",
     backupAddrLabel: "Backup controller address (a different MetaMask account, kept separately)",
@@ -1372,7 +1377,13 @@ function bkLog(msg, cls) {
   l.textContent = msg;
   $("backupLog").appendChild(l);
   // While an action runs, the fixed box shows its latest step (first line only).
-  if (bkBusy) { const first = String(msg).split("\n")[0]; $("busyMsg").textContent = first.length > 200 ? first.slice(0, 200) + "…" : first; }
+  if (bkBusy && !/^—— /.test(msg)) { const first = String(msg).split("\n")[0]; $("busyMsg").textContent = first.length > 200 ? first.slice(0, 200) + "…" : first; }
+}
+// The log keeps every action of the session: each one starts with time, UP and network.
+function bkSeparator() {
+  const net = getNetwork();
+  const up = $("expectedAddress").value.trim();
+  bkLog(`—— ${new Date().toLocaleTimeString()} · UP ${up || "?"} · ${net ? net.name : "?"} ——`, "line-dim");
 }
 function setBusy(on) {
   bkBusy = on;
@@ -1515,7 +1526,7 @@ async function readBackup() {
 }
 $("readCtrlBtn").addEventListener("click", async () => {
   if (bkBusy) return;
-  $("backupLog").innerHTML = "";
+  bkSeparator();
   setBusy(true); $("busyMsg").textContent = t("bkReading");
   try { await readBackup(); } finally { setBusy(false); }
 });
@@ -1528,6 +1539,11 @@ $("connectSigner5").addEventListener("click", async () => {
   try { await readBackup(); } finally { setBusy(false); }
 });
 $("removeSelect").addEventListener("change", updateBackupButtons);
+$("copyBackupLog").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($("backupLog").innerText); $("copyBackupLog").textContent = t("copiedLog"); }
+  catch (e) { /* clipboard not allowed: the log can still be selected by hand */ }
+  setTimeout(() => { $("copyBackupLog").textContent = t("copyLogBtn"); }, 1500);
+});
 
 // A fresh read, then the checks every write needs: admin signer, wallet on the same chain.
 async function freshAdminState() {
@@ -1573,7 +1589,7 @@ async function sendBackupTx(b, data, verify) {
 
 $("addBackupBtn").addEventListener("click", async () => {
   if (bkBusy) return;
-  $("backupLog").innerHTML = "";
+  bkSeparator();
   setBusy(true);
   try {
     const b = await freshAdminState();
@@ -1617,7 +1633,7 @@ $("addBackupBtn").addEventListener("click", async () => {
 
 $("removeBtn").addEventListener("click", async () => {
   if (bkBusy) return;
-  $("backupLog").innerHTML = "";
+  bkSeparator();
   if (!$("removeAck").checked) { bkLog(t("bkAckRequired"), "line-err"); return; }
   const chosen = $("removeSelect").value;
   if (!chosen) { bkLog(t("bkPickRemove"), "line-err"); return; }
