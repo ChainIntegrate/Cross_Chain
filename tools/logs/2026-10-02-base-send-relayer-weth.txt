@@ -1,0 +1,27 @@
+Send page with the relayer option, Base mainnet, 2026-10-02: ERC-20 WETH (the 0.001 WETH wrapped on Uniswap) from the
+maintainer's personal UP to the Birra20venti UP, signed by the backup controller (the cassa). The paymaster paid
+0.000001210067484894 ETH. The browser console still showed 429 answers from mainnet.base.org.
+
+UP: 0x328A19Ab63744AAF3d0AeBfB8e6Dc5246fAf317b
+Rete: Base
+Destinatario: 0x1d62B8d2c63B942095AD3C7FFc7e845195D9E718
+Wallet firmatario (controller): 0x6c5d0fa04ae90371e809114e9c3932ea7a3715c9
+✅ Wallet firmatario e RPC sulla stessa rete (chainId 8453).
+Key Manager: 0x25d0591a83508cE6C937DBB173B00c5A17A6A222
+Contratto: ERC-20 Wrapped Ether (WETH) — 0x4200000000000000000000000000000000000006
+Saldo della UP: 0.001 WETH
+✅ Saldo della UP sufficiente per l'importo richiesto.
+⚠️ Il destinatario è un contratto, non un normale wallet: assicurati che possa gestire quello che riceve (per esempio un'altra UP o un indirizzo di deposito di un exchange che supporta questa rete).
+✅ Simulazione riuscita sul percorso del relayer (EntryPoint → UP): il controller non paga gas.
+Gas: relayer del sito. Paymaster 0xb353565d1f801E7402DBC267b8C0E30E3540D4eD, costo massimo 0.000015799795 ETH (tetto 0.0003 ETH); limite di gas dell'esecuzione 182465.
+Riepilogo: la UP invierà 0.001 WETH a 0x1d62B8d2c63B942095AD3C7FFc7e845195D9E718.
+Gas: relayer del sito. Paymaster 0xb353565d1f801E7402DBC267b8C0E30E3540D4eD, costo massimo 0.00001579996 ETH (tetto 0.0003 ETH); limite di gas dell'esecuzione 182465.
+Firma in MetaMask il messaggio 0xbe6c087aa612101375ea6d8851c7af805156251b4a8ec2f28b9ce6d555bff80f (nessun gas): deve essere identico a quello mostrato da MetaMask.
+✅ Messaggio firmato da 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9 (il controller). Hash dell'operazione firmato: 0xbe6c087aa612101375ea6d8851c7af805156251b4a8ec2f28b9ce6d555bff80f
+Invio al relayer del sito...
+Transazione del relayer: 0xcafe6c0ddc835305d38b15067dd0bb66b34c98df01f94ae53617e0e53ac09d60
+https://basescan.org/tx/0xcafe6c0ddc835305d38b15067dd0bb66b34c98df01f94ae53617e0e53ac09d60
+In attesa di conferma...
+✅ Operazione eseguita. Costo pagato dal paymaster: 0.000001210067484894 ETH.
+✅✅ Trasferimento confermato.
+Saldo della UP dopo l'invio: 0.0 WETH

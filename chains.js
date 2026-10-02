@@ -3,7 +3,7 @@ const CHAINS = [
   { key: "apechain", name: "ApeChain", chainId: 33139, rpc: "https://rpc.apechain.com", explorerBase: "https://apescan.io", currency: "APE" },
   { key: "arbitrum-one", name: "Arbitrum One", chainId: 42161, rpc: "https://arb1.arbitrum.io/rpc", explorerBase: "https://arbiscan.io", currency: "ETH" },
   { key: "avalanche-c-chain", name: "Avalanche C-Chain", chainId: 43114, rpc: "https://api.avax.network/ext/bc/C/rpc", explorerBase: "https://snowscan.xyz", currency: "AVAX" },
-  { key: "base", name: "Base", chainId: 8453, rpc: "https://mainnet.base.org", explorerBase: "https://basescan.org", currency: "ETH" },
+  { key: "base", name: "Base", chainId: 8453, rpc: "https://base-rpc.publicnode.com", explorerBase: "https://basescan.org", currency: "ETH" },
   { key: "berachain", name: "Berachain", chainId: 80094, rpc: "https://rpc.berachain.com", explorerBase: "https://berascan.com", currency: "BERA" },
   { key: "blast", name: "Blast", chainId: 81457, rpc: "https://rpc.blast.io", explorerBase: "https://blastscan.io", currency: "ETH" },
   { key: "bnb-smart-chain", name: "BNB Smart Chain", chainId: 56, rpc: "https://bsc-dataseed1.bnbchain.org", explorerBase: "https://bscscan.com", currency: "BNB" },
