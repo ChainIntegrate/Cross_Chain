@@ -468,6 +468,7 @@ const I18N = {
     txSent: (v) => `Transazione inviata: ${v.hash}`,
     waiting: "In attesa di conferma...",
     txOk: "✅ Confermata.",
+    txUnknown: "⚠️ Dopo 5 minuti l'RPC non mostra ancora la transazione: controlla l'esito sull'explorer (link sopra) prima di riprovare.",
     txFailed: "❌ La transazione è fallita.",
     genericError: (v) => `Errore: ${v.err}`,
     publishedAt: (v) => `✅ Pubblicato a ${v.addr}, codice verificato.`,
@@ -696,6 +697,7 @@ const I18N = {
     txSent: (v) => `Transaction sent: ${v.hash}`,
     waiting: "Waiting for confirmation...",
     txOk: "✅ Confirmed.",
+    txUnknown: "⚠️ After 5 minutes the RPC still does not show the transaction: check the outcome on the explorer (link above) before trying again.",
     txFailed: "❌ The transaction failed.",
     genericError: (v) => `Error: ${v.err}`,
     publishedAt: (v) => `✅ Published at ${v.addr}, code verified.`,
@@ -1126,8 +1128,9 @@ async function sendTx(tx, label) {
   const explorerUrl = getExplorerUrl(s.netInfo, EXPLORER_PATH, sent.hash);
   if (explorerUrl) log(explorerUrl, "line-dim");
   log(t("waiting"), "line-dim");
-  const receipt = await s.provider.waitForTransaction(sent.hash);
-  if (!receipt || receipt.status !== 1) { log(t("txFailed"), "line-err"); return null; }
+  const receipt = await waitReceipt(s.provider, sent.hash);
+  if (!receipt) { log(t("txUnknown"), "line-warn"); return null; }
+  if (receipt.status !== 1) { log(t("txFailed"), "line-err"); return null; }
   log(t("txOk"), "line-ok");
   return { s, receipt };
 }
@@ -1419,8 +1422,9 @@ async function relaySigned() {
     const explorerUrl = getExplorerUrl(s.netInfo, EXPLORER_PATH, hash);
     if (explorerUrl) log(explorerUrl, "line-dim");
     log(t("waiting"), "line-dim");
-    const rc = await s.provider.waitForTransaction(hash);
-    if (!rc || rc.status !== 1) { log(t("txFailed"), "line-err"); return; }
+    const rc = await waitReceipt(s.provider, hash);
+    if (!rc) { log(t("txUnknown"), "line-warn"); return; }
+    if (rc.status !== 1) { log(t("txFailed"), "line-err"); return; }
     let ev = null, why = null;
     for (const l of rc.logs) {
       try { const p = EP_IFACE.parseLog(l); if (p?.name === "UserOperationEvent") ev = p; if (p?.name === "UserOperationRevertReason") why = p.args.revertReason; } catch (e) { /* other contracts' logs */ }

@@ -254,6 +254,7 @@ const I18N = {
     checkFirst: "La verifica del pannello 3 non è verde: aggiornala prima di continuare.",
     txSent: (v) => `Tx inviata: ${v.hash}`,
     waiting: "In attesa di conferma...",
+    txUnknown: "⚠️ Dopo 5 minuti l'RPC non mostra ancora la transazione: controlla l'esito sull'explorer (link sopra) prima di riprovare.",
     txFailed: "❌ Transazione fallita on-chain.",
     planTitle: (v) => `Operazioni in UNA transazione, firmata dal controller ${v.signer} e inviata al Key Manager ${v.km}:`,
     planGrant: (v) => `1. Concede temporaneamente al controller: ${v.bits} (permessi ${v.from} → ${v.to})`,
@@ -347,6 +348,7 @@ const I18N = {
     checkFirst: "The check in panel 3 is not green: update it before continuing.",
     txSent: (v) => `Tx sent: ${v.hash}`,
     waiting: "Waiting for confirmation...",
+    txUnknown: "⚠️ After 5 minutes the RPC still does not show the transaction: check the outcome on the explorer (link above) before trying again.",
     txFailed: "❌ Transaction failed on-chain.",
     planTitle: (v) => `Operations in ONE transaction, signed by the controller ${v.signer} and sent to the Key Manager ${v.km}:`,
     planGrant: (v) => `1. Temporarily grants the controller: ${v.bits} (permissions ${v.from} → ${v.to})`,
@@ -754,8 +756,9 @@ $("enableBtn").addEventListener("click", async () => {
     const explorerUrl = getExplorerUrl(p.c.net, EXPLORER_PATH, sent.hash);
     if (explorerUrl) log(explorerUrl, "line-dim");
     log(t("waiting"), "line-dim");
-    const receipt = await p.c.provider.waitForTransaction(sent.hash);
-    if (!receipt || receipt.status !== 1) { log(t("txFailed"), "line-err"); return; }
+    const receipt = await waitReceipt(p.c.provider, sent.hash);
+    if (!receipt) { log(t("txUnknown"), "line-warn"); return; }
+    if (receipt.status !== 1) { log(t("txFailed"), "line-err"); return; }
 
     log(t("verifying"), "line-dim");
     // Read at the transaction's block, with a few retries for RPC nodes that lag behind.

@@ -71,3 +71,19 @@ function getExplorerUrl(net, path, resource) {
   const base = net.explorerBase ? net.explorerBase + path : net.explorer;
   return base ? base + resource : null;
 }
+
+// Waits for a transaction receipt by asking the RPC every 1.5 seconds. Errors while waiting are
+// ignored and the next attempt follows: some public RPCs refuse receipt lookups for a hash they do
+// not know yet (publicnode answers 403 "archive requests require a personal token" until the
+// transaction is in a block). Returns the receipt, or null after `timeoutMs`.
+async function waitReceipt(provider, hash, timeoutMs = 300000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const receipt = await provider.getTransactionReceipt(hash);
+      if (receipt) return receipt;
+    } catch (e) { /* not known to this RPC yet: ask again */ }
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+  return null;
+}

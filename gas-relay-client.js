@@ -78,6 +78,7 @@
       ok: (v) => `✅ Operazione eseguita. Costo pagato dal paymaster: ${v.cost}.`,
       failed: (v) => `❌ La transazione del relayer è confermata, ma l'operazione della UP è fallita${v.why ? `: ${v.why}` : ""}. Costo pagato dal paymaster: ${v.cost}.`,
       noEvent: "❌ Nella transazione del relayer non c'è l'esito di questa operazione.",
+      noReceipt: (v) => `⚠️ Dopo 5 minuti l'RPC non mostra ancora la transazione ${v.hash}: controlla l'esito sull'explorer prima di riprovare.`,
     },
     en: {
       option: "Pay the gas with the site relayer",
@@ -111,6 +112,7 @@
       ok: (v) => `✅ Operation done. Cost paid by the paymaster: ${v.cost}.`,
       failed: (v) => `❌ The relayer's transaction is confirmed, but the UP's operation failed${v.why ? `: ${v.why}` : ""}. Cost paid by the paymaster: ${v.cost}.`,
       noEvent: "❌ The relayer's transaction carries no outcome for this operation.",
+      noReceipt: (v) => `⚠️ After 5 minutes the RPC still does not show transaction ${v.hash}: check the outcome on the explorer before trying again.`,
     },
   };
   const lang = () => (document.documentElement.lang === "en" ? "en" : "it");
@@ -270,7 +272,8 @@
   // the UserOperationEvent of this operation, never the receipt status alone.
   async function waitResult(provider, txHash, userOpHash, { log, fmt }) {
     log(text("waiting"), "line-dim");
-    const rc = await provider.waitForTransaction(txHash, 1, 300000);
+    const rc = await waitReceipt(provider, txHash);
+    if (!rc) { log(text("noReceipt", { hash: txHash }), "line-warn"); return { success: false, unknown: true }; }
     let ev = null, why = null;
     for (const l of (rc && rc.logs) || []) {
       if (l.address.toLowerCase() !== ENTRY_POINT.toLowerCase()) continue;

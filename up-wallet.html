@@ -413,6 +413,7 @@ const I18N = {
     txSentSummaryRelay: (v) => `Inviata: la UP paga ${v.value} a ${v.to} (il gas lo paga il paymaster del sito).`,
     waiting: "In attesa di conferma...",
     txOk: "✅✅ Transazione confermata.",
+    txUnknown: "⚠️ Dopo 5 minuti l'RPC non mostra ancora la transazione: controlla l'esito sull'explorer (link sopra) prima di riprovare.",
     txFailed: "❌ Transazione fallita on-chain.",
     rejectedByUser: "Richiesta rifiutata.",
 
@@ -586,6 +587,7 @@ const I18N = {
     txSentSummaryRelay: (v) => `Sent: the UP pays ${v.value} to ${v.to} (gas paid by the site paymaster).`,
     waiting: "Waiting for confirmation...",
     txOk: "✅✅ Transaction confirmed.",
+    txUnknown: "⚠️ After 5 minutes the RPC still does not show the transaction: check the outcome on the explorer (link above) before trying again.",
     txFailed: "❌ Transaction failed on-chain.",
     rejectedByUser: "Request rejected.",
 
@@ -1356,8 +1358,9 @@ $("sendBtn").addEventListener("click", busyWrap(async () => {
     try { await respondResult(p.topic, p.id, sent.hash); }
     catch (e) { log(t("txNotDelivered", { err: e.message || String(e) }), "line-danger"); }
     log(t("waiting"), "line-dim");
-    const receipt = await p.c.provider.waitForTransaction(sent.hash);
-    if (receipt && receipt.status === 1) log(t("txOk"), "line-ok");
+    const receipt = await waitReceipt(p.c.provider, sent.hash);
+    if (!receipt) log(t("txUnknown"), "line-warn");
+    else if (receipt.status === 1) log(t("txOk"), "line-ok");
     else log(t("txFailed"), "line-err");
   } catch (e) {
     if (pending === p) await fail(t("genericError", { err: e.shortMessage || e.message }), "Send failed");
