@@ -9,6 +9,7 @@
 <link rel="icon" href="favicon.ico">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="chains.js"></script>
+<script src="backup-check.js"></script>
 <script src="vendor/walletkit-1.6.0.min.js"></script>
 <!-- Site configuration, created on the server from config.example.js (not in the repository). -->
 <script src="config.js"></script>
@@ -117,6 +118,7 @@
   <button id="connectUp" class="secondary" data-i18n="connectUpBtn">Leggi l'indirizzo dall'estensione UP</button>
   <label for="upAddress" data-i18n="upAddressLabel">Indirizzo della UP</label>
   <input type="text" id="upAddress" placeholder="0x...">
+  <div id="backupAlert"></div>
 </div>
 
 <div class="panel">
@@ -686,6 +688,9 @@ function onNetworkChanged() {
 $("networkFilter").addEventListener("input", (e) => { renderNetworkOptions(e.target.value); onNetworkChanged(); });
 networkSelectEl.addEventListener("change", onNetworkChanged);
 $("customRpc").addEventListener("input", onNetworkChanged);
+
+// Alert shown only when this UP has no backup controller on the selected network (read-only).
+BackupCheck.attach({ el: $("backupAlert"), getNetwork, getUp: () => $("upAddress").value });
 
 // ==================== 2. UP ====================
 $("connectUp").addEventListener("click", async () => {

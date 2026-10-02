@@ -15,6 +15,7 @@ Last update: 2026-09-30.
 | `up-wallet.html` — UP Wallet | Experimental. Tested live on Base and Polygon (OpenSea sign-in, EURe swap, LI.FI, Basenames). Audited (AUDIT.md §7). |
 | `up-walletconnect-basenames.html` | Experimental demo, superseded by the UP Wallet (AUDIT R-07: decide whether to keep it). |
 | `up-nft-receiver.html` + `contracts/NFTReceiverExtension.sol` | Experimental, merged (PR #33, #36). Tested on a local chain with LUKSO UP/LSP6 0.12.1 and 0.14.0 and on Base mainnet. The page only enables the extension; publishing it on a new chain is done in `up-publish-implementation.html` (shortcut chip), with any wallet. |
+| Deploy tool section 5 + `backup-check.js` — backup controller | Add a backup controller or remove a lost one, per network; alert on Send, Test and UP Wallet when the backup is missing. Tested on a local chain with LUKSO UP/LSP6 0.12.1 and 0.14.0 (47 checks each). |
 
 ### Decisions already taken (do not reopen without a reason)
 - **Language:** code, comments, commits and docs in English; chat in Italian.
@@ -32,6 +33,7 @@ Last update: 2026-09-30.
 - **UP Wallet:** one network at a time; compatibility check between UP and controller as soon as network, UP and MetaMask are set, again on every change and before every request.
 - **NFT reception:** own stateless extension at the same address on every chain (`0x7F68e74483867058C806218aa05aB5527984C03e`); enabled with one atomic `executeBatch` that restores the controller's exact permission bytes.
 - **Gas:** **no automatic top-ups.** When a balance falls below a threshold, send an email ("network running low"); the maintainer tops up by hand.
+- **Backup controller (key loss, not theft):** the genesis key (the one extracted from the UP extension) is the only controller a UP is born with on every new network. Losing it without a second admin controller locks the user out of the UP on that network. Detection rule: at least two listed controllers with identical permissions that include ADDCONTROLLER and EDITPERMISSIONS (ERC4337 bit ignored; EntryPoint and URD never count). The backup gets exactly the signer's permissions (and AllowedCalls / AllowedERC725YDataKeys). Added or removed per network from section 5 of the Deploy tool; on LUKSO, LUKSO's own tools. The alert is shown on Send, Test and UP Wallet only, for the network in use; not on `up-gas-relay.html` (operator page). Both setups are the user's choice: genesis key used daily with the backup aside, or genesis key offline with a daily second controller. Never custodial: the backup is always the user's own key; the operator's cassa is never a controller of other people's UPs.
 
 ---
 
@@ -187,6 +189,20 @@ The notes below are the earlier LSP25 design, kept for reference.
   - which networks in our list have native USDC with CCTP;
   - whether Hyperlane has opened stablecoin routes to LUKSO;
   - ERC-4337 via LUKSO's `Extension4337` with a USDC paymaster, as an alternative to our own relayer.
+
+### 2.5 UP identity viewer across chains (next, after the backup controller)
+A page that reads and shows a UP's LSP3 identity on any network where it is deployed (Base, Polygon, …), not only on LUKSO. The page itself is the interpreter: no claim that the chain or third parties recognise the standard.
+- **Phase 1, read only (first):**
+  - input: UP address and network (`chains.js`, same pattern as the other pages);
+  - `getData` of `LSP3Profile` = `keccak256("LSP3Profile")` = `0x5ef83ad9559033e6e941db7d7c495acdce616347d28e90c7ce47cbfcfcad3bc5`; decode the VerifiableURI (LSP2), fetch the JSON, **check its hash against the declared one** before showing anything; show name, description, images, links, tags;
+  - IPFS through ChainIntegrate's own node `ipfs.chainintegrate.it` (public gateway for reading; uploads only from allowlisted IPs), a public gateway only as fallback. To check: the gateway sends CORS headers for the site's origin;
+  - **compare with LUKSO:** a redeploy copies only the data in the original creation, so on other networks `LSP3Profile` is the creation-time value, or empty. Show the value on the chosen network next to the current one on LUKSO and say when they differ;
+  - controllers and permissions from `backup-check.js` (already written), including the backup status.
+  - No VerifiableURI / IPFS code exists in the repo yet (not in `up-wallet.html` either): written new, shared if reused.
+- **Phase 2, publish (only once phase 1 is solid):** write `LSP3Profile` on that network (for example, align it with LUKSO's), only if the connected controller has SETDATA there (checked, not assumed).
+  - **Not through the gas relay as it is:** writing data through 4337 needs SETDATA on the EntryPoint, which breaks the G-M2 invariant (EntryPoint exactly `0x500`). The controller signs and pays gas, as on the other pages. A gasless alternative (e.g. LSP25 `executeRelayCall` sent by a relayer) would be a new mechanism, to be designed and audited separately.
+  - Security-sensitive: AUDIT.md entry and a log in `tools/logs/` after a real test.
+- **Rules:** EN/IT texts in plain language; an explicit note that this is ChainIntegrate's reading of ERC725Y data, not native recognition by the chain or third parties; never suggest sending funds before reading and writing have been verified.
 
 ---
 

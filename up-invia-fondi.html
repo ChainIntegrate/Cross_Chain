@@ -19,6 +19,7 @@
 <script src="config.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="chains.js"></script>
+<script src="backup-check.js"></script>
 <style>
   :root {
     --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
@@ -104,6 +105,7 @@
   </div>
   <label data-i18n="profileAddressLabel">Indirizzo UP da cui inviare</label>
   <input type="text" id="profileAddress" placeholder="0x...">
+  <div id="backupAlert"></div>
 </div>
 
 <div class="panel">
@@ -636,6 +638,9 @@ function getNetwork() {
   }
   return CHAINS.find(c => c.key === networkSelectEl.value);
 }
+
+// Alert shown only when this UP has no backup controller on the selected network (read-only).
+BackupCheck.attach({ el: $("backupAlert"), getNetwork, getUp: () => $("profileAddress").value });
 
 let balanceRequestId = 0;
 async function checkBalance() {
