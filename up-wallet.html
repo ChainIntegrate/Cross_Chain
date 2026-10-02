@@ -78,6 +78,15 @@
   body.modal-open { overflow: hidden; }
   .warn-box { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--err); border-radius: 8px; background: rgba(224,90,90,0.08); font-size: 13px; line-height: 1.5; }
   @media (max-width: 560px) { .kv { grid-template-columns: 1fr; } }
+  /* While the page works (a dApp request, a connection, a send): a fixed box with the current step. */
+  #busyToast { display: none; position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 70;
+               width: calc(100% - 32px); max-width: 720px; background: #1d2330; border: 2px solid var(--warn); border-radius: 10px;
+               padding: 12px 16px; font-size: 14px; line-height: 1.5; color: var(--text); box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
+  #busyToast.on { display: flex; gap: 12px; align-items: center; }
+  #busyToast .spin { width: 18px; height: 18px; flex: 0 0 18px; border: 3px solid var(--warn); border-top-color: transparent; border-radius: 50%; animation: spin 0.9s linear infinite; }
+  #busyToast .msg { word-break: break-word; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { #busyToast .spin { animation: none; } }
 </style>
 </head>
 <body>
@@ -167,6 +176,8 @@
   </div>
 </div>
 
+<div id="busyToast" role="status" aria-live="polite"><div class="spin"></div><div class="msg" id="busyMsg"></div></div>
+
 <div class="site-footer">
   <div class="footer-row">
     <img src="logo.png" alt="ChainIntegrate" class="footer-logo" onerror="this.style.display='none'">
@@ -208,6 +219,10 @@ const KNOWN_CONTRACTS = {
   "0x1231deb6f5749ef6ce6943a275a1d3e7486f4eae": { name: "LI.FI Diamond", role: "roleSwapBridge" },
   "0x89c6340b1a1f4b25d36cd8b063d49045caf3f818": { name: "LI.FI Permit2 Proxy", role: "roleLifiPermit2" },
   "0x0000000000001ff3684f28c67538d4d072c22734": { name: "0x AllowanceHolder", role: "roleSwap" },
+  "0x4200000000000000000000000000000000000006": { name: "WETH", role: "roleWrapped" }, // OP-stack predeploy (Base, Optimism, …)
+  "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": { name: "WETH", role: "roleWrapped" }, // Ethereum
+  "0x82af49447d8a07e3bd95bd0d56f35241523fbab1": { name: "WETH", role: "roleWrapped" }, // Arbitrum One
+  "0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270": { name: "WPOL", role: "roleWrapped" }, // Polygon
 };
 // "0x… (Name)" when the address is a known contract with code on this network, else the bare address.
 async function labelAddress(provider, addr) {
@@ -236,6 +251,8 @@ const KNOWN_IFACE = new ethers.Interface([
   "function authorizeOperator(address operator, uint256 amount, bytes operatorNotificationData)",
   "function transfer(address from, address to, bytes32 tokenId, bool force, bytes data)",
   "function authorizeOperator(address operator, bytes32 tokenId, bytes operatorNotificationData)",
+  "function deposit() payable",
+  "function withdraw(uint256 amount)",
 ]);
 // LSP6 errors, to explain why a simulation fails.
 const KM_ERRORS = new ethers.Interface([
@@ -291,7 +308,7 @@ const I18N = {
     modalSub: "Leggi tutto prima di decidere: controlli, avvisi e dettagli della richiesta. Niente parte senza il tuo clic e la conferma in MetaMask. La richiesta resta anche nello storico della pagina.",
     knownSpender: (v) => `ℹ️ Il permesso è per un contratto noto: ${v.addr} (${v.name} — ${v.role}). Controlla comunque token, importo e scadenza.`,
     knownContract: (v) => `ℹ️ Destinatario noto: ${v.name} — ${v.role}. Il nome dice chi riceve la chiamata, non cosa fa: controlla importi e rete sul sito.`,
-    roleSwapBridge: "aggregatore di swap e bridge tra reti", roleSwap: "contratto degli swap dell'API 0x", roleMarket: "marketplace di OpenSea", rolePermit2: "gestore delle approvazioni di token", roleLifiPermit2: "contratto di LI.FI che usa le firme Permit2 per swap e bridge",
+    roleWrapped: "token 1:1 della valuta nativa della rete (wrap/unwrap)", roleSwapBridge: "aggregatore di swap e bridge tra reti", roleSwap: "contratto degli swap dell'API 0x", roleMarket: "marketplace di OpenSea", rolePermit2: "gestore delle approvazioni di token", roleLifiPermit2: "contratto di LI.FI che usa le firme Permit2 per swap e bridge",
     actionTitleTx: (v) => `Transazione in attesa della tua decisione — ${v.site}`,
     actionTitleSign: (v) => `Firma in attesa della tua decisione — ${v.site}`,
 
@@ -367,6 +384,13 @@ const I18N = {
     warnUnlimited: "una quantità ILLIMITATA di token",
     infoRevoke: "ℹ️ Revoca di un'approvazione (importo 0 o permesso tolto).",
     infoTransfer: (v) => `ℹ️ Trasferimento: ${v.what} a ${v.to}.`,
+    infoWrap: (v) => `ℹ️ Conversione: ${v.amount} della UP diventano ${v.name} (wrap, 1:1).`,
+    infoUnwrap: (v) => `ℹ️ Riconversione: ${v.amount} della UP tornano ${v.cur || "valuta nativa"} (unwrap, 1:1).`,
+    gasByController: (v) => `pagato dal controller (fino a circa ${v.need})`,
+    relayAvailableOff: "ℹ️ Il relayer del sito è disponibile per questa UP, ma l'opzione è spenta: il gas lo paga il controller. Per usarlo: Rifiuta, spunta \"Paga il gas con il relayer del sito\" nella sezione 3 e ripeti l'operazione dalla dApp.",
+    busyProposal: "Richiesta di connessione dalla dApp: verifica di rete, UP e controller...",
+    busyRequest: "Richiesta dalla dApp: verifica, lettura dei dati e simulazione...",
+    busySend: "Invio in corso...",
     upNoFunds: (v) => `❌ La UP non ha abbastanza fondi per il valore richiesto: servono ${v.need}, ne ha ${v.have}.`,
     chainsOk: "✅ RPC e MetaMask sulla rete scelta; controller verificato.",
     simulating: "Simulazione della transazione incapsulata...",
@@ -386,6 +410,7 @@ const I18N = {
     txNotDelivered: (v) => `⚠️ La transazione È STATA INVIATA (hash sopra), ma la dApp non ha ricevuto la risposta (${v.err}): la sessione era chiusa o scaduta. NON ripeterla: controlla l'esito sull'explorer.`,
     invalidValue: "❌ Valore della transazione non valido: rifiutata.",
     txSentSummary: (v) => `Inviata: la UP paga ${v.value} a ${v.to} (più il gas, pagato dal controller).`,
+    txSentSummaryRelay: (v) => `Inviata: la UP paga ${v.value} a ${v.to} (il gas lo paga il paymaster del sito).`,
     waiting: "In attesa di conferma...",
     txOk: "✅✅ Transazione confermata.",
     txFailed: "❌ Transazione fallita on-chain.",
@@ -459,7 +484,7 @@ const I18N = {
     modalSub: "Read everything before deciding: checks, warnings and request details. Nothing happens without your click and your confirmation in MetaMask. The request also stays in the page's history.",
     knownSpender: (v) => `ℹ️ The permission is for a known contract: ${v.addr} (${v.name} — ${v.role}). Still check token, amount and deadline.`,
     knownContract: (v) => `ℹ️ Known recipient: ${v.name} — ${v.role}. The name says who receives the call, not what it does: check amounts and network on the site.`,
-    roleSwapBridge: "swap and cross-chain bridge aggregator", roleSwap: "0x API swap contract", roleMarket: "OpenSea marketplace", rolePermit2: "token approval manager", roleLifiPermit2: "LI.FI contract that uses Permit2 signatures for swaps and bridges",
+    roleWrapped: "1:1 token of the network's native currency (wrap/unwrap)", roleSwapBridge: "swap and cross-chain bridge aggregator", roleSwap: "0x API swap contract", roleMarket: "OpenSea marketplace", rolePermit2: "token approval manager", roleLifiPermit2: "LI.FI contract that uses Permit2 signatures for swaps and bridges",
     actionTitleTx: (v) => `Transaction waiting for your decision — ${v.site}`,
     actionTitleSign: (v) => `Signature waiting for your decision — ${v.site}`,
 
@@ -532,6 +557,13 @@ const I18N = {
     warnUnlimited: "an UNLIMITED amount of tokens",
     infoRevoke: "ℹ️ Revocation of an approval (amount 0 or permission removed).",
     infoTransfer: (v) => `ℹ️ Transfer: ${v.what} to ${v.to}.`,
+    infoWrap: (v) => `ℹ️ Conversion: ${v.amount} of the UP become ${v.name} (wrap, 1:1).`,
+    infoUnwrap: (v) => `ℹ️ Conversion back: ${v.amount} of the UP return to ${v.cur || "native currency"} (unwrap, 1:1).`,
+    gasByController: (v) => `paid by the controller (up to about ${v.need})`,
+    relayAvailableOff: "ℹ️ The site relayer is available for this UP, but the option is off: the controller pays the gas. To use it: Reject, tick \"Pay the gas with the site relayer\" in section 3 and repeat the operation from the dApp.",
+    busyProposal: "Connection request from the dApp: checking network, UP and controller...",
+    busyRequest: "Request from the dApp: checking, reading data and simulating...",
+    busySend: "Sending...",
     upNoFunds: (v) => `❌ The UP does not have enough funds for the requested value: ${v.need} needed, it has ${v.have}.`,
     chainsOk: "✅ RPC and MetaMask on the chosen network; controller verified.",
     simulating: "Simulating the wrapped transaction...",
@@ -551,6 +583,7 @@ const I18N = {
     txNotDelivered: (v) => `⚠️ The transaction WAS SENT (hash above), but the dApp did not receive the answer (${v.err}): the session was closed or expired. Do NOT repeat it: check the outcome on the explorer.`,
     invalidValue: "❌ Invalid transaction value: rejected.",
     txSentSummary: (v) => `Sent: the UP pays ${v.value} to ${v.to} (plus gas, paid by the controller).`,
+    txSentSummaryRelay: (v) => `Sent: the UP pays ${v.value} to ${v.to} (gas paid by the site paymaster).`,
     waiting: "Waiting for confirmation...",
     txOk: "✅✅ Transaction confirmed.",
     txFailed: "❌ Transaction failed on-chain.",
@@ -611,7 +644,16 @@ function setStatus(id, text, cls) {
 }
 // Lines logged since the last separator: the current request's checks, shown again in the modal.
 let requestNotes = [];
+let toastDepth = 0;
+// Shows or hides the progress box; nested uses (a send inside a request) keep it on until the outer one ends.
+function toast(on, first) {
+  toastDepth = Math.max(0, toastDepth + (on ? 1 : -1));
+  if (on && first) $("busyMsg").textContent = first;
+  $("busyToast").classList.toggle("on", toastDepth > 0);
+}
+const busyWrap = (fn, first) => async (...a) => { toast(true, t(first)); try { return await fn(...a); } finally { toast(false); } };
 function log(msg, cls) {
+  if (toastDepth > 0 && msg && !/^—— /.test(msg)) { const f = String(msg).split("\n")[0]; $("busyMsg").textContent = f.length > 200 ? f.slice(0, 200) + "…" : f; }
   const l = document.createElement("div");
   if (cls) l.className = cls;
   l.textContent = msg;
@@ -828,17 +870,21 @@ async function computeCompliance() {
     step("cCanSign", [canSign], cls(canSign));
 
     // Can the UP receive NFTs sent with safeTransferFrom? Informational: it does not block the bridge.
-    const upData = new ethers.Contract(up, ["function getData(bytes32) view returns (bytes)"], provider);
-    const hookStatus = async (selectors) => {
+    // One getDataBatch for all hooks and one getCode per extension: public RPCs answer 429 to bursts.
+    const upData = new ethers.Contract(up, ["function getDataBatch(bytes32[]) view returns (bytes[])"], provider);
+    const sels = [...NFT_HOOKS.erc721, ...NFT_HOOKS.erc1155];
+    const vals = await upData.getDataBatch(sels.map(LSP17_KEY));
+    const exts = Object.fromEntries(sels.map((sel, i) => [sel, vals[i] && ethers.dataLength(vals[i]) >= 20 ? ethers.getAddress(ethers.dataSlice(vals[i], 0, 20)) : null]));
+    const hasCode = {};
+    for (const a of new Set(Object.values(exts).filter(Boolean))) hasCode[a] = (await provider.getCode(a)) !== "0x";
+    const hookStatus = (selectors) => {
       for (const sel of selectors) {
-        const v = await upData.getData(LSP17_KEY(sel));
-        if (!v || ethers.dataLength(v) < 20) return { ok: false, text: ["nftNoExt"] };
-        const ext = ethers.getAddress(ethers.dataSlice(v, 0, 20));
-        if ((await provider.getCode(ext)) === "0x") return { ok: false, text: ["nftNoCode", { ext }] };
-        if (sel === selectors[selectors.length - 1]) return { ok: true, text: ["nftYes", { ext }] };
+        if (!exts[sel]) return { ok: false, text: ["nftNoExt"] };
+        if (!hasCode[exts[sel]]) return { ok: false, text: ["nftNoCode", { ext: exts[sel] }] };
       }
+      return { ok: true, text: ["nftYes", { ext: exts[selectors[selectors.length - 1]] }] };
     };
-    const [h721, h1155] = await Promise.all([hookStatus(NFT_HOOKS.erc721), hookStatus(NFT_HOOKS.erc1155)]);
+    const [h721, h1155] = [hookStatus(NFT_HOOKS.erc721), hookStatus(NFT_HOOKS.erc1155)];
     step("cNft721", h721.text, h721.ok ? "ok" : "warn");
     step("cNft1155", h1155.text, h1155.ok ? "ok" : "warn");
 
@@ -895,8 +941,8 @@ async function getWalletKit() {
       icons: [location.origin + "/favicon.ico"],
     },
   });
-  walletKit.on("session_proposal", onSessionProposal);
-  walletKit.on("session_request", onSessionRequest);
+  walletKit.on("session_proposal", busyWrap(onSessionProposal, "busyProposal"));
+  walletKit.on("session_request", busyWrap(onSessionRequest, "busyRequest"));
   walletKit.on("session_delete", () => { showSessions(); log(t("sessionClosed"), "line-dim"); });
   // Sessions restored from a previous visit may present another UP or network: close them.
   const { getSdkError } = window.WalletKitBundle;
@@ -1153,6 +1199,9 @@ async function describeCall(c, to, value, data, rows, warnings) {
   } else if (parsed.name === "authorizeOperator") {
     const what = typeof a[1] === "bigint" ? (huge(a[1]) ? t("warnUnlimited") : amount(a[1])) : `NFT ${a[1]}`;
     warnings.push([t("warnApproval", { who: await labelAddress(c.provider, a[0]), what }), "line-danger"]);
+  } else if (KNOWN_CONTRACTS[to.toLowerCase()]?.role === "roleWrapped" && (sig === "deposit()" || sig === "withdraw(uint256)")) {
+    const name = KNOWN_CONTRACTS[to.toLowerCase()].name;
+    warnings.push([sig === "deposit()" ? t("infoWrap", { amount: `${ethers.formatEther(value)} ${cur}`.trim(), name }) : t("infoUnwrap", { amount: `${ethers.formatEther(a[0])} ${name}`, cur }), "line-warn"]);
   } else if (sig === "transfer(address,uint256)") {
     warnings.push([t("infoTransfer", { what: amount(a[1]), to: a[0] }), "line-warn"]);
   } else if (parsed.name === "transfer" || parsed.name === "transferFrom" || parsed.name === "safeTransferFrom") {
@@ -1246,6 +1295,8 @@ async function handleSendTransaction(topic, id, c, tx, validation, reject) {
       log(t("simOnlyDone"), "line-warn");
       return respondError(topic, id, "Simulation only: transaction not sent", 5000);
     }
+    rows.push([t("kGas"), t("gasByController", { need: `${ethers.formatEther(need)} ${cur}`.trim() }), {}]);
+    if (relayOption.state().state === "ready") log(t("relayAvailableOff"), "line-warn");
     pending = { kind: "tx", topic, id, wrapped, gasLimit, c, to: toLabel, valueText };
     log(t("readyToSend"), "line-warn");
     showRequestModal("tx", t("actionTitleTx", { site: sessionPeer(topic) }), rows);
@@ -1254,7 +1305,7 @@ async function handleSendTransaction(topic, id, c, tx, validation, reject) {
   }
 }
 
-$("sendBtn").addEventListener("click", async () => {
+$("sendBtn").addEventListener("click", busyWrap(async () => {
   if (!pending || pending.kind !== "tx") return;
   if (!riskAccepted()) { log(t("ackRequired"), "line-err"); return; }
   const p = pending;
@@ -1281,7 +1332,7 @@ $("sendBtn").addEventListener("click", async () => {
         log(prep.plan, "line-dim");
         hash = await GasRelayClient.signAndSend(signerProvider, { chainId: c.chainId, prep, signer: c.signer, log });
       } catch (e) { return fail(e.message, "Relayed operation not sent"); }
-      log(t("txSentSummary", { value: p.valueText, to: p.to }), "line-dim");
+      log(t("txSentSummaryRelay", { value: p.valueText, to: p.to }), "line-dim");
       const explorerUrl = getExplorerUrl(c.net, EXPLORER_PATH, hash);
       if (explorerUrl) log(explorerUrl, "line-dim");
       // From here the operation exists on-chain: never ask to repeat it.
@@ -1312,7 +1363,7 @@ $("sendBtn").addEventListener("click", async () => {
     if (pending === p) await fail(t("genericError", { err: e.shortMessage || e.message }), "Send failed");
     else log(t("genericError", { err: e.shortMessage || e.message }), "line-err");
   }
-});
+}, "busySend"));
 
 // --- Message signatures (ERC-1271) ---
 // Returns the message as readable text, or null when it is a hash or binary data.
