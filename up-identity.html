@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>UP Identity Cross-Chain — ChainIntegrate</title>
+<meta name="description" content="Legge e mostra il profilo LSP3 (nome, immagini, link) di una Universal Profile su qualsiasi rete dove è deployata, e lo confronta con quello su LUKSO. Sola lettura, nessun wallet.">
+<link rel="icon" href="favicon.ico">
+<meta property="og:type" content="website">
+<meta property="og:title" content="UP Identity Cross-Chain — ChainIntegrate">
+<meta property="og:description" content="Il profilo LSP3 di una Universal Profile su Base, Polygon e le altre reti, confrontato con LUKSO. Sola lettura.">
+<meta property="og:image" content="https://crosschain-lukso.chainintegrate.it/banner.png">
+<meta property="og:url" content="https://crosschain-lukso.chainintegrate.it/up-identity.html">
+<meta name="twitter:card" content="summary_large_image">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="chains.js"></script>
+<script src="backup-check.js"></script>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
+    --text: #e6e8ec; --text-dim: #9aa1ad;
+    --accent: #5b8cff; --ok: #3fbf6f; --warn: #e0a83c; --err: #e05a5a;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+         max-width: 820px; margin: 0 auto; padding: 32px 20px 80px; }
+  .brand-row { margin-bottom: 24px; }
+  .brand-logo { display: block; width: 100%; height: auto; border-radius: 10px; }
+  .header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .subtitle { color: var(--text-dim); font-size: 13px; margin-bottom: 28px; }
+  #langToggle { width: auto; background: #2a2f3a; padding: 8px 14px; font-size: 12.5px; font-weight: 600;
+                border-radius: 6px; border: 1px solid var(--border); color: var(--text); cursor: pointer; margin-top: 2px; flex-shrink: 0; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+  .panel h2 { font-size: 14px; margin: 0 0 14px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.03em; }
+  label { display: block; font-size: 13px; color: var(--text-dim); margin: 14px 0 6px; }
+  select, input { width: 100%; background: #10131a; border: 1px solid var(--border); color: var(--text);
+                  border-radius: 6px; padding: 10px 12px; font-size: 13.5px; font-family: inherit; }
+  button { width: 100%; background: var(--accent); color: white; border: none; border-radius: 6px;
+           padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; }
+  button:disabled { background: #3a3f4b; cursor: not-allowed; }
+  button.secondary { background: #2a2f3a; }
+  .note { font-size: 12.5px; color: var(--text-dim); line-height: 1.55; }
+  .note b { color: var(--text); }
+  .disclaimer { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--warn); border-radius: 8px; background: rgba(224,168,60,0.08); font-size: 12.5px; line-height: 1.55; }
+  .status { font-size: 13px; margin-top: 12px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  .line-ok { color: var(--ok); } .line-warn { color: var(--warn); } .line-err { color: var(--err); } .line-dim { color: var(--text-dim); }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 640px) { .cols { grid-template-columns: 1fr; } }
+  .card { background: #10131a; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .card .bg { height: 90px; background: #1d2330 center / cover no-repeat; }
+  .card .body { padding: 12px 14px 14px; }
+  .card .avatar { width: 72px; height: 72px; border-radius: 50%; border: 3px solid #10131a; margin-top: -48px; background: #2a2f3a center / cover no-repeat; }
+  .card .where { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); margin-top: 6px; }
+  .card .name { font-size: 17px; font-weight: 700; margin-top: 2px; word-break: break-word; }
+  .card .desc { font-size: 13px; color: var(--text); margin-top: 6px; white-space: pre-wrap; word-break: break-word; }
+  .card .links a { display: inline-block; margin: 6px 10px 0 0; color: var(--accent); font-size: 13px; text-decoration: none; word-break: break-all; }
+  .card .tags span { display: inline-block; margin: 6px 6px 0 0; padding: 2px 8px; border-radius: 10px; background: #2a2f3a; font-size: 11.5px; }
+  .card .meta { font-size: 11.5px; color: var(--text-dim); margin-top: 10px; line-height: 1.5; word-break: break-all; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-family: monospace; }
+  .badge.ok { background: rgba(63,191,111,0.15); color: var(--ok); }
+  .badge.err { background: rgba(224,90,90,0.15); color: var(--err); }
+  .badge.warn { background: rgba(224,168,60,0.15); color: var(--warn); }
+  .ctrl { background: #10131a; border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; margin-top: 8px; font-size: 12.5px; }
+  .ctrl .addr { font-family: monospace; word-break: break-all; }
+  .site-footer { margin-top: 40px; padding: 18px 20px; background: #f5f6f8; border: 1px solid #e3e5ea; border-radius: 10px; color: #4b4f58; }
+  .footer-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .footer-logo { height: 48px; width: auto; flex-shrink: 0; }
+  .footer-text { font-size: 13px; line-height: 1.6; }
+  .footer-li { display: inline-flex; vertical-align: middle; margin: 0 2px; }
+  .site-footer a { color: #2563eb; text-decoration: none; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="brand-row"><img src="banner.png" alt="ChainIntegrate" class="brand-logo" onerror="this.style.display='none'"></div>
+
+<div class="header-row">
+  <div>
+    <h1 data-i18n="h1">Identità della UP su altre reti</h1>
+    <div class="subtitle" data-i18n="subtitle"></div>
+  </div>
+  <button id="langToggle" type="button">English</button>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel0Title">0 · Cos'è</h2>
+  <div class="note" data-i18n-html="panel0Note"></div>
+  <div class="disclaimer" data-i18n-html="disclaimer"></div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel1Title">1 · Rete</h2>
+  <input type="text" id="networkFilter" data-i18n-placeholder="networkFilterPlaceholder" placeholder="Filtra per nome...">
+  <select id="network" style="margin-top:8px;"></select>
+  <div id="customRpcWrap" style="display:none;">
+    <label data-i18n="customRpcLabel">RPC URL custom</label>
+    <input type="text" id="customRpc" placeholder="https://...">
+  </div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel2Title">2 · Universal Profile</h2>
+  <button id="connectUp" class="secondary" data-i18n="connectUpBtn">Leggi l'indirizzo dall'estensione UP</button>
+  <label for="upAddress" data-i18n="upAddressLabel">Indirizzo della UP</label>
+  <input type="text" id="upAddress" placeholder="0x...">
+  <button id="readBtn" data-i18n="readBtn">Leggi il profilo</button>
+  <div class="status" id="status"></div>
+</div>
+
+<div class="panel" id="resultPanel" hidden>
+  <h2 data-i18n="panel3Title">3 · Profilo</h2>
+  <div class="status" id="compare"></div>
+  <div class="cols" style="margin-top:12px;">
+    <div class="card" id="cardNet"></div>
+    <div class="card" id="cardLukso"></div>
+  </div>
+</div>
+
+<div class="panel" id="ctrlPanel" hidden>
+  <h2 data-i18n="panel4Title">4 · Chi controlla la UP su questa rete</h2>
+  <div class="note" data-i18n="panel4Note"></div>
+  <div class="status" id="ctrlStatus"></div>
+  <div id="ctrlList"></div>
+</div>
+
+<div class="site-footer">
+  <div class="footer-row">
+    <img src="logo.png" alt="ChainIntegrate" class="footer-logo" onerror="this.style.display='none'">
+    <div class="footer-text" data-i18n-html="footerHtml"></div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+// ==================== I18N ====================
+let LANG = "it";
+const I18N = {
+  it: {
+    pageTitle: "UP Identity Cross-Chain — ChainIntegrate",
+    h1: "Identità della UP su altre reti",
+    subtitle: "Il profilo LSP3 (nome, descrizione, immagini, link) di una Universal Profile, letto sulla rete che scegli e confrontato con quello attuale su LUKSO. Sola lettura: nessun wallet, nessuna firma.",
+    langToggleBtn: "English",
+    panel0Title: "0 · Cos'è",
+    panel0Note: "La tua Universal Profile esiste allo stesso indirizzo su ogni rete dove l'hai deployata. I suoi dati di identità stanno nella chiave <b>LSP3Profile</b> della UP: un riferimento a un file JSON (di solito su IPFS) con il suo hash. Questa pagina legge quella chiave sulla rete scelta e su LUKSO, scarica il file, <b>controlla che l'hash corrisponda</b> e mostra il profilo. Un deploy su un'altra rete copia solo i dati della creazione originale: lì il profilo è quello del giorno della creazione, oppure manca, e la pagina te lo dice.",
+    disclaimer: "<b>È una lettura fatta da ChainIntegrate</b> dei dati ERC725Y della UP, secondo gli standard LUKSO (LSP2, LSP3). Base, Polygon e le altre reti non \"sanno\" cos'è una Universal Profile: nessuna pretesa che la rete, i suoi explorer o altri servizi riconoscano questo profilo.",
+    panel1Title: "1 · Rete",
+    networkFilterPlaceholder: "Filtra per nome...",
+    customRpcLabel: "RPC URL custom",
+    customNetName: "Rete custom",
+    panel2Title: "2 · Universal Profile",
+    connectUpBtn: "Leggi l'indirizzo dall'estensione UP",
+    upAddressLabel: "Indirizzo della UP",
+    readBtn: "Leggi il profilo",
+    panel3Title: "3 · Profilo",
+    panel4Title: "4 · Chi controlla la UP su questa rete",
+    panel4Note: "I controller della UP sulla rete scelta, con a cosa servono, e se c'è un controller di backup.",
+    extNotFound: "Estensione Universal Profile non trovata in questo browser.",
+    needAddr: "Inserisci un indirizzo valido.",
+    needNet: "Scegli la rete.",
+    reading: "Lettura in corso...",
+    rpcWrong: (v) => `L'RPC risponde con chainId ${v.id}, non ${v.exp}.`,
+    notDeployed: (v) => `A questo indirizzo non c'è una UP su ${v.net}.`,
+    luksoNone: "Su LUKSO a questo indirizzo non c'è una UP.",
+    where: (v) => `Su ${v.net}`,
+    whereLukso: "Su LUKSO (attuale)",
+    noProfile: "Nessun profilo LSP3 impostato.",
+    badValue: "Valore di LSP3Profile non riconosciuto.",
+    fetchFail: (v) => `File del profilo non scaricabile: ${v.err}`,
+    hashOk: "✅ hash verificato",
+    hashBad: "❌ hash diverso da quello dichiarato: contenuto non attendibile, non mostrato",
+    hashUnknown: "⚠️ metodo di verifica non riconosciuto: contenuto non verificato",
+    source: (v) => `File: ${v.uri}`,
+    noName: "(senza nome)",
+    same: "✅ Il profilo su questa rete è identico a quello attuale su LUKSO.",
+    diff: "⚠️ Il profilo su questa rete è diverso da quello attuale su LUKSO: probabilmente è quello del giorno della creazione. Per allinearlo servirà la fase 2 (pubblicazione), non ancora disponibile.",
+    netEmpty: "ℹ️ Su questa rete la UP non ha un profilo LSP3: il deploy ha copiato solo i dati della creazione, che non lo includevano.",
+    luksoEmptyOnly: "ℹ️ Su LUKSO la UP non ha un profilo LSP3.",
+    ctrlReading: "Lettura dei controller...",
+    ctrlFail: (v) => `Lettura dei controller non riuscita: ${v.err}`,
+    ctrlBackupOk: "✅ C'è un controller di backup (due controller amministratori con gli stessi permessi).",
+    ctrlBackupNo: "⚠️ Nessun controller di backup su questa rete: se perdi la chiave del controller, perdi l'accesso. Si aggiunge dalla pagina di deploy, sezione 5.",
+    roleEp: "EntryPoint 4337 (gas relay): esegue operazioni firmate da un tuo controller, non può cambiare dati o controller",
+    roleUrd: "Universal Receiver Delegate: tiene la lista dei token e NFT LUKSO ricevuti, non può spostare fondi",
+    roleAdmin: "controller amministratore: firma qualsiasi operazione e gestisce i controller",
+    roleLimited: "controller con permessi limitati",
+    roleBad: "voce non valida",
+    footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a>`,
+  },
+  en: {
+    pageTitle: "UP Identity Cross-Chain — ChainIntegrate",
+    h1: "The UP's identity on other networks",
+    subtitle: "A Universal Profile's LSP3 profile (name, description, images, links), read on the network you choose and compared with the current one on LUKSO. Read-only: no wallet, no signature.",
+    langToggleBtn: "Italiano",
+    panel0Title: "0 · What this is",
+    panel0Note: "Your Universal Profile exists at the same address on every network where you deployed it. Its identity data sits in the UP's <b>LSP3Profile</b> key: a reference to a JSON file (usually on IPFS) with its hash. This page reads that key on the chosen network and on LUKSO, downloads the file, <b>checks that the hash matches</b> and shows the profile. A deploy on another network copies only the original creation data: there the profile is the one from the day of creation, or missing, and the page tells you.",
+    disclaimer: "<b>This is ChainIntegrate's reading</b> of the UP's ERC725Y data, following the LUKSO standards (LSP2, LSP3). Base, Polygon and the other networks do not \"know\" what a Universal Profile is: no claim that the network, its explorers or other services recognise this profile.",
+    panel1Title: "1 · Network",
+    networkFilterPlaceholder: "Filter by name...",
+    customRpcLabel: "Custom RPC URL",
+    customNetName: "Custom network",
+    panel2Title: "2 · Universal Profile",
+    connectUpBtn: "Read the address from the UP extension",
+    upAddressLabel: "UP address",
+    readBtn: "Read the profile",
+    panel3Title: "3 · Profile",
+    panel4Title: "4 · Who controls the UP on this network",
+    panel4Note: "The UP's controllers on the chosen network, what each is for, and whether there is a backup controller.",
+    extNotFound: "Universal Profile extension not found in this browser.",
+    needAddr: "Enter a valid address.",
+    needNet: "Choose the network.",
+    reading: "Reading...",
+    rpcWrong: (v) => `The RPC answers with chainId ${v.id}, not ${v.exp}.`,
+    notDeployed: (v) => `There is no UP at this address on ${v.net}.`,
+    luksoNone: "There is no UP at this address on LUKSO.",
+    where: (v) => `On ${v.net}`,
+    whereLukso: "On LUKSO (current)",
+    noProfile: "No LSP3 profile set.",
+    badValue: "LSP3Profile value not recognised.",
+    fetchFail: (v) => `Profile file could not be downloaded: ${v.err}`,
+    hashOk: "✅ hash verified",
+    hashBad: "❌ hash differs from the declared one: content not trustworthy, not shown",
+    hashUnknown: "⚠️ verification method not recognised: content not verified",
+    source: (v) => `File: ${v.uri}`,
+    noName: "(no name)",
+    same: "✅ The profile on this network is identical to the current one on LUKSO.",
+    diff: "⚠️ The profile on this network differs from the current one on LUKSO: probably the one from the day of creation. Aligning it will need phase 2 (publishing), not available yet.",
+    netEmpty: "ℹ️ On this network the UP has no LSP3 profile: the deploy copied only the creation data, which did not include it.",
+    luksoEmptyOnly: "ℹ️ On LUKSO the UP has no LSP3 profile.",
+    ctrlReading: "Reading the controllers...",
+    ctrlFail: (v) => `Reading the controllers failed: ${v.err}`,
+    ctrlBackupOk: "✅ There is a backup controller (two admin controllers with the same permissions).",
+    ctrlBackupNo: "⚠️ No backup controller on this network: if you lose the controller key, you lose access. Add one from the deploy page, section 5.",
+    roleEp: "4337 EntryPoint (gas relay): runs operations signed by one of your controllers, cannot change data or controllers",
+    roleUrd: "Universal Receiver Delegate: keeps the list of received LUKSO tokens and NFTs, cannot move funds",
+    roleAdmin: "admin controller: signs any operation and manages the controllers",
+    roleLimited: "controller with limited permissions",
+    roleBad: "invalid entry",
+    footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a>`,
+  },
+};
+function t(key, vars) { const v = I18N[LANG][key]; return typeof v === "function" ? v(vars || {}) : v; }
+function applyI18n() {
+  document.documentElement.lang = LANG;
+  document.title = t("pageTitle");
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.getAttribute("data-i18n")); });
+  document.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.getAttribute("data-i18n-html")); });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => { el.placeholder = t(el.getAttribute("data-i18n-placeholder")); });
+  $("langToggle").textContent = t("langToggleBtn");
+  if (last) render(last);
+}
+$("langToggle").addEventListener("click", () => { LANG = LANG === "it" ? "en" : "it"; applyI18n(); });
+
+// ==================== CONSTANTS ====================
+const LSP3_KEY = "0x5ef83ad9559033e6e941db7d7c495acdce616347d28e90c7ce47cbfcfcad3bc5"; // keccak256("LSP3Profile")
+const KECCAK_UTF8 = "0x6f357c6a"; // LSP2 verification method keccak256(utf8)
+const LUKSO = { name: "LUKSO", chainId: 42, rpc: "https://rpc.mainnet.lukso.network" };
+// ChainIntegrate's IPFS node first (public reading, uploads only from allowed IPs), then public gateways.
+const IPFS_GATEWAYS = ["https://ipfs.chainintegrate.it/ipfs/", "https://api.universalprofile.cloud/ipfs/", "https://ipfs.io/ipfs/"];
+const UP_ABI = ["function getData(bytes32) view returns (bytes)"];
+
+// ==================== NETWORK ====================
+const networkSelectEl = $("network");
+function renderNetworkOptions(filter) {
+  const f = (filter || "").toLowerCase();
+  networkSelectEl.innerHTML = "";
+  CHAINS.filter(c => c.name.toLowerCase().includes(f)).forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c.key;
+    opt.textContent = c.chainId ? `${c.name} (chainId ${c.chainId})` : c.name;
+    networkSelectEl.appendChild(opt);
+  });
+}
+renderNetworkOptions("");
+{
+  const q = new URLSearchParams(location.search);
+  if (q.get("network") && CHAINS.some(c => c.key === q.get("network"))) networkSelectEl.value = q.get("network");
+  if (q.get("up") && ethers.isAddress(q.get("up"))) $("upAddress").value = ethers.getAddress(q.get("up"));
+}
+$("networkFilter").addEventListener("input", (e) => { renderNetworkOptions(e.target.value); onNetwork(); });
+networkSelectEl.addEventListener("change", onNetwork);
+function onNetwork() { $("customRpcWrap").style.display = networkSelectEl.value === "custom" ? "block" : "none"; }
+function getNetwork() {
+  const c = CHAINS.find(x => x.key === networkSelectEl.value);
+  if (!c) return null;
+  if (c.key === "custom") return { key: "custom", name: t("customNetName"), chainId: null, rpc: $("customRpc").value.trim() };
+  return { ...c };
+}
+onNetwork();
+
+$("connectUp").addEventListener("click", async () => {
+  if (!window.lukso) { setStatus("status", t("extNotFound"), "line-err"); return; }
+  try { const a = await window.lukso.request({ method: "eth_requestAccounts" }); $("upAddress").value = a[0]; } catch (e) { /* rejected */ }
+});
+
+// ==================== LSP2 VerifiableURI ====================
+// New format: 0x0000 + method (4) + hash length (2) + hash + URI. Old JSONURL: method (4) + hash (32) + URI.
+function decodeVerifiableUri(value) {
+  if (!value || value === "0x") return null;
+  const b = ethers.getBytes(value);
+  let method, hash, uriBytes;
+  if (b.length >= 8 && b[0] === 0 && b[1] === 0) {
+    method = ethers.hexlify(b.slice(2, 6));
+    const len = (b[6] << 8) | b[7];
+    hash = ethers.hexlify(b.slice(8, 8 + len));
+    uriBytes = b.slice(8 + len);
+  } else if (b.length >= 36) {
+    method = ethers.hexlify(b.slice(0, 4));
+    hash = ethers.hexlify(b.slice(4, 36));
+    uriBytes = b.slice(36);
+  } else return { bad: true };
+  let uri;
+  try { uri = ethers.toUtf8String(uriBytes); } catch (e) { return { bad: true }; }
+  return { method, hash, uri };
+}
+// Resolves ipfs:// and https:// to the URLs to try, in order. Anything else is not fetched.
+function urlsFor(uri) {
+  if (/^ipfs:\/\//i.test(uri)) { const p = uri.replace(/^ipfs:\/\//i, "").replace(/^ipfs\//, ""); return IPFS_GATEWAYS.map(g => g + p); }
+  if (/^https:\/\//i.test(uri)) return [uri];
+  return [];
+}
+async function fetchBytes(uri) {
+  if (/^data:/i.test(uri)) {
+    const m = uri.match(/^data:[^,]*?(;base64)?,(.*)$/is);
+    if (!m) throw new Error("data URI");
+    return m[1] ? ethers.decodeBase64(m[2]) : ethers.toUtf8Bytes(decodeURIComponent(m[2]));
+  }
+  const urls = urlsFor(uri);
+  if (!urls.length) throw new Error(uri);
+  let lastErr = null;
+  for (const u of urls) {
+    try {
+      const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 15000);
+      const r = await fetch(u, { signal: ctl.signal, referrerPolicy: "no-referrer" });
+      clearTimeout(tm);
+      if (!r.ok) { lastErr = new Error(`HTTP ${r.status}`); continue; }
+      return new Uint8Array(await r.arrayBuffer());
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr || new Error("fetch");
+}
+// For images: a plain URL to show, only for ipfs:// (through our gateway) and https://.
+function imageUrl(uri) { const u = urlsFor(uri || ""); return u.length ? u[0] : null; }
+
+// Reads LSP3Profile on one network: { state: "noUp" | "none" | "bad" | "fetchFail" | "ok" | "hashBad", ... }
+async function readProfile(net, up) {
+  const provider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
+  const id = Number(await provider.send("eth_chainId", []));
+  if (net.chainId && id !== net.chainId) return { state: "rpc", id };
+  if ((await provider.getCode(up)) === "0x") return { state: "noUp", provider, chainId: id };
+  const raw = await new ethers.Contract(up, UP_ABI, provider).getData(LSP3_KEY);
+  const v = decodeVerifiableUri(raw);
+  if (!v) return { state: "none", provider, chainId: id, raw };
+  if (v.bad) return { state: "bad", provider, chainId: id, raw };
+  let bytes;
+  try { bytes = await fetchBytes(v.uri); } catch (e) { return { state: "fetchFail", err: e.message || String(e), provider, chainId: id, raw, ...v }; }
+  const known = v.method.toLowerCase() === KECCAK_UTF8;
+  const verified = known && ethers.keccak256(bytes).toLowerCase() === v.hash.toLowerCase();
+  if (known && !verified) return { state: "hashBad", provider, chainId: id, raw, ...v };
+  let json = null;
+  try { json = JSON.parse(ethers.toUtf8String(bytes)); } catch (e) { return { state: "bad", provider, chainId: id, raw, ...v }; }
+  return { state: "ok", verified, provider, chainId: id, raw, json: json && json.LSP3Profile ? json.LSP3Profile : json, ...v };
+}
+
+// ==================== RENDERING ====================
+function setStatus(id, text, cls) { const el = $(id); el.className = "status " + (cls || ""); el.textContent = text; }
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function pickImage(list, want) {
+  if (!Array.isArray(list) || !list.length) return null;
+  const sorted = [...list].filter(i => i && i.url).sort((a, b) => Math.abs((a.width || want) - want) - Math.abs((b.width || want) - want));
+  return sorted.length ? imageUrl(sorted[0].url) : null;
+}
+function renderCard(box, where, p) {
+  box.innerHTML = "";
+  const bg = el("div", "bg"), body = el("div", "body");
+  box.append(bg, body);
+  const av = el("div", "avatar");
+  body.append(av, el("div", "where", where));
+  if (!p || p.state === "noUp") { body.append(el("div", "desc", p && p.lukso ? t("luksoNone") : t("noProfile"))); return; }
+  if (p.state === "none") { body.append(el("div", "desc", t("noProfile"))); return; }
+  if (p.state === "bad") { body.append(el("div", "desc", t("badValue"))); return; }
+  if (p.state === "fetchFail") { body.append(el("div", "desc", t("fetchFail", { err: p.err })), el("div", "meta", t("source", { uri: p.uri }))); return; }
+  if (p.state === "hashBad") { body.append(el("div", "desc line-err", t("hashBad")), el("div", "meta", t("source", { uri: p.uri }))); return; }
+  const j = p.json || {};
+  const bgUrl = pickImage(j.backgroundImage, 800), avUrl = pickImage(j.profileImage, 256);
+  // URLs only from ipfs:// (through a gateway) or https://, set as CSS through the DOM, never as HTML.
+  if (bgUrl) bg.style.backgroundImage = `url("${encodeURI(bgUrl)}")`;
+  if (avUrl) av.style.backgroundImage = `url("${encodeURI(avUrl)}")`;
+  body.append(el("div", "name", typeof j.name === "string" && j.name ? j.name : t("noName")));
+  if (typeof j.description === "string" && j.description) body.append(el("div", "desc", j.description.slice(0, 2000)));
+  if (Array.isArray(j.links) && j.links.length) {
+    const ls = el("div", "links");
+    j.links.slice(0, 20).forEach(l => {
+      if (!l || typeof l.url !== "string" || !/^https?:\/\//i.test(l.url)) return;
+      const a = el("a", "", typeof l.title === "string" && l.title ? l.title : l.url);
+      a.href = l.url; a.target = "_blank"; a.rel = "noopener noreferrer";
+      ls.appendChild(a);
+    });
+    body.append(ls);
+  }
+  if (Array.isArray(j.tags) && j.tags.length) {
+    const ts = el("div", "tags");
+    j.tags.slice(0, 30).forEach(tg => { if (typeof tg === "string") ts.appendChild(el("span", "", tg)); });
+    body.append(ts);
+  }
+  body.append(el("div", "meta " + (p.verified ? "line-ok" : "line-warn"), p.verified ? t("hashOk") : t("hashUnknown")));
+  body.append(el("div", "meta", t("source", { uri: p.uri })));
+}
+
+let last = null, readSeq = 0;
+function render(r) {
+  $("resultPanel").hidden = false;
+  renderCard($("cardNet"), t("where", { net: r.netName }), r.net);
+  renderCard($("cardLukso"), t("whereLukso"), r.lukso);
+  const hasNet = r.net && !["none", "noUp"].includes(r.net.state), hasLukso = r.lukso && !["none", "noUp"].includes(r.lukso.state);
+  if (hasNet && hasLukso && r.net.raw && r.lukso.raw) setStatus("compare", r.net.raw.toLowerCase() === r.lukso.raw.toLowerCase() ? t("same") : t("diff"), r.net.raw.toLowerCase() === r.lukso.raw.toLowerCase() ? "line-ok" : "line-warn");
+  else if (!hasNet && hasLukso) setStatus("compare", t("netEmpty"), "line-dim");
+  else if (hasNet && !hasLukso) setStatus("compare", t("luksoEmptyOnly"), "line-dim");
+  else setStatus("compare", "", "");
+  if (r.ctrl) renderCtrl(r.ctrl);
+}
+function renderCtrl(c) {
+  $("ctrlPanel").hidden = false;
+  if (c.err) { setStatus("ctrlStatus", t("ctrlFail", { err: c.err }), "line-err"); $("ctrlList").innerHTML = ""; return; }
+  setStatus("ctrlStatus", c.hasBackup ? t("ctrlBackupOk") : t("ctrlBackupNo"), c.hasBackup ? "line-ok" : "line-warn");
+  const box = $("ctrlList"); box.innerHTML = "";
+  c.controllers.forEach(x => {
+    const d = el("div", "ctrl");
+    d.append(el("div", "addr", `[${x.index}] ${x.address || "?"}`));
+    const admin = (x.perms & BackupCheck.ADMIN) === BackupCheck.ADMIN;
+    const role = x.role === "entrypoint" ? t("roleEp") : x.role === "urd" ? t("roleUrd") : x.role === "malformed" ? t("roleBad") : admin ? t("roleAdmin") : t("roleLimited");
+    d.append(el("div", "line-dim", `${role} · 0x${x.perms.toString(16)}`));
+    box.appendChild(d);
+  });
+}
+
+$("readBtn").addEventListener("click", async () => {
+  const my = ++readSeq;
+  const net = getNetwork();
+  const raw = $("upAddress").value.trim();
+  if (!net || !net.rpc) { setStatus("status", t("needNet"), "line-err"); return; }
+  if (!ethers.isAddress(raw)) { setStatus("status", t("needAddr"), "line-err"); return; }
+  const up = ethers.getAddress(raw);
+  $("readBtn").disabled = true;
+  setStatus("status", t("reading"), "line-dim");
+  try {
+    const [rn, rl] = await Promise.all([
+      readProfile(net, up).catch(e => ({ state: "fetchFail", err: e.shortMessage || e.message })),
+      readProfile(LUKSO, up).catch(e => ({ state: "fetchFail", err: e.shortMessage || e.message })),
+    ]);
+    if (my !== readSeq) return;
+    if (rn.state === "rpc") { setStatus("status", t("rpcWrong", { id: rn.id, exp: net.chainId }), "line-err"); return; }
+    if (rl.state === "noUp") rl.lukso = true;
+    const netName = net.chainId ? net.name : `${t("customNetName")} (chainId ${rn.chainId})`;
+    if (rn.state === "noUp") { setStatus("status", t("notDeployed", { net: netName }), "line-err"); last = { netName, net: rn, lukso: rl }; render(last); $("ctrlPanel").hidden = true; return; }
+    setStatus("status", "", "");
+    let ctrl;
+    try { ctrl = await BackupCheck.read(rn.provider, up); } catch (e) { ctrl = { err: e.shortMessage || e.message }; }
+    if (my !== readSeq) return;
+    last = { netName, net: rn, lukso: rl, ctrl };
+    render(last);
+  } finally {
+    if (my === readSeq) $("readBtn").disabled = false;
+  }
+});
+
+applyI18n();
+</script>
+</body>
+</html>

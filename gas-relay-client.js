@@ -16,7 +16,9 @@
   const EP_PERMS = 0x500n; // SUPER_CALL | SUPER_TRANSFERVALUE
   const ERC4337 = 1n << 23n;
   // EntryPoint v0.6 counts verification 3 times when a paymaster is used; the relayer accepts up to 1M each.
-  const VERIFICATION_GAS = 400000n;
+  // Measured on a local chain with the real contracts (LUKSO UP/LSP6 0.12.1 and 0.14.0, Extension4337,
+  // UPPaymaster): about 82,000 for native and token transfers. 180,000 leaves more than twice that.
+  const VERIFICATION_GAS = 180000n;
   const MAX_CALL_GAS = 1000000n;
   const OP_GAS_ORACLE = "0x420000000000000000000000000000000000000F";
   const UO_TUPLE = "tuple(address,uint256,bytes,bytes,uint256,uint256,uint256,uint256,uint256,bytes,bytes)";
