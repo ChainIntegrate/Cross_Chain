@@ -82,7 +82,20 @@
 </div>
 
 <div class="panel">
-  <h2 data-i18n="panel1Title">1 · Profilo da testare</h2>
+  <h2 data-i18n="panel3Title">1 · Rete su cui operare</h2>
+  <div class="note" data-i18n="panel3Note"></div>
+  <input type="text" id="networkFilter" data-i18n-placeholder="networkFilterPlaceholder" placeholder="Filtra per nome... (es. base, polygon, arbitrum)">
+  <select id="network" style="margin-top:8px;"></select>
+  <div id="customRpcWrap" style="display:none;">
+    <label data-i18n="customRpcLabel">RPC URL custom</label>
+    <input type="text" id="customRpc" placeholder="https://...">
+    <label data-i18n="customExplorerLabel">Explorer URL custom (opzionale)</label>
+    <input type="text" id="customExplorer" placeholder="https://.../tx/">
+  </div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel1Title">2 · Profilo da testare</h2>
   <button id="connectUp" data-i18n="connectUpBtn">Connetti la tua Universal Profile</button>
   <div class="status-box" id="profileStatus"><span class="empty" data-i18n="notConnected">Non connesso.</span></div>
   <div class="note" style="margin-top:10px;" data-i18n="connectUpNote">
@@ -95,25 +108,13 @@
 </div>
 
 <div class="panel">
-  <h2 data-i18n="panel2Title">2 · Wallet firmatario (il controller)</h2>
+  <h2 data-i18n="panel2Title">3 · Wallet firmatario (il controller)</h2>
   <div class="note" data-i18n="panel2Note"></div>
   <div class="note" style="margin-top:12px; padding:12px 14px; border:1px solid var(--warn); border-radius:8px; background:rgba(224,168,60,0.08); color:var(--text);" data-i18n-html="fundsNote"></div>
   <button id="connectSigner" data-i18n="connectSignerBtn">Connetti MetaMask / wallet firmatario</button>
   <div class="status-box" id="signerStatus"><span class="empty" data-i18n="notConnected">Non connesso.</span></div>
 </div>
 
-<div class="panel">
-  <h2 data-i18n="panel3Title">3 · Rete su cui operare</h2>
-  <div class="note" data-i18n="panel3Note"></div>
-  <input type="text" id="networkFilter" data-i18n-placeholder="networkFilterPlaceholder" placeholder="Filtra per nome... (es. base, polygon, arbitrum)">
-  <select id="network" style="margin-top:8px;"></select>
-  <div id="customRpcWrap" style="display:none;">
-    <label data-i18n="customRpcLabel">RPC URL custom</label>
-    <input type="text" id="customRpc" placeholder="https://...">
-    <label data-i18n="customExplorerLabel">Explorer URL custom (opzionale)</label>
-    <input type="text" id="customExplorer" placeholder="https://.../tx/">
-  </div>
-</div>
 
 <div class="panel">
   <h2 data-i18n="panel4Title">4 · Test</h2>
@@ -149,19 +150,19 @@ const I18N = {
     panel0Title: "0 · Come funziona questa pagina",
     panel0Note: "Qui si opera su una UP <b>già deployata</b> su una rete diversa da LUKSO — non è la stessa cosa che collegare l'estensione UP direttamente. La UP infatti non firma le transazioni su un'altra rete: chi firma è il <b>wallet controller</b> (es. MetaMask) connesso a quella rete, con i permessi giusti sulla UP. Per questo la pagina ti chiede due collegamenti separati: (1) connetti la tua UP solo per leggerne comodamente l'indirizzo — nessuna firma qui; (2) connetti MetaMask (o un altro wallet) sulla <b>rete di destinazione</b> dove hai rideployato la UP, ed è quel wallet a mandare la transazione di test.",
 
-    panel1Title: "1 · Profilo da testare",
+    panel1Title: "2 · Profilo da testare",
     connectUpBtn: "Connetti la tua Universal Profile",
     notConnected: "Non connesso.",
     connectUpNote: "Serve solo per leggere l'indirizzo della UP — nessuna firma o transazione viene fatta a questo punto. Se vuoi testare una UP diversa da quella connessa nella tua estensione, puoi inserirne l'indirizzo a mano qui sotto.",
     profileAddressLabel: "Indirizzo UP da testare",
 
-    panel2Title: "2 · Wallet firmatario (il controller)",
-    panel2Note: "Questo è il wallet che manovra davvero la UP sulla rete scelta al punto 3 — deve essere connesso a quella rete, non a LUKSO. È normale avere sia l'estensione UP che MetaMask attivi insieme nel browser: usa quello giusto per ciascun passaggio.",
+    panel2Title: "3 · Wallet firmatario (il controller)",
+    panel2Note: "Questo è il wallet che manovra davvero la UP sulla rete scelta al punto 1 — deve essere connesso a quella rete, non a LUKSO. È normale avere sia l'estensione UP che MetaMask attivi insieme nel browser: usa quello giusto per ciascun passaggio.",
     fundsNote: "<b>💡 I fondi: due indirizzi, tutti e due tuoi</b><br>• <b>L'indirizzo della tua UP</b> (uguale su tutte le reti) è il tuo <i>conto</i>: mandaci fondi <b>solo dopo</b> che deploy e test su questa rete sono andati a buon fine: se qualcosa va storto (chiave del controller sbagliata, deploy fallito) i fondi mandati prima resterebbero bloccati.<br>• <b>L'indirizzo del controller</b> (il wallet in MetaMask) è la <i>chiave</i> che firma. Ogni operazione costa una piccola commissione (gas), e <b>la paga il controller, non la UP</b>.<br>👉 Quindi manda un po' di fondi <b>anche al controller</b>, sulla stessa rete (es. POL su Polygon, ETH su Base o Arbitrum): quanto basta per qualche transazione. Senza, il controller non può firmare nulla, anche se la UP è piena.",
     connectSignerBtn: "Connetti MetaMask / wallet firmatario",
 
-    panel3Title: "3 · Rete su cui operare",
-    panel3Note: "La rete dove la tua UP è stata rideployata (non LUKSO). Il wallet firmatario del punto 2 deve essere connesso a questa stessa rete: lo stato sopra mostra la rete attuale del wallet, verificalo prima di procedere.",
+    panel3Title: "1 · Rete su cui operare",
+    panel3Note: "La rete dove la tua UP è stata rideployata (non LUKSO). Il wallet firmatario del punto 3 deve essere connesso a questa stessa rete: lo stato del punto 3 mostra la rete attuale del wallet, verificalo prima di procedere.",
     networkFilterPlaceholder: "Filtra per nome... (es. base, polygon, arbitrum)",
     customRpcLabel: "RPC URL custom",
     customExplorerLabel: "Explorer URL custom (opzionale)",
@@ -177,9 +178,9 @@ const I18N = {
     noSignerFound: "Nessun wallet firmatario trovato",
     unknownNetworkLabel: (v) => `rete sconosciuta (chainId ${v.chainId})`,
 
-    missingAddrErr: "Indirizzo UP mancante o non valido (pannello 1) — connetti la tua UP o inseriscilo a mano.",
-    connectSignerFirstLog: "Collega prima il wallet firmatario (pannello 2).",
-    missingRpcLog: "Manca l'RPC della rete (pannello 3).",
+    missingAddrErr: "Indirizzo UP mancante o non valido (pannello 2) — connetti la tua UP o inseriscilo a mano.",
+    connectSignerFirstLog: "Collega prima il wallet firmatario (pannello 3).",
+    missingRpcLog: "Manca l'RPC della rete (pannello 1).",
     upLog: (v) => `UP: ${v.addr}`,
     kmLog: (v) => `Key Manager: ${v.addr}`,
     netLog: (v) => `Rete: ${v.name}`,
@@ -214,19 +215,19 @@ const I18N = {
     panel0Title: "0 · How this page works",
     panel0Note: "This page operates on a UP that is <b>already deployed</b> on a network other than LUKSO — it's not the same as just connecting the UP extension. The UP itself doesn't sign transactions on another network: the one signing is the <b>controller wallet</b> (e.g. MetaMask) connected to that network, with the right permissions on the UP. That's why the page asks for two separate connections: (1) connect your UP only to read its address conveniently — no signature here; (2) connect MetaMask (or another wallet) on the <b>destination network</b> where you redeployed the UP, and that wallet is the one sending the test transaction.",
 
-    panel1Title: "1 · Profile to test",
+    panel1Title: "2 · Profile to test",
     connectUpBtn: "Connect your Universal Profile",
     notConnected: "Not connected.",
     connectUpNote: "Only used to read the UP address — no signature or transaction happens at this point. If you want to test a UP other than the one connected in your extension, you can enter its address manually below.",
     profileAddressLabel: "UP address to test",
 
-    panel2Title: "2 · Signing wallet (the controller)",
-    panel2Note: "This is the wallet that actually operates the UP on the network chosen in step 3 — it must be connected to that network, not to LUKSO. It's normal to have both the UP extension and MetaMask active in the browser at the same time: use the right one for each step.",
+    panel2Title: "3 · Signing wallet (the controller)",
+    panel2Note: "This is the wallet that actually operates the UP on the network chosen in step 1 — it must be connected to that network, not to LUKSO. It's normal to have both the UP extension and MetaMask active in the browser at the same time: use the right one for each step.",
     fundsNote: "<b>💡 Funds: two addresses, both yours</b><br>• <b>Your UP address</b> (the same on every network) is your <i>account</i>: send funds to it <b>only after</b> the deploy and the test on this network have succeeded: if something goes wrong (wrong controller key, failed deploy) funds sent earlier would stay stuck.<br>• <b>The controller address</b> (the wallet in MetaMask) is the <i>key</i> that signs. Every operation costs a small fee (gas), and <b>the controller pays it, not the UP</b>.<br>👉 So send some funds <b>to the controller too</b>, on the same network (e.g. POL on Polygon, ETH on Base or Arbitrum): enough for a few transactions. Without them the controller cannot sign anything, even if the UP is full.",
     connectSignerBtn: "Connect MetaMask / signing wallet",
 
-    panel3Title: "3 · Network to operate on",
-    panel3Note: "The network where your UP was redeployed (not LUKSO). The signing wallet from step 2 must be connected to this same network — the status above shows the wallet's current network, check it before proceeding.",
+    panel3Title: "1 · Network to operate on",
+    panel3Note: "The network where your UP was redeployed (not LUKSO). The signing wallet from step 3 must be connected to this same network — the status in step 3 shows the wallet's current network, check it before proceeding.",
     networkFilterPlaceholder: "Filter by name... (e.g. base, polygon, arbitrum)",
     customRpcLabel: "Custom RPC URL",
     customExplorerLabel: "Custom explorer URL (optional)",
@@ -242,9 +243,9 @@ const I18N = {
     noSignerFound: "No signing wallet found",
     unknownNetworkLabel: (v) => `unknown network (chainId ${v.chainId})`,
 
-    missingAddrErr: "Missing or invalid UP address (panel 1) — connect your UP or enter it manually.",
-    connectSignerFirstLog: "Connect the signing wallet first (panel 2).",
-    missingRpcLog: "Missing network RPC (panel 3).",
+    missingAddrErr: "Missing or invalid UP address (panel 2) — connect your UP or enter it manually.",
+    connectSignerFirstLog: "Connect the signing wallet first (panel 3).",
+    missingRpcLog: "Missing network RPC (panel 1).",
     upLog: (v) => `UP: ${v.addr}`,
     kmLog: (v) => `Key Manager: ${v.addr}`,
     netLog: (v) => `Network: ${v.name}`,
