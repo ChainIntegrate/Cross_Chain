@@ -1444,7 +1444,8 @@ function renderBackup() {
       if ((c.perms & BK.ADMIN) === BK.ADMIN) badges.push(["err", t("bkAdmin")]);
       if (bk.genesis.includes(c.address.toLowerCase())) badges.push(["warn", t("bkGenesis")]);
     }
-    badges.forEach(([cls, text]) => { const s = document.createElement("span"); s.className = "badge " + cls; s.style.marginRight = "6px"; s.textContent = text; role.appendChild(s); });
+    // A space between badges too, so a copied list stays readable.
+    badges.forEach(([cls, text], i) => { const s = document.createElement("span"); s.className = "badge " + cls; s.style.marginRight = "6px"; s.textContent = text; if (i) role.append(" "); role.appendChild(s); });
     // What it is for, in plain words.
     const why = [];
     if (c.role === "entrypoint") why.push(t("bkWhyEp"));
