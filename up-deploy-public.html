@@ -165,6 +165,7 @@
   <div class="note" data-i18n-html="backupNote"></div>
   <div class="note" data-i18n-html="backupHowNote"></div>
   <button id="connectSigner5" data-i18n="connectSigner5Btn">Connetti il controller della UP (MetaMask)</button>
+  <div class="note" data-i18n="signerPickHint"></div>
   <div class="status-box" id="signerStatus5"><span class="empty" data-i18n="notConnected">Non connesso.</span></div>
   <button id="readCtrlBtn" data-i18n="readCtrlBtn">Leggi i controller della UP su questa rete</button>
   <div class="status-box" id="backupStatus"><span class="empty" data-i18n="backupNotRead">Controller non ancora letti.</span></div>
@@ -357,6 +358,7 @@ const I18N = {
     backupHowNote: "Usa l'indirizzo della UP (sezione 2), la rete (sezione 1) e il wallet connesso qui sotto (è lo stesso della sezione 3), che qui <b>deve essere un controller amministratore della UP</b> (con ADDCONTROLLER ed EDITPERMISSIONS): su una UP appena deployata è la chiave di genesi importata in MetaMask. Funziona anche per una UP deployata in passato. Va fatto <b>su ogni rete</b>, perché ogni rete ha la sua lista di controller. Su LUKSO si fa con gli strumenti di LUKSO.",
     readCtrlBtn: "Leggi i controller della UP su questa rete",
     connectSigner5Btn: "Connetti il controller della UP (MetaMask)",
+    signerPickHint: "Il wallet ti fa scegliere l'account a ogni connessione: puoi firmare con la chiave di genesi o con un backup. Per cambiare account ripremi il pulsante e scegline un altro.",
     copyLogBtn: "Copia il log",
     copiedLog: "Log copiato.",
     busyStart: "In corso: lettura dei dati e simulazione. Se serve una firma, MetaMask si apre tra qualche secondo.",
@@ -569,6 +571,7 @@ const I18N = {
     backupHowNote: "It uses the UP address (section 2), the network (section 1) and the wallet connected below (the same as in section 3), which here <b>must be an admin controller of the UP</b> (with ADDCONTROLLER and EDITPERMISSIONS): on a UP you just deployed, that is the genesis key imported into MetaMask. It also works for a UP deployed earlier. Do it <b>on every network</b>: each network has its own controller list. On LUKSO, use LUKSO's own tools.",
     readCtrlBtn: "Read the UP's controllers on this network",
     connectSigner5Btn: "Connect the UP's controller (MetaMask)",
+    signerPickHint: "The wallet lets you choose the account on every connection: you can sign with the genesis key or with a backup. To switch account, press the button again and pick another one.",
     copyLogBtn: "Copy the log",
     copiedLog: "Log copied.",
     busyStart: "Working: reading the data and simulating. If a signature is needed, MetaMask opens in a few seconds.",
@@ -1020,6 +1023,11 @@ async function connectSignerWallet() {
     return false;
   }
   try {
+    // Ask the wallet to show its account picker every time, so the signer can be chosen (genesis
+    // key, backup, ...). eth_requestAccounts alone silently returns the account already connected.
+    // Wallets without wallet_requestPermissions fall back to it; a refusal in the picker stops here.
+    try { await candidate.request({ method: "wallet_requestPermissions", params: [{ eth_accounts: {} }] }); }
+    catch (e) { if (e && e.code === 4001) throw e; }
     const accounts = await candidate.request({ method: "eth_requestAccounts" });
     signerAddress = accounts[0];
     signerProvider = candidate;
@@ -1115,7 +1123,11 @@ function watchSigner(p) {
   if (watchedSigner === p || typeof p.on !== "function") return;
   watchedSigner = p;
   p.on("chainChanged", invalidateCheck);
-  p.on("accountsChanged", (accs) => { signerAddress = accs && accs[0] ? accs[0] : null; invalidateCheck(); });
+  p.on("accountsChanged", (accs) => {
+    signerAddress = accs && accs[0] ? accs[0] : null;
+    setSignerStatus(signerAddress ? `<span class="badge ok">${t("connectedBadge")}</span> ${escapeHtml(signerAddress)}` : `<span class="empty">${t("notConnected")}</span>`);
+    invalidateCheck();
+  });
 }
 
 // The transaction is signed on the wallet's chain, while every check runs against the RPC:
@@ -1402,8 +1414,8 @@ function setBackupStatus(text, cls) {
 }
 // Same rule as backup-check.js: two admin controllers with the same permissions, ERC4337 ignored.
 function backupAmong(list) {
-  const groups = {};
-  list.filter(c => c.role === "controller" && (c.perms & BK.ADMIN) === BK.ADMIN)
+  const groups = {}, seen = new Set();
+  list.filter(c => c.role === "controller" && (c.perms & BK.ADMIN) === BK.ADMIN && !seen.has(c.address) && seen.add(c.address))
     .forEach(c => { const g = (c.perms & ~BK.ERC4337).toString(16); groups[g] = (groups[g] || 0) + 1; });
   return Object.values(groups).some(n => n >= 2);
 }

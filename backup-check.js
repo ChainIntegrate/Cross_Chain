@@ -44,7 +44,13 @@
       const role = low === ENTRY_POINT ? "entrypoint" : low === urd || low === LSP1_DELEGATE ? "urd" : "controller";
       return { address, index, perms: toBig(raw), raw, role };
     });
-    const admins = controllers.filter((c) => c.role === "controller" && (c.perms & ADMIN) === ADMIN);
+    // One address listed twice is still one key: never its own backup (AUDIT 2026-10-02 L-3).
+    const seen = new Set();
+    const admins = controllers.filter((c) => {
+      if (c.role !== "controller" || (c.perms & ADMIN) !== ADMIN || seen.has(c.address)) return false;
+      seen.add(c.address);
+      return true;
+    });
     const groups = {};
     admins.forEach((c) => { const g = (c.perms & ~ERC4337).toString(16); groups[g] = (groups[g] || 0) + 1; });
     const hasBackup = Object.values(groups).some((n) => n >= 2);

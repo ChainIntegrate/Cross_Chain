@@ -68,6 +68,8 @@
       signBoxTitle: "Firma in MetaMask",
       signBoxMsg: "MetaMask mostra un messaggio da firmare. Deve essere esattamente questo:",
       signBoxAccount: (v) => `Account che firma: ${v.addr} (il controller)`,
+      signBoxOp: (v) => `Cosa autorizzi: la UP ${v.up} chiama ${v.to} inviando ${v.value}; nonce ${v.nonce}; paga il paymaster ${v.pm}; rete chainId ${v.chainId}. L'hash qui sopra è calcolato da questa pagina, non dall'RPC.`,
+      hashMismatch: "❌ L'RPC ha restituito un hash dell'operazione diverso da quello calcolato dalla pagina: potrebbe voler farti firmare un'altra operazione. Niente è stato firmato. Usa un altro RPC.",
       signBoxSite: (v) => `Richiesta dal sito: ${v.site}`,
       signBoxNoGas: "È solo una firma: nessuna transazione e nessun gas. Se il messaggio è diverso, rifiuta in MetaMask.",
       signed: (v) => `✅ Messaggio firmato da ${v.who} (il controller). Hash dell'operazione firmato: ${v.hash}`,
@@ -102,6 +104,8 @@
       signBoxTitle: "Sign in MetaMask",
       signBoxMsg: "MetaMask shows a message to sign. It must be exactly this:",
       signBoxAccount: (v) => `Signing account: ${v.addr} (the controller)`,
+      signBoxOp: (v) => `What you authorize: the UP ${v.up} calls ${v.to} sending ${v.value}; nonce ${v.nonce}; the paymaster ${v.pm} pays; network chainId ${v.chainId}. The hash above is computed by this page, not by the RPC.`,
+      hashMismatch: "❌ The RPC returned an operation hash different from the one computed by the page: it may be trying to have you sign another operation. Nothing was signed. Use another RPC.",
       signBoxSite: (v) => `Requested by: ${v.site}`,
       signBoxNoGas: "It is only a signature: no transaction and no gas. If the message differs, reject it in MetaMask.",
       signed: (v) => `✅ Message signed by ${v.who} (the controller). Operation hash signed: ${v.hash}`,
@@ -201,9 +205,21 @@
     return pvg + pvg * 15n / 100n;
   }
 
+  // userOpHash as EntryPoint v0.6 computes it, in the browser: the value the controller signs never comes
+  // from the RPC (AUDIT 2026-10-02 H-1). Same formula as tools/relayer/relay.js. The chainId is the one
+  // already checked against both the RPC and the wallet.
+  function userOpHash(op, chainId) {
+    const enc = (t, v) => ethers.AbiCoder.defaultAbiCoder().encode(t, v);
+    const packed = enc(
+      ["address", "uint256", "bytes32", "bytes32", "uint256", "uint256", "uint256", "uint256", "uint256", "bytes32"],
+      [op.sender, op.nonce, ethers.keccak256(op.initCode), ethers.keccak256(op.callData), op.callGasLimit,
+        op.verificationGasLimit, op.preVerificationGas, op.maxFeePerGas, op.maxPriorityFeePerGas, ethers.keccak256(op.paymasterAndData)]);
+    return ethers.keccak256(enc(["bytes32", "address", "uint256"], [ethers.keccak256(packed), ENTRY_POINT, chainId]));
+  }
+
   // Builds the operation for UP.execute(CALL, to, value, data), simulated as the EntryPoint will run
   // it. Throws an Error whose message is ready to show. `ready` is the result of check().
-  async function prepare(provider, { up, ready, to, value, data, fmt }) {
+  async function prepare(provider, { chainId, up, ready, to, value, data, fmt }) {
     const callData = UP_IFACE.encodeFunctionData("execute", [0, to, value, data]);
     let est;
     try {
@@ -224,12 +240,17 @@
     const maxCost = (op.callGasLimit + op.verificationGasLimit * 3n + op.preVerificationGas) * op.maxFeePerGas;
     if (maxCost > ready.cap) throw new Error(text("overCap", { max: fmt(maxCost), cap: fmt(ready.cap) }));
     if (maxCost > ready.deposit) throw new Error(text("lowDeposit", { max: fmt(maxCost), dep: fmt(ready.deposit) }));
-    const hash = await ep.getUserOpHash(op);
-    return { op, hash, maxCost, plan: text("plan", { pm: ready.pm, max: fmt(maxCost), cap: fmt(ready.cap), gas: callGas.toString() }) };
+    // Computed here; the EntryPoint's own answer is only a cross-check. A different answer means an RPC that
+    // tries to have another operation signed: stop.
+    const hash = userOpHash(op, chainId);
+    const rpcHash = await ep.getUserOpHash(op);
+    if (rpcHash.toLowerCase() !== hash.toLowerCase()) throw new Error(text("hashMismatch"));
+    return { op, hash, maxCost, chainId, view: { up, to, value: fmt(value), nonce: op.nonce.toString(), pm: ready.pm, chainId },
+      plan: text("plan", { pm: ready.pm, max: fmt(maxCost), cap: fmt(ready.cap), gas: callGas.toString() }) };
   }
 
   // While MetaMask asks for the signature: a box with what MetaMask must show, to compare before signing.
-  function showSignBox({ hash, signer }) {
+  function showSignBox({ hash, signer, view }) {
     const box = document.createElement("div");
     box.id = "relaySignBox";
     box.setAttribute("role", "dialog");
@@ -239,6 +260,7 @@
     line(text("signBoxMsg"), "margin-top:6px;");
     // The hash in groups of 8, so it can be compared by eye with MetaMask's message.
     line(hash.slice(0, 2) + " " + hash.slice(2).match(/.{1,8}/g).join(" "), "margin-top:6px; font-family:monospace; font-size:15px; word-break:break-all; color:var(--ok, #3fbf6f);");
+    if (view) line(text("signBoxOp", view), "margin-top:8px; font-size:12.5px;");
     line(text("signBoxAccount", { addr: signer }), "margin-top:8px;");
     line(text("signBoxSite", { site: location.host }), "margin-top:2px;");
     line(text("signBoxNoGas"), "margin-top:8px; color:var(--text-dim, #9aa1ad);");
@@ -253,7 +275,8 @@
   async function signAndSend(signerProvider, { chainId, prep, signer, log }) {
     log(text("signAsk", { hash: prep.hash }), "line-warn");
     const s = await new ethers.BrowserProvider(signerProvider).getSigner();
-    const box = showSignBox({ hash: prep.hash, signer });
+    if (prep.chainId !== chainId) throw new Error(text("hashMismatch"));
+    const box = showSignBox({ hash: prep.hash, signer, view: prep.view });
     try { prep.op.signature = await s.signMessage(ethers.getBytes(prep.hash)); }
     finally { box.remove(); }
     const who = ethers.verifyMessage(ethers.getBytes(prep.hash), prep.op.signature);
@@ -364,5 +387,5 @@
     return { enabled: () => state.state === "ready" && cb.checked, refresh, state: () => state };
   }
 
-  window.GasRelayClient = { check, prepare, signAndSend, waitResult, attach, text, ENTRY_POINT };
+  window.GasRelayClient = { check, prepare, signAndSend, waitResult, attach, text, userOpHash, ENTRY_POINT };
 })();

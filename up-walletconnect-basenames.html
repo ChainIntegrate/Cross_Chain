@@ -227,6 +227,7 @@ const I18N = {
     verifyBad: (v) => `❌ WalletConnect segnala il sito come non affidabile (${v.v}): richiesta rifiutata.`,
     verifyWarn: (v) => `⚠️ Verifica del dominio WalletConnect: ${v.v}. Non è confermato che la richiesta venga dal sito dichiarato.`,
     verifyOk: "✅ Verifica del dominio WalletConnect: VALID.",
+    sign32Refused: "❌ Firma rifiutata: il messaggio è di 32 byte (un hash). Per questa UP, con il gas relay attivo (ERC-4337), la firma di 32 byte del controller vale come autorizzazione a spendere dalla UP: il sito potrebbe usarla per svuotarla. Le firme di hash si fanno solo dalle pagine di questo sito (Invio fondi, UP Wallet con il relayer), mai per una dApp.",
     signOpaque: "⚠️ Il contenuto NON è leggibile: è un hash o dati binari. Non puoi sapere cosa autorizzi. Se non sai esattamente a cosa serve, rifiuta.",
     signPermit: "⚠️⚠️ Questo messaggio sembra un PERMESSO A SPENDERE TOKEN (Permit/Permit2): chi lo riceve può spostare token della UP senza altre conferme. Firma solo se sai esattamente perché.",
     signReplay: "ℹ️ Se questo controller governa anche altre UP, la firma vale anche per quelle.",
@@ -341,6 +342,7 @@ const I18N = {
     verifyBad: (v) => `❌ WalletConnect flags the site as untrusted (${v.v}): request rejected.`,
     verifyWarn: (v) => `⚠️ WalletConnect domain verification: ${v.v}. It is not confirmed that the request comes from the declared site.`,
     verifyOk: "✅ WalletConnect domain verification: VALID.",
+    sign32Refused: "❌ Signature refused: the message is 32 bytes (a hash). For this UP, with the gas relay enabled (ERC-4337), a 32-byte signature by the controller is an authorization to spend from the UP: the site could use it to drain it. Hash signatures are made only by this site's own pages (Send, UP Wallet with the relayer), never for a dApp.",
     signOpaque: "⚠️ The content is NOT readable: it is a hash or binary data. You cannot know what you are authorising. Unless you know exactly what it is for, reject it.",
     signPermit: "⚠️⚠️ This message looks like a PERMISSION TO SPEND TOKENS (Permit/Permit2): whoever receives it can move the UP's tokens without further confirmation. Only sign if you know exactly why.",
     signReplay: "ℹ️ If this controller also governs other UPs, the signature is valid for them too.",
@@ -800,6 +802,9 @@ async function handleSignRequest(topic, id, chainId, request, verifyContext) {
       account = swapped ? a : b;
       if (typeof message !== "string") throw new Error("missing message");
       const bytes = ethers.isHexString(message) ? ethers.getBytes(message) : ethers.toUtf8Bytes(message);
+      // With ERC-4337 on the UP (Extension4337), a 32-byte personal_sign by a controller authorizes an operation
+      // that can spend from the UP: never signed for a dApp (AUDIT 2026-10-02 H-2).
+      if (bytes.length === 32) return reject(t("sign32Refused"));
       const text = readableText(bytes);
       hash = ethers.hashMessage(bytes);
       walletParams = [ethers.hexlify(bytes), null];

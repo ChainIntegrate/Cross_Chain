@@ -508,3 +508,23 @@ The review's advice to keep "small amounts" on these UPs must not be read as "43
 - **The original controller cannot be retired.** A redeploy replays LUKSO's original deployment calldata, which sets the original controller. On every future chain the UP is born controlled by that key, whatever was changed elsewhere. Rotating keys therefore helps only on chains already deployed; the original key stays the root for new ones.
 - **What actually reduces the exposure:** keep the original controller key offline and use it only for new deployments; for daily use, add a second controller on each chain, ideally a hardware wallet used through MetaMask (it signs `personal_sign`, so it works with 4337), possibly with AllowedCalls; keep in the hot key only what you are prepared to lose. These measures apply to every UP, with or without 4337.
 
+## 9. Rev. 6 — Full-repository review (2026-10-02)
+
+An AI-assisted review of the whole repository at `40f0bc0`, with the system live on Base and Polygon. Full report: [tools/audits/2026-10-02-full-repository.md](tools/audits/2026-10-02-full-repository.md). It reproduced all contract builds, the ethers SRI and a clean `npm audit` of the relayer, and found the earlier High/Medium findings still fixed. The two new High findings are both on the ERC-4337 signing path; neither is a flaw in LUKSO's contracts or in the EntryPoint.
+
+| # | Severity | Finding | Status |
+|---|---|---|---|
+| H-1 | High | The user-operation hash the controller signs came from the RPC (`getUserOpHash` over `eth_call`); a hostile RPC could have another operation signed, and the "compare with MetaMask" box compared two copies of the same value | **Fixed:** the hash is computed in the browser with the relayer's formula and the chainId already checked against RPC and wallet (`gas-relay-client.js`, `up-gas-relay.html`); the RPC's answer is only a cross-check and a mismatch stops before signing. The signature box also shows what the operation does (UP, destination, value, nonce, paymaster, chain). Tested with an RPC that answers a foreign hash |
+| H-2 | High | A 32-byte `personal_sign` by a controller with the 4337 bit is a valid authorization for a UP operation (`Extension4337` recovers from `toEthSignedMessageHash(userOpHash)`); the UP Wallet signed opaque messages for dApps after a warning | **Fixed:** the UP Wallet refuses a 32-byte `personal_sign` when the controller has the ERC4337 bit or the UP has the `validateUserOp` extension (also when the check cannot be read); the Basenames demo refuses every 32-byte `personal_sign`. Tested |
+| M-1 | Medium | An allowlisted UP's controller can extract paymaster gas up to the cap per operation (sharpens G-M1) | Open. Caps to be sized on the real maximum cost (now lower: verification reserve 180,000 instead of 400,000); the structural fix for a public service is a verifying paymaster (`tools/PLAN.md` 2.4 / gas-service idea) |
+| M-2 | Medium | An input edited while Check runs is not invalidated | Open |
+| M-3 | Medium | After signing, a relayer failure is reported as "not sent" although the operation can still land | Open |
+| M-4 | Medium | Deploy "matches/verified" does not bind the primary init calldata and funding | Open |
+| L-1 | Low | Transactions not bound to the checked chain (`chainId` not passed) | Open |
+| L-2 | Low | The ERC4337 bit not shown in permission tables | **Fixed** in the UP Wallet (also counted as privileged) and the NFT page; the deploy page already showed it |
+| L-3 | Low | A controller listed twice counted as its own backup | **Fixed** in `backup-check.js` and the deploy page |
+| L-4 | Low | Stale reads in the backup flow | Open |
+| L-5 | Low | The backup copies the ERC4337 bit; revoke clears it only for the signer | Accepted for now: the maintainer uses the backup to sign relayed operations. With H-2 fixed, a 4337 signer can no longer be tricked into an authorization by a dApp through these pages |
+| L-6 … L-8, I-1 … I-7 | Low / Info | Recipient gaps on the Send page, WalletConnect telemetry and SRI, minor robustness, paymaster panel inputs, guide wording | Open (hardening backlog) |
+
+**Key concentration (report section 7).** The cassa is paymaster owner, deploy payer and full-permission backup of the three UPs on Base and Polygon. Agreed direction: move the backup off the cassa to a separate key (ideally a hardware wallet, never from the same seed as the cassa), then remove the cassa from the six controller lists; the paymaster can also change owner (two-step `transferOwnership` / `acceptOwnership`) without changing its address.
