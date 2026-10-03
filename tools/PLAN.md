@@ -212,10 +212,12 @@ A page that reads and shows a UP's LSP3 identity on any network where it is depl
 ---
 
 ## 3. Other open items
+- **Site index = the guide (to do, 2026-10-03):** the site's home page must be the guide (`up-crosschain-guide.html`). To decide when doing it: an `index.html` that redirects, or a copy, or the server's index setting; the guide's internal links must keep working.
+- **Guide, tool list order (to do, 2026-10-03):** the link to the Identity page must come right after Send.
 - **`chains.js` (PR #21, Bertrand, merged 2026-09-30):** the five original tool pages load the shared list. `up-wallet.html`, `up-nft-receiver.html` and `up-gas-relay.html` were switched too in the follow-up PR. Only the deprecated v2 page keeps its own list. After the pull, check on the server that the network menus populate and that explorer links open.
 - **UP Wallet hint:** add a short note: "if the dApp hangs after the page delivered the answer, disconnect all sessions, disconnect on the dApp and reconnect with a new `wc:` link; do not reload the dApp with the session open".
 - **AUDIT R-06:** second review of `up-wallet.html` before removing the "experimental" label.
-- **AUDIT R-07:** keep or remove the Basenames demo.
+- **AUDIT R-07:** decided 2026-10-03: Basenames demo deprecated.
 - **AUDIT R-02 / I-03:** Content-Security-Policy and security headers.
 - **AUDIT R-03 / L-07:** refresh stale RPCs (e.g. `rpc.sepolia.org`).
 - **`banner.png`:** about 6 MB; optimise it.
