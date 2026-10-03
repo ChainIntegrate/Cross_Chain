@@ -213,7 +213,10 @@ A page that reads and shows a UP's LSP3 identity on any network where it is depl
 ---
 
 ## 3. Other open items
-- **Site index = the guide (to do, 2026-10-03):** the site's home page must be the guide (`up-crosschain-guide.html`). To decide when doing it: an `index.html` that redirects, or a copy, or the server's index setting; the guide's internal links must keep working.
+- **Site index = the guide: done 2026-10-03** on the server: nginx `index up-crosschain-guide.html;` in `/etc/nginx/sites-available/crosschain-lukso` (previous file kept as `crosschain-lukso.bak` next to it).
+- **Site relayer on Avalanche: done 2026-10-03.** Chain 43114 added to `/etc/crosschain-relayer/config.json` (RPC `https://api.avax.network/ext/bc/C/rpc`, paymaster `0xb353…D4eD`, `minBalanceWarn` 0.01) and to the monitor (ChainIntegrate UP, `minPaymasterDeposit` 0.01); relayer funded with 0.05 AVAX. First relayed send: `tools/logs/2026-10-03-avalanche-send-relayer.txt`. The relayer clone in `/opt/crosschain-relayer` checks out the whole repo (sparse checkout not active); harmless, it is outside the web root.
+- **The site relayer is for the maintainer's personal use.** A "pro" version (public service) is under evaluation; it needs a new paymaster contract (verifying paymaster: the service signs each operation it agrees to pay), not the current `UPPaymaster`.
+- **Gas relay page, to do:** let an admin controller give the 4337 permission to another controller (e.g. the backup), paid by the admin, so a backup with no funds can still sign relayed operations. Today the setup gives the bit only to the signer.
 - **Guide, tool list order (to do, 2026-10-03):** the link to the Identity page must come right after Send.
 - **`chains.js` (PR #21, Bertrand, merged 2026-09-30):** the five original tool pages load the shared list. `up-wallet.html`, `up-nft-receiver.html` and `up-gas-relay.html` were switched too in the follow-up PR. Only the deprecated v2 page keeps its own list. After the pull, check on the server that the network menus populate and that explorer links open.
 - **UP Wallet hint:** add a short note: "if the dApp hangs after the page delivered the answer, disconnect all sessions, disconnect on the dApp and reconnect with a new `wc:` link; do not reload the dApp with the session open".

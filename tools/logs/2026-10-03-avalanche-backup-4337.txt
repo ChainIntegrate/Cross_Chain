@@ -1,0 +1,37 @@
+Avalanche C-Chain, 2026-10-03, up-gas-relay.html: cap raised to 0.02 AVAX by the cassa (16:55), then the backup
+0x406f822aC86b61d4cDf4cD84833f7e5561609C02 of the ChainIntegrate UP given the 4337 permission by signing the setup itself
+(funded with a little AVAX first; the first two attempts stopped on "not enough gas", as designed). The UP was already set
+up by the genesis key: the transaction only changed the backup's permissions, 0x7f3f06 → 0xff3f06. The plan printed below
+still listed the extension and EntryPoint lines although nothing was written there (display bug, fixed since: the plan
+lists only what the transaction writes).
+
+—— 16:55:21 ——
+Simulazione...
+✅ Simulazione riuscita (gas stimato 30076).
+Conferma in MetaMask...
+Transazione inviata: 0x6dc0b6a18d587f16e7b21984716cf6f90747c80746dbba7d3b7589ff56b1a03e
+https://snowscan.xyz/tx/0x6dc0b6a18d587f16e7b21984716cf6f90747c80746dbba7d3b7589ff56b1a03e
+In attesa di conferma...
+✅ Confermata.
+Account attivo in MetaMask: 0x406f822aC86b61d4cDf4cD84833f7e5561609C02
+—— 16:57:00 ——
+Configurazione della UP 0x4a2605796e0d91A9667d6E30365aEEC384C48c27
+Firma: 0x406f822aC86b61d4cDf4cD84833f7e5561609C02 · Key Manager: 0x309fcE7B6a96CeF8fCbF926a006CDc6f21Ff280e · una sola transazione (executeBatch):
+1. setDataBatch:
+   - estensione per validateUserOp (0x3a871cdd) → 0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2
+   - permessi dell'EntryPoint 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789 → 0x000500 (SUPER_CALL, SUPER_TRANSFERVALUE; niente SETDATA)
+2. Permessi finali del controller: 0x7f3f06 → 0xff3f06 (quelli di prima + 4337)
+Se una parte fallisce, l'intera transazione viene annullata e non cambia niente.
+Simulazione...
+✅ Simulazione riuscita (gas stimato 58593).
+❌ L'account attivo non ha abbastanza gas: servono circa 0.00073241001098615 AVAX, ha 0.0 AVAX.
+(second identical attempt at 16:57:33 omitted; then the backup was funded)
+—— 16:58:36 ——
+(same plan)
+✅ Simulazione riuscita (gas stimato 58593).
+Conferma in MetaMask...
+Transazione inviata: 0xac93e9b4afd01aa1410425d3bd7ec6f43cc00d55f18087498c60574d265cc8aa
+https://snowscan.xyz/tx/0xac93e9b4afd01aa1410425d3bd7ec6f43cc00d55f18087498c60574d265cc8aa
+In attesa di conferma...
+✅ Confermata.
+✅ Verifica finale: estensione registrata, EntryPoint con i permessi previsti, permesso 4337 al controller, nessun altro permesso cambiato.
