@@ -470,7 +470,7 @@ const I18N = {
     txSent: (v) => `Transazione inviata: ${v.hash}`,
     waiting: "In attesa di conferma...",
     txOk: "✅ Confermata.",
-    txUnknown: "⚠️ Dopo 5 minuti l'RPC non mostra ancora la transazione: controlla l'esito sull'explorer (link sopra) prima di riprovare.",
+    txUnknown: "⚠️ Dopo un minuto l'RPC non mostra ancora la transazione: controlla l'esito sull'explorer (link sopra) prima di riprovare.",
     txFailed: "❌ La transazione è fallita.",
     genericError: (v) => `Errore: ${v.err}`,
     publishedAt: (v) => `✅ Pubblicato a ${v.addr}, codice verificato.`,
@@ -699,7 +699,7 @@ const I18N = {
     txSent: (v) => `Transaction sent: ${v.hash}`,
     waiting: "Waiting for confirmation...",
     txOk: "✅ Confirmed.",
-    txUnknown: "⚠️ After 5 minutes the RPC still does not show the transaction: check the outcome on the explorer (link above) before trying again.",
+    txUnknown: "⚠️ After a minute the RPC still does not show the transaction: check the outcome on the explorer (link above) before trying again.",
     txFailed: "❌ The transaction failed.",
     genericError: (v) => `Error: ${v.err}`,
     publishedAt: (v) => `✅ Published at ${v.addr}, code verified.`,
@@ -1130,7 +1130,7 @@ async function sendTx(tx, label) {
   const explorerUrl = getExplorerUrl(s.netInfo, EXPLORER_PATH, sent.hash);
   if (explorerUrl) log(explorerUrl, "line-dim");
   log(t("waiting"), "line-dim");
-  const receipt = await waitReceipt(s.provider, sent.hash);
+  const receipt = await waitReceipt(s.provider, sent.hash, signer.provider);
   if (!receipt) { log(t("txUnknown"), "line-warn"); return null; }
   if (receipt.status !== 1) { log(t("txFailed"), "line-err"); return null; }
   log(t("txOk"), "line-ok");

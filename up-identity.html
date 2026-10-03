@@ -251,7 +251,7 @@ const I18N = {
     pubTx: (v) => `Tx: ${v.hash}`,
     pubWaiting: "In attesa di conferma...",
     pubTxFailed: "❌ La transazione è stata inclusa ma è fallita: il profilo non è cambiato.",
-    pubNoReceipt: "⚠️ Nessuna conferma entro 5 minuti. La transazione può ancora essere inclusa: controlla sull'explorer prima di riprovare.",
+    pubNoReceipt: "⚠️ Nessuna conferma entro un minuto. La transazione può ancora essere inclusa: controlla sull'explorer prima di riprovare.",
     pubOk: "✅ Profilo pubblicato: su questa rete LSP3Profile ora è identico a quello di LUKSO.",
     pubVerifyBad: (v) => `⚠️ Transazione confermata, ma la rilettura non corrisponde: ${v.what}. Rileggi il profilo tra poco.`,
     pubError: (v) => `Errore: ${v.err}`,
@@ -351,7 +351,7 @@ const I18N = {
     pubTx: (v) => `Tx: ${v.hash}`,
     pubWaiting: "Waiting for confirmation...",
     pubTxFailed: "❌ The transaction was included but failed: the profile did not change.",
-    pubNoReceipt: "⚠️ No confirmation within 5 minutes. The transaction can still be included: check the explorer before trying again.",
+    pubNoReceipt: "⚠️ No confirmation within a minute. The transaction can still be included: check the explorer before trying again.",
     pubOk: "✅ Profile published: on this network LSP3Profile is now identical to LUKSO's.",
     pubVerifyBad: (v) => `⚠️ Transaction confirmed, but the re-read does not match: ${v.what}. Read the profile again in a moment.`,
     pubError: (v) => `Error: ${v.err}`,
@@ -794,14 +794,16 @@ $("pubBtn").addEventListener("click", async () => {
     const url = getExplorerUrl(r.netDef, "/tx/", tx.hash);
     if (url) pubLog(url, "line-dim");
     pubLog(t("pubWaiting"), "line-dim");
-    const receipt = await waitReceipt(provider, tx.hash);
+    const receipt = await waitReceipt(provider, tx.hash, signer.provider);
     if (!receipt) { pubLog(t("pubNoReceipt"), "line-warn"); return; }
     if (receipt.status !== 1) { pubLog(t("pubTxFailed"), "line-err"); return; }
     // Public RPCs are load-balanced: read at the receipt's block, retrying while a node lags behind.
     let got = null;
     for (let i = 0; i < 6; i++) {
       if (i) await new Promise(res => setTimeout(res, 1500));
-      try { got = await new ethers.Contract(up, UP_W_IFACE, provider).getData(LSP3_KEY, { blockTag: receipt.blockNumber }); } catch (e) { got = null; }
+      // At the receipt's block; if the RPC refuses a read at a past block, at the latest one.
+      const upC = new ethers.Contract(up, UP_W_IFACE, provider);
+      try { got = await upC.getData(LSP3_KEY, { blockTag: receipt.blockNumber }); } catch (e) { got = await upC.getData(LSP3_KEY).catch(() => null); }
       if (got && got.toLowerCase() === value.toLowerCase()) break;
     }
     if (got && got.toLowerCase() === value.toLowerCase()) pubLog(t("pubOk"), "line-ok");
