@@ -121,6 +121,8 @@ The controller signs the user operation hash with `personal_sign`, so MetaMask w
 
 ## Extension4337 (LUKSO, published by this project at a deterministic address)
 
+**Status:** experimental, never audited (LUKSO dev chat, 2026-10-03).
+
 `Extension4337.json` holds LUKSO's `Extension4337` exactly as released in `@lukso/lsp-smart-contracts` 0.17.4 (`artifacts/Extension4337.json`; the Solidity source is in `@lukso/lsp17-contracts`, `contracts/Extension4337.sol`). It is the LSP17 extension that lets a UP answer the EntryPoint's `validateUserOp` (selector `0x3a871cdd`):
 - it recovers the signer from the user operation hash with `personal_sign` semantics;
 - it requires the signer to hold the 4337 permission (`0x800000`);
