@@ -445,6 +445,7 @@ function renderNetworkOptions(filter) {
 renderNetworkOptions("");
 const presetNetworkKey = new URLSearchParams(location.search).get("network");
 if (presetNetworkKey && CHAINS.some(c => c.key === presetNetworkKey)) networkSelectEl.value = presetNetworkKey;
+{ const u = new URLSearchParams(location.search).get("up"); if (u && ethers.isAddress(u)) $("upAddress").value = ethers.getAddress(u); }
 
 function getNetwork() {
   const c = CHAINS.find(x => x.key === networkSelectEl.value);

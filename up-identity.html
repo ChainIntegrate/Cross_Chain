@@ -19,6 +19,7 @@
 <script src="backup-check.js"></script>
 <script src="config.js"></script>
 <script src="asset-list.js"></script>
+<script src="gas-relay-client.js"></script>
 <style>
   :root {
     --bg: #0f1115; --panel: #171a21; --border: #2a2f3a; --field: #10131a; --chip: #2a2f3a; --disabled: #3a3f4b; --raised: #1d2330;
@@ -67,6 +68,9 @@
   .badge.warn { background: rgba(224,168,60,0.15); color: var(--warn); }
   .ctrl { background: var(--field); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; margin-top: 8px; font-size: 12.5px; }
   .ctrl .addr { font-family: monospace; word-break: break-all; }
+  .cap { background: var(--field); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; margin-top: 8px; font-size: 12.5px; line-height: 1.55; }
+  .cap .t { font-weight: 700; }
+  .cap a { color: var(--accent); text-decoration: none; }
   .assets { background: var(--field); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; font-size: 13px; }
   .assets .where { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); }
   .assets .native { font-size: 15px; font-weight: 700; margin-top: 4px; }
@@ -142,6 +146,9 @@
   <div class="note" data-i18n="panel4Note"></div>
   <div class="status" id="ctrlStatus"></div>
   <div id="ctrlList"></div>
+  <h3 style="font-size:13.5px; margin:18px 0 6px;" data-i18n="capTitle">Cosa può fare la UP su questa rete</h3>
+  <div class="note" data-i18n="capNote"></div>
+  <div id="capList"></div>
 </div>
 
 <div class="panel" id="pubPanel" hidden>
@@ -225,6 +232,31 @@ const I18N = {
     roleAdmin: "controller amministratore: firma qualsiasi operazione e gestisce i controller",
     roleLimited: "controller con permessi limitati",
     roleBad: "voce non valida",
+    capTitle: "Cosa può fare la UP su questa rete",
+    capNote: "Letto dai dati della UP su questa rete: ogni funzione si attiva una volta per rete, dalla pagina indicata.",
+    capReading: "Lettura...",
+    capFail: (v) => `Non letto: ${v.err}`,
+    capLspT: "Token e NFT LUKSO (LSP7, LSP8)",
+    capLspOk: "✅ Sì: il Universal Receiver Delegate registra i token ricevuti nella lista LSP5 della UP.",
+    capLspNo: "⚠️ Nessun Universal Receiver Delegate: i token LSP7/LSP8 arrivano lo stesso, ma la UP non li registra nella sua lista.",
+    capNftT: "NFT ERC-721 ed ERC-1155",
+    capNftOk: "✅ Sì: estensione di ricezione 0x7F68…C03e registrata, con codice verificato.",
+    capNftOther: (v) => `⚠️ Sì, ma con un'altra estensione (${v.addr}), non verificata da questa pagina.`,
+    capNftPartial: (v) => `⚠️ Solo in parte: manca ${v.missing}. Rifalla dalla pagina NFT.`,
+    capNftNo: "❌ No: un NFT ERC-721 inviato con safeTransferFrom, o un ERC-1155, viene rifiutato. Gli acquisti su OpenSea falliscono.",
+    capNftLink: "→ Attiva la ricezione degli NFT (pagina NFT)",
+    capGasT: "Gas pagato dal relayer del sito (ERC-4337)",
+    capGasNo: "Non configurato su questa rete: il controller paga il gas di ogni operazione.",
+    capGasOk: (v) => `✅ UP configurata: Extension4337 registrata, EntryPoint con esattamente 0x500 (chiamate e invii, niente dati né permessi). Firmano: ${v.signers}.`,
+    capGasNoSigner: "⚠️ Extension4337 ed EntryPoint a posto, ma nessun controller ha il permesso 4337: nessuno può firmare.",
+    capGasEpBad: (v) => `❌ L'EntryPoint ha permessi ${v.p}, non esattamente 0x500: controlla subito dalla pagina gas relay (AUDIT G-M2).`,
+    capGasPartial: (v) => `⚠️ Configurazione incompleta: ${v.what}.`,
+    capGasWhatExt: "Extension4337 mancante o diversa",
+    capGasWhatEp: "EntryPoint non tra i controller",
+    capGasReady: (v) => `✅ Relayer del sito attivo su questa rete: la UP è nella lista del paymaster ${v.pm}, tetto ${v.cap} per operazione, deposito ${v.dep}.`,
+    capGasNotReady: (v) => `⚠️ La UP è nella lista del paymaster ${v.pm}, ma: ${v.why}.`,
+    capGasNoRelay: "Il relayer del sito non serve questa rete, o la UP non è nella lista di un suo paymaster.",
+    capGasLink: "→ Configura il gas relay (pagina gas relay)",
     panel6Title: "6 · Allinea il profilo a LUKSO su questa rete",
     panel6Note: "Copia su questa rete il profilo che la UP ha oggi su LUKSO: <b>una transazione</b> firmata da un controller della UP su questa rete, che paga il gas. Scrive solo la chiave <b>LSP3Profile</b>, con lo stesso valore di LUKSO: lo stesso file e lo stesso hash. Non cambia l'indirizzo della UP né i controller. Non è automatico: se poi cambi il profilo su LUKSO, qui resta questa versione finché non ripubblichi. Serve un controller con il permesso SUPER_SETDATA, oppure SETDATA con la chiave LSP3Profile tra quelle consentite.",
     pubConnectBtn: "Connetti il controller della UP (MetaMask)",
@@ -325,6 +357,31 @@ const I18N = {
     roleAdmin: "admin controller: signs any operation and manages the controllers",
     roleLimited: "controller with limited permissions",
     roleBad: "invalid entry",
+    capTitle: "What the UP can do on this network",
+    capNote: "Read from the UP's data on this network: each feature is enabled once per network, from the page shown.",
+    capReading: "Reading...",
+    capFail: (v) => `Not read: ${v.err}`,
+    capLspT: "LUKSO tokens and NFTs (LSP7, LSP8)",
+    capLspOk: "✅ Yes: the Universal Receiver Delegate records received tokens in the UP's LSP5 list.",
+    capLspNo: "⚠️ No Universal Receiver Delegate: LSP7/LSP8 tokens still arrive, but the UP does not record them in its list.",
+    capNftT: "ERC-721 and ERC-1155 NFTs",
+    capNftOk: "✅ Yes: receiver extension 0x7F68…C03e registered, code verified.",
+    capNftOther: (v) => `⚠️ Yes, but with another extension (${v.addr}), not verified by this page.`,
+    capNftPartial: (v) => `⚠️ Only partly: ${v.missing} missing. Redo it from the NFT page.`,
+    capNftNo: "❌ No: an ERC-721 sent with safeTransferFrom, or an ERC-1155, is refused. OpenSea purchases fail.",
+    capNftLink: "→ Enable NFT reception (NFT page)",
+    capGasT: "Gas paid by the site relayer (ERC-4337)",
+    capGasNo: "Not set up on this network: the controller pays the gas of every operation.",
+    capGasOk: (v) => `✅ UP set up: Extension4337 registered, EntryPoint with exactly 0x500 (calls and transfers, no data or permissions). Signers: ${v.signers}.`,
+    capGasNoSigner: "⚠️ Extension4337 and EntryPoint are fine, but no controller has the 4337 permission: nobody can sign.",
+    capGasEpBad: (v) => `❌ The EntryPoint has permissions ${v.p}, not exactly 0x500: check it now from the gas relay page (AUDIT G-M2).`,
+    capGasPartial: (v) => `⚠️ Incomplete setup: ${v.what}.`,
+    capGasWhatExt: "Extension4337 missing or different",
+    capGasWhatEp: "EntryPoint not among the controllers",
+    capGasReady: (v) => `✅ Site relayer active on this network: the UP is on paymaster ${v.pm}'s list, cap ${v.cap} per operation, deposit ${v.dep}.`,
+    capGasNotReady: (v) => `⚠️ The UP is on paymaster ${v.pm}'s list, but: ${v.why}.`,
+    capGasNoRelay: "The site relayer does not serve this network, or the UP is not on one of its paymasters' lists.",
+    capGasLink: "→ Set up the gas relay (gas relay page)",
     panel6Title: "6 · Align the profile with LUKSO on this network",
     panel6Note: "Copies to this network the profile the UP has on LUKSO today: <b>one transaction</b> signed by a controller of the UP on this network, which pays the gas. It writes only the <b>LSP3Profile</b> key, with the same value as on LUKSO: the same file and the same hash. It changes neither the UP's address nor its controllers. It is not automatic: if you later change the profile on LUKSO, this network keeps this version until you publish again. It needs a controller with SUPER_SETDATA, or SETDATA with the LSP3Profile key among the allowed ones.",
     pubConnectBtn: "Connect the UP's controller (MetaMask)",
@@ -626,6 +683,7 @@ function renderAssets(box, where, net, a) {
 }
 function renderCtrl(c) {
   $("ctrlPanel").hidden = false;
+  if (last) renderCaps(last.caps, last.netDef, last.up);
   if (c.err) { setStatus("ctrlStatus", t("ctrlFail", { err: c.err }), "line-err"); $("ctrlList").innerHTML = ""; return; }
   setStatus("ctrlStatus", c.hasBackup ? t("ctrlBackupOk") : t("ctrlBackupNo"), c.hasBackup ? "line-ok" : "line-warn");
   const box = $("ctrlList"); box.innerHTML = "";
@@ -679,6 +737,89 @@ function loadAssets(my, net, rn, rl, up) {
   };
   one("net", rn, net.key);
   one("lukso", rl, LUKSO.key);
+}
+
+// ==================== WHAT THE UP CAN DO (section 4) ====================
+// Read-only, from the UP's ERC725Y data on the chosen network: LSP7/LSP8 recording (URD), ERC-721/1155
+// reception (LSP17 extension), gas relay (Extension4337, EntryPoint permissions, 4337 signers) and
+// whether the site relayer and one of its paymasters serve this UP.
+const NFT_EXT = "0x7F68e74483867058C806218aa05aB5527984C03e";
+const NFT_EXT_HASH = "0xed365f94b64256c4c81311071c739de4a006d09676dc9e2bd5cd49b346ddb955";
+const NFT_SELECTORS = [["0x150b7a02", "onERC721Received"], ["0xf23a6e61", "onERC1155Received"], ["0xbc197c81", "onERC1155BatchReceived"]];
+const EXT_4337 = "0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2";
+const EXT_4337_HASH = "0x91968b95ee6f8e01a554060b775c13e8df3f0173d87a55a48ed54b8ff02c052d";
+const VALIDATE_USER_OP_SEL = "0x3a871cdd";
+const LSP17 = (sel) => "0xcee78b4094da860110960000" + sel.slice(2) + "00".repeat(16);
+const ERC4337_BIT = 1n << 23n;
+async function readCaps(provider, up, chainId, ctrl) {
+  const upC = new ethers.Contract(up, UP_W_IFACE, provider);
+  const keys = NFT_SELECTORS.map(([sel]) => LSP17(sel)).concat([LSP17(VALIDATE_USER_OP_SEL)]);
+  const vals = await upC.getDataBatch(keys);
+  const addrOf = (v) => (v && ethers.dataLength(v) === 20 ? ethers.getAddress(v) : null);
+  const hashOf = async (a) => { const c = await provider.getCode(a); return c === "0x" ? null : ethers.keccak256(c); };
+  const out = {};
+  // LSP7/LSP8: the URD is read by BackupCheck (key LSP1UniversalReceiverDelegate).
+  out.lsp = !!(ctrl && ctrl.urd && (await provider.getCode(ctrl.urd)) !== "0x");
+  // ERC-721 / ERC-1155
+  const nft = NFT_SELECTORS.map(([, name], i) => ({ name, addr: addrOf(vals[i]) }));
+  const set = nft.filter(x => x.addr);
+  if (!set.length) out.nft = { state: "no" };
+  else if (set.length < nft.length) out.nft = { state: "partial", missing: nft.filter(x => !x.addr).map(x => x.name).join(", ") };
+  else if (set.every(x => x.addr === NFT_EXT) && (await hashOf(NFT_EXT)) === NFT_EXT_HASH) out.nft = { state: "ok" };
+  else out.nft = { state: "other", addr: [...new Set(set.map(x => x.addr))].join(", ") };
+  // Gas relay: the UP side
+  const ext = addrOf(vals[3]);
+  const extOk = ext === EXT_4337 && (await hashOf(EXT_4337)) === EXT_4337_HASH;
+  const ep = ctrl && ctrl.controllers ? ctrl.controllers.find(c => c.role === "entrypoint") : null;
+  const signers = ctrl && ctrl.controllers ? ctrl.controllers.filter(c => c.role === "controller" && (c.perms & ERC4337_BIT)).map(c => c.address) : [];
+  if (!ext && !ep) out.gas = { state: "no" };
+  else if (ep && ep.perms !== 0x500n) out.gas = { state: "epBad", p: "0x" + ep.perms.toString(16) };
+  else if (!extOk || !ep) out.gas = { state: "partial", what: [!extOk ? t("capGasWhatExt") : null, !ep ? t("capGasWhatEp") : null].filter(Boolean).join("; ") };
+  else out.gas = { state: signers.length ? "ok" : "noSigner", signers };
+  // Gas relay: the site's relayer and paymaster (only meaningful once the UP side exists)
+  if (out.gas.state !== "no") {
+    try {
+      const r = await GasRelayClient.check(provider, { chainId, up, signer: null });
+      const why = (r.reasons || []).filter(x => x[0] !== "noSigner").map(x => GasRelayClient.text(x[0], x[1]));
+      out.relay = r.state === "none" ? { state: "none" } : why.length ? { state: "notReady", pm: r.pm, why: why.join("; ") } : { state: "ready", pm: r.pm };
+      if (out.relay.state === "ready") {
+        const pm = new ethers.Contract(r.pm, ["function maxCostPerOp() view returns (uint256)"], provider);
+        const ep6 = new ethers.Contract(GasRelayClient.ENTRY_POINT, ["function balanceOf(address) view returns (uint256)"], provider);
+        [out.relay.cap, out.relay.dep] = await Promise.all([pm.maxCostPerOp(), ep6.balanceOf(r.pm)]);
+      }
+    } catch (e) { out.relay = { state: "none" }; }
+  }
+  return out;
+}
+function renderCaps(c, netDef, up) {
+  const box = $("capList"); box.innerHTML = "";
+  if (!c) { box.append(el("div", "line-dim", t("capReading"))); return; }
+  if (c.err) { box.append(el("div", "line-err", t("capFail", { err: c.err }))); return; }
+  const cur = netDef.currency && netDef.currency !== "?" ? " " + netDef.currency : "";
+  const q = new URLSearchParams({ up }); if (netDef.key && netDef.key !== "custom") q.set("network", netDef.key);
+  const item = (title, lines, link) => {
+    const d = el("div", "cap"); d.append(el("div", "t", title));
+    lines.forEach(([txt, cls]) => d.append(el("div", cls || "", txt)));
+    if (link) { const a = el("a", "", link[0]); a.href = link[1] + "?" + q.toString(); a.target = "_blank"; a.rel = "noopener"; d.append(a); }
+    box.append(d);
+  };
+  item(t("capLspT"), [[c.lsp ? t("capLspOk") : t("capLspNo"), c.lsp ? "line-ok" : "line-warn"]]);
+  const n = c.nft;
+  item(t("capNftT"), [[n.state === "ok" ? t("capNftOk") : n.state === "other" ? t("capNftOther", n) : n.state === "partial" ? t("capNftPartial", n) : t("capNftNo"),
+    n.state === "ok" ? "line-ok" : n.state === "no" ? "line-err" : "line-warn"]], n.state === "ok" ? null : [t("capNftLink"), "up-nft-receiver.html"]);
+  const g = c.gas, lines = [];
+  if (g.state === "no") lines.push([t("capGasNo"), "line-dim"]);
+  else if (g.state === "epBad") lines.push([t("capGasEpBad", g), "line-err"]);
+  else if (g.state === "partial") lines.push([t("capGasPartial", g), "line-warn"]);
+  else if (g.state === "noSigner") lines.push([t("capGasNoSigner"), "line-warn"]);
+  else lines.push([t("capGasOk", { signers: g.signers.join(", ") }), "line-ok"]);
+  if (c.relay) {
+    const r = c.relay;
+    if (r.state === "ready") lines.push([t("capGasReady", { pm: r.pm, cap: ethers.formatEther(r.cap) + cur, dep: ethers.formatEther(r.dep) + cur }), "line-ok"]);
+    else if (r.state === "notReady") lines.push([t("capGasNotReady", r), "line-warn"]);
+    else lines.push([t("capGasNoRelay"), "line-dim"]);
+  }
+  item(t("capGasT"), lines, g.state === "ok" && c.relay && c.relay.state === "ready" ? null : [t("capGasLink"), "up-gas-relay.html"]);
 }
 
 // ==================== 6. PUBLISH (align LSP3Profile with LUKSO) ====================
@@ -844,8 +985,14 @@ $("readBtn").addEventListener("click", async () => {
     let ctrl;
     try { ctrl = await BackupCheck.read(rn.provider, up); } catch (e) { ctrl = { err: e.shortMessage || e.message }; }
     if (my !== readSeq) return;
-    last = { seq: my, up, netName, netDef, net: rn, lukso: rl, ctrl };
+    last = { seq: my, up, netName, netDef, net: rn, lukso: rl, ctrl, caps: null };
     render(last);
+    if (!ctrl.err) {
+      let caps;
+      try { caps = await readCaps(rn.provider, up, rn.chainId, ctrl); } catch (e) { caps = { err: e.shortMessage || e.message }; }
+      if (my !== readSeq || !last || last.seq !== my) return;
+      last.caps = caps; renderCaps(caps, netDef, up);
+    }
   } finally {
     if (my === readSeq) $("readBtn").disabled = false;
   }
