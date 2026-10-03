@@ -16,6 +16,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="chains.js"></script>
 <script src="backup-check.js"></script>
+<script src="config.js"></script>
+<script src="asset-list.js"></script>
 <style>
   :root {
     --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
@@ -64,6 +66,15 @@
   .badge.warn { background: rgba(224,168,60,0.15); color: var(--warn); }
   .ctrl { background: #10131a; border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; margin-top: 8px; font-size: 12.5px; }
   .ctrl .addr { font-family: monospace; word-break: break-all; }
+  .assets { background: #10131a; border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; font-size: 13px; }
+  .assets .where { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); }
+  .assets .native { font-size: 15px; font-weight: 700; margin-top: 4px; }
+  .asset { border-top: 1px solid var(--border); padding: 7px 0; word-break: break-word; }
+  .asset .kind { display: inline-block; padding: 1px 6px; border-radius: 4px; background: #2a2f3a; font-size: 11px; font-family: monospace; margin-right: 6px; }
+  .asset .addr { font-family: monospace; font-size: 11.5px; color: var(--text-dim); word-break: break-all; }
+  .asset .addr a { color: var(--text-dim); }
+  .assets details { margin-top: 8px; }
+  .assets summary { cursor: pointer; color: var(--text-dim); font-size: 12.5px; }
   .site-footer { margin-top: 40px; padding: 18px 20px; background: #f5f6f8; border: 1px solid #e3e5ea; border-radius: 10px; color: #4b4f58; }
   .footer-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
   .footer-logo { height: 48px; width: auto; flex-shrink: 0; }
@@ -123,6 +134,15 @@
   <div class="note" data-i18n="panel4Note"></div>
   <div class="status" id="ctrlStatus"></div>
   <div id="ctrlList"></div>
+</div>
+
+<div class="panel" id="assetPanel" hidden>
+  <h2 data-i18n="panel5Title">5 · Token e NFT</h2>
+  <div class="note" data-i18n-html="panel5Note"></div>
+  <div class="cols" style="margin-top:12px;">
+    <div class="assets" id="assetsNet"></div>
+    <div class="assets" id="assetsLukso"></div>
+  </div>
 </div>
 
 <div class="site-footer">
@@ -187,6 +207,22 @@ const I18N = {
     roleAdmin: "controller amministratore: firma qualsiasi operazione e gestisce i controller",
     roleLimited: "controller con permessi limitati",
     roleBad: "voce non valida",
+    panel5Title: "5 · Token e NFT",
+    panel5Note: "Quello che la UP possiede su ciascuna rete: la valuta della rete, i token e NFT LUKSO (LSP7, LSP8) dalla lista <b>LSP5ReceivedAssets</b> della UP, letta dalla blockchain, e gli altri token e NFT (ERC-20, ERC-721, ERC-1155) da un <b>indicizzatore</b> (Alchemy o Blockscout), che può essere incompleto. I contratti segnalati come spam sono raccolti a parte. Nessun token qui è stato verificato come autentico: un nome o un simbolo può imitare quello di un altro token.",
+    assetsReading: "Lettura di token e NFT...",
+    assetsFail: (v) => `Token e NFT non letti: ${v.err}`,
+    nativeBal: (v) => `${v.amount} ${v.cur}`,
+    nativeFail: (v) => `Saldo ${v.cur} non letto: ${v.err}`,
+    assetsNone: "Nessun token o NFT trovato.",
+    nftCount: (v) => `${v.n} NFT`,
+    nftIds: (v) => `ID: ${v.ids}${v.more ? " …" : ""}`,
+    unreadable: "saldo non leggibile",
+    spamSummary: (v) => `Probabile spam (${v.n})`,
+    srcLsp5: (v) => `LSP5 della UP (blockchain): ${v.n} contratti registrati${v.cut ? `, letti i primi ${v.max}` : ""}.`,
+    srcLsp5Fail: (v) => `LSP5 non letto: ${v.err}`,
+    srcIndexer: (v) => `${v.name} (indicizzatore): ${v.n} voci.`,
+    srcIndexerFail: (v) => `${v.name} non raggiungibile: ${v.err}. Si vedono solo valuta e LSP5.`,
+    srcNoIndexer: "Nessun indicizzatore per questa rete: si vedono solo valuta e LSP5 (token LUKSO). Per ERC-20 e NFT serve una rete coperta da Alchemy o Blockscout.",
     footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a>`,
   },
   en: {
@@ -238,6 +274,22 @@ const I18N = {
     roleAdmin: "admin controller: signs any operation and manages the controllers",
     roleLimited: "controller with limited permissions",
     roleBad: "invalid entry",
+    panel5Title: "5 · Tokens and NFTs",
+    panel5Note: "What the UP holds on each network: the network's currency, LUKSO tokens and NFTs (LSP7, LSP8) from the UP's <b>LSP5ReceivedAssets</b> list, read from the chain, and the other tokens and NFTs (ERC-20, ERC-721, ERC-1155) from an <b>indexer</b> (Alchemy or Blockscout), which can be incomplete. Contracts flagged as spam are grouped apart. No token here is verified as genuine: a name or symbol can imitate another token's.",
+    assetsReading: "Reading tokens and NFTs...",
+    assetsFail: (v) => `Tokens and NFTs not read: ${v.err}`,
+    nativeBal: (v) => `${v.amount} ${v.cur}`,
+    nativeFail: (v) => `${v.cur} balance not read: ${v.err}`,
+    assetsNone: "No tokens or NFTs found.",
+    nftCount: (v) => `${v.n} NFT${v.n === "1" ? "" : "s"}`,
+    nftIds: (v) => `IDs: ${v.ids}${v.more ? " …" : ""}`,
+    unreadable: "balance not readable",
+    spamSummary: (v) => `Likely spam (${v.n})`,
+    srcLsp5: (v) => `The UP's LSP5 (chain): ${v.n} contracts registered${v.cut ? `, first ${v.max} read` : ""}.`,
+    srcLsp5Fail: (v) => `LSP5 not read: ${v.err}`,
+    srcIndexer: (v) => `${v.name} (indexer): ${v.n} entries.`,
+    srcIndexerFail: (v) => `${v.name} not reachable: ${v.err}. Only the currency and LSP5 are shown.`,
+    srcNoIndexer: "No indexer for this network: only the currency and LSP5 (LUKSO tokens) are shown. ERC-20 and NFTs need a network covered by Alchemy or Blockscout.",
     footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a>`,
   },
 };
@@ -256,7 +308,7 @@ $("langToggle").addEventListener("click", () => { LANG = LANG === "it" ? "en" : 
 // ==================== CONSTANTS ====================
 const LSP3_KEY = "0x5ef83ad9559033e6e941db7d7c495acdce616347d28e90c7ce47cbfcfcad3bc5"; // keccak256("LSP3Profile")
 const KECCAK_UTF8 = "0x6f357c6a"; // LSP2 verification method keccak256(utf8)
-const LUKSO = { name: "LUKSO", chainId: 42, rpc: "https://rpc.mainnet.lukso.network" };
+const LUKSO = { key: "lukso", name: "LUKSO", chainId: 42, rpc: "https://rpc.mainnet.lukso.network", explorerBase: "https://explorer.execution.mainnet.lukso.network", currency: "LYX" };
 // LUKSO's gateway first (it serves the profiles' files), then ChainIntegrate's node (it serves only what it
 // pins), then a public gateway. Each file and each image is tried on them in this order.
 const IPFS_GATEWAYS = ["https://api.universalprofile.cloud/ipfs/", "https://ipfs.chainintegrate.it/ipfs/", "https://ipfs.io/ipfs/"];
@@ -432,6 +484,55 @@ function render(r) {
   else if (hasNet && !hasLukso) setStatus("compare", t("luksoEmptyOnly"), "line-dim");
   else setStatus("compare", "", "");
   if (r.ctrl) renderCtrl(r.ctrl);
+  const a = assets.seq === r.seq ? assets : {};
+  renderAssets($("assetsNet"), t("where", { net: r.netName }), r.netDef, a.net);
+  renderAssets($("assetsLukso"), t("whereLukso"), LUKSO, a.lukso);
+}
+// One column of section 5. `a` is undefined while reading, null when there is no UP on that network.
+function renderAssets(box, where, net, a) {
+  box.innerHTML = "";
+  box.append(el("div", "where", where));
+  if (a === undefined) { box.append(el("div", "line-dim", t("assetsReading"))); return; }
+  if (a === null) { box.append(el("div", "line-dim", t("notDeployed", { net: net.name }))); return; }
+  if (a.failed) { box.append(el("div", "line-err", t("assetsFail", { err: a.failed }))); return; }
+  const cur = net.currency || "";
+  if (a.native !== null) box.append(el("div", "native", t("nativeBal", { amount: ethers.formatEther(a.native), cur })));
+  else box.append(el("div", "line-err", t("nativeFail", { cur, err: a.errors.native })));
+  const row = (r) => {
+    const d = el("div", "asset");
+    const head = el("div");
+    head.append(el("span", "kind", r.type));
+    const title = [r.name, r.symbol ? `(${r.symbol})` : ""].filter(Boolean).join(" ") || "?";
+    head.append(document.createTextNode(title));
+    d.append(head);
+    if (r.unreadable) d.append(el("div", "line-warn", t("unreadable")));
+    else if (r.amount !== undefined) d.append(el("div", "", r.amount + (r.symbol ? " " + r.symbol : "")));
+    else {
+      d.append(el("div", "", t("nftCount", { n: r.count })));
+      if (r.ids && r.ids.length) d.append(el("div", "line-dim", t("nftIds", { ids: r.ids.join(", "), more: Number(r.count) > r.ids.length })));
+    }
+    const ad = el("div", "addr");
+    const url = getExplorerUrl(net, "/address/", r.address);
+    if (url) { const l = el("a", "", r.address); l.href = url; l.target = "_blank"; l.rel = "noopener noreferrer"; ad.append(l); } else ad.textContent = r.address;
+    d.append(ad);
+    return d;
+  };
+  const good = a.rows.filter(r => !r.spam), spam = a.rows.filter(r => r.spam);
+  if (!a.rows.length) box.append(el("div", "line-dim", t("assetsNone")));
+  good.forEach(r => box.append(row(r)));
+  if (spam.length) {
+    const det = el("details"); det.append(el("summary", "", t("spamSummary", { n: spam.length })));
+    spam.forEach(r => det.append(row(r)));
+    box.append(det);
+  }
+  const src = [];
+  src.push(a.errors.lsp5 ? [t("srcLsp5Fail", { err: a.errors.lsp5 }), "line-warn"]
+    : [t("srcLsp5", { n: a.lsp5Total, cut: a.lsp5Total > AssetList.MAX_ASSETS, max: AssetList.MAX_ASSETS }), "line-dim"]);
+  const ixName = a.indexer && (a.indexer.kind === "alchemy" ? "Alchemy" : "Blockscout");
+  if (!a.indexer) src.push([t("srcNoIndexer"), "line-dim"]);
+  else if (a.indexer.err) src.push([t("srcIndexerFail", { name: ixName, err: a.indexer.err }), "line-warn"]);
+  else src.push([t("srcIndexer", { name: ixName, n: a.indexer.rows.length }), "line-dim"]);
+  src.forEach(([txt, cls]) => { const m = el("div", "meta " + cls, txt); m.style.cssText = "font-size:11.5px; margin-top:8px;"; box.append(m); });
 }
 function renderCtrl(c) {
   $("ctrlPanel").hidden = false;
@@ -446,6 +547,26 @@ function renderCtrl(c) {
     d.append(el("div", "line-dim", `${role} · 0x${x.perms.toString(16)}`));
     box.appendChild(d);
   });
+}
+
+// Section 5: both networks read in parallel; each column fills in when its read finishes.
+// Results are kept by read (seq), so a column that finishes before the profile is rendered is not lost.
+let assets = { seq: 0 };
+function loadAssets(my, net, rn, rl, up) {
+  $("assetPanel").hidden = false;
+  assets = { seq: my };
+  const one = (side, p, key) => {
+    const done = (a) => {
+      if (assets.seq !== my) return;
+      assets[side] = a;
+      if (last && last.seq === my) render(last);
+    };
+    if (p.state === "noUp") { done(null); return; }
+    if (!p.provider) { done({ failed: p.err || "RPC" }); return; }
+    AssetList.list(p.provider, up, key).then(done, (e) => done({ failed: e.message }));
+  };
+  one("net", rn, net.key);
+  one("lukso", rl, LUKSO.key);
 }
 
 $("readBtn").addEventListener("click", async () => {
@@ -466,12 +587,14 @@ $("readBtn").addEventListener("click", async () => {
     if (rn.state === "rpc") { setStatus("status", t("rpcWrong", { id: rn.id, exp: net.chainId }), "line-err"); return; }
     if (rl.state === "noUp") rl.lukso = true;
     const netName = net.chainId ? net.name : `${t("customNetName")} (chainId ${rn.chainId})`;
-    if (rn.state === "noUp") { setStatus("status", t("notDeployed", { net: netName }), "line-err"); last = { netName, net: rn, lukso: rl }; render(last); $("ctrlPanel").hidden = true; return; }
+    const netDef = { ...net, name: netName };
+    loadAssets(my, net, rn, rl, up);
+    if (rn.state === "noUp") { setStatus("status", t("notDeployed", { net: netName }), "line-err"); last = { seq: my, netName, netDef, net: rn, lukso: rl }; render(last); $("ctrlPanel").hidden = true; return; }
     setStatus("status", "", "");
     let ctrl;
     try { ctrl = await BackupCheck.read(rn.provider, up); } catch (e) { ctrl = { err: e.shortMessage || e.message }; }
     if (my !== readSeq) return;
-    last = { netName, net: rn, lukso: rl, ctrl };
+    last = { seq: my, netName, netDef, net: rn, lukso: rl, ctrl };
     render(last);
   } finally {
     if (my === readSeq) $("readBtn").disabled = false;

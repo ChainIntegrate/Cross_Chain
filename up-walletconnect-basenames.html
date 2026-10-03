@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex, nofollow">
-<title>UP WalletConnect — Basenames demo — ChainIntegrate</title>
+<title>DEPRECATED — UP WalletConnect — Basenames demo — ChainIntegrate</title>
 <link rel="icon" href="favicon.ico">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="vendor/walletkit-1.6.0.min.js"></script>
@@ -68,6 +68,19 @@
 
 <div class="brand-row">
   <img src="banner.png" alt="ChainIntegrate" class="brand-logo" onerror="this.style.display='none'">
+</div>
+
+<div class="panel" style="border-color: var(--err); background: rgba(224,90,90,0.12);">
+  <h2 style="color: var(--err);">Deprecata — non usare · Deprecated — do not use</h2>
+  <div style="font-size:14px; line-height:1.5;">
+    Esperimento chiuso: la prima versione del ponte WalletConnect, limitata a Basenames su Base. Resta nel repository solo
+    come riferimento, non viene più aggiornata e tutte le sue azioni sono disattivate. Per collegare la tua UP a una dApp usa
+    <a href="up-wallet.html" style="color: var(--accent);">UP Wallet</a>.
+    <br><br>
+    Closed experiment: the first version of the WalletConnect bridge, limited to Basenames on Base. It stays in the repository
+    for reference only, is no longer updated and all its actions are disabled. To connect your UP to a dApp, use
+    <a href="up-wallet.html" style="color: var(--accent);">UP Wallet</a>.
+  </div>
 </div>
 
 <div class="top-row">
@@ -167,7 +180,7 @@ const BASE_REGISTRAR = "0x03c4738Ee98aE44591e1A4A4F3CaB6641d95DD9a"; // ERC-721 
 let LANG = "it";
 const I18N = {
   it: {
-    pageTitle: "UP WalletConnect — demo Basenames — ChainIntegrate",
+    pageTitle: "DEPRECATED — UP WalletConnect — demo Basenames — ChainIntegrate",
     h1: "UP WalletConnect — demo Basenames",
     subtitle: "Usa la tua Universal Profile rideployata su Base come account su Basenames (base.org/names): la dApp vede l'indirizzo della UP, il tuo controller firma.",
     langToggleBtn: "English",
@@ -282,7 +295,7 @@ const I18N = {
     footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a>`,
   },
   en: {
-    pageTitle: "UP WalletConnect — Basenames demo — ChainIntegrate",
+    pageTitle: "DEPRECATED — UP WalletConnect — Basenames demo — ChainIntegrate",
     h1: "UP WalletConnect — Basenames demo",
     subtitle: "Use your Universal Profile redeployed on Base as the account on Basenames (base.org/names): the dApp sees the UP address, your controller signs.",
     langToggleBtn: "Italiano",
@@ -410,6 +423,11 @@ function applyI18n() {
 }
 $("langToggle").addEventListener("click", () => { LANG = LANG === "it" ? "en" : "it"; applyI18n(); });
 
+// Deprecated page: every action is disabled (only the language button works). Kept for reference
+// only, no longer maintained; use up-wallet.html. No WalletConnect session is ever created here.
+const DEPRECATED = true;
+document.querySelectorAll("button, input, textarea, select").forEach(el => { if (el.id !== "langToggle") el.disabled = true; });
+
 // ==================== HELPERS ====================
 // All data coming from the dApp, wallets or RPCs is written with textContent, never innerHTML.
 function setStatus(id, text, cls) {
@@ -463,6 +481,7 @@ async function estimateMaxGasPrice() {
 let upAddress = null, kmAddress = null;
 
 $("connectUp").addEventListener("click", async () => {
+  if (DEPRECATED) return;
   if (!window.lukso) { setStatus("upStatus", t("extNotFound"), "line-err"); return; }
   try {
     const accounts = await window.lukso.request({ method: "eth_requestAccounts" });
@@ -476,6 +495,7 @@ function resetUp() { upAddress = null; kmAddress = null; setStatus("upStatus", t
 $("upAddress").addEventListener("input", resetUp);
 
 $("checkUpBtn").addEventListener("click", async () => {
+  if (DEPRECATED) return;
   resetUp();
   const raw = $("upAddress").value.trim();
   if (!ethers.isAddress(raw)) { setStatus("upStatus", t("invalidUp"), "line-err"); return; }
@@ -501,6 +521,7 @@ window.addEventListener("eip6963:announceProvider", (e) => discoveredProviders.p
 window.dispatchEvent(new Event("eip6963:requestProvider"));
 
 $("connectSigner").addEventListener("click", async () => {
+  if (DEPRECATED) return;
   let candidate = discoveredProviders.find(p => !/lukso|universal profile/i.test(p.info.name))?.provider;
   if (!candidate && window.ethereum && window.ethereum !== window.lukso) candidate = window.ethereum;
   if (!candidate) { setStatus("signerStatus", t("noSignerFound"), "line-err"); return; }
@@ -563,6 +584,7 @@ function showSessions() {
 const riskAccepted = () => $("ackRisk").checked;
 
 $("pairBtn").addEventListener("click", async () => {
+  if (DEPRECATED) return;
   const uri = $("wcUri").value.trim();
   if (!riskAccepted()) { setStatus("wcStatus", t("ackRequired"), "line-err"); return; }
   if (!upAddress) { setStatus("wcStatus", t("checkUpFirst"), "line-err"); return; }
@@ -878,6 +900,7 @@ async function handleSignRequest(topic, id, chainId, request, verifyContext) {
 }
 
 $("signBtn").addEventListener("click", async () => {
+  if (DEPRECATED) return;
   if (!pending || pending.kind !== "sign") return;
   if (!riskAccepted()) { log(t("ackRequired"), "line-err"); return; }
   const p = pending;
@@ -928,6 +951,7 @@ $("rejectBtn").addEventListener("click", async () => {
 });
 
 $("sendBtn").addEventListener("click", async () => {
+  if (DEPRECATED) return;
   if (!pending || pending.kind !== "tx") return;
   if (!riskAccepted()) { log(t("ackRequired"), "line-err"); return; }
   const p = pending;
