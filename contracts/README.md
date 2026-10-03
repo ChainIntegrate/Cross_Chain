@@ -26,7 +26,7 @@ It is published through Nick's deterministic deployment proxy, with a fixed salt
 
 ### Where it is published
 
-Published and source-verified on LUKSO mainnet, Base and Polygon, at the same address:
+Published and source-verified on LUKSO mainnet, Base, Polygon and Avalanche C-Chain, at the same address (full status in [Source verification status](#source-verification-status)):
 - [LUKSO explorer](https://explorer.execution.mainnet.lukso.network/address/0x7F68e74483867058C806218aa05aB5527984C03e)
 - [Basescan](https://basescan.org/address/0x7F68e74483867058C806218aa05aB5527984C03e#code)
 - [Polygonscan](https://polygonscan.com/address/0x7F68e74483867058C806218aa05aB5527984C03e#code)
@@ -57,13 +57,13 @@ LSP6 checks each payload when it runs, so the three steps work in one transactio
 - `supportsInterface` reports both receiver interfaces;
 - the controller's permissions are unchanged.
 
-## UPPaymaster (experimental, not published)
+## UPPaymaster (experimental)
 
 `UPPaymaster.sol` is an [ERC-4337](https://eips.ethereum.org/EIPS/eip-4337) paymaster for EntryPoint v0.6. It pays the gas of user operations sent by Universal Profiles on its allowlist, and of nothing else. It is the "who pays?" contract of the planned gas relayer: controllers sign, a relayer sends, the paymaster pays from its deposit, and the controllers never need gas.
 
 **License:** GPL-3.0 (since 2026-10-03; it was MIT), because it is built on the GPL-3.0 ERC-4337 interfaces of `@account-abstraction/contracts`. Only the header changed: the compiled code is identical, so the address and the already verified source (which still shows the MIT header on Basescan) are the same contract. New verifications show GPL-3.0.
 
-**Status:** experimental and unaudited. Published on Base for the ChainIntegrate cassa (owner `0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9`): `0xb353565d1f801E7402DBC267b8C0E30E3540D4eD`, [source verified on Basescan](https://basescan.org/address/0xb353565d1f801E7402DBC267b8C0E30E3540D4eD#code). The first sponsored operation succeeded on 2026-09-30. Keep deposits small.
+**Status:** experimental and unaudited. Published on Base, Polygon and Avalanche C-Chain (same address) for the ChainIntegrate cassa (owner `0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9`): `0xb353565d1f801E7402DBC267b8C0E30E3540D4eD`, [source verified on Basescan](https://basescan.org/address/0xb353565d1f801E7402DBC267b8C0E30E3540D4eD#code). The first sponsored operation succeeded on 2026-09-30. Keep deposits small.
 
 **What it does**
 - `validatePaymasterUserOp` accepts an operation only if the sender UP is on the allowlist and the operation cannot cost more than `maxCostPerOp`. It reads only storage keyed by the sender.
@@ -163,3 +163,23 @@ To verify:
 2. **Sourcify** (sourcify.dev): choose the chain (Base 8453, Polygon 137), the address, and import the standard JSON. A code-identical contract with different metadata is accepted as a **partial match**, publicly visible.
 
 `UPPaymaster.json` also records the paymaster's runtime code hash with the canonical EntryPoint. It is the same for every owner, because the owner lives in storage and the EntryPoint in an immutable. The page checks it the same way.
+
+## Source verification status
+
+The three contracts have the same address on every network. Status on 2026-10-03:
+
+| Contract | Basescan | Polygonscan | Snowscan (Avalanche) | Base Blockscout | Polygon Blockscout | LUKSO explorer |
+|---|---|---|---|---|---|---|
+| NFTReceiverExtension `0x7F68e74483867058C806218aa05aB5527984C03e` | ✅ | ✅ | ✅ | ✅ partial | ✅ partial | ✅ |
+| UPPaymaster `0xb353565d1f801E7402DBC267b8C0E30E3540D4eD` | ✅ | ✅ | ✅ | ⏳ to do | ⏳ to do | — not published |
+| Extension4337 `0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2` | ✅ | ✅ | ✅ | ✅ | ✅ | — (LUKSO's own) |
+
+"Partial" on Blockscout is the best possible result for NFTReceiverExtension and UPPaymaster: they are compiled without the metadata hash (so the address is the same everywhere), and Blockscout can then match the code but not the metadata. On Blockscout the verification runs in the background: if the page seems stuck after "Verify & publish", reload it a few minutes later.
+
+Parameters, the same on every explorer (method "Solidity (Standard-JSON input)"; constructor arguments without `0x`, only if asked):
+
+| Contract | File | Compiler | License | Constructor arguments |
+|---|---|---|---|---|
+| NFTReceiverExtension | `NFTReceiverExtension.input.json` | v0.8.24+commit.e11b9ed9 | MIT | none |
+| UPPaymaster | `UPPaymaster.input.json` | v0.8.24+commit.e11b9ed9 | GPL-3.0 | `0000000000000000000000005ff137d4b0fdcd49dca30c7cf57e578a026d27890000000000000000000000006c5d0fa04ae90371e809114e9c3932ea7a3715c9` (EntryPoint v0.6, owner) |
+| Extension4337 | `Extension4337.input.json` | v0.8.17+commit.8df45f5f | Apache-2.0 | `0000000000000000000000005ff137d4b0fdcd49dca30c7cf57e578a026d2789` (EntryPoint v0.6) |
