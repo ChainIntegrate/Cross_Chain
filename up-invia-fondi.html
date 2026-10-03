@@ -1382,7 +1382,7 @@ $("checkBtn").addEventListener("click", withBusy(async () => {
       if (ready.state !== "ready") { log(t("relayNotReadyLog"), "line-err"); relayOption.refresh(); return; }
       const fmtCur = (w) => `${ethers.formatEther(w)} ${net.currency || ""}`.trim();
       let prep;
-      try { prep = await GasRelayClient.prepare(provider, { up: ethers.getAddress(profile.address), ready, to: plan.to, value: plan.value, data: plan.data, fmt: fmtCur }); }
+      try { prep = await GasRelayClient.prepare(provider, { chainId: chains.chainId, up: ethers.getAddress(profile.address), ready, to: plan.to, value: plan.value, data: plan.data, fmt: fmtCur }); }
       catch (e) {
         log(e.message, "line-err");
         if (NFT_KINDS.includes(plan.kind) && recipientIsContract) log(t("nftRecipientHint"), "line-warn");
@@ -1471,7 +1471,7 @@ $("sendBtn").addEventListener("click", withBusy(async () => {
       const fmtCur = (w) => `${ethers.formatEther(w)} ${net.currency || ""}`.trim();
       const ready = await GasRelayClient.check(provider, { chainId: checkedContext.chainId, up: plan.up, signer: ethers.getAddress(checkedContext.signer) });
       if (ready.state !== "ready") { log(t("relayNotReadyLog"), "line-err"); return; }
-      const prep = await GasRelayClient.prepare(provider, { up: plan.up, ready, to: plan.to, value: plan.value, data: plan.data, fmt: fmtCur });
+      const prep = await GasRelayClient.prepare(provider, { chainId: checkedContext.chainId, up: plan.up, ready, to: plan.to, value: plan.value, data: plan.data, fmt: fmtCur });
       log(prep.plan, "line-dim");
       const hash = await GasRelayClient.signAndSend(signerProvider, { chainId: checkedContext.chainId, prep, signer: checkedContext.signer, log });
       const explorerUrl = getExplorerUrl(net, EXPLORER_PATH, hash);

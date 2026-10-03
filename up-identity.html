@@ -257,8 +257,9 @@ $("langToggle").addEventListener("click", () => { LANG = LANG === "it" ? "en" : 
 const LSP3_KEY = "0x5ef83ad9559033e6e941db7d7c495acdce616347d28e90c7ce47cbfcfcad3bc5"; // keccak256("LSP3Profile")
 const KECCAK_UTF8 = "0x6f357c6a"; // LSP2 verification method keccak256(utf8)
 const LUKSO = { name: "LUKSO", chainId: 42, rpc: "https://rpc.mainnet.lukso.network" };
-// ChainIntegrate's IPFS node first (public reading, uploads only from allowed IPs), then public gateways.
-const IPFS_GATEWAYS = ["https://ipfs.chainintegrate.it/ipfs/", "https://api.universalprofile.cloud/ipfs/", "https://ipfs.io/ipfs/"];
+// LUKSO's gateway first (it serves the profiles' files), then ChainIntegrate's node (it serves only what it
+// pins), then a public gateway. Each file and each image is tried on them in this order.
+const IPFS_GATEWAYS = ["https://api.universalprofile.cloud/ipfs/", "https://ipfs.chainintegrate.it/ipfs/", "https://ipfs.io/ipfs/"];
 const UP_ABI = ["function getData(bytes32) view returns (bytes)"];
 
 // ==================== NETWORK ====================
@@ -341,8 +342,20 @@ async function fetchBytes(uri) {
   }
   throw lastErr || new Error("fetch");
 }
-// For images: a plain URL to show, only for ipfs:// (through our gateway) and https://.
-function imageUrl(uri) { const u = urlsFor(uri || ""); return u.length ? u[0] : null; }
+// Images: tried on each gateway in turn; the first that loads becomes the element's background.
+// Only ipfs:// (through a gateway) and https:// are used, set through the DOM, never as HTML.
+function setImage(elem, uri) {
+  const urls = urlsFor(uri || "");
+  const next = (i) => {
+    if (i >= urls.length) return;
+    const img = new Image();
+    img.referrerPolicy = "no-referrer";
+    img.onload = () => { elem.style.backgroundImage = `url("${encodeURI(urls[i])}")`; };
+    img.onerror = () => next(i + 1);
+    img.src = urls[i];
+  };
+  next(0);
+}
 
 // Reads LSP3Profile on one network: { state: "noUp" | "none" | "bad" | "fetchFail" | "ok" | "hashBad", ... }
 async function readProfile(net, up) {
@@ -369,8 +382,8 @@ function setStatus(id, text, cls) { const el = $(id); el.className = "status " +
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 function pickImage(list, want) {
   if (!Array.isArray(list) || !list.length) return null;
-  const sorted = [...list].filter(i => i && i.url).sort((a, b) => Math.abs((a.width || want) - want) - Math.abs((b.width || want) - want));
-  return sorted.length ? imageUrl(sorted[0].url) : null;
+  const sorted = [...list].filter(i => i && typeof i.url === "string").sort((a, b) => Math.abs((a.width || want) - want) - Math.abs((b.width || want) - want));
+  return sorted.length ? sorted[0].url : null;
 }
 function renderCard(box, where, p) {
   box.innerHTML = "";
@@ -385,9 +398,8 @@ function renderCard(box, where, p) {
   if (p.state === "hashBad") { body.append(el("div", "desc line-err", t("hashBad")), el("div", "meta", t("source", { uri: p.uri }))); return; }
   const j = p.json || {};
   const bgUrl = pickImage(j.backgroundImage, 800), avUrl = pickImage(j.profileImage, 256);
-  // URLs only from ipfs:// (through a gateway) or https://, set as CSS through the DOM, never as HTML.
-  if (bgUrl) bg.style.backgroundImage = `url("${encodeURI(bgUrl)}")`;
-  if (avUrl) av.style.backgroundImage = `url("${encodeURI(avUrl)}")`;
+  if (bgUrl) setImage(bg, bgUrl);
+  if (avUrl) setImage(av, avUrl);
   body.append(el("div", "name", typeof j.name === "string" && j.name ? j.name : t("noName")));
   if (typeof j.description === "string" && j.description) body.append(el("div", "desc", j.description.slice(0, 2000)));
   if (Array.isArray(j.links) && j.links.length) {

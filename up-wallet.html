@@ -196,16 +196,18 @@ const WALLETCONNECT_PROJECT_ID = (window.CROSSCHAIN_CONFIG && window.CROSSCHAIN_
 // Built-in chains: shared chains.js. Explorer links to transactions use the "/tx/" path.
 const EXPLORER_PATH = "/tx/";
 
-// LSP6 permission bits, as in @lukso/lsp6-contracts LSP6Constants.sol (bits 0..22).
+// LSP6 permission bits, as in @lukso/lsp6-contracts LSP6Constants.sol (bits 0..22), plus ERC4337 (bit 23).
 const PERMISSION_BITS = [
   "CHANGEOWNER","ADDCONTROLLER","EDITPERMISSIONS","ADDEXTENSIONS","CHANGEEXTENSIONS",
   "ADDUNIVERSALRECEIVERDELEGATE","CHANGEUNIVERSALRECEIVERDELEGATE","REENTRANCY",
   "SUPER_TRANSFERVALUE","TRANSFERVALUE","SUPER_CALL","CALL","SUPER_STATICCALL","STATICCALL",
   "SUPER_DELEGATECALL","DELEGATECALL","DEPLOY","SUPER_SETDATA","SETDATA","ENCRYPT","DECRYPT",
-  "SIGN","EXECUTE_RELAY_CALL"
+  "SIGN","EXECUTE_RELAY_CALL","ERC4337"
 ];
 const P = Object.fromEntries(PERMISSION_BITS.map((n, i) => [n, 1n << BigInt(i)]));
-const PRIVILEGED = P.CHANGEOWNER | P.ADDCONTROLLER | P.EDITPERMISSIONS | P.SUPER_DELEGATECALL | P.DELEGATECALL;
+// ERC4337: a 32-byte personal_sign by this controller authorizes an operation of the UP (AUDIT 2026-10-02 H-2).
+const PRIVILEGED = P.CHANGEOWNER | P.ADDCONTROLLER | P.EDITPERMISSIONS | P.SUPER_DELEGATECALL | P.DELEGATECALL | P.ERC4337;
+const VALIDATE_USER_OP = "0x3a871cdd";
 const PERM_PREFIX = "0x4b80742de2bf82acb3630000"; // LSP6 AddressPermissions:Permissions:<address>
 const ERC1271_MAGIC = "0x1626ba7e";
 const PERMIT2 = "0x000000000022d473030f116ddee9f6b43ac78ba3";
@@ -427,6 +429,7 @@ const I18N = {
     verifyBad: (v) => `❌ WalletConnect segnala il sito come non affidabile (${v.v}): richiesta rifiutata.`,
     verifyWarn: (v) => `⚠️ Verifica del dominio WalletConnect: ${v.v}. Non è confermato che la richiesta venga dal sito dichiarato.`,
     verifyOk: "✅ Verifica del dominio WalletConnect: VALID.",
+    sign32Refused: "❌ Firma rifiutata: il messaggio è di 32 byte (un hash). Per questa UP, con il gas relay attivo (ERC-4337), la firma di 32 byte del controller vale come autorizzazione a spendere dalla UP: il sito potrebbe usarla per svuotarla. Le firme di hash si fanno solo dalle pagine di questo sito (Invio fondi, UP Wallet con il relayer), mai per una dApp.",
     signOpaque: "⚠️ Il contenuto NON è leggibile: è un hash o dati binari. Non puoi sapere cosa autorizzi. Se non sai esattamente a cosa serve, rifiuta.",
     signPermit: "⚠️⚠️ Questo messaggio sembra un PERMESSO A SPENDERE TOKEN (Permit/Permit2): chi lo riceve può spostare token della UP senza altre conferme. Firma solo se sai esattamente perché.",
     signOrder: "⚠️⚠️ Questo messaggio sembra un ORDINE (per esempio di vendita): chi lo esegue può trasferire beni della UP alle condizioni scritte. Controlla ogni campo.",
@@ -600,6 +603,7 @@ const I18N = {
     verifyBad: (v) => `❌ WalletConnect flags the site as untrusted (${v.v}): request rejected.`,
     verifyWarn: (v) => `⚠️ WalletConnect domain verification: ${v.v}. It is not confirmed that the request comes from the declared site.`,
     verifyOk: "✅ WalletConnect domain verification: VALID.",
+    sign32Refused: "❌ Signature refused: the message is 32 bytes (a hash). For this UP, with the gas relay enabled (ERC-4337), a 32-byte signature by the controller is an authorization to spend from the UP: the site could use it to drain it. Hash signatures are made only by this site's own pages (Send, UP Wallet with the relayer), never for a dApp.",
     signOpaque: "⚠️ The content is NOT readable: it is a hash or binary data. You cannot know what you are authorising. Unless you know exactly what it is for, reject it.",
     signPermit: "⚠️⚠️ This message looks like a PERMISSION TO SPEND TOKENS (Permit/Permit2): whoever receives it can move the UP's tokens without further confirmation. Only sign if you know exactly why.",
     signOrder: "⚠️⚠️ This message looks like an ORDER (for example a sale): whoever executes it can transfer the UP's assets on the stated terms. Check every field.",
@@ -1258,7 +1262,7 @@ async function handleSendTransaction(topic, id, c, tx, validation, reject) {
       if (ready.state !== "ready") return reject(t("relayNotReady"));
       log(t("simulating"), "line-dim");
       let prep;
-      try { prep = await GasRelayClient.prepare(c.provider, { up: c.up, ready, to, value, data, fmt: (w) => `${ethers.formatEther(w)} ${cur}`.trim() }); }
+      try { prep = await GasRelayClient.prepare(c.provider, { chainId: c.chainId, up: c.up, ready, to, value, data, fmt: (w) => `${ethers.formatEther(w)} ${cur}`.trim() }); }
       catch (e) { return reject(e.message); }
       log(t("relaySimOk"), "line-ok");
       log(prep.plan, "line-dim");
@@ -1330,7 +1334,7 @@ $("sendBtn").addEventListener("click", busyWrap(async () => {
       if (ready.state !== "ready") return fail(t("relayNotReady"), "Relayer not available");
       let prep, hash;
       try {
-        prep = await GasRelayClient.prepare(c.provider, { up: c.up, ready, to: p.target, value: p.value, data: p.data, fmt: fmtCur });
+        prep = await GasRelayClient.prepare(c.provider, { chainId: c.chainId, up: c.up, ready, to: p.target, value: p.value, data: p.data, fmt: fmtCur });
         log(prep.plan, "line-dim");
         hash = await GasRelayClient.signAndSend(signerProvider, { chainId: c.chainId, prep, signer: c.signer, log });
       } catch (e) { return fail(e.message, "Relayed operation not sent"); }
@@ -1402,6 +1406,12 @@ async function handleSignRequest(topic, id, c, request, validation, reject) {
       account = swapped ? a : b;
       if (typeof message !== "string") throw new Error("missing message");
       const bytes = ethers.isHexString(message) ? ethers.getBytes(message) : ethers.toUtf8Bytes(message);
+      // Extension4337 accepts personal_sign(userOpHash): with 4337 on this UP or this controller, a 32-byte
+      // personal_sign is an authorization to spend from the UP, whatever the dApp says it is for (AUDIT H-2).
+      if (bytes.length === 32) {
+        const ext = await new ethers.Contract(c.up, ["function getData(bytes32) view returns (bytes)"], c.provider).getData(LSP17_KEY(VALIDATE_USER_OP)).catch(() => "0x?");
+        if ((c.perms & P.ERC4337) || (ext && ext !== "0x")) return reject(t("sign32Refused"));
+      }
       const text = readableText(bytes);
       hash = ethers.hashMessage(bytes);
       walletParams = ethers.hexlify(bytes);

@@ -9,6 +9,7 @@
 <link rel="icon" href="favicon.ico">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="chains.js"></script>
+<script src="gas-relay-client.js"></script>
 <style>
   :root {
     --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
@@ -1351,7 +1352,10 @@ $("signOpBtn").addEventListener("click", () => guarded(async () => {
   const maxCost = (OP_GAS.call + OP_GAS.verification * 3n + op.preVerificationGas) * fees.maxFee;
   if (maxCost > s.cap) { log(t("opOverCap", { maxCost: fmt(maxCost, s.cur), cap: fmt(s.cap, s.cur) }), "line-err"); return; }
   if (maxCost > s.deposit) { log(t("opLowDeposit", { maxCost: fmt(maxCost, s.cur), deposit: fmt(s.deposit, s.cur) }), "line-err"); return; }
-  const hash = await ep.getUserOpHash(op);
+  // The hash to sign is computed in the page (gas-relay-client.js, same formula as the relayer); the
+  // EntryPoint's answer through the RPC is only a cross-check (AUDIT 2026-10-02 H-1).
+  const hash = GasRelayClient.userOpHash(op, s.chainId);
+  if ((await ep.getUserOpHash(op)).toLowerCase() !== hash.toLowerCase()) { log(GasRelayClient.text("hashMismatch"), "line-err"); return; }
   const text = t("opPlan", { ep: ENTRY_POINT, up: s.upAddr, amount: fmt(amount, s.cur), to: ethers.getAddress(to), nonce: op.nonce.toString(), pm: s.pmAddr, pvg: op.preVerificationGas.toString(),
     maxCost: fmt(maxCost, s.cur), cap: fmt(s.cap, s.cur), deposit: fmt(s.deposit, s.cur), hash });
   setStatus("opBox", text, "");
