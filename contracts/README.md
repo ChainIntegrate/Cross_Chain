@@ -61,6 +61,8 @@ LSP6 checks each payload when it runs, so the three steps work in one transactio
 
 `UPPaymaster.sol` is an [ERC-4337](https://eips.ethereum.org/EIPS/eip-4337) paymaster for EntryPoint v0.6. It pays the gas of user operations sent by Universal Profiles on its allowlist, and of nothing else. It is the "who pays?" contract of the planned gas relayer: controllers sign, a relayer sends, the paymaster pays from its deposit, and the controllers never need gas.
 
+**License:** GPL-3.0 (since 2026-10-03; it was MIT), because it is built on the GPL-3.0 ERC-4337 interfaces of `@account-abstraction/contracts`. Only the header changed: the compiled code is identical, so the address and the already verified source (which still shows the MIT header on Basescan) are the same contract. New verifications show GPL-3.0.
+
 **Status:** experimental and unaudited. Published on Base for the ChainIntegrate cassa (owner `0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9`): `0xb353565d1f801E7402DBC267b8C0E30E3540D4eD`, [source verified on Basescan](https://basescan.org/address/0xb353565d1f801E7402DBC267b8C0E30E3540D4eD#code). The first sponsored operation succeeded on 2026-09-30. Keep deposits small.
 
 **What it does**
