@@ -157,6 +157,31 @@
 </div>
 
 <div class="panel">
+  <h2 data-i18n="vpmTitle">3b · Paymaster di sponsorizzazione (con la cassa)</h2>
+  <div class="note" data-i18n-html="vpmNote"></div>
+  <div class="status-box" id="vpmBox"><span class="empty" data-i18n="notChecked">Non ancora verificato.</span></div>
+  <button id="publishVpmBtn" disabled data-i18n="publishVpmBtn">Pubblica il paymaster di sponsorizzazione su questa rete</button>
+  <div class="row">
+    <div><label for="vpmFundAmount" data-i18n="fundLabel">Ricarica (valuta nativa della rete)</label><input type="text" id="vpmFundAmount" placeholder="0.001"></div>
+    <button id="vpmFundBtn" disabled data-i18n="fundBtn">Ricarica</button>
+  </div>
+  <div class="row">
+    <div><label for="vpmSigner" data-i18n="vpmSignerLabel">Firmatario (la chiave del servizio di sponsorizzazione)</label><input type="text" id="vpmSigner" placeholder="0x..."></div>
+    <button id="vpmSignerBtn" disabled data-i18n="capBtn">Imposta</button>
+  </div>
+  <div class="row">
+    <div><label for="vpmCapAmount" data-i18n="capLabel">Tetto per operazione (valuta nativa)</label><input type="text" id="vpmCapAmount" placeholder="0.0003"></div>
+    <button id="vpmCapBtn" disabled data-i18n="capBtn">Imposta</button>
+  </div>
+  <div class="row">
+    <div><label for="vpmWithdrawTo" data-i18n="withdrawToLabel">Preleva verso</label><input type="text" id="vpmWithdrawTo" placeholder="0x..."></div>
+    <div><label for="vpmWithdrawAmount" data-i18n="withdrawAmountLabel">Importo</label><input type="text" id="vpmWithdrawAmount" placeholder="0.001"></div>
+    <button id="vpmWithdrawBtn" class="secondary" disabled data-i18n="withdrawBtn">Preleva</button>
+  </div>
+  <button id="vpmStopBtn" class="secondary" disabled data-i18n="vpmStopBtn">Ferma subito (firmatario a zero)</button>
+</div>
+
+<div class="panel">
   <h2 data-i18n="panel3Title">4 · La UP</h2>
   <h3 data-i18n="listTitle">Lista del paymaster · con la cassa</h3>
   <div class="note" data-i18n-html="listNote"></div>
@@ -218,7 +243,12 @@ const ENTRY_POINT = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
 const NICK_FACTORY = "0x4e59b44847b379578588920cA78FbF26c0B4956C";
 const SALT = "0x0000000000000000000000000000000000000000000000000000000000000000";
 // contracts/Extension4337.json and contracts/UPPaymaster.json: creation code, expected runtime hashes.
-let EXT = null, PMJ = null;
+let EXT = null, PMJ = null, VPMJ = null; // + contracts/UPVerifyingPaymaster.json
+const VPM_ABI = [
+  "function owner() view returns (address)", "function pendingOwner() view returns (address)", "function signer() view returns (address)",
+  "function maxCostPerOp() view returns (uint256)", "function deposit() view returns (uint256)",
+  "function setSigner(address signer)", "function setMaxCostPerOp(uint256 maxCost)", "function withdrawTo(address to, uint256 amount)",
+];
 const PM_ABI = [
   "function owner() view returns (address)", "function maxCostPerOp() view returns (uint256)",
   "function sponsored(address) view returns (bool)", "function deposit() view returns (uint256)",
@@ -373,6 +403,17 @@ const I18N = {
     withdrawToLabel: "Preleva verso",
     withdrawAmountLabel: "Importo",
     withdrawBtn: "Preleva",
+    vpmTitle: "3b · Paymaster di sponsorizzazione (con la cassa)",
+    vpmNote: "Un secondo paymaster, separato da quello della sezione 3: <b>non ha una lista</b>. Paga solo le operazioni approvate, una per una, dal <b>servizio di sponsorizzazione</b> del sito, che firma con la sua chiave (il <b>firmatario</b>). Il servizio decide quali UP e quante operazioni; il paymaster controlla la firma e il <b>tetto per operazione</b>, che limita il danno anche se la chiave del servizio venisse rubata. Stesso proprietario (la cassa), indirizzo diverso. Firmatario e tetto partono da zero: finché non li imposti non paga niente. <b>Ferma subito</b> toglie il firmatario: nessuna operazione viene più pagata. Le operazioni della UP non cambiano: stessa configurazione della sezione 4.",
+    publishVpmBtn: "Pubblica il paymaster di sponsorizzazione su questa rete",
+    vpmSignerLabel: "Firmatario (la chiave del servizio di sponsorizzazione)",
+    vpmStopBtn: "Ferma subito (firmatario a zero)",
+    kVpmSigner: "Firmatario", vpmNoSigner: "nessuno — non paga niente finché non lo imposti",
+    kVpmPending: "Proprietario proposto", kVpmSvc: "Relayer del sito",
+    vpmSvcYes: "usa questo paymaster per il servizio di sponsorizzazione",
+    vpmSvcOther: (v) => `usa un altro paymaster di sponsorizzazione (${v.addr})`,
+    vpmSvcNo: "non usa un paymaster di sponsorizzazione su questa rete",
+    vpmNeedOwner: "Scrivi il proprietario (la cassa) nella sezione 3.",
     panel3Title: "4 · La UP",
     listTitle: "Lista del paymaster · con la cassa", listNote: "Con la <b>cassa</b> attiva in MetaMask. <b>Aggiungi la UP alla lista</b> apre MetaMask, dopo qualche secondo, per confermare una transazione della cassa (costa pochissimo gas). Dopo la conferma qui sotto compare <b>La UP è nella lista</b>. Solo le UP nella lista possono usare il paymaster.", listIn: "✅ La UP è nella lista del paymaster.", listOut: "La UP non è nella lista: con la cassa attiva premi \"Aggiungi la UP alla lista\".", listNeed: "Servono un paymaster pubblicato (sezione 3) e l'indirizzo della UP.", setupTitle: "Configurazione della UP · con il controller",
     panel3Note: "Due passaggi, con account diversi:<br><b>1 · Pubblica l'Extension4337</b>, solo se qui sotto risulta <b>non pubblicata</b>: una volta per rete, poi vale per tutte le UP. <b>Può firmarla qualsiasi account</b>, per esempio la cassa: paga solo il gas e non ottiene nessun diritto sulle UP, perché il contratto è pubblico e uguale per tutti. In MetaMask la transazione va alla fabbrica di contratti standard <code>0x4e59b448…956C</code>, che può comparire senza nome o con caratteri strani: è normale.<br><b>2 · Configura la UP</b> con il <b>controller</b> della UP attivo in MetaMask (la chiave di genesi o il backup, <b>mai la cassa</b>): una sola transazione atomica del Key Manager, con un po' di gas pagato dal controller; se una parte fallisce, non cambia niente. Il controller che firma riceve il permesso 4337. Prima di firmare vedi l'elenco delle operazioni e la simulazione.",
@@ -606,6 +647,17 @@ const I18N = {
     withdrawToLabel: "Withdraw to",
     withdrawAmountLabel: "Amount",
     withdrawBtn: "Withdraw",
+    vpmTitle: "3b · Sponsor paymaster (with the cassa)",
+    vpmNote: "A second paymaster, separate from the one in section 3: <b>it has no list</b>. It pays only for the operations approved, one by one, by the site's <b>sponsor service</b>, which signs with its own key (the <b>signer</b>). The service decides which UPs and how many operations; the paymaster checks the signature and the <b>cap per operation</b>, which limits the damage even if the service's key were stolen. Same owner (the cassa), different address. Signer and cap start at zero: it pays nothing until you set both. <b>Stop now</b> removes the signer: no operation is paid any more. Nothing changes on the UP side: same setup as section 4.",
+    publishVpmBtn: "Publish the sponsor paymaster on this network",
+    vpmSignerLabel: "Signer (the sponsor service's key)",
+    vpmStopBtn: "Stop now (signer set to zero)",
+    kVpmSigner: "Signer", vpmNoSigner: "none — pays nothing until you set it",
+    kVpmPending: "Proposed owner", kVpmSvc: "Site relayer",
+    vpmSvcYes: "uses this paymaster for the sponsor service",
+    vpmSvcOther: (v) => `uses another sponsor paymaster (${v.addr})`,
+    vpmSvcNo: "uses no sponsor paymaster on this network",
+    vpmNeedOwner: "Enter the owner (the cassa) in section 3.",
     panel3Title: "4 · The UP",
     listTitle: "Paymaster allowlist · with the cassa", listNote: "With the <b>cassa</b> active in MetaMask. <b>Add the UP to the allowlist</b> opens MetaMask, after a few seconds, to confirm a transaction of the cassa (it costs very little gas). After the confirmation the box below says <b>The UP is on the allowlist</b>. Only UPs on the allowlist can use the paymaster.", listIn: "✅ The UP is on the paymaster allowlist.", listOut: "The UP is not on the allowlist: with the cassa active press \"Add the UP to the allowlist\".", listNeed: "It needs a published paymaster (section 3) and the UP address.", setupTitle: "UP setup · with the controller",
     panel3Note: "Two steps, with different accounts:<br><b>1 · Publish Extension4337</b>, only if the box below says <b>not published</b>: once per network, then it serves every UP. <b>Any account can sign it</b>, for example the cassa: it only pays the gas and gets no rights over any UP, because the contract is public and the same for everyone. In MetaMask the transaction goes to the standard contract factory <code>0x4e59b448…956C</code>, which may show no name or odd characters: that is normal.<br><b>2 · Set up the UP</b> with the UP's <b>controller</b> active in MetaMask (the genesis key or the backup, <b>never the cassa</b>): one atomic Key Manager transaction, with a little gas paid by the controller; if any part fails, nothing changes. The signing controller receives the 4337 permission. Before signing you see the list of operations and the simulation.",
@@ -940,7 +992,7 @@ async function freshState() {
 }
 
 async function computeState() {
-  const s = { net: [], pm: [], up: [], ok: false };
+  const s = { net: [], pm: [], vpm: [], up: [], ok: false };
   const net = getNetwork();
   if (!EXT || !PMJ) { s.net.push(["kNetwork", "contracts/*.json ?", "err"]); return s; }
   if (!net || !net.rpc) { s.net.push(["kNetwork", "RPC ?", "err"]); return s; }
@@ -1013,6 +1065,30 @@ async function computeState() {
     }
   }
 
+  // ---- sponsor paymaster (same owner, its own address)
+  if (owner) {
+    const vpmInit = ethers.concat([VPMJ.creationCode, enc(["address", "address"], [ENTRY_POINT, owner])]);
+    const vpmAddr = ethers.getCreate2Address(NICK_FACTORY, SALT, ethers.keccak256(vpmInit));
+    const vpmCode = await provider.getCode(vpmAddr);
+    const vpmState = vpmCode === "0x" ? "missing" : ethers.keccak256(vpmCode) === VPMJ.runtimeCodeHash ? "ok" : "wrong";
+    Object.assign(s, { vpmInit, vpmAddr, vpmState });
+    s.vpm.push(["kPmAddress", vpmAddr, ""]);
+    s.vpm.push(["kPmCode", [vpmState === "ok" ? "pmOk" : vpmState === "missing" ? "pmMissing" : "pmWrong"], vpmState === "ok" ? "ok" : vpmState === "missing" ? "warn" : "err"]);
+    if (vpmState === "ok") {
+      const v = new ethers.Contract(vpmAddr, VPM_ABI, provider);
+      const [vOwner, vPending, vSigner, vCap, vDep] = await Promise.all([v.owner(), v.pendingOwner(), v.signer(), v.maxCostPerOp(), v.deposit()]);
+      Object.assign(s, { vpmOwner: vOwner, vpmSigner: vSigner, vpmIsOwner: vOwner === signerAddress });
+      s.vpm.push(["kPmOwner", vOwner === owner ? owner : ["ownerMismatch", { owner: vOwner }], vOwner === owner ? "" : "err"]);
+      if (vPending !== ethers.ZeroAddress) s.vpm.push(["kVpmPending", vPending, "warn"]);
+      s.vpm.push(["kVpmSigner", vSigner === ethers.ZeroAddress ? ["vpmNoSigner"] : vSigner, vSigner === ethers.ZeroAddress ? "warn" : ""]);
+      s.vpm.push(["kPmCap", vCap > 0n ? fmt(vCap, s.cur) : ["capZero"], vCap > 0n ? "" : "warn"]);
+      s.vpm.push(["kPmDeposit", fmt(vDep, s.cur), vDep > 0n ? "" : "warn"]);
+      s.vpm.push(["kYou", [s.vpmIsOwner ? "youOwner" : "youNotOwner", { addr: signerAddress }], s.vpmIsOwner ? "ok" : "warn"]);
+      const sp = svc && svc.chains[String(chainId)] && svc.chains[String(chainId)].sponsorPaymaster;
+      s.vpm.push(["kVpmSvc", !sp ? ["vpmSvcNo"] : sp.toLowerCase() === vpmAddr.toLowerCase() ? ["vpmSvcYes"] : ["vpmSvcOther", { addr: sp }], sp && sp.toLowerCase() === vpmAddr.toLowerCase() ? "ok" : "warn"]);
+    }
+  }
+
   // ---- UP
   s.extState = extCode === "0x" ? "missing" : ethers.keccak256(extCode) === EXT.runtimeCodeHash ? "ok" : "wrong";
   const extRow = ["kExt", [s.extState === "ok" ? "extOk" : s.extState === "missing" ? "extMissing" : "extWrong", { addr: EXT.address }], s.extState === "ok" ? "ok" : s.extState === "missing" ? "warn" : "err"];
@@ -1079,6 +1155,7 @@ function render(s) {
   if (s.ok && s.pmState === "ok" && s.upAddr && s.sponsored !== undefined) setStatus("listBox", t(s.sponsored ? "listIn" : "listOut"), s.sponsored ? "line-ok" : "line-warn");
   else setStatus("listBox", s.ok ? t("listNeed") : t("notChecked"), "empty");
   if (s.pm.length) renderKv("pmBox", s.pm); else setStatus("pmBox", t("notChecked"), "empty");
+  if (s.vpm.length) renderKv("vpmBox", s.vpm); else setStatus("vpmBox", t(s.ok ? "vpmNeedOwner" : "notChecked"), "empty");
   if (s.up.length) renderKv("upBox", s.up); else setStatus("upBox", t("notChecked"), "empty");
 }
 function updateButtons() {
@@ -1089,6 +1166,11 @@ function updateButtons() {
   const own = ok && s.pmState === "ok" && s.isOwner;
   $("capBtn").disabled = !own;
   $("withdrawBtn").disabled = !own;
+  $("publishVpmBtn").disabled = !(ok && s.vpmState === "missing" && s.factoryOk);
+  $("vpmFundBtn").disabled = !(ok && s.vpmState === "ok");
+  const vOwn = ok && s.vpmState === "ok" && s.vpmIsOwner;
+  ["vpmSignerBtn", "vpmCapBtn", "vpmWithdrawBtn"].forEach(id => { $(id).disabled = !vOwn; });
+  $("vpmStopBtn").disabled = !(vOwn && s.vpmSigner && s.vpmSigner !== ethers.ZeroAddress);
   $("sponsorBtn").disabled = !(own && s.upAddr && !s.sponsored);
   $("unsponsorBtn").disabled = !(own && s.upAddr && s.sponsored);
   $("publishExtBtn").disabled = !(ok && s.extState === "missing" && s.factoryOk);
@@ -1190,6 +1272,41 @@ $("withdrawBtn").addEventListener("click", () => guarded(async () => {
   if (!ethers.isAddress(to)) { log(t("badAddress"), "line-err"); return; }
   if (!v) { log(t("badAmount"), "line-err"); return; }
   await ownerTx(pmData("withdrawTo", [ethers.getAddress(to), v]));
+}));
+
+// ---- sponsor paymaster
+$("publishVpmBtn").addEventListener("click", () => guarded(async () => {
+  const s = state; if (!s || s.vpmState !== "missing") return;
+  const r = await sendTx({ to: NICK_FACTORY, data: ethers.concat([SALT, s.vpmInit]) });
+  if (!r) return;
+  const h = await codeHashAt(r.s.provider, s.vpmAddr, r.receipt.blockNumber);
+  log(h === VPMJ.runtimeCodeHash ? t("publishedAt", { addr: s.vpmAddr }) : t("publishCheckFail", { addr: s.vpmAddr }), h === VPMJ.runtimeCodeHash ? "line-ok" : "line-warn");
+}));
+$("vpmFundBtn").addEventListener("click", () => guarded(async () => {
+  const v = amountWei("vpmFundAmount"); if (!v) { log(t("badAmount"), "line-err"); return; }
+  await sendTx({ to: state.vpmAddr, value: v });
+}));
+const vpmData = (fn, args) => new ethers.Interface(VPM_ABI).encodeFunctionData(fn, args);
+async function vpmOwnerTx(data) {
+  if (!state || !state.vpmIsOwner) { log(t("notOwner"), "line-err"); return; }
+  await sendTx({ to: state.vpmAddr, data });
+}
+$("vpmSignerBtn").addEventListener("click", () => guarded(async () => {
+  const a = $("vpmSigner").value.trim();
+  if (!ethers.isAddress(a)) { log(t("badAddress"), "line-err"); return; }
+  await vpmOwnerTx(vpmData("setSigner", [ethers.getAddress(a)]));
+}));
+$("vpmStopBtn").addEventListener("click", () => guarded(() => vpmOwnerTx(vpmData("setSigner", [ethers.ZeroAddress]))));
+$("vpmCapBtn").addEventListener("click", () => guarded(async () => {
+  let v; try { v = ethers.parseEther($("vpmCapAmount").value.trim()); } catch (e) { v = null; }
+  if (v === null || v < 0n) { log(t("badAmount"), "line-err"); return; }
+  await vpmOwnerTx(vpmData("setMaxCostPerOp", [v]));
+}));
+$("vpmWithdrawBtn").addEventListener("click", () => guarded(async () => {
+  const to = $("vpmWithdrawTo").value.trim(), v = amountWei("vpmWithdrawAmount");
+  if (!ethers.isAddress(to)) { log(t("badAddress"), "line-err"); return; }
+  if (!v) { log(t("badAmount"), "line-err"); return; }
+  await vpmOwnerTx(vpmData("withdrawTo", [ethers.getAddress(to), v]));
 }));
 
 // ---- UP setup: one atomic executeBatch
@@ -1586,8 +1703,8 @@ $("checkCfgBtn").addEventListener("click", async () => {
 
 // ==================== START ====================
 applyI18n();
-Promise.all([fetch("contracts/Extension4337.json").then(r => r.json()), fetch("contracts/UPPaymaster.json").then(r => r.json())])
-  .then(([e, p]) => { EXT = e; PMJ = p; onInputsChanged(); loadSvc(); })
+Promise.all(["Extension4337", "UPPaymaster", "UPVerifyingPaymaster"].map(n => fetch(`contracts/${n}.json`).then(r => r.json())))
+  .then(([e, p, v]) => { EXT = e; PMJ = p; VPMJ = v; onInputsChanged(); loadSvc(); })
   .catch((e) => setStatus("netBox", "contracts/*.json: " + e.message, "line-err"));
 </script>
 

@@ -5,7 +5,8 @@
 // them to the EntryPoint with handleOps, paying the transaction gas with its own key. The EntryPoint
 // reimburses it from the deposit of the paymaster named in the operation. It accepts only operations
 // that use one of the paymasters listed in its configuration, so it only works for the UPs those
-// paymasters sponsor.
+// paymasters sponsor. A chain can also name a "sponsor paymaster" (UPVerifyingPaymaster): operations
+// for it carry an approval signed by a separate signing service, which this relayer does not run.
 //
 // EXPERIMENTAL. See tools/relayer/README.md before running it.
 //
@@ -75,6 +76,8 @@ function readConfig(path) {
     if (!ch.rpc) throw new Error(`config: chain ${id} has no rpc`);
     if (!Array.isArray(ch.paymasters) || !ch.paymasters.length) throw new Error(`config: chain ${id} has no paymasters`);
     ch.paymasters = ch.paymasters.map((p) => ethers.getAddress(p));
+    // Optional: the UPVerifyingPaymaster whose approvals come from the signing service.
+    ch.sponsorPaymaster = ch.sponsorPaymaster ? ethers.getAddress(ch.sponsorPaymaster) : null;
     ch.minBalanceWarn = ch.minBalanceWarn ? ethers.parseEther(String(ch.minBalanceWarn)) : 0n;
   }
   return c;
@@ -98,6 +101,7 @@ function newKey(path) {
 }
 
 // ==================== user operation checks ====================
+const SPONSOR_DATA_BYTES = 97; // UPVerifyingPaymaster: address 20 + validUntil 6 + validAfter 6 + signature 65
 const UINT_FIELDS = ["nonce", "callGasLimit", "verificationGasLimit", "preVerificationGas", "maxFeePerGas", "maxPriorityFeePerGas"];
 const BYTES_FIELDS = ["initCode", "callData", "paymasterAndData", "signature"];
 
@@ -121,9 +125,14 @@ function parseOp(raw) {
 
 function checkShape(op, chain) {
   if (op.initCode !== "0x") throw new Refused("initCode must be empty: the UP must already exist");
-  if (op.paymasterAndData.length !== 42) throw new Refused("paymasterAndData must be exactly a paymaster address");
-  const pm = ethers.getAddress(op.paymasterAndData);
-  if (!chain.paymasters.includes(pm)) throw new Refused(`paymaster ${pm} is not served by this relayer`, 403);
+  // Either a paymaster address alone (allowlist paymasters), or the sponsor paymaster followed by its
+  // approval: validUntil (6 bytes), validAfter (6 bytes), signature (65 bytes). The paymaster checks
+  // the approval itself; here only the shape and the address.
+  const pmBytes = (op.paymasterAndData.length - 2) / 2;
+  if (pmBytes !== 20 && pmBytes !== SPONSOR_DATA_BYTES) throw new Refused("paymasterAndData must be a paymaster address, or the sponsor paymaster with its approval");
+  const pm = ethers.getAddress(op.paymasterAndData.slice(0, 42));
+  if (pmBytes === 20 && !chain.paymasters.includes(pm)) throw new Refused(`paymaster ${pm} is not served by this relayer`, 403);
+  if (pmBytes === SPONSOR_DATA_BYTES && pm !== chain.sponsorPaymaster) throw new Refused(`paymaster ${pm} is not this relayer's sponsor paymaster`, 403);
   if (op.signature.length !== 2 + 65 * 2) throw new Refused("signature must be 65 bytes");
   if ((op.callData.length - 2) / 2 > MAX.callDataBytes) throw new Refused("callData too long");
   for (const f of ["callGasLimit", "verificationGasLimit", "preVerificationGas"]) {
@@ -205,10 +214,10 @@ async function setupChain(id, ch, wallet) {
   const rpcChainId = BigInt(await provider.send("eth_chainId", []));
   if (rpcChainId !== chainId) throw new ConfigError(`chain ${id}: the rpc answers chainId ${rpcChainId}`);
   if ((await provider.getCode(ENTRY_POINT)) === "0x") throw new ConfigError(`chain ${id}: no EntryPoint v0.6 at ${ENTRY_POINT}`);
-  for (const pm of ch.paymasters) if ((await provider.getCode(pm)) === "0x") throw new ConfigError(`chain ${id}: no contract at paymaster ${pm}`);
+  for (const pm of ch.paymasters.concat(ch.sponsorPaymaster ? [ch.sponsorPaymaster] : [])) if ((await provider.getCode(pm)) === "0x") throw new ConfigError(`chain ${id}: no contract at paymaster ${pm}`);
   const opStack = (await provider.getCode(OP_GAS_ORACLE)) !== "0x";
   const balance = await provider.getBalance(wallet.address);
-  log(`chain ${id}: ready${opStack ? " (OP stack)" : ""}, paymasters ${ch.paymasters.join(", ")}, relayer balance ${ethers.formatEther(balance)}`);
+  log(`chain ${id}: ready${opStack ? " (OP stack)" : ""}, paymasters ${ch.paymasters.join(", ")}${ch.sponsorPaymaster ? `, sponsor paymaster ${ch.sponsorPaymaster}` : ""}, relayer balance ${ethers.formatEther(balance)}`);
   return { ...ch, chainId, provider, signer: wallet.connect(provider), opStack, queue: Promise.resolve(), recent: new Map(), pendingSender: new Map() };
 }
 
@@ -340,7 +349,7 @@ function makeServer(config, wallet, chains) {
         await Promise.all([...chains].map(async ([id, ch]) => {
           let balance = null;
           try { balance = (await ch.provider.getBalance(wallet.address)).toString(); } catch (e) { /* rpc down */ }
-          out.chains[id] = { paymasters: ch.paymasters, balance };
+          out.chains[id] = { paymasters: ch.paymasters, balance, ...(ch.sponsorPaymaster ? { sponsorPaymaster: ch.sponsorPaymaster } : {}) };
         }));
         return send(res, 200, out);
       }
