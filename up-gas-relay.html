@@ -321,14 +321,14 @@ const I18N = {
 <li>Sezione 3: controlla che il <b>Proprietario</b> sia la cassa.</li>
 </ol>
 <h4>Una volta per rete, con la cassa attiva</h4>
-<ol><li>Pubblica il paymaster, se manca.</li><li>Ricaricalo.</li><li>Imposta il tetto per operazione.</li></ol>
-<p>Ogni pulsante apre MetaMask per confermare una transazione della cassa.</p>
+<ol><li>Pubblica il paymaster, se manca.</li><li>Ricaricalo.</li><li>Imposta il tetto per operazione.</li><li>Sezione 4: se l'<b>Extension4337</b> risulta <b>non pubblicata</b>, premi <b>Pubblica l'Extension4337 su questa rete</b>. Qui la cassa paga solo il gas: l'estensione è un contratto pubblico, uguale per tutti, e chi la pubblica non ottiene diritti sulle UP. Si fa una volta per rete.</li></ol>
+<p>Ogni pulsante apre MetaMask per confermare una transazione della cassa. Il paymaster e l'Extension4337 si pubblicano tramite la fabbrica di contratti standard <code>0x4e59b448…956C</code>: in MetaMask può comparire senza nome o con caratteri strani, è normale.</p>
 <h4>Per ogni UP</h4>
 <ol>
 <li>Scrivi l'indirizzo della UP nella sezione 1.</li>
 <li><b>Con la cassa attiva</b>, sezione 4, <b>Lista del paymaster</b>: premi <b>Aggiungi la UP alla lista</b>. Dopo qualche secondo <b>MetaMask si apre e chiede di confermare una transazione</b>: controlla che l'account sia la cassa e conferma. Costa pochissimo gas, pagato dalla cassa. Dopo la conferma il riquadro dice <b>La UP è nella lista</b>.</li>
-<li><b>Passa al controller della UP</b> in MetaMask e controlla la sezione 1.</li>
-<li>Sezione 4, <b>Configurazione</b>: <b>Prepara e simula</b>, leggi il piano, poi <b>Firma e invia</b> e conferma in MetaMask. Una sola transazione, con un po' di gas pagato dal controller; la pagina verifica il risultato.</li>
+<li><b>Passa al controller della UP</b> in MetaMask (la chiave di genesi o il backup, <b>mai la cassa</b>) e controlla la sezione 1: la riga <b>Permessi dell'account attivo</b> della sezione 4 deve mostrare i permessi, non "non è un controller".</li>
+<li>Sezione 4, <b>Configurazione</b>: <b>Prepara e simula</b>, leggi il piano, poi <b>Firma e invia</b> e conferma in MetaMask. Una sola transazione, con un po' di gas pagato dal controller (serve un po' di valuta della rete sul suo account); la pagina verifica il risultato. Il controller che firma riceve il permesso 4337: per firmare le operazioni anche con l'altro controller, ripeti la configurazione con lui attivo.</li>
 <li>La UP deve avere su questa rete i soldi che vuole inviare: il paymaster paga il gas, non l'importo.</li>
 </ol>
 <h4>Ogni operazione, con il controller attivo</h4>
@@ -375,7 +375,7 @@ const I18N = {
     withdrawBtn: "Preleva",
     panel3Title: "4 · La UP",
     listTitle: "Lista del paymaster · con la cassa", listNote: "Con la <b>cassa</b> attiva in MetaMask. <b>Aggiungi la UP alla lista</b> apre MetaMask, dopo qualche secondo, per confermare una transazione della cassa (costa pochissimo gas). Dopo la conferma qui sotto compare <b>La UP è nella lista</b>. Solo le UP nella lista possono usare il paymaster.", listIn: "✅ La UP è nella lista del paymaster.", listOut: "La UP non è nella lista: con la cassa attiva premi \"Aggiungi la UP alla lista\".", listNeed: "Servono un paymaster pubblicato (sezione 3) e l'indirizzo della UP.", setupTitle: "Configurazione della UP · con il controller",
-    panel3Note: "Connetti in MetaMask il <b>controller</b> della UP. La configurazione è una sola transazione atomica del Key Manager: se una parte fallisce, non cambia niente. Prima di firmare vedi l'elenco delle operazioni e la simulazione.",
+    panel3Note: "Due passaggi, con account diversi:<br><b>1 · Pubblica l'Extension4337</b>, solo se qui sotto risulta <b>non pubblicata</b>: una volta per rete, poi vale per tutte le UP. <b>Può firmarla qualsiasi account</b>, per esempio la cassa: paga solo il gas e non ottiene nessun diritto sulle UP, perché il contratto è pubblico e uguale per tutti. In MetaMask la transazione va alla fabbrica di contratti standard <code>0x4e59b448…956C</code>, che può comparire senza nome o con caratteri strani: è normale.<br><b>2 · Configura la UP</b> con il <b>controller</b> della UP attivo in MetaMask (la chiave di genesi o il backup, <b>mai la cassa</b>): una sola transazione atomica del Key Manager, con un po' di gas pagato dal controller; se una parte fallisce, non cambia niente. Il controller che firma riceve il permesso 4337. Prima di firmare vedi l'elenco delle operazioni e la simulazione.",
     connectUpBtn: "Leggi l'indirizzo dall'estensione UP",
     upAddressLabel: "Indirizzo della UP",
     publishExtBtn: "Pubblica l'Extension4337 su questa rete",
@@ -552,14 +552,14 @@ const I18N = {
 <li>Section 3: check that the <b>Owner</b> is the cassa.</li>
 </ol>
 <h4>Once per chain, with the cassa active</h4>
-<ol><li>Publish the paymaster, if missing.</li><li>Fund it.</li><li>Set the cap per operation.</li></ol>
-<p>Each button opens MetaMask to confirm a transaction of the cassa.</p>
+<ol><li>Publish the paymaster, if missing.</li><li>Fund it.</li><li>Set the cap per operation.</li><li>Section 4: if <b>Extension4337</b> shows <b>not published</b>, press <b>Publish Extension4337 on this network</b>. Here the cassa only pays the gas: the extension is a public contract, the same for everyone, and whoever publishes it gets no rights over any UP. Once per network.</li></ol>
+<p>Each button opens MetaMask to confirm a transaction of the cassa. The paymaster and Extension4337 are published through the standard contract factory <code>0x4e59b448…956C</code>: MetaMask may show it with no name or odd characters, that is normal.</p>
 <h4>For each UP</h4>
 <ol>
 <li>Enter the UP address in section 1.</li>
 <li><b>With the cassa active</b>, section 4, <b>Paymaster allowlist</b>: press <b>Add the UP to the allowlist</b>. After a few seconds <b>MetaMask opens and asks you to confirm a transaction</b>: check that the account is the cassa and confirm. It costs very little gas, paid by the cassa. After the confirmation the box says <b>The UP is on the allowlist</b>.</li>
-<li><b>Switch to the UP's controller</b> in MetaMask and check section 1.</li>
-<li>Section 4, <b>Setup</b>: <b>Prepare and simulate</b>, read the plan, then <b>Sign and send</b> and confirm in MetaMask. One transaction, with a little gas paid by the controller; the page verifies the result.</li>
+<li><b>Switch to the UP's controller</b> in MetaMask (the genesis key or the backup, <b>never the cassa</b>) and check section 1: the <b>Active account's permissions</b> row in section 4 must show the permissions, not "not a controller".</li>
+<li>Section 4, <b>Setup</b>: <b>Prepare and simulate</b>, read the plan, then <b>Sign and send</b> and confirm in MetaMask. One transaction, with a little gas paid by the controller (its account needs a little of the network's currency); the page verifies the result. The signing controller receives the 4337 permission: to sign operations with the other controller too, repeat the setup with it active.</li>
 <li>The UP must hold on this network the money it wants to send: the paymaster pays the gas, not the amount.</li>
 </ol>
 <h4>Every operation, with the controller active</h4>
@@ -606,7 +606,7 @@ const I18N = {
     withdrawBtn: "Withdraw",
     panel3Title: "4 · The UP",
     listTitle: "Paymaster allowlist · with the cassa", listNote: "With the <b>cassa</b> active in MetaMask. <b>Add the UP to the allowlist</b> opens MetaMask, after a few seconds, to confirm a transaction of the cassa (it costs very little gas). After the confirmation the box below says <b>The UP is on the allowlist</b>. Only UPs on the allowlist can use the paymaster.", listIn: "✅ The UP is on the paymaster allowlist.", listOut: "The UP is not on the allowlist: with the cassa active press \"Add the UP to the allowlist\".", listNeed: "It needs a published paymaster (section 3) and the UP address.", setupTitle: "UP setup · with the controller",
-    panel3Note: "Connect the UP's <b>controller</b> in MetaMask. The setup is one atomic Key Manager transaction: if any part fails, nothing changes. Before signing you see the list of operations and the simulation.",
+    panel3Note: "Two steps, with different accounts:<br><b>1 · Publish Extension4337</b>, only if the box below says <b>not published</b>: once per network, then it serves every UP. <b>Any account can sign it</b>, for example the cassa: it only pays the gas and gets no rights over any UP, because the contract is public and the same for everyone. In MetaMask the transaction goes to the standard contract factory <code>0x4e59b448…956C</code>, which may show no name or odd characters: that is normal.<br><b>2 · Set up the UP</b> with the UP's <b>controller</b> active in MetaMask (the genesis key or the backup, <b>never the cassa</b>): one atomic Key Manager transaction, with a little gas paid by the controller; if any part fails, nothing changes. The signing controller receives the 4337 permission. Before signing you see the list of operations and the simulation.",
     connectUpBtn: "Read the address from the UP extension",
     upAddressLabel: "UP address",
     publishExtBtn: "Publish Extension4337 on this network",
