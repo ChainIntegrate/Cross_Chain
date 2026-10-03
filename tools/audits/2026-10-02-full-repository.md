@@ -3,7 +3,7 @@
 **Target:** `github.com/ChainIntegrate/Cross_Chain`, commit `40f0bc0a411c66cb0adf009b74edee148a0962c5` (branch `main`), full history (205 commits).
 **Published site:** `https://crosschain-lukso.chainintegrate.it/`.
 **Date:** 2026‑10‑02.
-**Prepared by:** Claude (AI assistant, Anthropic) in Claude Cowork. Model and settings are recorded in the signature at the end.
+**Prepared by:** Claude (AI assistant, Anthropic) in Claude Cowork. Settings are recorded in the signature at the end.
 
 ---
 
@@ -191,12 +191,10 @@ Prepared by **Claude**, an AI assistant made by Anthropic, working in **Claude C
 
 | Field | Value |
 |---|---|
-| **Model (configured for the session)** | `claude-opus-5-5` |
-| **Model (as the runtime reported it during parts of this work)** | `claude-opus-4-8` — the serving model can differ from, and change within, a session; both identifiers appeared while this audit was produced |
+| **Model** | recorded by the maintainer, not in the repository (project rule: no model identifiers in published files) |
 | **Reasoning / effort** | High; four parallel component sub‑reviews (general‑purpose agents on the same model family) plus a lead pass, each finding re‑checked against source |
 | **Tools used** | repository clone and `git` history review; local Solidity recompilation (solc 0.8.24 / 0.8.17) and CREATE2 recomputation; ethers 6 harnesses; a local ganache chain with the real EntryPoint v0.6 and LUKSO 0.14.0/0.12.1 bytecode (reused from the 2026‑10‑01 review); `npm ci` + `npm audit` on the relayer lockfile; SRI hash verification |
 | **Target commit** | `40f0bc0a411c66cb0adf009b74edee148a0962c5` |
-| **Session** | https://claude.ai/code/session_019yjB9ziPMaesAdbwPpHLpk |
 | **Date** | 2026‑10‑02 |
 | **Egress limitation** | no live RPC or site access from the audit environment; on‑chain facts and the live site's HTTP headers were taken from the repository's own logs and could not be independently confirmed |
 
