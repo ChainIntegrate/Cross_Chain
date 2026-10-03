@@ -304,7 +304,7 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 | R-04 | Consider moving the shared code (chain list, decoding, `checkChains`, `escapeHtml`) into one versioned JS file. | Six copies of the same logic had drifted apart. That drift caused several of the findings above. A shared `chains.js` is in progress (PR #21); `up-wallet.html` holds a seventh copy of the chain list until then. |
 | R-05 | ~~Let redeployed profiles receive ERC-721 / ERC-1155 safe transfers with a minimal, stateless LSP17 extension published at the same address on every chain (I-12).~~ ✅ Done with `up-nft-receiver.html` (one atomic `executeBatch`; controller permissions restored byte for byte) and `contracts/NFTReceiverExtension.sol` (reproducible bytecode, see `contracts/README.md`). Tested on a local chain with LUKSO UP/LSP6 0.12.1 and 0.14.0; not yet on mainnet. | Marketplace purchases failed on redeployed profiles. |
 | R-06 | Review `up-wallet.html` again (ideally with a second reviewer) before removing the "experimental" label, and after any change to its rejection rules, decoding or signing flow. | It is the only page that signs and sends arbitrary requests from third-party sites. |
-| R-07 | Decide whether to keep `up-walletconnect-basenames.html`: `up-wallet.html` covers the same case with more checks. | Two bridges double the code to maintain; the demo is now only an example. |
+| R-07 | Decide whether to keep `up-walletconnect-basenames.html`: `up-wallet.html` covers the same case with more checks. | Two bridges double the code to maintain; the demo is now only an example. **Decided 2026-10-03:** deprecated (banner, all actions disabled, no longer maintained). |
 
 ---
 
