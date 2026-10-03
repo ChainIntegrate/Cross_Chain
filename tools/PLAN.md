@@ -48,6 +48,7 @@ Last update: 2026-09-30.
 - The publisher address does not matter: the extension has no owner, and its address depends only on factory, salt and bytecode.
 - **Verified on mainnet:** the UP bought an ERC-1155 on OpenSea on Base. The transaction was Seaport 1.6 `fulfillAdvancedOrder`, recipient the UP, 0.00088209 ETH paid from the UP. The token is BasePaint `0xBa5e05cb…dcAc83`, id 665, and it was received by the UP through the extension. The simulation had already succeeded, which it could not do before the extension. Basescan labels the UP with its Basenames primary name.
 - **Polygon: done on 2026-09-29.** The extension was published and enabled on the maintainer's personal UP (enabling tx `0x3b042f87…0000`).
+- **Avalanche C-Chain: done on 2026-10-03** on the ChainIntegrate UP (`0x4a26…8c27`): extension published (tx `0xb2706aeb…9b71`) and enabled by the genesis controller (tx `0x92d50631…ae6d`); final check OK, controller permissions unchanged.
 - **LUKSO: published only, NOT enabled, on 2026-09-29** (tx `0xd00aa669…aa99`). The original UP on LUKSO does not need it, because LSP8 NFTs arrive without it. It is published there so the address is the same across the whole ecosystem.
 - **Source verified** on Basescan, Polygonscan and the LUKSO explorer (Blockscout) for `0x7F68e74483867058C806218aa05aB5527984C03e`, using `contracts/NFTReceiverExtension.input.json` (Standard-JSON input, solc v0.8.24+commit.e11b9ed9, MIT). Do not upload `NFTReceiverExtension.json`: it is the summary file, and explorers reject it with `Unknown key "abi"`.
 - **Next:**
