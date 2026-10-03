@@ -17,6 +17,7 @@ html[data-theme="light"] {
   color-scheme: light;
 }
 html[data-theme="dark"] { color-scheme: dark; }
+html[data-theme="light"] button:disabled { color: var(--text-dim); }
 html[data-theme="light"] button.secondary, html[data-theme="light"] .lang-btn, html[data-theme="light"] #langToggle,
 html[data-theme="light"] .chip, html[data-theme="light"] .langbtn, html[data-theme="light"] .theme-btn { color: var(--text); }
 .theme-btn { width: auto !important; flex-shrink: 0; cursor: pointer; background: var(--chip); color: var(--text);

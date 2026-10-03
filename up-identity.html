@@ -76,6 +76,7 @@
   .asset .thumb.has-img { color: transparent; }
   .asset .info { min-width: 0; flex: 1; }
   button.danger { background: var(--err); }
+  button.danger:disabled { background: var(--disabled); }
   #pubLog { font-size: 12.5px; margin-top: 10px; white-space: pre-wrap; word-break: break-all; line-height: 1.6; }
   .asset .kind { display: inline-block; padding: 1px 6px; border-radius: 4px; background: var(--chip); font-size: 11px; font-family: monospace; margin-right: 6px; }
   .asset .addr { font-family: monospace; font-size: 11.5px; color: var(--text-dim); word-break: break-all; }
@@ -226,6 +227,8 @@ const I18N = {
     roleBad: "voce non valida",
     panel6Title: "6 · Allinea il profilo a LUKSO su questa rete",
     panel6Note: "Copia su questa rete il profilo che la UP ha oggi su LUKSO: <b>una transazione</b> firmata da un controller della UP su questa rete, che paga il gas. Scrive solo la chiave <b>LSP3Profile</b>, con lo stesso valore di LUKSO: lo stesso file e lo stesso hash. Non cambia l'indirizzo della UP né i controller. Non è automatico: se poi cambi il profilo su LUKSO, qui resta questa versione finché non ripubblichi. Serve un controller con il permesso SUPER_SETDATA, oppure SETDATA con la chiave LSP3Profile tra quelle consentite.",
+    pubConnectBtn: "Connetti il controller della UP (MetaMask)",
+    pubBtn: "Pubblica il profilo di LUKSO su questa rete (una transazione)",
     pubNeedLukso: "Su LUKSO non c'è un profilo verificato da copiare (serve un profilo LSP3 con hash verificato).",
     pubSame: "✅ Già allineato: su questa rete il profilo è identico a quello di LUKSO.",
     pubReady: "Su questa rete il profilo è diverso da quello di LUKSO, o manca: si può allineare.",
@@ -321,6 +324,8 @@ const I18N = {
     roleBad: "invalid entry",
     panel6Title: "6 · Align the profile with LUKSO on this network",
     panel6Note: "Copies to this network the profile the UP has on LUKSO today: <b>one transaction</b> signed by a controller of the UP on this network, which pays the gas. It writes only the <b>LSP3Profile</b> key, with the same value as on LUKSO: the same file and the same hash. It changes neither the UP's address nor its controllers. It is not automatic: if you later change the profile on LUKSO, this network keeps this version until you publish again. It needs a controller with SUPER_SETDATA, or SETDATA with the LSP3Profile key among the allowed ones.",
+    pubConnectBtn: "Connect the UP's controller (MetaMask)",
+    pubBtn: "Publish LUKSO's profile on this network (one transaction)",
     pubNeedLukso: "There is no verified profile on LUKSO to copy (an LSP3 profile with a verified hash is needed).",
     pubSame: "✅ Already aligned: on this network the profile is identical to LUKSO's.",
     pubReady: "On this network the profile differs from LUKSO's, or is missing: it can be aligned.",
