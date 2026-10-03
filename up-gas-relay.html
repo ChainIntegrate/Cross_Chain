@@ -477,7 +477,9 @@ const I18N = {
     publishCheckFail: (v) => `⚠️ Transazione confermata, ma a ${v.addr} il codice non è quello atteso.`,
     planTitle: (v) => `Configurazione della UP ${v.up}\nFirma: ${v.signer} · Key Manager: ${v.km} · una sola transazione (executeBatch):`,
     planGrant: (v) => `1. Permessi temporanei al controller: + ${v.bits} (${v.from} → ${v.to})`,
-    planData: (v) => `${v.n}. setDataBatch:\n   - estensione per validateUserOp (0x3a871cdd) → ${v.ext}${v.epList}\n   - permessi dell'EntryPoint ${v.ep} → ${v.epPerms} (SUPER_CALL, SUPER_TRANSFERVALUE; niente SETDATA)`,
+    planData: (v) => `${v.n}. setDataBatch:`,
+    planDataExt: (v) => `   - estensione per validateUserOp (0x3a871cdd) → ${v.ext}`,
+    planDataEp: (v) => `   - permessi dell'EntryPoint ${v.ep} → ${v.epPerms} (SUPER_CALL, SUPER_TRANSFERVALUE; niente SETDATA)`,
     planEpList: (v) => `\n   - EntryPoint aggiunto all'elenco dei controller (posizione ${v.i})`,
     planFinal: (v) => `${v.n}. Permessi finali del controller: ${v.from} → ${v.to} (quelli di prima + 4337${v.extra})`,
     planFinalExtra: ", senza i permessi temporanei",
@@ -706,7 +708,9 @@ const I18N = {
     publishCheckFail: (v) => `⚠️ Transaction confirmed, but the code at ${v.addr} is not the expected one.`,
     planTitle: (v) => `Setup of the UP ${v.up}\nSigner: ${v.signer} · Key Manager: ${v.km} · one transaction (executeBatch):`,
     planGrant: (v) => `1. Temporary permissions for the controller: + ${v.bits} (${v.from} → ${v.to})`,
-    planData: (v) => `${v.n}. setDataBatch:\n   - extension for validateUserOp (0x3a871cdd) → ${v.ext}${v.epList}\n   - EntryPoint ${v.ep} permissions → ${v.epPerms} (SUPER_CALL, SUPER_TRANSFERVALUE; no SETDATA)`,
+    planData: (v) => `${v.n}. setDataBatch:`,
+    planDataExt: (v) => `   - extension for validateUserOp (0x3a871cdd) → ${v.ext}`,
+    planDataEp: (v) => `   - EntryPoint ${v.ep} permissions → ${v.epPerms} (SUPER_CALL, SUPER_TRANSFERVALUE; no SETDATA)`,
     planEpList: (v) => `\n   - EntryPoint added to the controllers list (position ${v.i})`,
     planFinal: (v) => `${v.n}. Controller's final permissions: ${v.from} → ${v.to} (the previous ones + 4337${v.extra})`,
     planFinalExtra: ", without the temporary permissions",
@@ -1210,7 +1214,12 @@ $("prepareSetupBtn").addEventListener("click", () => guarded(async () => {
   const lines = [t("planTitle", { up: s.upAddr, signer: s.signer, km: s.km })];
   let n = 1;
   if (s.missingTemp) { lines.push(t("planGrant", { bits: permNames(s.missingTemp), from: permHex(s.perms), to: permHex(s.perms | s.missingTemp) })); n++; }
-  lines.push(t("planData", { n, ext: EXT.address, ep: ENTRY_POINT, epPerms: permHex(EP_PERMS), epList: epIndex !== null ? t("planEpList", { i: epIndex }) : "" })); n++;
+  // Only what this transaction really writes: on a UP already set up for another controller, just the permission.
+  const dataLines = [];
+  if (s.extKey !== "ok") dataLines.push(t("planDataExt", { ext: EXT.address }));
+  if (epIndex !== null) dataLines.push(t("planEpList", { i: epIndex }).replace(/^\n/, ""));
+  if (s.epState !== "ok") dataLines.push(t("planDataEp", { ep: ENTRY_POINT, epPerms: permHex(EP_PERMS) }));
+  if (dataLines.length) { lines.push([t("planData", { n })].concat(dataLines).join("\n")); n++; }
   lines.push(t("planFinal", { n, from: permHex(s.perms), to: permHex(finalPerms), extra: s.missingTemp ? t("planFinalExtra") : "" }));
   lines.push(t("planAtomic"));
   setStatus("setupPlanBox", lines.join("\n"), "");
