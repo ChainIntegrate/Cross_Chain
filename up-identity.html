@@ -255,6 +255,9 @@ const I18N = {
     pubOk: "✅ Profilo pubblicato: su questa rete LSP3Profile ora è identico a quello di LUKSO.",
     pubVerifyBad: (v) => `⚠️ Transazione confermata, ma la rilettura non corrisponde: ${v.what}. Rileggi il profilo tra poco.`,
     pubError: (v) => `Errore: ${v.err}`,
+    pubCancelled: "Annullato nel wallet: nessuna transazione inviata.",
+    pubNoGas: (v) => `❌ ${v.addr} ha ${v.bal} ${v.cur} su questa rete, ne servono circa ${v.cost} per il gas. Niente inviato: aggiungi un po' di ${v.cur || "valuta della rete"} a questo account, oppure connetti un altro controller che ne abbia.`,
+    pubGasOk: (v) => `Gas stimato: circa ${v.cost} ${v.cur}, pagato da ${v.addr} (saldo ${v.bal} ${v.cur}).`,
     panel5Title: "5 · Token e NFT",
     panel5Note: "Quello che la UP possiede su ciascuna rete: la valuta della rete, i token e NFT LUKSO (LSP7, LSP8) dalla lista <b>LSP5ReceivedAssets</b> della UP, letta dalla blockchain, e gli altri token e NFT (ERC-20, ERC-721, ERC-1155) da un <b>indicizzatore</b> (Alchemy o Blockscout), che può essere incompleto. I contratti segnalati come spam sono raccolti a parte. Nessun token qui è stato verificato come autentico: un nome o un simbolo può imitare quello di un altro token.",
     assetsReading: "Lettura di token e NFT...",
@@ -352,6 +355,9 @@ const I18N = {
     pubOk: "✅ Profile published: on this network LSP3Profile is now identical to LUKSO's.",
     pubVerifyBad: (v) => `⚠️ Transaction confirmed, but the re-read does not match: ${v.what}. Read the profile again in a moment.`,
     pubError: (v) => `Error: ${v.err}`,
+    pubCancelled: "Cancelled in the wallet: no transaction sent.",
+    pubNoGas: (v) => `❌ ${v.addr} holds ${v.bal} ${v.cur} on this network; about ${v.cost} is needed for gas. Nothing sent: add a little ${v.cur || "of the network's currency"} to this account, or connect another controller that has some.`,
+    pubGasOk: (v) => `Estimated gas: about ${v.cost} ${v.cur}, paid by ${v.addr} (balance ${v.bal} ${v.cur}).`,
     panel5Title: "5 · Tokens and NFTs",
     panel5Note: "What the UP holds on each network: the network's currency, LUKSO tokens and NFTs (LSP7, LSP8) from the UP's <b>LSP5ReceivedAssets</b> list, read from the chain, and the other tokens and NFTs (ERC-20, ERC-721, ERC-1155) from an <b>indexer</b> (Alchemy or Blockscout), which can be incomplete. Contracts flagged as spam are grouped apart. No token here is verified as genuine: a name or symbol can imitate another token's.",
     assetsReading: "Reading tokens and NFTs...",
@@ -767,6 +773,19 @@ $("pubBtn").addEventListener("click", async () => {
     pubLog(t("pubSimulating"), "line-dim");
     try { await provider.call({ from: pubAddr, to: km, data }); }
     catch (e) { pubLog(t("pubSimFail", { err: e.shortMessage || e.reason || e.message }), "line-err"); return; }
+    // The signer pays the gas: check its balance before the wallet opens (a fresh backup key often
+    // holds nothing on this network, and the wallet then shows only a generic fee alert).
+    const cur = r.netDef.currency && r.netDef.currency !== "?" ? r.netDef.currency : "";
+    try {
+      const [gas, fee, bal] = await Promise.all([provider.estimateGas({ from: pubAddr, to: km, data }), provider.getFeeData(), provider.getBalance(pubAddr)]);
+      const price = fee.maxFeePerGas || fee.gasPrice;
+      if (price) {
+        const cost = gas * price;
+        const v = { addr: pubAddr, bal: ethers.formatEther(bal), cost: ethers.formatEther(cost), cur };
+        if (bal < cost) { pubLog(t("pubNoGas", v), "line-err"); return; }
+        pubLog(t("pubGasOk", v), "line-dim");
+      }
+    } catch (e) { /* no estimate: the wallet still shows its own fee */ }
     pubLog(t("pubSimOk"), "line-ok");
     const signer = await new ethers.BrowserProvider(pubWallet).getSigner();
     if (signer.address.toLowerCase() !== pubAddr.toLowerCase()) { pubLog(t("pubSignerChanged", { now: signer.address, checked: pubAddr }), "line-err"); return; }
@@ -789,7 +808,8 @@ $("pubBtn").addEventListener("click", async () => {
     else pubLog(t("pubVerifyBad", { what: `LSP3Profile ${got ? got.slice(0, 20) + "…" : "?"}` }), "line-warn");
     reread = true;
   } catch (e) {
-    pubLog(t("pubError", { err: e.shortMessage || e.message }), "line-err");
+    if (e && (e.code === "ACTION_REJECTED" || e.code === 4001 || (e.info && e.info.error && e.info.error.code === 4001))) pubLog(t("pubCancelled"), "line-warn");
+    else pubLog(t("pubError", { err: e.shortMessage || e.message }), "line-err");
   } finally {
     pubBusy = false; $("readBtn").disabled = false;
     // After a confirmed transaction, read everything again: the cards then show the aligned profile.

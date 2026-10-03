@@ -1,0 +1,22 @@
+ChainIntegrate UP 0x4a2605796e0d91A9667d6E30365aEEC384C48c27 on Polygon mainnet, 2026-10-03: LSP3Profile aligned with
+LUKSO from section 6 of up-identity.html. The first attempts used the new backup 0x406f822aC86b61d4cDf4cD84833f7e5561609C02,
+which held no POL: MetaMask showed only a red network-fee alert and the maintainer cancelled ("user rejected action").
+The page now checks the signer's balance before the wallet opens. Then signed with the genesis key:
+
+—— 10:52:02 · UP 0x4a2605796e0d91A9667d6E30365aEEC384C48c27 · Polygon ——
+Il wallet è sulla rete con chainId 43114, non su Polygon (chainId 137): cambia rete nel wallet e riprova.
+—— 10:52:22 · UP 0x4a2605796e0d91A9667d6E30365aEEC384C48c27 · Polygon ——
+Piano (una transazione, firmata da 0x406f822aC86b61d4cDf4cD84833f7e5561609C02 tramite il Key Manager 0x309fcE7B6a96CeF8fCbF926a006CDc6f21Ff280e):
+- LSP3Profile su Polygon → il valore di LUKSO (file ipfs://QmTA3G9oZJRvjzwYaVwdJFcucF9FEAdMRbL517prdUbMKE)
+Simulazione...
+✅ Simulazione riuscita. Conferma la transazione nel wallet.
+Errore: user rejected action
+—— 10:54:19 · UP 0x4a2605796e0d91A9667d6E30365aEEC384C48c27 · Polygon ——
+Piano (una transazione, firmata da 0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c tramite il Key Manager 0x309fcE7B6a96CeF8fCbF926a006CDc6f21Ff280e):
+- LSP3Profile su Polygon → il valore di LUKSO (file ipfs://QmTA3G9oZJRvjzwYaVwdJFcucF9FEAdMRbL517prdUbMKE)
+Simulazione...
+✅ Simulazione riuscita. Conferma la transazione nel wallet.
+Tx: 0xa00a1a53442486122fd06d6da8d6ca82b1fb9146c402300e866c6512be7aa4fc
+https://polygonscan.com/tx/0xa00a1a53442486122fd06d6da8d6ca82b1fb9146c402300e866c6512be7aa4fc
+In attesa di conferma...
+✅ Profilo pubblicato: su questa rete LSP3Profile ora è identico a quello di LUKSO.
