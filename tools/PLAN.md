@@ -192,7 +192,9 @@ The notes below are the earlier LSP25 design, kept for reference.
   - whether Hyperlane has opened stablecoin routes to LUKSO;
   - ERC-4337 via LUKSO's `Extension4337` with a USDC paymaster, as an alternative to our own relayer.
 
-### 2.5 UP identity viewer across chains (next, after the backup controller)
+### 2.5 UP identity viewer across chains
+**Phase 1 done (2026-10-02): `up-identity.html`.** Local test 16/16 on LUKSO 0.12.1 and 0.14.0 (same profile, older profile, legacy JSONURL, hash mismatch, gateway fallback, data: URI, HTML in the name shown as text, no profile, no UP, controllers and backup). To do: check on the live site that `ipfs.chainintegrate.it` answers the browser (CORS); otherwise the public gateways take over.
+
 A page that reads and shows a UP's LSP3 identity on any network where it is deployed (Base, Polygon, …), not only on LUKSO. The page itself is the interpreter: no claim that the chain or third parties recognise the standard.
 - **Phase 1, read only (first):**
   - input: UP address and network (`chains.js`, same pattern as the other pages);

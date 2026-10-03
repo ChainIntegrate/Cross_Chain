@@ -266,7 +266,7 @@ const permHex = (n) => "0x" + n.toString(16).padStart(6, "0");
 // go through the relayer.
 const EP_PERMS = P.SUPER_CALL | P.SUPER_TRANSFERVALUE;
 // Gas limits of the test operation (EntryPoint v0.6 counts verification 3 times when a paymaster is used).
-const OP_GAS = { call: 150000n, verification: 400000n };
+const OP_GAS = { call: 150000n, verification: 180000n }; // verification measured at about 82,000 (gas-relay-client.js)
 // OP-stack chains (Base, Optimism, ...) charge an L1 data fee outside the gas used; their GasPriceOracle
 // predeploy tells how much.
 const OP_GAS_ORACLE = "0x420000000000000000000000000000000000000F";
