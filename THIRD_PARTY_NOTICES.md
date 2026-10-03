@@ -6,7 +6,7 @@ The repository is released under the [MIT License](LICENSE), with the exceptions
 
 | File | License | Why |
 |---|---|---|
-| `contracts/UPPaymaster.sol`, `contracts/UPVerifyingPaymaster.sol` | GPL-3.0 ([text](licenses/GPL-3.0.txt)) | It is built on the ERC-4337 interfaces of `@account-abstraction/contracts` 0.6.0 (eth-infinitism), which are GPL-3.0. Changing the license header does not change the compiled code: the published paymaster and its verified source are the same contract. |
+| `contracts/UPPaymaster.sol`, `contracts/UPVerifyingPaymaster.sol` | GPL-3.0 ([text](licenses/GPL-3.0.txt)) | They are built on the ERC-4337 interfaces of `@account-abstraction/contracts` 0.6.0 (eth-infinitism), which are GPL-3.0. For `UPPaymaster`, which was MIT before, changing the license header does not change the compiled code: the published paymaster and its verified source are the same contract. |
 
 ## WalletConnect bundle: `vendor/walletkit-1.6.0.min.js`
 
