@@ -1,0 +1,470 @@
+{
+  "contract": "UPVerifyingPaymaster",
+  "status": "experimental, unaudited, not published",
+  "compiler": "0.8.24+commit.e11b9ed9.Emscripten.clang",
+  "settings": {
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
+    },
+    "evmVersion": "paris",
+    "metadata": {
+      "bytecodeHash": "none",
+      "appendCBOR": false
+    },
+    "outputSelection": {
+      "*": {
+        "*": [
+          "abi",
+          "evm.bytecode.object",
+          "evm.deployedBytecode.object"
+        ]
+      }
+    }
+  },
+  "factory": "0x4e59b44847b379578588920cA78FbF26c0B4956C",
+  "salt": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
+  "constructor": "constructor(address entryPoint, address owner)",
+  "creationCode": "0x60a060405234801561001057600080fd5b50604051610f54380380610f5483398101604081905261002f9161009a565b6001600160a01b03828116608052600080546001600160a01b03191691831691821781556040517f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0908290a350506100d4565b6001600160a01b038116811461009757600080fd5b50565b600080604083850312156100ad57600080fd5b82516100b881610082565b60208401519092506100c981610082565b809150509250929050565b608051610e436101116000396000818160fb015281816102ab015281816103a101528181610670015281816106cc01526107cf0152610e436000f3fe6080604052600436106100e15760003560e01c806394e1fc191161007f578063d0e30db011610059578063d0e30db0146102cd578063e30c3978146102e2578063f2fde38b14610302578063f465c77e1461032257600080fd5b806394e1fc1914610259578063a9a2340914610279578063b0d691fe1461029957600080fd5b806340b945a4116100bb57806340b945a4146101e45780636c19e7831461020457806379ba5097146102245780638da5cb5b1461023957600080fd5b80631fd6d28b14610163578063205c28781461018c578063238ac933146101ac57600080fd5b3661015e5760405163b760faf960e01b81523060048201527f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03169063b760faf99034906024016000604051808303818588803b15801561014857600080fd5b505af115801561015c573d6000803e3d6000fd5b005b600080fd5b34801561016f57600080fd5b5061017960035481565b6040519081526020015b60405180910390f35b34801561019857600080fd5b5061015c6101a7366004610af1565b610350565b3480156101b857600080fd5b506002546101cc906001600160a01b031681565b6040516001600160a01b039091168152602001610183565b3480156101f057600080fd5b5061015c6101ff366004610b1d565b610401565b34801561021057600080fd5b5061015c61021f366004610b36565b610467565b34801561023057600080fd5b5061015c6104dc565b34801561024557600080fd5b506000546101cc906001600160a01b031681565b34801561026557600080fd5b50610179610274366004610b87565b61055f565b34801561028557600080fd5b5061015c610294366004610be5565b610665565b3480156102a557600080fd5b506101cc7f000000000000000000000000000000000000000000000000000000000000000081565b3480156102d957600080fd5b506101796106b4565b3480156102ee57600080fd5b506001546101cc906001600160a01b031681565b34801561030e57600080fd5b5061015c61031d366004610b36565b610744565b34801561032e57600080fd5b5061034261033d366004610c74565b6107c0565b604051610183929190610cc2565b6000546001600160a01b0316331461037b576040516330cd747160e01b815260040160405180910390fd5b60405163040b850f60e31b81526001600160a01b038381166004830152602482018390527f0000000000000000000000000000000000000000000000000000000000000000169063205c287890604401600060405180830381600087803b1580156103e557600080fd5b505af11580156103f9573d6000803e3d6000fd5b505050505050565b6000546001600160a01b0316331461042c576040516330cd747160e01b815260040160405180910390fd5b60038190556040518181527fc86fa37b78d25316822df616cf19fab0dadd17f222a0b374eedaf2bfa067b9db9060200160405180910390a150565b6000546001600160a01b03163314610492576040516330cd747160e01b815260040160405180910390fd5b600280546001600160a01b0319166001600160a01b0383169081179091556040517f5719a5656c5cfdaafa148ecf366fd3b0a7fae06449ce2a46225977fb7417e29d90600090a250565b6001546001600160a01b03163314610507576040516330cd747160e01b815260040160405180910390fd5b6000805460405133926001600160a01b03909216917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e091a3600080546001600160a01b03199081163317909155600180549091169055565b600061056e6020850185610b36565b60208501356105806040870187610d17565b60405161058e929190610d65565b6040519081900390206105a46060880188610d17565b6040516105b2929190610d65565b604080519182900382206001600160a01b03909516602083015281019290925260608201526080808201929092529085013560a08083019190915285013560c08083019190915285013560e08083019190915285013561010080830191909152850135610120820152466101408201523061016082015265ffffffffffff80851661018083015283166101a08201526101c0016040516020818303038152906040528051906020012090505b9392505050565b336001600160a01b037f000000000000000000000000000000000000000000000000000000000000000016146106ae57604051636b31ba1560e11b815260040160405180910390fd5b50505050565b6040516370a0823160e01b81523060048201526000907f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316906370a0823190602401602060405180830381865afa15801561071b573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061073f9190610d75565b905090565b6000546001600160a01b0316331461076f576040516330cd747160e01b815260040160405180910390fd5b600180546001600160a01b0319166001600160a01b0383811691821790925560008054604051929316917f38d16b8cac22d99fc7c124b9cd0de2d3fa1faef420bfe791d8c362d765e227009190a350565b60606000336001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000161461080d57604051636b31ba1560e11b815260040160405180910390fd5b36600061081e610120880188610d17565b909250905060618114610847575050604080516020810190915260008152915060019050610977565b600082601483610858826006610d8e565b9261086593929190610db5565b61086e91610ddf565b60d01c90506000838361088360146006610d8e565b6108909260209290610db5565b61089991610ddf565b60025460d09190911c91506000906001600160a01b031615806108bd575060035488115b8061095157506002546001600160a01b03166109456109336108e08d878761055f565b6040517f19457468657265756d205369676e6564204d6573736167653a0a3332000000006020820152603c8101829052600090605c01604051602081830303815290604052805190602001209050919050565b610940876020818b610db5565b61097f565b6001600160a01b031614155b905061095e818484610aa1565b6040805160208101909152600081529750955050505050505b935093915050565b6000604182146109915750600061065e565b60006109a06020828587610db5565b6109a991610e0f565b905060006109bb604060208688610db5565b6109c491610e0f565b90506000858560408181106109db576109db610e2d565b919091013560f81c9150507f7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0821180610a2757508060ff16601b14158015610a2757508060ff16601c14155b15610a38576000935050505061065e565b60408051600081526020810180835289905260ff831691810191909152606081018490526080810183905260019060a0016020604051602081039080840390855afa158015610a8b573d6000803e3d6000fd5b5050604051601f19015198975050505050505050565b600060d08265ffffffffffff16901b60a08465ffffffffffff16901b85610ac9576000610acc565b60015b60ff161717949350505050565b6001600160a01b0381168114610aee57600080fd5b50565b60008060408385031215610b0457600080fd5b8235610b0f81610ad9565b946020939093013593505050565b600060208284031215610b2f57600080fd5b5035919050565b600060208284031215610b4857600080fd5b813561065e81610ad9565b60006101608284031215610b6657600080fd5b50919050565b803565ffffffffffff81168114610b8257600080fd5b919050565b600080600060608486031215610b9c57600080fd5b833567ffffffffffffffff811115610bb357600080fd5b610bbf86828701610b53565b935050610bce60208501610b6c565b9150610bdc60408501610b6c565b90509250925092565b60008060008060608587031215610bfb57600080fd5b843560038110610c0a57600080fd5b9350602085013567ffffffffffffffff80821115610c2757600080fd5b818701915087601f830112610c3b57600080fd5b813581811115610c4a57600080fd5b886020828501011115610c5c57600080fd5b95986020929092019750949560400135945092505050565b600080600060608486031215610c8957600080fd5b833567ffffffffffffffff811115610ca057600080fd5b610cac86828701610b53565b9660208601359650604090950135949350505050565b604081526000835180604084015260005b81811015610cf05760208187018101516060868401015201610cd3565b506000606082850101526060601f19601f8301168401019150508260208301529392505050565b6000808335601e19843603018112610d2e57600080fd5b83018035915067ffffffffffffffff821115610d4957600080fd5b602001915036819003821315610d5e57600080fd5b9250929050565b8183823760009101908152919050565b600060208284031215610d8757600080fd5b5051919050565b80820180821115610daf57634e487b7160e01b600052601160045260246000fd5b92915050565b60008085851115610dc557600080fd5b83861115610dd257600080fd5b5050820193919092039150565b6001600160d01b03198135818116916006851015610e075780818660060360031b1b83161692505b505092915050565b80356020831015610daf57600019602084900360031b1b1692915050565b634e487b7160e01b600052603260045260246000fd",
+  "creationCodeHash": "0xf41f3bd2db27cbccd604e3ef6b88c3bf7d60409e9b7ff61dc05b156cb9cc4aea",
+  "howToComputeAddress": "initCode = creationCode ++ abi.encode(entryPoint, owner); address = last 20 bytes of keccak256(0xff ++ factory ++ salt ++ keccak256(initCode))",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "contract IEntryPoint",
+          "name": "entryPoint_",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "owner_",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "NotEntryPoint",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NotOwner",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "maxCost",
+          "type": "uint256"
+        }
+      ],
+      "name": "MaxCostPerOpChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "from",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferStarted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "from",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferred",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "signer",
+          "type": "address"
+        }
+      ],
+      "name": "SignerChanged",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "acceptOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "deposit",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "entryPoint",
+      "outputs": [
+        {
+          "internalType": "contract IEntryPoint",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "sender",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "nonce",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bytes",
+              "name": "initCode",
+              "type": "bytes"
+            },
+            {
+              "internalType": "bytes",
+              "name": "callData",
+              "type": "bytes"
+            },
+            {
+              "internalType": "uint256",
+              "name": "callGasLimit",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "verificationGasLimit",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "preVerificationGas",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxFeePerGas",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxPriorityFeePerGas",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bytes",
+              "name": "paymasterAndData",
+              "type": "bytes"
+            },
+            {
+              "internalType": "bytes",
+              "name": "signature",
+              "type": "bytes"
+            }
+          ],
+          "internalType": "struct UserOperation",
+          "name": "userOp",
+          "type": "tuple"
+        },
+        {
+          "internalType": "uint48",
+          "name": "validUntil",
+          "type": "uint48"
+        },
+        {
+          "internalType": "uint48",
+          "name": "validAfter",
+          "type": "uint48"
+        }
+      ],
+      "name": "getHash",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "maxCostPerOp",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "pendingOwner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "enum IPaymaster.PostOpMode",
+          "name": "",
+          "type": "uint8"
+        },
+        {
+          "internalType": "bytes",
+          "name": "",
+          "type": "bytes"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "postOp",
+      "outputs": [],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "maxCost",
+          "type": "uint256"
+        }
+      ],
+      "name": "setMaxCostPerOp",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "signer_",
+          "type": "address"
+        }
+      ],
+      "name": "setSigner",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "signer",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "sender",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "nonce",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bytes",
+              "name": "initCode",
+              "type": "bytes"
+            },
+            {
+              "internalType": "bytes",
+              "name": "callData",
+              "type": "bytes"
+            },
+            {
+              "internalType": "uint256",
+              "name": "callGasLimit",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "verificationGasLimit",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "preVerificationGas",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxFeePerGas",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxPriorityFeePerGas",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bytes",
+              "name": "paymasterAndData",
+              "type": "bytes"
+            },
+            {
+              "internalType": "bytes",
+              "name": "signature",
+              "type": "bytes"
+            }
+          ],
+          "internalType": "struct UserOperation",
+          "name": "userOp",
+          "type": "tuple"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "maxCost",
+          "type": "uint256"
+        }
+      ],
+      "name": "validatePaymasterUserOp",
+      "outputs": [
+        {
+          "internalType": "bytes",
+          "name": "context",
+          "type": "bytes"
+        },
+        {
+          "internalType": "uint256",
+          "name": "validationData",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address payable",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "withdrawTo",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "stateMutability": "payable",
+      "type": "receive"
+    }
+  ]
+}

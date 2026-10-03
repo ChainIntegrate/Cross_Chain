@@ -119,6 +119,32 @@ The controller signs the user operation hash with `personal_sign`, so MetaMask w
   - allowlist changes or withdrawals by anyone but the owner.
 - **The EntryPoint's permissions do not leak:** a signer allowed only to call contracts cannot use the EntryPoint's value-transfer permission.
 
+## UPVerifyingPaymaster (experimental, not published)
+
+`UPVerifyingPaymaster.sol` is an ERC-4337 paymaster for EntryPoint v0.6, like `UPPaymaster`, but it does not keep a list of accounts. It pays for a user operation only when an **off-chain signing service** has approved that operation: the service decides (subscription, quota, which contracts, budget) and signs; the contract checks the signature. It is the base for a sponsored-gas service where the rules live in the service, not on chain.
+
+**Status:** experimental, unaudited, **not published** on any network. License GPL-3.0, like `UPPaymaster` (it builds on the same `@account-abstraction/contracts` 0.6.0 interfaces).
+
+**How an operation is approved**
+1. The client builds the user operation, with `paymasterAndData` still empty.
+2. The service checks its rules and computes `getHash(userOp, validUntil, validAfter)`: every field of the operation except `paymasterAndData` and `signature`, plus the chain id, the paymaster's address and the validity window. It signs that hash with `personal_sign` (EIP-191), with its approving key.
+3. The client sets `paymasterAndData = paymaster (20 bytes) ++ validUntil (uint48, 6 bytes) ++ validAfter (uint48, 6 bytes) ++ signature (65 bytes)`. Then the controller signs the user operation hash as usual (Extension4337), and the relayer sends it.
+
+**What the contract checks** (`validatePaymasterUserOp`, called only by the EntryPoint)
+- The approving key (`signer`) is set, and the signature is the signer's (65 bytes; malleable high-s signatures refused).
+- The operation cannot cost more than `maxCostPerOp`. It is a second line of defence: even with a stolen approving key, each operation can cost the deposit at most this much.
+- The validity window is returned to the EntryPoint, which enforces it (`validUntil` 0 = no expiry).
+- An approval is bound to that operation (its nonce makes it single-use), that chain and that paymaster: changing the call, the gas limits, the chain or the paymaster voids it.
+- The UP side is unchanged: the operation must still be signed by a controller with the 4337 permission, through Extension4337.
+
+**Owner** (two-step transfer, as in `UPPaymaster`): funds it with a plain transfer (forwarded to the EntryPoint deposit), sets or replaces the approving key (`setSigner`; `address(0)` stops all sponsoring at once), sets `maxCostPerOp`, withdraws. The signer and the cap start empty: nothing is paid until the owner sets both.
+
+**Same address on every chain for a given owner:** the constructor takes only the EntryPoint and the owner, as in `UPPaymaster` (different creation code, so a different address from `UPPaymaster`). Files: `UPVerifyingPaymaster.input.json` (standard-JSON input, solc 0.8.24, optimizer 200, `paris`, no metadata hash) and `UPVerifyingPaymaster.json` (creation code, ABI, how to compute the address).
+
+**Bundlers:** validation reads the paymaster's own storage (signer, cap). Public bundlers that apply the ERC-7562 rules would require the paymaster to be staked; the site's own relayer does not apply them, and Extension4337 reads the Key Manager's storage in any case.
+
+**Tested** on a local chain with the real EntryPoint v0.6, LUKSO `UniversalProfile` / `LSP6KeyManager` 0.14.0 and 0.12.1 and `Extension4337` (30 checks on each version): an approved operation is paid and the relayer reimbursed (about 169,000 gas); refused are the cases with no signer or a zero cap, a replay, an approval by another key, an operation changed after approval (amount, gas limits), an approval for another chain or paymaster, an expired or not-yet-valid approval, malformed `paymasterAndData`, a malleable signature, a cost above the cap, and an operation signed by a non-controller; key rotation, stop, owner-only functions and the two-step ownership transfer work.
+
 ## Extension4337 (LUKSO, published by this project at a deterministic address)
 
 **Status:** experimental, never audited (LUKSO dev chat, 2026-10-03).
