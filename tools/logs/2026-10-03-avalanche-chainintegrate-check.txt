@@ -1,0 +1,21 @@
+ChainIntegrate UP 0x4a2605796e0d91A9667d6E30365aEEC384C48c27 on Avalanche C-Chain (chainId 43114), 2026-10-03. Already
+deployed and backed up by the maintainer; LSP3Profile aligned with LUKSO from section 6 of up-identity.html (the identity
+page then showed "identical to the current one on LUKSO", hash verified on both, file
+ipfs://QmTA3G9oZJRvjzwYaVwdJFcucF9FEAdMRbL517prdUbMKE). Read-only checks afterwards, from up-deploy-public.html:
+
+Section 4 (Verify):
+✅ Il wallet firmatario è connesso alla rete corretta (chainId 43114).
+UP atteso: 0x4a2605796e0d91A9667d6E30365aEEC384C48c27
+Key Manager atteso: 0x309fcE7B6a96CeF8fCbF926a006CDc6f21Ff280e
+✅ Calldata verificata: l'indirizzo predetto corrisponde a quello atteso.
+Indirizzo di sistema riconosciuto: 0x7870c5b8bc9572a8001c3f96f7ff59961b23500d (LSP1UniversalReceiverDelegateUP (contratto ufficiale LUKSO)) — permessi necessari al funzionamento, non è un controller "proprietario".
+Controller con ALL_PERMISSIONS: 0x9c8fd044a4c777f9f97c6cfc127c91f86b795c9c — sarà lui a controllare la UP dopo il deploy.
+❌ BLOCCANTE — la UP risulta già deployata su questa rete (0x4a2605796e0d91A9667d6E30365aEEC384C48c27). Nessun nuovo deploy necessario.
+https://snowscan.xyz/address/0x4a2605796e0d91A9667d6E30365aEEC384C48c27
+
+Section 5 (controllers, connected wallet = the cassa, no longer a controller):
+✅ Backup presente su Avalanche C-Chain: 2 controller con gli stessi permessi di amministrazione.
+[0] 0x7870C5B8BC9572A8001C3f96f7ff59961B23500D Universal Receiver Delegate — 0x60080 (REENTRANCY, SUPER_SETDATA, SETDATA)
+[1] 0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c genesis key, admin — 0x7f3f06
+[2] 0x406f822aC86b61d4cDf4cD84833f7e5561609C02 backup, admin — 0x7f3f06
+No EntryPoint: the gas relay is not set up on Avalanche.

@@ -1,0 +1,34 @@
+NFT reception (ERC-721 / ERC-1155) on Avalanche C-Chain (chainId 43114), 2026-10-03. The receiver extension
+0x7F68e74483867058C806218aa05aB5527984C03e published on Avalanche (permissionless; same bytecode and address as on LUKSO,
+Base and Polygon), then enabled on the ChainIntegrate UP 0x4a2605796e0d91A9667d6E30365aEEC384C48c27 by the genesis
+controller from up-nft-receiver.html.
+
+Publishing:
+✅ Wallet firmatario e RPC sulla stessa rete (chainId 43114).
+✅ Nick's factory presente su questa rete.
+✅ L'indirizzo è libero su questa rete: il contratto non è ancora pubblicato.
+✅ Stima gas riuscita: 264784 unità.
+Costo stimato (con margine): 0.003177400047661
+✅ Saldo del wallet firmatario sufficiente.
+Pronto. La pubblicazione è permissionless e non cambia nulla dei tuoi profili: crea solo il contratto.
+Invio transazione (conferma nel wallet)...
+Tx: 0xb2706aeb839dfa114f054277a59bf90170a33afa751a3c97605283c6181c9b71
+In attesa di conferma...
+✅✅ Contratto pubblicato su Avalanche C-Chain a 0x7F68e74483867058C806218aa05aB5527984C03e, con bytecode identico a LUKSO.
+https://snowscan.xyz/address/0x7F68e74483867058C806218aa05aB5527984C03e
+
+Enabling on the UP:
+—— 12:14:52 ——
+Operazioni in UNA transazione, firmata dal controller 0x9c8fd044a4c777f9f97c6cfc127c91f86b795c9c e inviata al Key Manager 0x309fcE7B6a96CeF8fCbF926a006CDc6f21Ff280e:
+1. Concede temporaneamente al controller: ADDEXTENSIONS (permessi 0xff3f06 → 0xff3f0e)
+2. Registra l'estensione 0x7F68e74483867058C806218aa05aB5527984C03e sulla UP per: onERC721Received, onERC1155Received, onERC1155BatchReceived, supportsInterface
+3. Riporta i permessi del controller esattamente a 0xff3f06
+Se una qualsiasi operazione fallisce, l'intera transazione viene annullata e non cambia nulla.
+Simulazione della transazione...
+✅ Simulazione riuscita. Gas stimato: 209706.
+Invio della transazione (conferma in MetaMask)...
+Tx inviata: 0x92d50631a2709e3342f20a8ca50dd15f8f0ea2f809a708e8f9fbfe311dafae6d
+https://snowscan.xyz/tx/0x92d50631a2709e3342f20a8ca50dd15f8f0ea2f809a708e8f9fbfe311dafae6d
+In attesa di conferma...
+Verifica finale sulla UP...
+✅✅ Fatto: la UP ora può ricevere NFT ERC-721 ed ERC-1155 su questa rete, e i permessi del controller sono uguali a prima.

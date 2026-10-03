@@ -82,7 +82,7 @@
       ok: (v) => `✅ Operazione eseguita. Costo pagato dal paymaster: ${v.cost}.`,
       failed: (v) => `❌ La transazione del relayer è confermata, ma l'operazione della UP è fallita${v.why ? `: ${v.why}` : ""}. Costo pagato dal paymaster: ${v.cost}.`,
       noEvent: "❌ Nella transazione del relayer non c'è l'esito di questa operazione.",
-      noReceipt: (v) => `⚠️ Dopo 5 minuti l'RPC non mostra ancora la transazione ${v.hash}: controlla l'esito sull'explorer prima di riprovare.`,
+      noReceipt: (v) => `⚠️ Dopo un minuto l'RPC non mostra ancora la transazione ${v.hash}: controlla l'esito sull'explorer prima di riprovare.`,
     },
     en: {
       option: "Pay the gas with the site relayer",
@@ -118,7 +118,7 @@
       ok: (v) => `✅ Operation done. Cost paid by the paymaster: ${v.cost}.`,
       failed: (v) => `❌ The relayer's transaction is confirmed, but the UP's operation failed${v.why ? `: ${v.why}` : ""}. Cost paid by the paymaster: ${v.cost}.`,
       noEvent: "❌ The relayer's transaction carries no outcome for this operation.",
-      noReceipt: (v) => `⚠️ After 5 minutes the RPC still does not show transaction ${v.hash}: check the outcome on the explorer before trying again.`,
+      noReceipt: (v) => `⚠️ After a minute the RPC still does not show transaction ${v.hash}: check the outcome on the explorer before trying again.`,
     },
   };
   const lang = () => (document.documentElement.lang === "en" ? "en" : "it");

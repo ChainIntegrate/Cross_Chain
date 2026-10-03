@@ -48,6 +48,7 @@ Last update: 2026-09-30.
 - The publisher address does not matter: the extension has no owner, and its address depends only on factory, salt and bytecode.
 - **Verified on mainnet:** the UP bought an ERC-1155 on OpenSea on Base. The transaction was Seaport 1.6 `fulfillAdvancedOrder`, recipient the UP, 0.00088209 ETH paid from the UP. The token is BasePaint `0xBa5e05cb…dcAc83`, id 665, and it was received by the UP through the extension. The simulation had already succeeded, which it could not do before the extension. Basescan labels the UP with its Basenames primary name.
 - **Polygon: done on 2026-09-29.** The extension was published and enabled on the maintainer's personal UP (enabling tx `0x3b042f87…0000`).
+- **Avalanche C-Chain: done on 2026-10-03** on the ChainIntegrate UP (`0x4a26…8c27`): extension published (tx `0xb2706aeb…9b71`) and enabled by the genesis controller (tx `0x92d50631…ae6d`); final check OK, controller permissions unchanged.
 - **LUKSO: published only, NOT enabled, on 2026-09-29** (tx `0xd00aa669…aa99`). The original UP on LUKSO does not need it, because LSP8 NFTs arrive without it. It is published there so the address is the same across the whole ecosystem.
 - **Source verified** on Basescan, Polygonscan and the LUKSO explorer (Blockscout) for `0x7F68e74483867058C806218aa05aB5527984C03e`, using `contracts/NFTReceiverExtension.input.json` (Standard-JSON input, solc v0.8.24+commit.e11b9ed9, MIT). Do not upload `NFTReceiverExtension.json`: it is the summary file, and explorers reject it with `Unknown key "abi"`.
 - **Next:**
@@ -212,10 +213,12 @@ A page that reads and shows a UP's LSP3 identity on any network where it is depl
 ---
 
 ## 3. Other open items
+- **Site index = the guide (to do, 2026-10-03):** the site's home page must be the guide (`up-crosschain-guide.html`). To decide when doing it: an `index.html` that redirects, or a copy, or the server's index setting; the guide's internal links must keep working.
+- **Guide, tool list order (to do, 2026-10-03):** the link to the Identity page must come right after Send.
 - **`chains.js` (PR #21, Bertrand, merged 2026-09-30):** the five original tool pages load the shared list. `up-wallet.html`, `up-nft-receiver.html` and `up-gas-relay.html` were switched too in the follow-up PR. Only the deprecated v2 page keeps its own list. After the pull, check on the server that the network menus populate and that explorer links open.
 - **UP Wallet hint:** add a short note: "if the dApp hangs after the page delivered the answer, disconnect all sessions, disconnect on the dApp and reconnect with a new `wc:` link; do not reload the dApp with the session open".
 - **AUDIT R-06:** second review of `up-wallet.html` before removing the "experimental" label.
-- **AUDIT R-07:** keep or remove the Basenames demo.
+- **AUDIT R-07:** decided 2026-10-03: Basenames demo deprecated.
 - **AUDIT R-02 / I-03:** Content-Security-Policy and security headers.
 - **AUDIT R-03 / L-07:** refresh stale RPCs (e.g. `rpc.sepolia.org`).
 - **`banner.png`:** about 6 MB; optimise it.

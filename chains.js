@@ -73,16 +73,20 @@ function getExplorerUrl(net, path, resource) {
 }
 
 // Waits for a transaction receipt by asking the RPC every 1.5 seconds. Errors while waiting are
-// ignored and the next attempt follows: some public RPCs refuse receipt lookups for a hash they do
-// not know yet (publicnode answers 403 "archive requests require a personal token" until the
-// transaction is in a block). Returns the receipt, or null after `timeoutMs`.
-async function waitReceipt(provider, hash, timeoutMs = 300000) {
+// ignored and the next attempt follows: some public RPCs refuse receipt lookups (publicnode answers
+// 403 "archive requests require a personal token", before the transaction is in a block and, on
+// Base, sometimes after). `fallback` is the signing wallet's provider (an ethers BrowserProvider):
+// when the RPC has no answer, the wallet is asked too, since it tracks the transaction it sent.
+// Returns the receipt, or null after `timeoutMs`.
+async function waitReceipt(provider, hash, fallback = null, timeoutMs = 60000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    try {
-      const receipt = await provider.getTransactionReceipt(hash);
-      if (receipt) return receipt;
-    } catch (e) { /* not known to this RPC yet: ask again */ }
+    for (const p of fallback ? [provider, fallback] : [provider]) {
+      try {
+        const receipt = await p.getTransactionReceipt(hash);
+        if (receipt) return receipt;
+      } catch (e) { /* not known to this source yet: ask again */ }
+    }
     await new Promise((r) => setTimeout(r, 1500));
   }
   return null;

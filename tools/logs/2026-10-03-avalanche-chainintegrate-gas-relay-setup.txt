@@ -1,0 +1,54 @@
+Gas relay setup for the ChainIntegrate UP 0x4a2605796e0d91A9667d6E30365aEEC384C48c27 on Avalanche C-Chain (chainId 43114),
+2026-10-03, from up-gas-relay.html. Before this log: the UP was put on the paymaster's allowlist by the cassa
+("La UP è nella lista del paymaster"). Extension4337 published by the cassa (any account can: it pays only the gas);
+the UP setup signed by the genesis controller; the two later transactions by the cassa (paymaster deposit and cap).
+The site relayer 0xbb683923c2Df0269996C0E2F276A5097cE863C2F still has to be configured for chain 43114 on the server.
+
+—— 12:04:55 ——
+Simulazione...
+✅ Simulazione riuscita (gas stimato 734648).
+Conferma in MetaMask...
+Transazione inviata: 0xe40dac83edc80f29d5752b291d9d27a62599d86fed0d6b8a450331ffab412032
+https://snowscan.xyz/tx/0xe40dac83edc80f29d5752b291d9d27a62599d86fed0d6b8a450331ffab412032
+In attesa di conferma...
+✅ Confermata.
+✅ Pubblicato a 0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2, codice verificato.
+Account attivo in MetaMask: 0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c
+—— 12:05:23 ——
+Configurazione della UP 0x4a2605796e0d91A9667d6E30365aEEC384C48c27
+Firma: 0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c · Key Manager: 0x309fcE7B6a96CeF8fCbF926a006CDc6f21Ff280e · una sola transazione (executeBatch):
+1. Permessi temporanei al controller: + ADDEXTENSIONS (0x7f3f06 → 0x7f3f0e)
+2. setDataBatch:
+   - estensione per validateUserOp (0x3a871cdd) → 0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2
+   - EntryPoint aggiunto all'elenco dei controller (posizione 3)
+   - permessi dell'EntryPoint 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789 → 0x000500 (SUPER_CALL, SUPER_TRANSFERVALUE; niente SETDATA)
+3. Permessi finali del controller: 0x7f3f06 → 0xff3f06 (quelli di prima + 4337, senza i permessi temporanei)
+Se una parte fallisce, l'intera transazione viene annullata e non cambia niente.
+Simulazione...
+✅ Simulazione riuscita (gas stimato 205631).
+Controlla l'elenco qui sopra, poi premi "Firma e invia".
+Simulazione...
+✅ Simulazione riuscita (gas stimato 205631).
+Conferma in MetaMask...
+Transazione inviata: 0x3e8ecfaa7a56d18cebc8bdf2a0148116ed83dfd87a13de13256c1d9f74601a98
+https://snowscan.xyz/tx/0x3e8ecfaa7a56d18cebc8bdf2a0148116ed83dfd87a13de13256c1d9f74601a98
+In attesa di conferma...
+✅ Confermata.
+✅ Verifica finale: estensione registrata, EntryPoint con i permessi previsti, permesso 4337 al controller, nessun altro permesso cambiato.
+Account attivo in MetaMask: 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9
+—— 12:09:28 ——
+Simulazione...
+✅ Simulazione riuscita (gas stimato 55928).
+Conferma in MetaMask...
+Transazione inviata: 0x4a49b6539e908a4dce5ac273d70106d12aee13fc440ec6b01d5f65c55046ede8
+https://snowscan.xyz/tx/0x4a49b6539e908a4dce5ac273d70106d12aee13fc440ec6b01d5f65c55046ede8
+In attesa di conferma...
+✅ Confermata.
+—— 12:09:35 ——
+Simulazione...
+✅ Simulazione riuscita (gas stimato 47210).
+Conferma in MetaMask...
+Transazione inviata: 0x982675ade0d8ee6e7e65bd2f9932f1e3115d18b521a0801727e1fb3634e2d082
+https://snowscan.xyz/tx/0x982675ade0d8ee6e7e65bd2f9932f1e3115d18b521a0801727e1fb3634e2d082
+In attesa di conferma...
+✅ Confermata.

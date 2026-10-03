@@ -1,0 +1,17 @@
+ChainIntegrate UP 0x4a2605796e0d91A9667d6E30365aEEC384C48c27 on Base mainnet, 2026-10-03: LSP3Profile aligned with LUKSO
+from section 6 of up-identity.html, signed by the genesis key, with the new gas check. MetaMask confirmed the transaction,
+but the page never saw the receipt: base-rpc.publicnode.com kept answering 403 to the lookups, and after 5 minutes the page
+said "no confirmation". Fixed since: waitReceipt also asks the signing wallet, the wait is one minute, and the verification
+falls back to the latest block when a read at the receipt's block is refused.
+
+—— 11:26:21 · UP 0x4a2605796e0d91A9667d6E30365aEEC384C48c27 · Base ——
+Piano (una transazione, firmata da 0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c tramite il Key Manager 0x309fcE7B6a96CeF8fCbF926a006CDc6f21Ff280e):
+- LSP3Profile su Base → il valore di LUKSO (file ipfs://QmTA3G9oZJRvjzwYaVwdJFcucF9FEAdMRbL517prdUbMKE)
+Simulazione...
+Gas stimato: circa 0.000001625085 ETH, pagato da 0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c (saldo 0.000486493605908377 ETH).
+✅ Simulazione riuscita. Conferma la transazione nel wallet.
+Tx: 0xfa2ce3fe05df0dafd25687fcdc1a0ba83efb13f798587ece32c1a04d44c60036
+https://basescan.org/tx/0xfa2ce3fe05df0dafd25687fcdc1a0ba83efb13f798587ece32c1a04d44c60036
+In attesa di conferma...
+⚠️ Nessuna conferma entro 5 minuti. La transazione può ancora essere inclusa: controlla sull'explorer prima di riprovare.
+(browser console: POST https://base-rpc.publicnode.com/ 403 (Forbidden), repeated)
