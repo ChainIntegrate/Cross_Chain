@@ -6,7 +6,7 @@ The repository is released under the [MIT License](LICENSE), with the exceptions
 
 | File | License | Why |
 |---|---|---|
-| `contracts/UPPaymaster.sol` | GPL-3.0 ([text](licenses/GPL-3.0.txt)) | It is built on the ERC-4337 interfaces of `@account-abstraction/contracts` 0.6.0 (eth-infinitism), which are GPL-3.0. Changing the license header does not change the compiled code: the published paymaster and its verified source are the same contract. |
+| `contracts/UPPaymaster.sol`, `contracts/UPVerifyingPaymaster.sol` | GPL-3.0 ([text](licenses/GPL-3.0.txt)) | They are built on the ERC-4337 interfaces of `@account-abstraction/contracts` 0.6.0 (eth-infinitism), which are GPL-3.0. For `UPPaymaster`, which was MIT before, changing the license header does not change the compiled code: the published paymaster and its verified source are the same contract. |
 
 ## WalletConnect bundle: `vendor/walletkit-1.6.0.min.js`
 
@@ -27,6 +27,7 @@ These standard-JSON compiler inputs embed third-party Solidity files so that any
 |---|---|---|
 | `contracts/Extension4337.input.json` | LUKSO `Extension4337` and LSP packages (`@lukso/lsp*-contracts`), `@erc725/smart-contracts` 7.0.0, `@openzeppelin/contracts` 4.9.6, `@account-abstraction/contracts` 0.6.0 | Apache-2.0 (LUKSO, ERC725), MIT (OpenZeppelin, ERC725), CC0-1.0 (ERC725), GPL-3.0 (`@account-abstraction`) |
 | `contracts/UPPaymaster.input.json` | `@account-abstraction/contracts` 0.6.0 interfaces | GPL-3.0 |
+| `contracts/UPVerifyingPaymaster.input.json` | `@account-abstraction/contracts` 0.6.0 interfaces | GPL-3.0 |
 | `contracts/NFTReceiverExtension.input.json` | none (our MIT source only) | — |
 
 `contracts/Extension4337.json` also records the creation code of LUKSO's `Extension4337` (Apache-2.0).
