@@ -1,0 +1,25 @@
+First operation through the site relayer on Avalanche C-Chain (chainId 43114), 2026-10-03, from up-invia-fondi.html with
+"Pay the gas with the site relayer". The ChainIntegrate UP sends 0.01 AVAX to the cassa; the signer is the genesis
+controller (the only one with the 4337 permission on Avalanche). Relayer configured for 43114 the same day
+(/etc/crosschain-relayer/config.json: RPC api.avax.network, paymaster 0xb353…D4eD, minBalanceWarn 0.01; monitor: this UP,
+minPaymasterDeposit 0.01). Note: max cost 0.0074 AVAX against a cap of 0.01; the real cost was 0.00096 AVAX.
+
+UP: 0x4a2605796e0d91A9667d6E30365aEEC384C48c27
+Rete: Avalanche C-Chain
+Destinatario: 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9
+Wallet firmatario (controller): 0x9c8fd044a4c777f9f97c6cfc127c91f86b795c9c
+✅ Wallet firmatario e RPC sulla stessa rete (chainId 43114).
+Key Manager: 0x309fcE7B6a96CeF8fCbF926a006CDc6f21Ff280e
+Saldo attuale della UP: 0.01
+✅ Saldo della UP sufficiente per l'importo richiesto.
+✅ Simulazione riuscita sul percorso del relayer (EntryPoint → UP): il controller non paga gas.
+Gas: relayer del sito. Paymaster 0xb353565d1f801E7402DBC267b8C0E30E3540D4eD, costo massimo 0.00739939011099085 AVAX (tetto 0.01 AVAX); limite di gas dell'esecuzione 148562.
+Riepilogo: la UP invierà 0.01 di valuta nativa a 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9.
+Firma in MetaMask il messaggio 0x6870ee63fd2c0bd599b58af533d567d782c004e47e8648a02cc396ea032f0d44 (nessun gas): deve essere identico a quello mostrato da MetaMask.
+✅ Messaggio firmato da 0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c (il controller). Hash dell'operazione firmato: 0x6870ee63fd2c0bd599b58af533d567d782c004e47e8648a02cc396ea032f0d44
+Invio al relayer del sito...
+Transazione del relayer: 0xad14ca74d821ac0f4d042b996e2073c45eae09f36889ba2a4e912750510ab9f3
+https://snowscan.xyz/tx/0xad14ca74d821ac0f4d042b996e2073c45eae09f36889ba2a4e912750510ab9f3
+In attesa di conferma...
+✅ Operazione eseguita. Costo pagato dal paymaster: 0.00096200502886015 AVAX.
+✅✅ Trasferimento confermato.
