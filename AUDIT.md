@@ -2,10 +2,10 @@
 
 | | |
 |---|---|
-| **Audit date** | 2026-09-27 (rev. 1–3); 2026-09-29 (rev. 4) |
-| **Commit audited** | `f56dd29` (rev. 1–3); `47642bc` (rev. 4), both on branch `main` |
-| **Revision** | 3 — rev. 2 reclassified H-03, M-05, I-01 and I-02 after the maintainer's feedback (salt/IV are public format values; all profiles and addresses shown belong to the maintainer and are public by choice); rev. 3 adds L-09, found while testing the new implementation-publishing page, and M-08, after the maintainer described how the site is deployed; M-08 was fixed and verified on the live site the same day; rev. 4 adds the two WalletConnect pages (section 7) |
-| **Scope** | Rev. 1–3: every file in the repository at the time: 6 HTML tools, `decrypt.js`, README, images in `guide-assets/`, and the full git history. Rev. 4: the WalletConnect pages `up-wallet.html` and `up-walletconnect-basenames.html`, the vendored `vendor/walletkit-1.6.0.min.js` and `config.example.js` |
+| **Audit date** | 2026-09-27 (rev. 1–3); 2026-09-29 (rev. 4); 2026-10-01 (rev. 5); 2026-10-02 (rev. 6) |
+| **Commit audited** | `f56dd29` (rev. 1–3); `47642bc` (rev. 4); `40f0bc0` (rev. 6), all on branch `main`. Rev. 5 covered deployed contracts and the relayer (section 8) |
+| **Revision** | 3 — rev. 2 reclassified H-03, M-05, I-01 and I-02 after the maintainer's feedback (salt/IV are public format values; all profiles and addresses shown belong to the maintainer and are public by choice); rev. 3 adds L-09, found while testing the new implementation-publishing page, and M-08, after the maintainer described how the site is deployed; M-08 was fixed and verified on the live site the same day; rev. 4 adds the two WalletConnect pages (section 7); rev. 5 the gas relay (section 8); rev. 6 a review of the whole repository with the system live (section 9) |
+| **Scope** | Rev. 1–3: every file in the repository at the time: 6 HTML tools, `decrypt.js`, README, images in `guide-assets/`, and the full git history. Rev. 4: the WalletConnect pages `up-wallet.html` and `up-walletconnect-basenames.html`, the vendored `vendor/walletkit-1.6.0.min.js` and `config.example.js`. Rev. 5: `Extension4337`, `contracts/UPPaymaster.sol`, the relayer and the gas-relay setup batches. Rev. 6: the whole repository, pages, shared scripts, contracts and relayer |
 | **Method** | Manual code review, cross-check against the LUKSO reference contracts (`@lukso/lsp6-contracts` 0.16.3, `@lukso/lsp23-contracts` 0.16.3; for rev. 4 also `@lukso/lsp-smart-contracts` 0.14.0 for LSP0, LSP6 `isValidSignature` and LSP17), browser end-to-end tests with mocked wallets/RPCs/WalletConnect (Playwright + Chromium), a git history review for secrets and personal data, and, for rev. 4, live tests by the maintainer on Base and Polygon mainnet |
 
 ## Contents
@@ -18,6 +18,7 @@
 6. [How the fixes were verified](#6-how-the-fixes-were-verified)
 7. [Rev. 4 — WalletConnect pages (UP Wallet and Basenames demo)](#7-rev-4--walletconnect-pages-up-wallet-and-basenames-demo)
 8. [Rev. 5 — Gas relay: Extension4337, paymaster, relayer](#8-rev-5--gas-relay-extension4337-paymaster-relayer)
+9. [Rev. 6 — Full-repository review (2026-10-02)](#9-rev-6--full-repository-review-2026-10-02)
 
 ---
 
@@ -32,7 +33,7 @@ The tools are static, client-side pages. They never ask for a private key: every
 | Low | 12 | 11 | 1 |
 | Informational | 13 | 2 | 11 (documented / accepted / planned) |
 
-Rev. 4 (section 7) adds M-09, L-10 to L-12 and I-07 to I-13. Rev. 5 (section 8, 2026-10-01) covers the experimental gas relay (ERC-4337) with its own numbering, G-H1 to G-I3. The pages it covers are **experimental**: unlike the other tools, they sign messages and send arbitrary transactions on behalf of the profile, so their residual risk is inherently higher and depends on the user reading what is shown.
+Rev. 4 (section 7) adds M-09, L-10 to L-12 and I-07 to I-13. Rev. 5 (section 8, 2026-10-01) covers the experimental gas relay (ERC-4337) with its own numbering, G-H1 to G-I3. Rev. 6 (section 9, 2026-10-02) reviews the whole repository with its own numbering, H-1 to I-7: both High findings (H-1, H-2) and L-2, L-3 are fixed, L-5 is accepted, the rest is a hardening backlog; the key-concentration item was resolved on 2026-10-03. The pages it covers are **experimental**: unlike the other tools, they sign messages and send arbitrary transactions on behalf of the profile, so their residual risk is inherently higher and depends on the user reading what is shown.
 
 Severity scale: **High** means funds can be lost or sent to the wrong place, or personal data is exposed. **Medium** means the page gives a wrong or misleading security result, or there is a realistic injection or supply-chain vector. **Low** means a robustness or UX flaw with limited impact. **Informational** covers hardening advice and accepted design risks.
 
@@ -515,7 +516,7 @@ An AI-assisted review of the whole repository at `40f0bc0`, with the system live
 | # | Severity | Finding | Status |
 |---|---|---|---|
 | H-1 | High | The user-operation hash the controller signs came from the RPC (`getUserOpHash` over `eth_call`); a hostile RPC could have another operation signed, and the "compare with MetaMask" box compared two copies of the same value | **Fixed:** the hash is computed in the browser with the relayer's formula and the chainId already checked against RPC and wallet (`gas-relay-client.js`, `up-gas-relay.html`); the RPC's answer is only a cross-check and a mismatch stops before signing. The signature box also shows what the operation does (UP, destination, value, nonce, paymaster, chain). Tested with an RPC that answers a foreign hash |
-| H-2 | High | A 32-byte `personal_sign` by a controller with the 4337 bit is a valid authorization for a UP operation (`Extension4337` recovers from `toEthSignedMessageHash(userOpHash)`); the UP Wallet signed opaque messages for dApps after a warning | **Fixed:** the UP Wallet refuses a 32-byte `personal_sign` when the controller has the ERC4337 bit or the UP has the `validateUserOp` extension (also when the check cannot be read); the Basenames demo refuses every 32-byte `personal_sign`. Tested |
+| H-2 | High | A 32-byte `personal_sign` by a controller with the 4337 bit is a valid authorization for a UP operation (`Extension4337` recovers from `toEthSignedMessageHash(userOpHash)`); the UP Wallet signed opaque messages for dApps after a warning | **Fixed:** the UP Wallet refuses a 32-byte `personal_sign` when the controller has the ERC4337 bit or the UP has the `validateUserOp` extension (also when the check cannot be read); the Basenames demo refuses every 32-byte `personal_sign` (and since 2026-10-03 the demo is deprecated, all actions disabled). Tested |
 | M-1 | Medium | An allowlisted UP's controller can extract paymaster gas up to the cap per operation (sharpens G-M1) | Open. Caps to be sized on the real maximum cost (now lower: verification reserve 180,000 instead of 400,000); the structural fix for a public service is a verifying paymaster (`tools/PLAN.md` 2.4 / gas-service idea) |
 | M-2 | Medium | An input edited while Check runs is not invalidated | Open |
 | M-3 | Medium | After signing, a relayer failure is reported as "not sent" although the operation can still land | Open |
@@ -524,7 +525,7 @@ An AI-assisted review of the whole repository at `40f0bc0`, with the system live
 | L-2 | Low | The ERC4337 bit not shown in permission tables | **Fixed** in the UP Wallet (also counted as privileged) and the NFT page; the deploy page already showed it |
 | L-3 | Low | A controller listed twice counted as its own backup | **Fixed** in `backup-check.js` and the deploy page |
 | L-4 | Low | Stale reads in the backup flow | Open |
-| L-5 | Low | The backup copies the ERC4337 bit; revoke clears it only for the signer | Accepted for now: the maintainer uses the backup to sign relayed operations. With H-2 fixed, a 4337 signer can no longer be tricked into an authorization by a dApp through these pages |
+| L-5 | Low | The backup copies the ERC4337 bit; revoke clears it only for the signer | **Accepted (final):** the backup keeps the bit by design, so it can sign relayed operations when the genesis key is unavailable. With H-2 fixed, a 4337 signer can no longer be tricked into an authorization by a dApp through these pages; revoking the relay for a UP means revoking the bit on each controller that has it |
 | L-6 … L-8, I-1 … I-7 | Low / Info | Recipient gaps on the Send page, WalletConnect telemetry and SRI, minor robustness, paymaster panel inputs, guide wording | Open (hardening backlog) |
 
 **Key concentration (report section 7).** The cassa is paymaster owner, deploy payer and full-permission backup of the three UPs on Base and Polygon. Agreed direction: move the backup off the cassa to a separate key (ideally a hardware wallet, never from the same seed as the cassa), then remove the cassa from the six controller lists; the paymaster can also change owner (two-step `transferOwnership` / `acceptOwnership`) without changing its address. **Done on 2026-10-03:** on all six UP/network pairs the cassa was removed and a separate key added as backup (`tools/logs/2026-10-03-backup-rotation.txt`); it is still a hot key, to be replaced by a hardware wallet. The cassa remains paymaster owner and deploy payer; the paymaster is on hold.
