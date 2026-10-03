@@ -191,7 +191,7 @@
   <div class="step-num">8</div>
   <div class="step-body">
     <h3>Operate your profile on the new chain</h3>
-    <p>Import the private key you extracted in step 1 into MetaMask (or your wallet of choice) — this is standard "import account" functionality in any wallet. From there, use the <a href="up-test-operazione.html">Test tool</a> to confirm the controller actually operates the profile — it writes a timestamp on-chain through the Key Manager and reads it back. Once that works, you can also use the <a href="up-invia-fondi.html">Send tool</a> to transfer native currency, tokens and NFTs from the profile to another address, signed by that same controller.</p>
+    <p>Import the private key you extracted in step 1 into MetaMask (or your wallet of choice) — this is standard "import account" functionality in any wallet. From there, use the <a href="up-test-operazione.html">Test tool</a> to confirm the controller actually operates the profile — it writes a timestamp on-chain through the Key Manager and reads it back. Once that works, you can also use the <a href="up-invia-fondi.html">Send tool</a> to transfer native currency, tokens and NFTs from the profile to another address, signed by that same controller. The <a href="up-identity.html">Identity tool</a> shows the profile on that network next to LUKSO's and can align it (name, images, links) with one transaction.</p>
     <div class="note danger">
       <b>Importing the key puts your whole profile inside that wallet.</b> The same key also controls your profile on LUKSO, so a compromise of this wallet is a compromise of the profile everywhere.
       <ul>
@@ -215,7 +215,8 @@
       <li><b>If you lose the backup:</b> with the genesis key you add a new one, and remove the lost one (same section).</li>
       <li><b>If you lose the genesis key:</b> with the backup you keep signing, add a new backup and remove the lost key. The only thing you lose for good is deploying on new networks: there the profile is born with the genesis key only.</li>
       <li><b>On every network, after every new deploy:</b> each network has its own controller list, and a new network starts without the backup. On LUKSO, add it with LUKSO's own tools.</li>
-      <li>The Send, Test and UP Wallet pages show a warning when the profile has no backup on the selected network.</li>
+      <li>The Send, Test and UP Wallet pages show a warning when the profile has no backup on the selected network; the Identity page lists the controllers and says whether the backup is there.</li>
+      <li><b>If you use the gas relay:</b> each controller that should sign relayed operations needs the 4337 permission. A backup added after the gas relay setup gets it automatically (section 5 copies the signer's permissions); one added before needs the setup repeated with it active, on the gas relay page.</li>
     </ul>
     <div class="note">Theft is a different problem with a different answer: if you think a key has been <i>stolen</i>, move the funds to a safe account right away and replace that key on every network (see step 1).</div>
   </div>
@@ -225,7 +226,7 @@
   <b>💡 Funds: two addresses, both yours — don't forget the controller.</b>
   <ul>
     <li><b>Your UP address</b> (the same on every chain) is your <i>account</i>. Send funds to it <b>only after</b> the deploy (step 7) and the test with the Test tool (step 8) have both succeeded, and preferably after adding the backup (step 9). If something goes wrong — the wrong controller key, a failed deploy — funds sent earlier would stay stuck at that address.</li>
-    <li><b>The controller address</b> (the account you imported into MetaMask in step 8) is the <i>key</i> that signs. Every operation — test, transfer, anything — costs a small fee (gas), and <b>the controller pays it, not the UP</b>.</li>
+    <li><b>The controller address</b> (the account you imported into MetaMask in step 8) is the <i>key</i> that signs. Every operation — test, transfer, anything — costs a small fee (gas), and <b>the controller pays it, not the UP</b>. The exception: operations whose gas is paid by the site's relayer, only for profiles on its paymaster's list. Changes to the profile's data or controllers are always paid by the controller.</li>
     <li>👉 So on the new chain send some funds <b>to the controller too</b> (e.g. POL on Polygon, ETH on Base or Arbitrum): at least enough for a few transactions. Without them the controller cannot sign anything, even if the UP is full.</li>
   </ul>
   One is a smart contract account (the UP), the other a normal wallet (the controller, an EOA): different addresses, but both under your control.
@@ -287,11 +288,11 @@
   <li><a href="up-deploy-public.html">Deploy</a> — decode calldata, verify, and deploy a Universal Profile at its predicted address on another chain. Section 5 adds a backup controller, or removes a lost one, on any network where the profile exists.</li>
   <li><a href="up-verify-only.html">Verify only</a> — check whether a deploy already exists on another chain. It only reads public data from an RPC: no wallet is required, but you can optionally connect your Universal Profile to auto-fill the address it checks for, instead of typing it by hand.</li>
   <li><a href="up-test-operazione.html">Test</a> — confirm your controller can operate the deployed profile.</li>
-  <li><a href="up-invia-fondi.html">Send</a> — transfer native currency, tokens (ERC-20) and NFTs (ERC-721, ERC-1155) from the profile to another address. It can list what the profile holds on the selected network.</li>
+  <li><a href="up-invia-fondi.html">Send</a> — transfer native currency, tokens (ERC-20) and NFTs (ERC-721, ERC-1155) from the profile to another address. It can list what the profile holds on the selected network. If the profile is on the list of the site's paymaster, the gas can be paid by the site's relayer.</li>
+  <li><a href="up-identity.html">Identity</a> — the profile on another network, compared with LUKSO: name, images and links, what it holds (native currency, tokens and NFTs, with their images), who controls it and whether there is a backup, and what it can do there (receive NFTs, gas relay). Reading needs no wallet. Section 6 aligns the profile with LUKSO's, with one transaction signed by your controller.</li>
   <li><a href="up-publish-implementation.html">Publish implementation</a> — if the Verify or Deploy tool reports that your profile's LSP0 or Key Manager implementation is missing on the target chain, publish it there at the same address, by replaying LUKSO's original deterministic deploy. Anyone can do it; it only costs gas.</li>
   <li><a href="up-wallet.html">UP Wallet</a> <i>(experimental)</i> — use the redeployed profile as your account on any dApp through WalletConnect: the page checks that profile and controller are compatible, shows and simulates every request, and signs only after your confirmation. Start in simulation mode, with small amounts.</li>
   <li><a href="up-nft-receiver.html">NFT reception</a> <i>(experimental)</i> — lets the redeployed profile receive ERC-721 / ERC-1155 NFTs (for example purchases on marketplaces), with one transaction that leaves the controller's permissions unchanged.</li>
-  <li><a href="up-identity.html">Identity</a> — see the profile (name, images, links) on another network, compared with LUKSO, and who controls it there. Read-only, no wallet.</li>
   <li><a href="up-gas-relay.html">Gas relay</a> <i>(experimental)</i> — operate the profile while its controller holds no gas: the controller signs, the site's relayer sends, the site operator's paymaster pays. Only for profiles on the paymaster's list. Includes a read-only configuration check.</li>
 </ul>
 
@@ -417,7 +418,7 @@
   <div class="step-num">8</div>
   <div class="step-body">
     <h3>Opera il tuo profilo sulla nuova rete</h3>
-    <p>Importa in MetaMask (o nel wallet che preferisci) la chiave privata estratta al passo 1 — è la normale funzione "importa account" di qualsiasi wallet. Da lì usa la <a href="up-test-operazione.html">pagina di Test</a> per confermare che il controller operi davvero il profilo — scrive un timestamp on-chain tramite il Key Manager e lo rilegge. Una volta verificato, puoi anche usare la <a href="up-invia-fondi.html">pagina di Invio</a> per trasferire valuta nativa, token e NFT dal profilo a un altro indirizzo, firmato dallo stesso controller.</p>
+    <p>Importa in MetaMask (o nel wallet che preferisci) la chiave privata estratta al passo 1 — è la normale funzione "importa account" di qualsiasi wallet. Da lì usa la <a href="up-test-operazione.html">pagina di Test</a> per confermare che il controller operi davvero il profilo — scrive un timestamp on-chain tramite il Key Manager e lo rilegge. Una volta verificato, puoi anche usare la <a href="up-invia-fondi.html">pagina di Invio</a> per trasferire valuta nativa, token e NFT dal profilo a un altro indirizzo, firmato dallo stesso controller. La <a href="up-identity.html">pagina Identità</a> mostra il profilo su quella rete accanto a quello di LUKSO e può allinearlo (nome, immagini, link) con una transazione.</p>
     <div class="note danger">
       <b>Importare la chiave significa mettere l'intero profilo dentro quel wallet.</b> La stessa chiave controlla il tuo profilo anche su LUKSO: se quel wallet viene compromesso, il profilo è compromesso ovunque.
       <ul>
@@ -441,7 +442,8 @@
       <li><b>Se perdi il backup:</b> con la chiave di genesi ne aggiungi un altro e rimuovi quello perso (stessa sezione).</li>
       <li><b>Se perdi la chiave di genesi:</b> con il backup continui a firmare, aggiungi un nuovo backup e rimuovi la chiave persa. L'unica cosa che perdi per sempre è il deploy su reti nuove: lì il profilo nasce solo con la chiave di genesi.</li>
       <li><b>Su ogni rete, dopo ogni nuovo deploy:</b> ogni rete ha la sua lista di controller, e una rete nuova parte senza backup. Su LUKSO aggiungilo con gli strumenti di LUKSO.</li>
-      <li>Le pagine Invio, Test e UP Wallet mostrano un avviso quando il profilo non ha un backup sulla rete scelta.</li>
+      <li>Le pagine Invio, Test e UP Wallet mostrano un avviso quando il profilo non ha un backup sulla rete scelta; la pagina Identità elenca i controller e dice se il backup c'è.</li>
+      <li><b>Se usi il gas relay:</b> ogni controller che deve firmare operazioni pagate dal relayer ha bisogno del permesso 4337. Un backup aggiunto dopo la configurazione del gas relay lo riceve da solo (la sezione 5 copia i permessi di chi firma); uno aggiunto prima ha bisogno di ripetere la configurazione con lui attivo, nella pagina del gas relay.</li>
     </ul>
     <div class="note">Il furto è un altro problema, con un'altra risposta: se pensi che una chiave ti sia stata <i>rubata</i>, sposta subito i fondi su un account sicuro e sostituisci quella chiave su ogni rete (vedi il passo 1).</div>
   </div>
@@ -451,7 +453,7 @@
   <b>💡 I fondi: due indirizzi, tutti e due tuoi — non dimenticare il controller.</b>
   <ul>
     <li><b>L'indirizzo della tua UP</b> (uguale su tutte le reti) è il tuo <i>conto</i>. Mandaci fondi <b>solo dopo</b> che il deploy (passo 7) e il test con la pagina di Test (passo 8) sono andati entrambi a buon fine, e meglio ancora dopo aver aggiunto il backup (passo 9). Se qualcosa va storto — chiave del controller sbagliata, deploy fallito — i fondi mandati prima resterebbero bloccati a quell'indirizzo.</li>
-    <li><b>L'indirizzo del controller</b> (l'account che hai importato in MetaMask al passo 8) è la <i>chiave</i> che firma. Ogni operazione — test, invio, qualsiasi cosa — costa una piccola commissione (gas), e <b>la paga il controller, non la UP</b>.</li>
+    <li><b>L'indirizzo del controller</b> (l'account che hai importato in MetaMask al passo 8) è la <i>chiave</i> che firma. Ogni operazione — test, invio, qualsiasi cosa — costa una piccola commissione (gas), e <b>la paga il controller, non la UP</b>. L'eccezione: le operazioni il cui gas lo paga il relayer del sito, solo per i profili nella lista del suo paymaster. Le modifiche ai dati o ai controller del profilo le paga sempre il controller.</li>
     <li>👉 Quindi sulla nuova rete manda un po' di fondi <b>anche al controller</b> (es. POL su Polygon, ETH su Base o Arbitrum): almeno quanto basta per qualche transazione. Senza, il controller non può firmare nulla, anche se la UP è piena.</li>
   </ul>
   Uno è un account smart contract (la UP), l'altro un normale wallet (il controller, un EOA): indirizzi diversi, ma tutti e due sotto il tuo controllo.
@@ -513,11 +515,11 @@
   <li><a href="up-deploy-public.html">Deploy</a> — decodifica la calldata, verifica e deploya una Universal Profile all'indirizzo predetto su un'altra rete. La sezione 5 aggiunge un controller di backup, o rimuove uno perso, su qualsiasi rete dove il profilo esiste.</li>
   <li><a href="up-verify-only.html">Sola verifica</a> — controlla se un deploy esiste già su un'altra rete. Legge solo dati pubblici da un RPC: non serve nessun wallet, ma puoi connettere facoltativamente la tua Universal Profile per compilare automaticamente l'indirizzo da controllare, invece di digitarlo a mano.</li>
   <li><a href="up-test-operazione.html">Test</a> — conferma che il tuo controller possa operare il profilo deployato.</li>
-  <li><a href="up-invia-fondi.html">Invio</a> — trasferisce valuta nativa, token (ERC-20) e NFT (ERC-721, ERC-1155) dal profilo a un altro indirizzo. Può elencare cosa possiede il profilo sulla rete scelta.</li>
+  <li><a href="up-invia-fondi.html">Invio</a> — trasferisce valuta nativa, token (ERC-20) e NFT (ERC-721, ERC-1155) dal profilo a un altro indirizzo. Può elencare cosa possiede il profilo sulla rete scelta. Se il profilo è nella lista del paymaster del sito, il gas può pagarlo il relayer del sito.</li>
+  <li><a href="up-identity.html">Identità</a> — il profilo su un'altra rete, confrontato con LUKSO: nome, immagini e link, cosa possiede (valuta, token e NFT, con le loro immagini), chi lo controlla e se c'è un backup, e cosa può fare lì (ricevere NFT, gas relay). La lettura non richiede wallet. La sezione 6 allinea il profilo a quello di LUKSO, con una transazione firmata dal tuo controller.</li>
   <li><a href="up-publish-implementation.html">Pubblica implementazione</a> — se la pagina di Verifica o di Deploy segnala che l'implementazione LSP0 o Key Manager del tuo profilo manca sulla rete di destinazione, la pubblica lì allo stesso indirizzo, ripetendo il deploy deterministico originale di LUKSO. Può farlo chiunque, costa solo gas.</li>
   <li><a href="up-wallet.html">UP Wallet</a> <i>(sperimentale)</i> — usa il profilo rideployato come account su qualsiasi dApp tramite WalletConnect: la pagina verifica che profilo e controller siano compatibili, mostra e simula ogni richiesta e firma solo dopo la tua conferma. Parti in modalità simulazione, con importi piccoli.</li>
   <li><a href="up-nft-receiver.html">Ricezione NFT</a> <i>(sperimentale)</i> — permette al profilo rideployato di ricevere NFT ERC-721 / ERC-1155 (per esempio acquisti sui marketplace), con una sola transazione che lascia invariati i permessi del controller.</li>
-  <li><a href="up-identity.html">Identità</a> — vedi il profilo (nome, immagini, link) su un'altra rete, confrontato con LUKSO, e chi lo controlla lì. Sola lettura, nessun wallet.</li>
   <li><a href="up-gas-relay.html">Gas pagato dal paymaster</a> <i>(sperimentale)</i> — opera il profilo senza che il controller abbia gas: il controller firma, il relayer del sito invia, il paymaster del gestore paga. Solo per i profili nella lista del paymaster. Include una verifica della configurazione in sola lettura.</li>
 </ul>
 
