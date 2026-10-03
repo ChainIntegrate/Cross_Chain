@@ -427,6 +427,9 @@ const I18N = {
     bkAckRequired: "Spunta la conferma prima di rimuovere.",
     bkPickRemove: "Scegli il controller da rimuovere.",
     bkError: (v) => `Errore: ${v.err}`,
+    bkCancelled: "Annullato in MetaMask: nessuna transazione inviata.",
+    bkNoGas: (v) => `❌ ${v.addr} ha ${v.bal} ${v.cur} su questa rete, ne servono circa ${v.cost} per il gas. Niente inviato: aggiungi un po' di ${v.cur || "valuta della rete"} a questo account, oppure connetti un altro controller amministratore che ne abbia.`,
+    bkGasOk: (v) => `Gas stimato: circa ${v.cost} ${v.cur}, pagato da ${v.addr} (saldo ${v.bal} ${v.cur}).`,
     bkChangedRead: "La UP, la rete o il wallet sono cambiati: premi di nuovo «Leggi i controller».",
   },
   en: {
@@ -641,6 +644,9 @@ const I18N = {
     bkAckRequired: "Tick the confirmation before removing.",
     bkPickRemove: "Choose the controller to remove.",
     bkError: (v) => `Error: ${v.err}`,
+    bkCancelled: "Cancelled in MetaMask: no transaction sent.",
+    bkNoGas: (v) => `❌ ${v.addr} holds ${v.bal} ${v.cur} on this network; about ${v.cost} is needed for gas. Nothing sent: add a little ${v.cur || "of the network's currency"} to this account, or connect another admin controller that has some.`,
+    bkGasOk: (v) => `Estimated gas: about ${v.cost} ${v.cur}, paid by ${v.addr} (balance ${v.bal} ${v.cur}).`,
     bkChangedRead: "The UP, the network or the wallet changed: press \"Read the controllers\" again.",
   },
 };
@@ -1588,6 +1594,19 @@ async function sendBackupTx(b, data, verify) {
   bkLog(t("bkSimulating"), "line-dim");
   try { await b.provider.call({ from: b.signer, to: b.km, data }); }
   catch (e) { bkLog(t("bkSimFail", { err: e.shortMessage || e.reason || e.message }), "line-err"); return false; }
+  // The signer pays the gas: check its balance before MetaMask opens (a fresh backup key often holds
+  // nothing on this network, and the wallet then shows only a generic fee alert).
+  try {
+    const [gas, fee, bal] = await Promise.all([b.provider.estimateGas({ from: b.signer, to: b.km, data }), b.provider.getFeeData(), b.provider.getBalance(b.signer)]);
+    const price = fee.maxFeePerGas || fee.gasPrice;
+    if (price) {
+      const net = getNetwork();
+      const cur = net && net.currency && net.currency !== "?" ? net.currency : "";
+      const v = { addr: b.signer, bal: ethers.formatEther(bal), cost: ethers.formatEther(gas * price), cur };
+      if (bal < gas * price) { bkLog(t("bkNoGas", v), "line-err"); return false; }
+      bkLog(t("bkGasOk", v), "line-dim");
+    }
+  } catch (e) { /* no estimate: MetaMask still shows its own fee */ }
   bkLog(t("bkSimOk"), "line-ok");
   const browserProvider = new ethers.BrowserProvider(signerProvider);
   browserProvider.pollingInterval = 1000; // confirm as soon as the block is there (default 4 s)
@@ -1648,7 +1667,8 @@ $("addBackupBtn").addEventListener("click", async () => {
     bkLog(problems.length ? t("bkVerifyBad", { what: problems.join(", ") }) : t("bkAddOk", { addr: backup }), problems.length ? "line-warn" : "line-ok");
     await readBackup();
   } catch (e) {
-    bkLog(t("bkError", { err: e.shortMessage || e.message }), "line-err");
+    if (e && (e.code === "ACTION_REJECTED" || e.code === 4001)) bkLog(t("bkCancelled"), "line-warn");
+    else bkLog(t("bkError", { err: e.shortMessage || e.message }), "line-err");
   } finally {
     setBusy(false);
   }
@@ -1699,7 +1719,8 @@ $("removeBtn").addEventListener("click", async () => {
     $("removeAck").checked = false;
     await readBackup();
   } catch (e) {
-    bkLog(t("bkError", { err: e.shortMessage || e.message }), "line-err");
+    if (e && (e.code === "ACTION_REJECTED" || e.code === 4001)) bkLog(t("bkCancelled"), "line-warn");
+    else bkLog(t("bkError", { err: e.shortMessage || e.message }), "line-err");
   } finally {
     setBusy(false);
   }
