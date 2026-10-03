@@ -254,7 +254,7 @@
     const box = document.createElement("div");
     box.id = "relaySignBox";
     box.setAttribute("role", "dialog");
-    box.style.cssText = "position:fixed; left:50%; top:16px; transform:translateX(-50%); z-index:60; width:calc(100% - 32px); max-width:620px; background:#1d2330; border:2px solid var(--accent, #5b8cff); border-radius:10px; padding:14px 16px; color:var(--text, #e6e8ec); font-size:13.5px; line-height:1.5; box-shadow:0 6px 24px rgba(0,0,0,0.5);";
+    box.style.cssText = "position:fixed; left:50%; top:16px; transform:translateX(-50%); z-index:60; width:calc(100% - 32px); max-width:620px; background:var(--raised, #1d2330); border:2px solid var(--accent, #5b8cff); border-radius:10px; padding:14px 16px; color:var(--text, #e6e8ec); font-size:13.5px; line-height:1.5; box-shadow:0 6px 24px rgba(0,0,0,0.5);";
     const line = (txt, css) => { const d = document.createElement("div"); d.textContent = txt; if (css) d.style.cssText = css; box.appendChild(d); return d; };
     line(text("signBoxTitle"), "font-weight:700; font-size:14.5px;");
     line(text("signBoxMsg"), "margin-top:6px;");
