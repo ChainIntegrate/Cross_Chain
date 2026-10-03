@@ -1,0 +1,24 @@
+Backup rotation on the maintainer's three UPs, Base and Polygon mainnet, 2026-10-03, from section 5 of up-deploy-public.html.
+Each UP: the genesis controller signs; the cassa 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9 is removed as backup and
+0x406f822aC86b61d4cDf4cD84833f7e5561609C02 (a separate hot key, to be replaced by a hardware wallet) is added with the
+genesis controller's permissions 0xff3f06. Audit 2026-10-02 section 7 (key concentration). Transactions:
+
+UP 0x1d62B8d2c63B942095AD3C7FFc7e845195D9E718 (genesis 0x434667A8840E18628Cbd7B3a51D7cEE207fD9d4c, KM 0x595DCd1cd30146FA21186bcE639625C9026C4feE)
+  Base     remove cassa 0x566331a6bb96d5a71f6657d3618ff3e643f401867c23fa81893a1ae065b8563e
+           add backup   0x2abb628c290b96cf7d92cc0cf0e75621b52e138899dfb257ece6aec98b396780
+  Polygon  remove cassa 0x06ebbee82237f90eff8cde3b959b034e0c380a053ef9fd996a203f7a4c2820f5
+           add backup   0x0fc571a3e27cb9bad517e68fee4e896353f566a25cb798c4e259295bc755b59e
+UP 0x328A19Ab63744AAF3d0AeBfB8e6Dc5246fAf317b (genesis 0x86F72AF152E8b502E8Dc7CF87A115Ec94490c6f2, KM 0x25d0591a83508cE6C937DBB173B00c5A17A6A222)
+  Base     remove cassa 0x7e71771033d72747afaf3d4a6904d94aa60be436bb3509e6177e11ca995b6ae8
+           add backup   0x180140c0abdcbd2cc9851b5f8216a21e7cfe59b9e7ffa9737360c6584d8115f3
+  Polygon  remove cassa 0x4636b93a36a20bf087108f3361bbb44debaa53698334f32900a0dacd31bf0997
+           add backup   0xe669c5000148077599ff417248784f493297ccbe98182f05d408dd184fde44a3
+UP 0x4a2605796e0d91A9667d6E30365aEEC384C48c27 (genesis 0x9C8Fd044A4C777f9f97c6cFC127C91f86b795C9c, KM 0x309fcE7B6a96CeF8fCbF926a006CDc6f21Ff280e)
+  Base     remove cassa 0x7258aa3406783d83dd0abe31474d0089c45fe692f2ee5a0082be3f7615e8d6aa
+           add backup   0x2ef772c48f05678f1503e80f5ba137ac1aa26204abba57c5e2d4830de0cd5dfd
+  Polygon  remove cassa 0xc67d1c4397ae8c1bd7982c7f772bb76427fa0b5e2e7a4985b574058089f3f2d0
+           add backup   0x2a27c08c99251652b74f1b9faae57fe4f1f615b53912001d5af79bca514f63a8
+
+Every step: simulation ok, transaction confirmed, and the page's re-read at the receipt block matched the plan
+("Controller ... rimosso" / "Backup registrato"). The removal warning "only one admin controller will remain" appeared
+before each removal, as expected, and each removal was followed within seconds by the new backup.

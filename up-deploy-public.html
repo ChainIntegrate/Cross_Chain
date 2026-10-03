@@ -178,6 +178,7 @@
   <div class="divider" data-i18n="removeDivider">— oppure, dopo aver perso una chiave —</div>
   <label data-i18n="removeLabel">Controller da rimuovere</label>
   <select id="removeSelect"></select>
+  <div class="note" data-i18n="removeHint"></div>
   <label class="check-row"><input type="checkbox" id="removeAck"> <span data-i18n="removeAck">Confermo: questa chiave è persa o non mi serve più. Il controller connesso nel wallet resta e continua a gestire la UP.</span></label>
   <button id="removeBtn" class="danger" disabled data-i18n="removeBtn">Rimuovi il controller selezionato</button>
   <div id="backupLog"></div>
@@ -367,6 +368,7 @@ const I18N = {
     addBackupBtn: "Aggiungi il controller di backup",
     removeDivider: "— oppure, dopo aver perso una chiave —",
     removeLabel: "Controller da rimuovere",
+    removeHint: "L'elenco mostra tutti i controller tranne quello connesso nel wallet: chi firma non può rimuovere se stesso. Per rimuovere la chiave connessa, connetti un altro amministratore (per esempio il backup).",
     removeAck: "Confermo: questa chiave è persa o non mi serve più. Il controller connesso nel wallet resta e continua a gestire la UP.",
     removeBtn: "Rimuovi il controller selezionato",
     removeNone: "(nessun controller rimovibile)",
@@ -580,6 +582,7 @@ const I18N = {
     addBackupBtn: "Add the backup controller",
     removeDivider: "— or, after losing a key —",
     removeLabel: "Controller to remove",
+    removeHint: "The list shows every controller except the one connected in the wallet: the signer cannot remove itself. To remove the connected key, connect another admin (for example the backup).",
     removeAck: "I confirm: this key is lost or no longer needed. The controller connected in the wallet stays and keeps managing the UP.",
     removeBtn: "Remove the selected controller",
     removeNone: "(no removable controller)",
@@ -1497,7 +1500,14 @@ function renderBackup() {
   if (!removable.length) {
     const o = document.createElement("option"); o.value = ""; o.textContent = t("removeNone"); sel.appendChild(o);
   } else {
-    removable.forEach(c => { const o = document.createElement("option"); o.value = c.address; o.textContent = `${c.address} — ${permHex(c.perms)}`; sel.appendChild(o); });
+    removable.forEach(c => {
+      const o = document.createElement("option");
+      o.value = c.address;
+      const tags = [(c.perms & BK.ADMIN) === BK.ADMIN ? t("bkAdmin") : t("bkRoleCtrl")];
+      if (bk.genesis.includes(c.address.toLowerCase())) tags.push(t("bkGenesis"));
+      o.textContent = `${c.address} — ${permHex(c.perms)} · ${tags.join(", ")}`;
+      sel.appendChild(o);
+    });
     if (removable.some(c => c.address === prev)) sel.value = prev;
   }
   updateBackupButtons();
