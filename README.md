@@ -152,6 +152,12 @@ Bug reports and improvements to the tools are welcome. This repository does not 
 
 ## License
 
-Released under the [MIT License](LICENSE). The software is provided "as is", without warranty of any kind: these tools prepare irreversible on-chain transactions, and you use them at your own risk.
+Released under the [MIT License](LICENSE), with these exceptions:
+- `contracts/UPPaymaster.sol` is under **GPL-3.0** ([text](licenses/GPL-3.0.txt)), like the ERC-4337 interfaces (`@account-abstraction/contracts`, GPL-3.0) it is built on.
+- Third-party code included in the repository keeps its own license: the WalletConnect bundle in `vendor/` (WalletConnect Community License Agreement of Reown, Inc., plus MIT/ISC/Apache-2.0/0BSD dependencies) and the sources embedded in `contracts/*.input.json` (LUKSO, ERC725, OpenZeppelin, `@account-abstraction`). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+The software is provided "as is", without warranty of any kind: these tools prepare irreversible on-chain transactions, and you use them at your own risk.
 
 The ChainIntegrate name, logo and banner are not covered by the license.
+
+The site relayer in `tools/relayer/` is run by the maintainer for personal use; it is not a public service.
