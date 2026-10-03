@@ -2,6 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
+<script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex, nofollow">
@@ -13,7 +14,7 @@
 <script src="config.js"></script>
 <style>
   :root {
-    --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
+    --bg: #0f1115; --panel: #171a21; --border: #2a2f3a; --field: #10131a; --chip: #2a2f3a; --disabled: #3a3f4b; --raised: #1d2330;
     --text: #e6e8ec; --text-dim: #9aa1ad;
     --accent: #5b8cff; --ok: #3fbf6f; --warn: #e0a83c; --err: #e05a5a;
   }
@@ -27,13 +28,13 @@
   .note { font-size: 12.5px; color: var(--text-dim); line-height: 1.5; margin-bottom: 12px; }
   label { display: block; font-size: 13px; color: var(--text-dim); margin: 14px 0 6px; }
   label:first-child { margin-top: 0; }
-  select, input { width: 100%; background: #10131a; border: 1px solid var(--border); color: var(--text);
+  select, input { width: 100%; background: var(--field); border: 1px solid var(--border); color: var(--text);
                   border-radius: 6px; padding: 10px 12px; font-size: 14px; font-family: inherit; }
   button { width: 100%; background: var(--accent); color: white; border: none; border-radius: 6px;
            padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; }
-  button:disabled { background: #3a3f4b; cursor: not-allowed; }
+  button:disabled { background: var(--disabled); cursor: not-allowed; }
   button.danger { background: var(--err); }
-  .status-box { background: #10131a; border: 1px solid var(--border); border-radius: 6px; padding: 12px;
+  .status-box { background: var(--field); border: 1px solid var(--border); border-radius: 6px; padding: 12px;
                 font-family: monospace; font-size: 12.5px; margin-top: 12px; }
   .status-box .empty { color: var(--text-dim); }
   #log { font-family: monospace; font-size: 12.5px; white-space: pre-wrap; word-break: break-all; line-height: 1.6; }
@@ -46,7 +47,7 @@
   .brand-row { margin-bottom: 24px; }
   .brand-logo { display: block; width: 100%; height: auto; border-radius: 10px; }
   .top-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-  .lang-btn { width: auto; background: #2a2f3a; padding: 6px 14px; font-size: 12px; margin-top: 0; flex-shrink: 0; }
+  .lang-btn { width: auto; background: var(--chip); padding: 6px 14px; font-size: 12px; margin-top: 0; flex-shrink: 0; }
   .site-footer { margin-top: 40px; padding: 18px 20px; background: #f5f6f8; border: 1px solid #e3e5ea; border-radius: 10px; color: #4b4f58; }
   .footer-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
   .footer-logo { height: 48px; width: auto; flex-shrink: 0; }
@@ -60,7 +61,7 @@
   .check-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 13.5px; }
   .check-row input { width: auto; }
   .warn-box { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--warn); border-radius: 8px; background: rgba(224,168,60,0.08); font-size: 13px; line-height: 1.5; }
-  button.secondary { background: #2a2f3a; }
+  button.secondary { background: var(--chip); }
   .kv pre { margin: 0; white-space: pre-wrap; word-break: break-all; font-size: 12px; max-height: 320px; overflow: auto; }
 </style>
 </head>

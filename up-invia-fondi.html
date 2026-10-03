@@ -2,6 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
+<script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <title data-i18n="pageTitle">UP Invia Fondi — ChainIntegrate</title>
@@ -23,7 +24,7 @@
 <script src="gas-relay-client.js"></script>
 <style>
   :root {
-    --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
+    --bg: #0f1115; --panel: #171a21; --border: #2a2f3a; --field: #10131a; --chip: #2a2f3a; --disabled: #3a3f4b; --raised: #1d2330;
     --text: #e6e8ec; --text-dim: #9aa1ad;
     --accent: #5b8cff; --ok: #3fbf6f; --warn: #e0a83c; --err: #e05a5a;
   }
@@ -37,13 +38,13 @@
   .note { font-size: 12.5px; color: var(--text-dim); line-height: 1.5; margin-bottom: 12px; }
   label { display: block; font-size: 13px; color: var(--text-dim); margin: 14px 0 6px; }
   label:first-child { margin-top: 0; }
-  select, input { width: 100%; background: #10131a; border: 1px solid var(--border); color: var(--text);
+  select, input { width: 100%; background: var(--field); border: 1px solid var(--border); color: var(--text);
                   border-radius: 6px; padding: 10px 12px; font-size: 14px; font-family: inherit; }
   button { width: 100%; background: var(--accent); color: white; border: none; border-radius: 6px;
            padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; }
-  button:disabled { background: #3a3f4b; cursor: not-allowed; }
+  button:disabled { background: var(--disabled); cursor: not-allowed; }
   button.danger { background: var(--err); }
-  .status-box { background: #10131a; border: 1px solid var(--border); border-radius: 6px; padding: 12px;
+  .status-box { background: var(--field); border: 1px solid var(--border); border-radius: 6px; padding: 12px;
                 font-family: monospace; font-size: 12.5px; margin-top: 12px; }
   .status-box .empty { color: var(--text-dim); }
   #log { font-family: monospace; font-size: 12.5px; white-space: pre-wrap; word-break: break-all; line-height: 1.6; }
@@ -55,19 +56,19 @@
   .brand-row { margin-bottom: 24px; }
   .brand-logo { display: block; width: 100%; height: auto; border-radius: 10px; }
   .top-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-  .lang-btn { width: auto; background: #2a2f3a; padding: 6px 14px; font-size: 12px; margin-top: 0; flex-shrink: 0; }
+  .lang-btn { width: auto; background: var(--chip); padding: 6px 14px; font-size: 12px; margin-top: 0; flex-shrink: 0; }
   [hidden] { display: none !important; }
-  button.secondary { background: #2a2f3a; }
+  button.secondary { background: var(--chip); }
   .amount-row { display: flex; gap: 8px; align-items: stretch; }
   .amount-row button { width: auto; margin-top: 0; padding: 0 16px; }
   .alt-search { margin-top: 10px; font-size: 13px; color: var(--text-dim); }
   .alt-search summary { cursor: pointer; }
   .asset-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; max-height: 320px; overflow-y: auto; }
-  .asset-row { width: 100%; margin-top: 0; padding: 8px 10px; text-align: left; font-size: 12.5px; font-weight: 500; background: #10131a; border: 1px solid var(--border); overflow-wrap: anywhere; }
+  .asset-row { width: 100%; margin-top: 0; padding: 8px 10px; text-align: left; font-size: 12.5px; font-weight: 500; background: var(--field); border: 1px solid var(--border); overflow-wrap: anywhere; }
   .asset-row:hover { border-color: var(--accent); }
   .asset-row.spam { color: var(--warn); }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  .chip { width: auto; margin-top: 0; padding: 4px 10px; font-size: 12px; font-weight: 500; font-family: monospace; background: #2a2f3a; }
+  .chip { width: auto; margin-top: 0; padding: 4px 10px; font-size: 12px; font-weight: 500; font-family: monospace; background: var(--chip); }
   .site-footer { margin-top: 40px; padding: 18px 20px; background: #f5f6f8; border: 1px solid #e3e5ea; border-radius: 10px; color: #4b4f58; }
   .footer-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
   .footer-logo { height: 48px; width: auto; flex-shrink: 0; }
@@ -77,7 +78,7 @@
   .site-footer a:hover { text-decoration: underline; }
   /* While Check or Send runs: a fixed box that says what is happening, so the wait before the wallet opens is never silent. */
   #busyToast { display: none; position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 50;
-               width: calc(100% - 32px); max-width: 720px; background: #1d2330; border: 2px solid var(--warn); border-radius: 10px;
+               width: calc(100% - 32px); max-width: 720px; background: var(--raised); border: 2px solid var(--warn); border-radius: 10px;
                padding: 12px 16px; font-size: 14px; line-height: 1.5; color: var(--text); box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
   #busyToast.on { display: flex; gap: 12px; align-items: center; }
   #busyToast .spin { width: 18px; height: 18px; flex: 0 0 18px; border: 3px solid var(--warn); border-top-color: transparent; border-radius: 50%; animation: spin 0.9s linear infinite; }

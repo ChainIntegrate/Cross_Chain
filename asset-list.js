@@ -4,13 +4,16 @@
 // otherwise Blockscout's public API. An RPC node cannot list an address's tokens by itself; the
 // indexer rows are only as complete as the indexer. No wallet, no signature.
 //
-// Used by up-identity.html. Rows: { address, type, name, symbol, amount, ids, count, spam, source }
-// (amount: formatted fungible balance; ids: NFT token IDs, at most MAX_IDS; count: NFTs held).
+// Used by up-identity.html. Rows: { address, type, name, symbol, amount, ids, count, spam, source,
+// image, lsp4Metadata } (amount: formatted fungible balance; ids: NFT token IDs, at most MAX_IDS;
+// count: NFTs held; image: URL from the indexer; lsp4Metadata: the asset's LSP4Metadata value, a
+// VerifiableURI the page resolves to the token or collection image).
 (function () {
   const LSP5_ARRAY = "0x6460ee3c0aac563ccbf76d6e1d07bada78e3a9514e6382b736ed3f478ab7b90b"; // LSP5ReceivedAssets[]
   const LSP5_MAP = "0x812c4334633eb816c80d0000"; // LSP5ReceivedAssetsMap:<address>
   const LSP4_NAME = "0xdeba1e292f8ba88238e10ab3c7f88bd4be4fac56cad5194b6ecceaf653468af1";
   const LSP4_SYMBOL = "0x2f0a68ab07768e01943a599e73362a0e17a63a72e94dd2e384d2c1d4db932756";
+  const LSP4_METADATA = "0x9afb95cacc9f95858ec44aa8c3b685511002e30ae54415823f406128b85b238e";
   // How LSP8 token IDs are written: LSP8TokenIdFormat (0.14+), LSP8TokenIdType (older). In both,
   // 0 = number and 1 = string; the other values differ between releases, so they stay hex.
   const LSP8_ID_FORMAT = "0xf675e9361af1c1664c1868cfa3eb97672d6b1a513aa5b81dec34c9ee330e818d";
@@ -61,6 +64,12 @@
     return null;
   }
 
+  // Image URLs taken from indexers: only https://, ipfs:// and small data:image/ URIs; anything else is dropped.
+  function imageUrl(u) {
+    if (typeof u !== "string" || u.length > 200000) return null;
+    if (/^https:\/\//i.test(u) || /^ipfs:\/\//i.test(u) || /^data:image\/(png|jpe?g|gif|webp|svg\+xml)[;,]/i.test(u)) return u;
+    return null;
+  }
   const text = (v) => { if (!v || v === "0x") return null; try { return ethers.toUtf8String(v).slice(0, 80); } catch (e) { return null; } };
   const fmt = (amount, decimals) => { try { return ethers.formatUnits(amount, Number(decimals || 0)); } catch (e) { return amount.toString(); } };
   const shortId = (id) => { const s = String(id); return s.length > 20 ? s.slice(0, 10) + "…" + s.slice(-6) : s; };
@@ -89,9 +98,10 @@
     const entries = addrs.map((address, k) => ({ address, iid: maps[k] && ethers.dataLength(maps[k]) >= 4 ? maps[k].slice(0, 10).toLowerCase() : "" }));
     const rows = await pool(entries, 4, async ({ address, iid }) => {
       const type = LSP8_IDS.includes(iid) ? "LSP8" : "LSP7";
-      const meta = await tryCall(provider, address, "getDataBatch", [[LSP4_NAME, LSP4_SYMBOL, LSP8_ID_FORMAT, LSP8_ID_TYPE]]);
+      const meta = await tryCall(provider, address, "getDataBatch", [[LSP4_NAME, LSP4_SYMBOL, LSP8_ID_FORMAT, LSP8_ID_TYPE, LSP4_METADATA]]);
       const bal = await tryCall(provider, address, "balanceOf", [up]);
-      const row = { address, type, name: meta ? text(meta[0]) : null, symbol: meta ? text(meta[1]) : null, spam: false, source: "lsp5" };
+      const row = { address, type, name: meta ? text(meta[0]) : null, symbol: meta ? text(meta[1]) : null, spam: false, source: "lsp5",
+        lsp4Metadata: meta && meta[4] && meta[4] !== "0x" ? meta[4] : null };
       if (bal === null) return { ...row, unreadable: true };
       if (type === "LSP8") {
         const ids = await tryCall(provider, address, "tokenIdsOf", [up]);
@@ -127,7 +137,7 @@
       if (!address || !ethers.isAddress(address) || NFT_TYPES.includes(tok.type)) return;
       let amount; try { amount = BigInt(b.value || "0"); } catch (e) { return; }
       if (amount === 0n) return;
-      rows.push({ address: ethers.getAddress(address), type: tok.type || "?", name: tok.name, symbol: tok.symbol, amount: fmt(amount, tok.decimals), spam: bsSpam(tok), source: "blockscout" });
+      rows.push({ address: ethers.getAddress(address), type: tok.type || "?", name: tok.name, symbol: tok.symbol, amount: fmt(amount, tok.decimals), spam: bsSpam(tok), source: "blockscout", image: imageUrl(tok.icon_url) });
     });
     let params = "";
     for (let page = 0; page < MAX_PAGES; page++) {
@@ -135,8 +145,11 @@
       (res.items || []).forEach(c => {
         const tok = c.token || {}, address = bsAddr(tok);
         if (!address || !ethers.isAddress(address)) return;
-        const ids = (c.token_instances || []).filter(i => i.id !== undefined && i.id !== null).map(i => String(i.id));
-        rows.push({ address: ethers.getAddress(address), type: tok.type || "?", name: tok.name, symbol: tok.symbol, count: String(c.amount || ids.length), ids: ids.slice(0, MAX_IDS).map(shortId), spam: bsSpam(tok), source: "blockscout" });
+        const insts = (c.token_instances || []).filter(i => i.id !== undefined && i.id !== null);
+        const ids = insts.map(i => String(i.id));
+        // The collection's icon, else the first token's image.
+        const image = imageUrl(tok.icon_url) || insts.map(i => imageUrl(i.image_url) || imageUrl(i.metadata && i.metadata.image)).find(Boolean) || null;
+        rows.push({ address: ethers.getAddress(address), type: tok.type || "?", name: tok.name, symbol: tok.symbol, count: String(c.amount || ids.length), ids: ids.slice(0, MAX_IDS).map(shortId), spam: bsSpam(tok), source: "blockscout", image });
       });
       if (!res.next_page_params) break;
       params = "?" + new URLSearchParams(res.next_page_params).toString();
@@ -158,7 +171,7 @@
         let amount; try { amount = BigInt(b.tokenBalance || "0x0"); } catch (e) { continue; }
         if (amount === 0n || !ethers.isAddress(b.contractAddress)) continue;
         const meta = await alchemyRpc(net, key, "alchemy_getTokenMetadata", [b.contractAddress]).catch(() => ({}));
-        rows.push({ address: ethers.getAddress(b.contractAddress), type: "ERC-20", name: meta.name, symbol: meta.symbol, amount: fmt(amount, meta.decimals), spam: false, source: "alchemy" });
+        rows.push({ address: ethers.getAddress(b.contractAddress), type: "ERC-20", name: meta.name, symbol: meta.symbol, amount: fmt(amount, meta.decimals), spam: false, source: "alchemy", image: imageUrl(meta.logo) });
       }
       pageKey = res && res.pageKey;
       if (!pageKey) break;
@@ -177,7 +190,10 @@
         let id; try { id = BigInt(n.tokenId).toString(); } catch (e) { continue; }
         const type = c.tokenType === "ERC1155" ? "ERC-1155" : c.tokenType === "ERC721" ? "ERC-721" : (c.tokenType || "?");
         // Only Alchemy's verdict counts as spam (its spamClassifications also flag popular collections).
-        const row = nfts[address] || (nfts[address] = { address, type, name: c.name || (c.openSeaMetadata && c.openSeaMetadata.collectionName), symbol: c.symbol, ids: [], n: 0, spam: c.isSpam === true || c.isSpam === "true", source: "alchemy" });
+        const row = nfts[address] || (nfts[address] = { address, type, name: c.name || (c.openSeaMetadata && c.openSeaMetadata.collectionName), symbol: c.symbol, ids: [], n: 0, spam: c.isSpam === true || c.isSpam === "true", source: "alchemy",
+          image: imageUrl(c.openSeaMetadata && c.openSeaMetadata.imageUrl) });
+        // No collection image: the first token's (Alchemy's cached thumbnail first).
+        if (!row.image) row.image = imageUrl(n.image && (n.image.thumbnailUrl || n.image.cachedUrl || n.image.originalUrl)) || null;
         row.n++;
         if (row.ids.length < MAX_IDS) row.ids.push(shortId(id) + (n.balance && n.balance !== "1" ? ` ×${n.balance}` : ""));
       }
@@ -206,5 +222,5 @@
     return out;
   }
 
-  window.AssetList = { list, indexerFor, fromLsp5, BLOCKSCOUT, ALCHEMY, LSP5_ARRAY, LSP5_MAP, MAX_ASSETS, MAX_IDS };
+  window.AssetList = { list, imageUrl, LSP4_METADATA, indexerFor, fromLsp5, BLOCKSCOUT, ALCHEMY, LSP5_ARRAY, LSP5_MAP, MAX_ASSETS, MAX_IDS };
 })();
