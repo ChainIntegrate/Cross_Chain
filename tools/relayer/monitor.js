@@ -92,7 +92,9 @@ async function checkUp(provider, up, chain, mon, out, where, chainId) {
 }
 
 async function checkChain(id, chain, mon, info, out) {
-  const provider = new ethers.JsonRpcProvider(chain.rpc, Number(id), { staticNetwork: true });
+  // One request at a time: some public RPCs (mainnet.base.org) refuse batched or bursty calls with an
+  // error ethers reports as "missing revert data".
+  const provider = new ethers.JsonRpcProvider(chain.rpc, Number(id), { staticNetwork: true, batchMaxCount: 1 });
   const where0 = `chain ${id}`;
   const rpcId = BigInt(await provider.send("eth_chainId", []));
   if (rpcId !== BigInt(id)) return out.push({ level: "error", where: where0, msg: `rpc answers chainId ${rpcId}` });
@@ -116,7 +118,7 @@ async function checkChain(id, chain, mon, info, out) {
     if (code === "0x" || ethers.keccak256(code) !== SPONSOR_RUNTIME_HASH) out.push({ level: "error", where, msg: "code missing or different from UPVerifyingPaymaster" });
     else {
       const c = new ethers.Contract(pm, VPM_ABI, provider);
-      const [owner, cap, dep, signer] = await Promise.all([c.owner(), c.maxCostPerOp(), c.deposit(), c.signer()]);
+      const owner = await c.owner(), cap = await c.maxCostPerOp(), dep = await c.deposit(), signer = await c.signer();
       if (mon.paymasterOwner && ethers.getAddress(owner) !== ethers.getAddress(mon.paymasterOwner)) out.push({ level: "error", where, msg: `owner is ${owner}, expected ${mon.paymasterOwner}` });
       if (signer === ethers.ZeroAddress) out.push({ level: "error", where, msg: "no signer: sponsoring is stopped" });
       else if (mon.sponsorSigner && ethers.getAddress(signer) !== ethers.getAddress(mon.sponsorSigner)) out.push({ level: "error", where, msg: `signer is ${signer}, expected ${mon.sponsorSigner}` });
