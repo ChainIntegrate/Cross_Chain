@@ -46,8 +46,8 @@ A chain in the configuration can also have `"sponsorPaymaster": "0x…"`, a `UPV
 
 | Method and path | Body | Answer |
 |---|---|---|
-| `POST /relay/sponsor/check` | `{ "chainId": 43114, "sender": "0x…UP" }` | `{ "sponsored": true }`, or `{ "sponsored": false, "reason": "…" }` |
-| `POST /relay/sponsor/sign` | `{ "chainId": 43114, "op": { … } }` with `paymasterAndData` set to the paymaster followed by 77 placeholder bytes | `{ "paymasterAndData": "0x…" }` (97 bytes: paymaster, validUntil, validAfter, signature), or `{ "error": "…" }` with status 4xx/5xx |
+| `POST /relay/sponsor/check` | `{ "chainId": 43114, "sender": "0x…UP" }` | `{ "sponsored": true }`, or `{ "sponsored": false, "reason": "…" }`. With paid subscriptions also `balance` and `price` (USDC) and `subscription` (`amount`, `receiver`, `usdc`, `status`: none, requested, paid, active; `prices` per chain) |
+| `POST /relay/sponsor/sign` | `{ "chainId": 43114, "op": { … } }` with `paymasterAndData` set to the paymaster followed by 77 placeholder bytes; for the subscription payment also `"subscribe": { "email": "…" }` (`up-subscribe.html`) | `{ "paymasterAndData": "0x…" }` (97 bytes: paymaster, validUntil, validAfter, signature), or `{ "error": "…" }` with status 4xx/5xx |
 
 The page checks the approval before the controller signs: right paymaster, 97 bytes, and a signature that recovers to the paymaster's `signer()` over `getHash(op, validUntil, validAfter)`.
 

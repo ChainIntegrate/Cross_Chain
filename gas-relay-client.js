@@ -61,6 +61,7 @@
       option: "Paga il gas con il relayer del sito",
       optionNote: (v) => `Il controller firma un messaggio in MetaMask, senza gas; il relayer del sito invia e il paymaster ${v.pm} paga (al massimo ${v.cap} per operazione). Solo chiamate e invii di valore.`,
       optionNoteSponsor: (v) => `Il controller firma un messaggio in MetaMask, senza gas; il servizio di sponsorizzazione del sito approva l'operazione, il relayer la invia e il paymaster ${v.pm} paga (al massimo ${v.cap} per operazione). Solo chiamate e invii di valore.`,
+      balanceNote: (v) => `Saldo della UP: ${v.bal} USDC; questa operazione costa ${v.price} USDC.`,
       notReady: "Il relayer del sito serve questa rete e la UP è nella lista del paymaster, ma manca qualcosa:",
       notReadySponsor: "Il servizio di sponsorizzazione del sito accetta questa UP, ma manca qualcosa:",
       noSponsorSigner: "il paymaster di sponsorizzazione non ha un firmatario impostato",
@@ -113,6 +114,7 @@
       option: "Pay the gas with the site relayer",
       optionNote: (v) => `The controller signs a message in MetaMask, no gas; the site relayer sends it and the paymaster ${v.pm} pays (at most ${v.cap} per operation). Calls and value transfers only.`,
       optionNoteSponsor: (v) => `The controller signs a message in MetaMask, no gas; the site's sponsor service approves the operation, the relayer sends it and the paymaster ${v.pm} pays (at most ${v.cap} per operation). Calls and value transfers only.`,
+      balanceNote: (v) => `UP balance: ${v.bal} USDC; this operation costs ${v.price} USDC.`,
       notReady: "The site relayer serves this network and the UP is on the paymaster's list, but something is missing:",
       notReadySponsor: "The site's sponsor service accepts this UP, but something is missing:",
       noSponsorSigner: "the sponsor paymaster has no signer set",
@@ -187,25 +189,28 @@
     return info;
   }
 
-  // Asks the sponsor service whether it sponsors this UP on this chain. Any failure counts as "no".
-  async function sponsorAccepts(chainId, up) {
+  // The sponsor service's answer for this UP on this chain ({ sponsored, balance?, price?, subscription? }),
+  // or null when it does not answer.
+  async function sponsorStatus(chainId, up) {
     try {
       const r = await fetch("relay/sponsor/check", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chainId, sender: up }) });
       const j = r.ok ? await r.json() : null;
-      return !!(j && j.sponsored === true);
-    } catch (e) { return false; }
+      return j && typeof j.sponsored === "boolean" ? j : null;
+    } catch (e) { return null; }
   }
 
   // { state: "none" } when the relayer does not apply (no relayer on this network, UP not on any
   // paymaster's list and not accepted by the sponsor service); { state: "notReady", reasons } when the
   // UP is listed but something is missing; { state: "ready", pm, cap, deposit, sponsor } when it can be
   // used. With the sponsor paymaster, `sponsor` is { signer }: the key its approvals must recover to.
-  async function check(provider, { chainId, up, signer }) {
+  // forSubscription: the subscription page's own check. It uses the sponsor paymaster for a UP the service
+  // does not sponsor yet (it will sponsor exactly the subscription payment) and skips the allowlists.
+  async function check(provider, { chainId, up, signer, forSubscription }) {
     const inf = await loadInfo();
     const c = inf && inf.chains[String(chainId)];
     if (!c) return { state: "none" };
     let pm = null, sponsor = null;
-    for (const a of Array.isArray(c.paymasters) ? c.paymasters : []) {
+    for (const a of !forSubscription && Array.isArray(c.paymasters) ? c.paymasters : []) {
       if ((await provider.getCode(a)) === "0x") continue;
       if (await new ethers.Contract(a, PM_ABI, provider).sponsored(up)) { pm = ethers.getAddress(a); break; }
     }
@@ -214,9 +219,10 @@
     if (!pm && c.sponsorPaymaster && ethers.isAddress(c.sponsorPaymaster) && (await provider.getCode(c.sponsorPaymaster)) !== "0x") {
       const vpm = new ethers.Contract(c.sponsorPaymaster, VPM_ABI, provider);
       try {
-        if (ethers.getAddress(await vpm.entryPoint()) === ENTRY_POINT && (await sponsorAccepts(chainId, up))) {
+        const st = ethers.getAddress(await vpm.entryPoint()) === ENTRY_POINT ? await sponsorStatus(chainId, up) : null;
+        if (st && (st.sponsored || forSubscription)) {
           pm = ethers.getAddress(c.sponsorPaymaster);
-          sponsor = { signer: ethers.getAddress(await vpm.signer()) };
+          sponsor = { signer: ethers.getAddress(await vpm.signer()), balance: st.balance || null, price: st.price || null, subscription: st.subscription || null };
         }
       } catch (e) { pm = null; sponsor = null; }
     }
@@ -383,12 +389,13 @@
   }
 
   // Asks the sponsor service to approve prep.op, checks the approval, and updates prep.op and prep.hash.
-  async function getApproval(prep, log) {
+  // `subscribe` ({ email }) goes with the subscription payment only.
+  async function getApproval(prep, log, subscribe) {
     log(text("sponsorAsk"), "line-dim");
     const pm = prep.view.pm;
     let r, j;
     try {
-      r = await fetch("relay/sponsor/sign", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chainId: prep.chainId, op: opJson(prep.op) }) });
+      r = await fetch("relay/sponsor/sign", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chainId: prep.chainId, op: opJson(prep.op), ...(subscribe ? { subscribe } : {}) }) });
       j = await r.json();
     } catch (e) { throw new Error(text("sponsorUnreachable")); }
     if (!r.ok || !j || !j.paymasterAndData) throw new Error(text("sponsorRefused", { err: (j && j.error) || `HTTP ${r.status}` }));
@@ -430,9 +437,9 @@
   // sends it. Returns the relayer's transaction hash. `log(msg, cls)` reports each step. With the
   // sponsor paymaster, the service's approval is asked for and checked first: prep.op and prep.hash
   // change, so the caller must read prep.hash only after this returns.
-  async function signAndSend(signerProvider, { chainId, prep, signer, log }) {
+  async function signAndSend(signerProvider, { chainId, prep, signer, log, subscribe }) {
     if (prep.chainId !== chainId) throw new Error(text("hashMismatch"));
-    if (prep.sponsor) await getApproval(prep, log);
+    if (prep.sponsor) await getApproval(prep, log, subscribe);
     log(text("signAsk", { hash: prep.hash }), "line-warn");
     const s = await new ethers.BrowserProvider(signerProvider).getSigner();
     const box = showSignBox({ hash: prep.hash, signer, view: prep.view });
@@ -523,7 +530,8 @@
       label.textContent = text("option");
       note.innerHTML = "";
       if (state.state === "ready") {
-        note.textContent = text(state.sponsor ? "optionNoteSponsor" : "optionNote", { pm: state.pm, cap: state.capText });
+        note.textContent = text(state.sponsor ? "optionNoteSponsor" : "optionNote", { pm: state.pm, cap: state.capText })
+          + (state.sponsor && state.sponsor.balance ? " " + text("balanceNote", { bal: state.sponsor.balance, price: state.sponsor.price }) : "");
       } else if (state.state === "notReady") {
         const p = document.createElement("div"); p.textContent = text(state.sponsor ? "notReadySponsor" : "notReady");
         const ul = document.createElement("ul"); ul.style.margin = "4px 0 0"; ul.style.paddingLeft = "20px";
@@ -569,5 +577,5 @@
     return { enabled: () => state.state === "ready" && cb.checked, refresh, state: () => state };
   }
 
-  window.GasRelayClient = { check, prepare, signAndSend, waitResult, attach, text, userOpHash, sponsorHash, approvalProblem, pendingStatus, pendingView, ENTRY_POINT };
+  window.GasRelayClient = { check, prepare, signAndSend, waitResult, attach, text, userOpHash, sponsorHash, approvalProblem, pendingStatus, pendingView, sponsorStatus, loadInfo, ENTRY_POINT };
 })();

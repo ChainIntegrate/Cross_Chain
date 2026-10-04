@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<script src="theme.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>Gas sponsorizzato: iscrizione — ChainIntegrate</title>
+<link rel="icon" href="favicon.ico">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="chains.js"></script>
+<script src="gas-relay-client.js"></script>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --border: #2a2f3a; --field: #10131a; --chip: #2a2f3a; --disabled: #3a3f4b; --raised: #1d2330;
+    --text: #e6e8ec; --text-dim: #9aa1ad;
+    --accent: #5b8cff; --ok: #3fbf6f; --warn: #e0a83c; --err: #e05a5a;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+         max-width: 760px; margin: 0 auto; padding: 32px 20px 80px; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .subtitle { color: var(--text-dim); font-size: 13px; margin-bottom: 28px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+  .panel h2 { font-size: 14px; margin: 0 0 14px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.03em; }
+  .note { font-size: 12.5px; color: var(--text-dim); line-height: 1.5; margin-bottom: 12px; }
+  label { display: block; font-size: 13px; color: var(--text-dim); margin: 14px 0 6px; }
+  select, input { width: 100%; background: var(--field); border: 1px solid var(--border); color: var(--text);
+                  border-radius: 6px; padding: 10px 12px; font-size: 14px; font-family: inherit; }
+  button { width: 100%; background: var(--accent); color: white; border: none; border-radius: 6px;
+           padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; }
+  button:disabled { background: var(--disabled); cursor: not-allowed; }
+  button.danger { background: var(--err); }
+  button.secondary { background: var(--chip); }
+  .status-box { background: var(--field); border: 1px solid var(--border); border-radius: 6px; padding: 12px;
+                font-family: monospace; font-size: 12.5px; margin-top: 12px; }
+  .status-box .empty { color: var(--text-dim); }
+  #log { font-family: monospace; font-size: 12.5px; white-space: pre-wrap; word-break: break-all; line-height: 1.6; }
+  .line-ok { color: var(--ok); } .line-warn { color: var(--warn); } .line-err { color: var(--err); } .line-dim { color: var(--text-dim); }
+  .line-compare { color: var(--warn); font-weight: 700; border: 1px solid var(--warn); border-radius: 6px; padding: 8px 10px; margin: 6px 0; }
+  .brand-row { margin-bottom: 24px; }
+  .brand-logo { display: block; width: 100%; height: auto; border-radius: 10px; }
+  .top-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .lang-btn { width: auto; background: var(--chip); padding: 6px 14px; font-size: 12px; margin-top: 0; flex-shrink: 0; }
+  .site-footer { margin-top: 40px; padding: 18px 20px; background: #f5f6f8; border: 1px solid #e3e5ea; border-radius: 10px; color: #4b4f58; }
+  .footer-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .footer-logo { height: 48px; width: auto; flex-shrink: 0; }
+  .footer-text { font-size: 13px; line-height: 1.6; }
+  .footer-li { display: inline-flex; vertical-align: middle; margin: 0 2px; }
+  .site-footer a { color: #2563eb; text-decoration: none; font-weight: 600; }
+  .kv { display: grid; grid-template-columns: 210px 1fr; gap: 6px 12px; font-size: 13px; margin-top: 10px; }
+  .kv .k { color: var(--text-dim); }
+  .kv .v { font-family: monospace; word-break: break-all; }
+  .kv .v.ok { color: var(--ok); } .kv .v.warn { color: var(--warn); } .kv .v.err { color: var(--err); }
+  .verdict { margin-top: 12px; font-weight: 700; }
+  .check-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 13.5px; }
+  .check-row input { width: auto; }
+  .warn-box { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--err); border-radius: 8px; background: rgba(224,90,90,0.08); font-size: 13px; line-height: 1.5; }
+  .link-btn { display: block; text-align: center; background: var(--accent); color: white; border-radius: 6px; padding: 12px; font-size: 14px; font-weight: 600; text-decoration: none; margin-top: 12px; }
+  .link-btn[hidden] { display: none; }
+  .plan { font-family: monospace; font-size: 12.5px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  @media (max-width: 560px) { .kv { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="brand-row">
+  <img src="banner.png" alt="ChainIntegrate" class="brand-logo" onerror="this.style.display='none'">
+</div>
+
+<div class="top-row">
+  <div>
+    <h1 data-i18n="h1">Gas sponsorizzato: iscrizione e ricarica</h1>
+    <div class="subtitle" data-i18n="subtitle"></div>
+  </div>
+  <button class="lang-btn" id="langToggle" data-i18n="langToggleBtn">English</button>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel0Title">0 · Come funziona</h2>
+  <div class="note" data-i18n-html="panel0Note"></div>
+  <div class="status-box" id="priceBox"><span class="empty" data-i18n="priceLoading">Lettura del listino...</span></div>
+  <div class="warn-box" data-i18n-html="disclaimer"></div>
+  <div class="check-row"><input type="checkbox" id="ackRisk"><label for="ackRisk" style="margin:0; color: var(--text);" data-i18n="ackLabel">Ho letto e accetto</label></div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel1Title">1 · Rete, UP e controller</h2>
+  <label for="network" data-i18n="networkLabel">Rete su cui paghi</label>
+  <select id="network"></select>
+  <label for="upAddress" data-i18n="upAddressLabel">Indirizzo della tua UP</label>
+  <input type="text" id="upAddress" placeholder="0x...">
+  <div class="note" style="margin-top:8px;" data-i18n="upNote"></div>
+  <button id="connectSigner" data-i18n="connectSignerBtn">Connetti MetaMask (controller della UP)</button>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel2Title">2 · Verifica</h2>
+  <div class="note" data-i18n="panel2Note"></div>
+  <div class="status-box" id="checkBox"><span class="empty" data-i18n="checkIdle">La verifica parte da sola quando rete, UP e MetaMask sono impostati.</span></div>
+  <a id="fixLink" class="link-btn" hidden target="_blank" rel="noopener"></a>
+  <button id="recheckBtn" class="secondary" data-i18n="recheckBtn">Ricontrolla</button>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel3Title">3 · Email e pagamento</h2>
+  <label for="email" data-i18n="emailLabel">La tua email (per l'attivazione)</label>
+  <input type="email" id="email" placeholder="nome@esempio.it" autocomplete="email">
+  <div class="note" style="margin-top:10px;" data-i18n-html="privacyNote"></div>
+  <div class="check-row"><input type="checkbox" id="ackPrivacy"><label for="ackPrivacy" style="margin:0; color: var(--text);" data-i18n="ackPrivacy">Ho letto l'informativa e acconsento all'uso dell'email per l'attivazione</label></div>
+  <button id="payBtn" disabled data-i18n="payBtn">Paga 5 USDC e richiedi l'attivazione</button>
+  <div id="payHint" class="note" style="margin-top:8px;"></div>
+  <div id="log" class="line-dim" style="margin-top:10px;"></div>
+</div>
+
+<div class="site-footer">
+  <div class="footer-row">
+    <img src="logo.png" alt="ChainIntegrate" class="footer-logo" onerror="this.style.display='none'">
+    <div class="footer-text" data-i18n-html="footerHtml"></div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const EXPLORER_PATH = "/tx/";
+
+// ==================== WHAT THE PAGE TRUSTS ====================
+// The payment goes to ChainIntegrate's UP, in Circle's native USDC. Both are written here: if the
+// service ever answered other values, the page stops before anything is signed.
+const RECEIVER = "0x4a2605796e0d91A9667d6E30365aEEC384C48c27";
+const NATIVE_USDC = {
+  8453: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",   // Base
+  137: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",    // Polygon PoS (native, not the old USDC.e)
+  43114: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",  // Avalanche C-Chain
+};
+const AMOUNT = 5_000000n; // 5 USDC, 6 decimals
+const ERC20 = new ethers.Interface(["function balanceOf(address) view returns (uint256)", "function transfer(address to, uint256 amount) returns (bool)"]);
+
+const I18N = {
+  it: {
+    pageTitle: "Gas sponsorizzato: iscrizione — ChainIntegrate",
+    h1: "Gas sponsorizzato: iscrizione e ricarica",
+    subtitle: "Paga 5 USDC dalla tua Universal Profile e ottieni un saldo con cui il sito paga il gas delle tue operazioni su Base, Polygon e Avalanche.",
+    langToggleBtn: "English",
+    panel0Title: "0 · Come funziona",
+    panel0Note: "<b>Cosa compri.</b> 5 USDC diventano un <b>saldo unico</b> della tua UP, valido su tutte le reti del servizio. Ogni operazione pagata dal sito scala il prezzo della rete su cui avviene (listino qui sotto), <b>solo quando viene eseguita</b>. Lo stesso pagamento serve anche per le ricariche.<br><br><b>Prima di pagare, sulla rete scelta:</b><ol style=\"margin:6px 0 0; padding-left:20px;\"><li>la tua UP deve esistere su quella rete (se l'hai creata su LUKSO, replicala con la pagina Deploy);</li><li>la UP deve avere la <b>configurazione 4337</b>. È <b>necessaria per la richiesta di attivazione</b> (il sito paga il gas di questo pagamento) <b>e per ogni uso successivo</b> del gas sponsorizzato. È una transazione una tantum per rete, pagata dal tuo controller (pochi centesimi);</li><li>la UP deve avere almeno 5 USDC <b>nativi di Circle</b> su quella rete (puoi mandarli da un exchange all'indirizzo della tua UP).</li></ol><br><b>Dopo il pagamento</b> l'iscrizione resta in attesa: l'attivazione è fatta a mano, e ricevi un'email quando il saldo è disponibile.",
+    priceLoading: "Lettura del listino...",
+    priceLine: (v) => `Listino per operazione: ${v.list}. Con 5 USDC, per esempio, ${v.example}.`,
+    priceNone: "Il servizio di sponsorizzazione non risponde: riprova più tardi.",
+    disclaimer: "<b>⚠️ Leggi prima di pagare</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Servizio sperimentale.</b> I contratti usati (paymaster e Extension4337 di LUKSO) non hanno un audit professionale. Transazioni reali e irreversibili.</li><li><b>Il saldo si usa solo per il gas</b> delle operazioni della tua UP pagate dal sito, sulle reti del servizio.</li><li><b>Questa pagina non chiede mai chiavi private</b>: il tuo controller firma un messaggio in MetaMask.</li><li>Per problemi o domande: assistenza via Telegram (in fondo alla pagina).</li></ul>",
+    ackLabel: "Ho letto e accetto: uso questo servizio a mio rischio.",
+    ackRequired: "Prima accetta le condizioni nel pannello 0.",
+    panel1Title: "1 · Rete, UP e controller",
+    networkLabel: "Rete su cui paghi",
+    upAddressLabel: "Indirizzo della tua UP",
+    upNote: "Lo stesso indirizzo della tua UP su LUKSO. Il pagamento parte dalla UP: è così che il servizio sa quale UP attivare.",
+    connectSignerBtn: "Connetti MetaMask (controller della UP)",
+    noSignerFound: "Nessun wallet trovato: installa MetaMask.",
+    connectionRejected: "Connessione rifiutata in MetaMask.",
+    panel2Title: "2 · Verifica",
+    panel2Note: "Sola lettura: niente viene firmato. Se manca qualcosa, il pulsante qui sotto ti porta alla pagina giusta.",
+    checkIdle: "La verifica parte da sola quando rete, UP e MetaMask sono impostati.",
+    checkRunning: "Verifica in corso...",
+    recheckBtn: "Ricontrolla",
+    kNet: "Rete", kUp: "UP", kSigner: "Controller", kSvc: "Servizio", kSetup: "Configurazione 4337", kUsdc: "USDC nella UP", kStatus: "Iscrizione",
+    netOk: (v) => `${v.name} (chainId ${v.id})`,
+    walletWrong: (v) => `MetaMask è sulla rete ${v.got}, non su ${v.name} (${v.exp}): cambia rete in MetaMask`,
+    upMissing: "indirizzo non valido",
+    upNotDeployed: "la UP non esiste su questa rete: prima replicala (pagina Deploy)",
+    upOk: "esiste su questa rete",
+    signerNone: "collega MetaMask con un controller della UP",
+    svcDown: "il servizio di sponsorizzazione non risponde su questa rete",
+    svcBadData: "il servizio indica un USDC o un destinatario diversi da quelli attesi: niente verrà firmato",
+    svcOk: (v) => `pagamento di ${v.amount} USDC alla UP di ChainIntegrate ${v.receiver}`,
+    setupOk: "pronta (estensione, EntryPoint e permesso 4337 del controller)",
+    setupMissing: (v) => `manca: ${v.what}. Serve per la richiesta di attivazione e per l'uso del gas sponsorizzato: una transazione una tantum, pagata dal controller.`,
+    usdcOk: (v) => `${v.bal} USDC (servono ${v.need})`,
+    usdcLow: (v) => `${v.bal} USDC: servono almeno ${v.need} USDC nativi (contratto ${v.token}) nella UP su questa rete`,
+    stNone: "non ancora iscritta",
+    stRequested: "pagamento richiesto, in attesa di conferma sulla chain",
+    stPaid: "pagamento ricevuto: in attesa di attivazione (riceverai un'email)",
+    stActive: (v) => `attiva: saldo ${v.bal} USDC (questo pagamento è una ricarica)`,
+    fixDeploy: "Replica la UP su questa rete (pagina Deploy) →",
+    fixSetup: "Fai la configurazione 4337 (pagina Gas relay, sezione 4) →",
+    panel3Title: "3 · Email e pagamento",
+    emailLabel: "La tua email (per l'attivazione)",
+    privacyNote: "<b>Informativa.</b> L'email serve solo per comunicarti l'attivazione e per le comunicazioni su questo servizio. È conservata sul server del servizio, collegata alla tua UP; non è pubblicata né ceduta a terzi. Titolare: ChainIntegrate. Per farla cancellare scrivi all'assistenza (Telegram, in fondo alla pagina).",
+    ackPrivacy: "Ho letto l'informativa e acconsento all'uso dell'email per l'attivazione",
+    payBtn: "Paga 5 USDC e richiedi l'attivazione",
+    hintAck: "Accetta le condizioni (pannello 0).",
+    hintCheck: "Completa la verifica (pannello 2).",
+    hintEmail: "Scrivi un'email valida e accetta l'informativa.",
+    hintReady: "MetaMask ti chiederà di firmare un messaggio (nessun gas): il gas di questo pagamento lo paga il sito.",
+    hintPaid: "Il pagamento è già registrato e in attesa di attivazione: non serve pagare di nuovo.",
+    badEmail: "Email non valida.",
+    preparing: "Preparazione dell'operazione (5 USDC alla UP di ChainIntegrate)...",
+    waitingWatcher: "Operazione eseguita. Attendo che il servizio registri il pagamento (fino a qualche minuto)...",
+    paidOk: "✅ Pagamento registrato. L'attivazione è fatta a mano: riceverai un'email quando il saldo è disponibile.",
+    paidLater: "⚠️ Il pagamento è sulla chain ma il servizio non l'ha ancora registrato. Riapri questa pagina più tardi: lo stato si aggiorna da solo; non pagare di nuovo.",
+    opFailed: "❌ L'operazione non è riuscita: niente è stato pagato.",
+    genericError: (v) => `Errore: ${v.err}`,
+    editedDuringCheckLog: "❌ Dati cambiati mentre la preparazione era in corso: niente è stato inviato. Ripeti.",
+    footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a>`,
+  },
+  en: {
+    pageTitle: "Sponsored gas: subscription — ChainIntegrate",
+    h1: "Sponsored gas: subscription and top-up",
+    subtitle: "Pay 5 USDC from your Universal Profile and get a balance with which the site pays the gas of your operations on Base, Polygon and Avalanche.",
+    langToggleBtn: "Italiano",
+    panel0Title: "0 · How it works",
+    panel0Note: "<b>What you buy.</b> 5 USDC become <b>one balance</b> of your UP, valid on every network of the service. Each operation paid by the site takes the price of the network where it runs (price list below), <b>only when it is executed</b>. The same payment is also used for top-ups.<br><br><b>Before paying, on the chosen network:</b><ol style=\"margin:6px 0 0; padding-left:20px;\"><li>your UP must exist on that network (if you created it on LUKSO, replicate it with the Deploy page);</li><li>the UP must have the <b>4337 setup</b>. It is <b>needed for the activation request</b> (the site pays the gas of this payment) <b>and for every later use</b> of the sponsored gas. It is a one-time transaction per network, paid by your controller (a few cents);</li><li>the UP must hold at least 5 <b>Circle-native</b> USDC on that network (you can send them from an exchange to your UP's address).</li></ol><br><b>After the payment</b> the subscription waits: activation is done by hand, and you get an e-mail when the balance is available.",
+    priceLoading: "Reading the price list...",
+    priceLine: (v) => `Price per operation: ${v.list}. With 5 USDC, for example, ${v.example}.`,
+    priceNone: "The sponsor service does not answer: try again later.",
+    disclaimer: "<b>⚠️ Read before paying</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Experimental service.</b> The contracts used (the paymaster and LUKSO's Extension4337) have no professional audit. Real, irreversible transactions.</li><li><b>The balance is used only for the gas</b> of your UP's operations paid by the site, on the service's networks.</li><li><b>This page never asks for private keys</b>: your controller signs a message in MetaMask.</li><li>For problems or questions: support via Telegram (bottom of the page).</li></ul>",
+    ackLabel: "I have read and accept: I use this service at my own risk.",
+    ackRequired: "First accept the conditions in panel 0.",
+    panel1Title: "1 · Network, UP and controller",
+    networkLabel: "Network you pay on",
+    upAddressLabel: "Your UP's address",
+    upNote: "The same address as your UP on LUKSO. The payment comes from the UP: this is how the service knows which UP to activate.",
+    connectSignerBtn: "Connect MetaMask (the UP's controller)",
+    noSignerFound: "No wallet found: install MetaMask.",
+    connectionRejected: "Connection rejected in MetaMask.",
+    panel2Title: "2 · Check",
+    panel2Note: "Read-only: nothing is signed. If something is missing, the button below takes you to the right page.",
+    checkIdle: "The check starts by itself once network, UP and MetaMask are set.",
+    checkRunning: "Checking...",
+    recheckBtn: "Check again",
+    kNet: "Network", kUp: "UP", kSigner: "Controller", kSvc: "Service", kSetup: "4337 setup", kUsdc: "USDC in the UP", kStatus: "Subscription",
+    netOk: (v) => `${v.name} (chainId ${v.id})`,
+    walletWrong: (v) => `MetaMask is on network ${v.got}, not on ${v.name} (${v.exp}): switch network in MetaMask`,
+    upMissing: "invalid address",
+    upNotDeployed: "the UP does not exist on this network: replicate it first (Deploy page)",
+    upOk: "exists on this network",
+    signerNone: "connect MetaMask with a controller of the UP",
+    svcDown: "the sponsor service does not answer on this network",
+    svcBadData: "the service gives a USDC or a receiver different from the expected ones: nothing will be signed",
+    svcOk: (v) => `payment of ${v.amount} USDC to ChainIntegrate's UP ${v.receiver}`,
+    setupOk: "ready (extension, EntryPoint and the controller's 4337 permission)",
+    setupMissing: (v) => `missing: ${v.what}. Needed for the activation request and for using the sponsored gas: a one-time transaction, paid by the controller.`,
+    usdcOk: (v) => `${v.bal} USDC (${v.need} needed)`,
+    usdcLow: (v) => `${v.bal} USDC: at least ${v.need} Circle-native USDC (contract ${v.token}) are needed in the UP on this network`,
+    stNone: "not subscribed yet",
+    stRequested: "payment requested, waiting for confirmation on chain",
+    stPaid: "payment received: waiting for activation (you will get an e-mail)",
+    stActive: (v) => `active: balance ${v.bal} USDC (this payment is a top-up)`,
+    fixDeploy: "Replicate the UP on this network (Deploy page) →",
+    fixSetup: "Do the 4337 setup (Gas relay page, section 4) →",
+    panel3Title: "3 · E-mail and payment",
+    emailLabel: "Your e-mail (for the activation)",
+    privacyNote: "<b>Privacy notice.</b> The e-mail is used only to tell you about the activation and for communications about this service. It is kept on the service's server, linked to your UP; it is not published or given to third parties. Controller: ChainIntegrate. To have it deleted, write to support (Telegram, bottom of the page).",
+    ackPrivacy: "I have read the notice and agree to the use of the e-mail for the activation",
+    payBtn: "Pay 5 USDC and request activation",
+    hintAck: "Accept the conditions (panel 0).",
+    hintCheck: "Complete the check (panel 2).",
+    hintEmail: "Enter a valid e-mail and accept the notice.",
+    hintReady: "MetaMask will ask you to sign a message (no gas): the site pays the gas of this payment.",
+    hintPaid: "The payment is already recorded and waits for activation: no need to pay again.",
+    badEmail: "Invalid e-mail.",
+    preparing: "Preparing the operation (5 USDC to ChainIntegrate's UP)...",
+    waitingWatcher: "Operation executed. Waiting for the service to record the payment (up to a few minutes)...",
+    paidOk: "✅ Payment recorded. Activation is done by hand: you will get an e-mail when the balance is available.",
+    paidLater: "⚠️ The payment is on chain but the service has not recorded it yet. Open this page again later: the status updates by itself; do not pay again.",
+    opFailed: "❌ The operation did not succeed: nothing was paid.",
+    genericError: (v) => `Error: ${v.err}`,
+    editedDuringCheckLog: "❌ Data changed while it was being prepared: nothing was sent. Repeat.",
+    footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a>`,
+  },
+};
+let LANG = "it";
+function t(key, vars) { const e = I18N[LANG][key]; return typeof e === "function" ? e(vars || {}) : e; }
+function applyI18n() {
+  document.documentElement.lang = LANG;
+  document.title = t("pageTitle");
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.getAttribute("data-i18n")); });
+  document.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.getAttribute("data-i18n-html")); });
+  renderPrices(); if (lastCheck) renderCheck(lastCheck); updateButtons();
+}
+// The check's lines are written in the page's language: run it again after a switch.
+$("langToggle").addEventListener("click", () => { LANG = LANG === "it" ? "en" : "it"; applyI18n(); if (lastCheck) scheduleCheck(0); });
+
+// Data from wallets, RPCs and the service is written with textContent, never innerHTML.
+function setStatus(id, text, cls) { const el = $(id); el.textContent = ""; const s = document.createElement("span"); if (cls) s.className = cls; s.textContent = text; el.appendChild(s); }
+function log(msg, cls) { const d = document.createElement("div"); if (cls) d.className = cls; d.textContent = msg; $("log").appendChild(d); }
+const validEmail = (e) => e.length <= 254 && /^[^\s@<>()",;:\\[\]]+@[^\s@<>()",;:\\[\]]+\.[^\s@<>()",;:\\[\]]{2,}$/.test(e);
+
+// ==================== networks and price list ====================
+let nets = [], prices = null, busy = false;
+async function loadNetworks() {
+  const info = await GasRelayClient.loadInfo(true);
+  nets = CHAINS.filter(c => NATIVE_USDC[c.chainId] && info && info.chains[String(c.chainId)] && info.chains[String(c.chainId)].sponsorPaymaster);
+  const sel = $("network"); sel.textContent = "";
+  nets.forEach(c => { const o = document.createElement("option"); o.value = c.key; o.textContent = `${c.name} (chainId ${c.chainId})`; sel.appendChild(o); });
+  const want = new URLSearchParams(location.search).get("network");
+  if (want && nets.some(c => c.key === want)) sel.value = want;
+  // Any address that is not a customer gets the subscription data, price list included.
+  if (nets.length) { const st = await GasRelayClient.sponsorStatus(nets[0].chainId, ethers.ZeroAddress); prices = st && st.subscription ? st.subscription.prices : null; }
+  renderPrices();
+}
+function renderPrices() {
+  if (!prices) { setStatus("priceBox", nets.length ? t("priceLoading") : t("priceNone"), nets.length ? "empty" : "line-err"); return; }
+  const list = nets.filter(c => prices[String(c.chainId)]).map(c => `${c.name} ${prices[String(c.chainId)]} USDC`);
+  const ex = nets.filter(c => prices[String(c.chainId)]).map(c => `${Math.floor(5 / Number(prices[String(c.chainId)]))} ${LANG === "it" ? "operazioni su" : "operations on"} ${c.name}`);
+  setStatus("priceBox", t("priceLine", { list: list.join(" · "), example: ex.join(LANG === "it" ? " oppure " : " or ") }), "");
+}
+const getNet = () => nets.find(c => c.key === $("network").value) || null;
+
+// ==================== wallet ====================
+let signerProvider = null, signerAddress = null;
+const discovered = [];
+window.addEventListener("eip6963:announceProvider", (e) => discovered.push(e.detail));
+window.dispatchEvent(new Event("eip6963:requestProvider"));
+$("connectSigner").addEventListener("click", async () => {
+  let candidate = discovered.find(p => !/lukso|universal profile/i.test(p.info.name))?.provider;
+  if (!candidate && window.ethereum && window.ethereum !== window.lukso) candidate = window.ethereum;
+  if (!candidate) { setStatus("checkBox", t("noSignerFound"), "line-err"); return; }
+  try {
+    const acc = await candidate.request({ method: "eth_requestAccounts" });
+    signerAddress = acc[0] ? ethers.getAddress(acc[0]) : null;
+    if (signerProvider !== candidate && candidate.on) {
+      candidate.on("accountsChanged", (a) => { signerAddress = a && a[0] ? ethers.getAddress(a[0]) : null; scheduleCheck(0); });
+      candidate.on("chainChanged", () => scheduleCheck(0));
+    }
+    signerProvider = candidate;
+    scheduleCheck(0);
+  } catch (e) { setStatus("checkBox", t("connectionRejected"), "line-err"); }
+});
+
+// ==================== check ====================
+// Bumped by every change: a payment prepared while it changed is not sent (AUDIT M-2).
+let gen = 0, check = null, lastCheck = null, checkRun = 0, checkTimer = null;
+function scheduleCheck(delay = 500) { gen++; check = null; updateButtons(); clearTimeout(checkTimer); checkTimer = setTimeout(runCheck, delay); }
+["upAddress"].forEach(id => $(id).addEventListener("input", () => scheduleCheck()));
+$("network").addEventListener("change", () => scheduleCheck(0));
+["email"].forEach(id => $(id).addEventListener("input", updateButtons));
+["ackRisk", "ackPrivacy"].forEach(id => $(id).addEventListener("change", updateButtons));
+$("recheckBtn").addEventListener("click", () => scheduleCheck(0));
+
+async function runCheck() {
+  const run = ++checkRun;
+  setStatus("checkBox", t("checkRunning"), "empty");
+  let c;
+  try { c = await computeCheck(); } catch (e) { c = { rows: [["kNet", t("genericError", { err: e.shortMessage || e.message }), "err"]], ok: false }; }
+  if (run !== checkRun) return;
+  check = c.ok ? c : null; lastCheck = c;
+  renderCheck(c); updateButtons();
+}
+async function computeCheck() {
+  const rows = [], out = { rows, ok: false };
+  const net = getNet();
+  if (!net) { rows.push(["kNet", t("priceNone"), "err"]); return out; }
+  const provider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
+  const chainId = Number(await provider.send("eth_chainId", []));
+  if (chainId !== net.chainId) { rows.push(["kNet", `RPC chainId ${chainId}`, "err"]); return out; }
+  rows.push(["kNet", t("netOk", { name: net.name, id: chainId }), "ok"]);
+  const raw = $("upAddress").value.trim();
+  if (!ethers.isAddress(raw)) { rows.push(["kUp", t("upMissing"), "err"]); return out; }
+  const up = ethers.getAddress(raw);
+  if ((await provider.getCode(up)) === "0x") { rows.push(["kUp", t("upNotDeployed"), "err"]); out.fix = "deploy"; out.up = up; out.net = net; return out; }
+  rows.push(["kUp", `${up} — ${t("upOk")}`, "ok"]);
+  if (!signerAddress || !signerProvider) { rows.push(["kSigner", t("signerNone"), "warn"]); return out; }
+  const walletChain = parseInt(await signerProvider.request({ method: "eth_chainId" }), 16);
+  if (walletChain !== chainId) { rows.push(["kSigner", t("walletWrong", { got: walletChain, name: net.name, exp: chainId }), "err"]); return out; }
+  rows.push(["kSigner", signerAddress, "ok"]);
+  // The service: what to pay and to whom. Never trusted alone: checked against the page's own values.
+  const st = await GasRelayClient.sponsorStatus(chainId, up);
+  const sub = st && st.subscription;
+  if (!sub) { rows.push(["kSvc", t("svcDown"), "err"]); return out; }
+  if (!sub.usdc || ethers.getAddress(sub.usdc) !== NATIVE_USDC[chainId] || ethers.getAddress(sub.receiver) !== RECEIVER || ethers.parseUnits(String(sub.amount), 6) !== AMOUNT) { rows.push(["kSvc", t("svcBadData"), "err"]); return out; }
+  rows.push(["kSvc", t("svcOk", { amount: "5", receiver: RECEIVER }), "ok"]);
+  // The UP's 4337 setup, the paymaster and the controller: the relayer client's own checks.
+  const ready = await GasRelayClient.check(provider, { chainId, up, signer: signerAddress, forSubscription: true });
+  if (ready.state !== "ready") {
+    const what = (ready.reasons || []).map(([k, v]) => GasRelayClient.text(k, v)).join("; ") || t("svcDown");
+    rows.push(["kSetup", t("setupMissing", { what }), "err"]); out.fix = "setup"; out.up = up; out.net = net; return out;
+  }
+  rows.push(["kSetup", t("setupOk"), "ok"]);
+  out.status = sub.status;
+  const bal = await new ethers.Contract(NATIVE_USDC[chainId], ERC20, provider).balanceOf(up);
+  const enough = bal >= AMOUNT;
+  rows.push(["kUsdc", t(enough ? "usdcOk" : "usdcLow", { bal: ethers.formatUnits(bal, 6), need: "5", token: NATIVE_USDC[chainId] }), enough ? "ok" : "err"]);
+  const status = sub.status;
+  rows.push(["kStatus", status === "active" ? t("stActive", { bal: st.balance || "0" }) : t(status === "paid" ? "stPaid" : status === "requested" ? "stRequested" : "stNone"), status === "paid" ? "warn" : status === "active" ? "ok" : ""]);
+  Object.assign(out, { ok: enough, provider, chainId, up, net, ready, status });
+  return out;
+}
+function renderCheck(c) {
+  const box = $("checkBox"); box.textContent = "";
+  const grid = document.createElement("div"); grid.className = "kv";
+  for (const [k, v, cls] of c.rows) {
+    const kd = document.createElement("div"); kd.className = "k"; kd.textContent = t(k);
+    const vd = document.createElement("div"); vd.className = "v" + (cls ? " " + cls : ""); vd.textContent = v;
+    grid.append(kd, vd);
+  }
+  box.appendChild(grid);
+  const a = $("fixLink");
+  if (c.fix && c.up && c.net) {
+    const q = new URLSearchParams({ up: c.up, network: c.net.key });
+    a.href = c.fix === "deploy" ? `up-deploy-public.html?${q}` : `up-gas-relay.html?${q}`;
+    a.textContent = t(c.fix === "deploy" ? "fixDeploy" : "fixSetup");
+    a.hidden = false;
+  } else a.hidden = true;
+}
+function updateButtons() {
+  const email = $("email").value.trim();
+  let hint = "";
+  if (!$("ackRisk").checked) hint = t("hintAck");
+  else if (lastCheck && lastCheck.status === "paid") hint = t("hintPaid");
+  else if (!check) hint = t("hintCheck");
+  else if (!validEmail(email) || !$("ackPrivacy").checked) hint = t("hintEmail");
+  else hint = t("hintReady");
+  $("payHint").textContent = hint;
+  $("payBtn").disabled = busy || hint !== t("hintReady");
+}
+
+// ==================== payment ====================
+$("payBtn").addEventListener("click", async () => {
+  if (busy || !check) return;
+  const email = $("email").value.trim().toLowerCase();
+  if (!validEmail(email)) { log(t("badEmail"), "line-err"); return; }
+  busy = true; updateButtons();
+  const g = gen;
+  $("log").textContent = "";
+  const c = check;
+  const fmt = (w) => `${ethers.formatEther(w)} ${c.net.currency || ""}`.trim();
+  try {
+    log(t("preparing"), "line-dim");
+    const data = ERC20.encodeFunctionData("transfer", [RECEIVER, AMOUNT]);
+    const ready = await GasRelayClient.check(c.provider, { chainId: c.chainId, up: c.up, signer: signerAddress, forSubscription: true });
+    if (ready.state !== "ready") throw new Error(t("hintCheck"));
+    const prep = await GasRelayClient.prepare(c.provider, { chainId: c.chainId, up: c.up, ready, to: NATIVE_USDC[c.chainId], value: 0n, data, fmt });
+    if (g !== gen) { log(t("editedDuringCheckLog"), "line-err"); return; }
+    log(prep.plan, "line-dim");
+    const hash = await GasRelayClient.signAndSend(signerProvider, { chainId: c.chainId, prep, signer: signerAddress, log, subscribe: { email } });
+    const url = getExplorerUrl(c.net, EXPLORER_PATH, hash);
+    if (url) log(url, "line-dim");
+    const res = await GasRelayClient.waitResult(c.provider, hash, prep.hash, { log, fmt });
+    if (!res.success) { if (!res.unknown) log(t("opFailed"), "line-err"); return; }
+    log(t("waitingWatcher"), "line-dim");
+    // The service records the payment within about a minute of the block.
+    for (let i = 0; i < 24; i++) {
+      await new Promise(r => setTimeout(r, 10000));
+      const st = await GasRelayClient.sponsorStatus(c.chainId, c.up);
+      const s = st && st.subscription && st.subscription.status;
+      if (s === "paid" || s === "active") { log(t("paidOk"), "line-ok"); scheduleCheck(0); return; }
+    }
+    log(t("paidLater"), "line-warn");
+  } catch (e) {
+    log(e.message && e.message.length < 600 ? e.message : t("genericError", { err: e.shortMessage || e.message }), "line-err");
+  } finally { busy = false; updateButtons(); }
+});
+
+// ==================== start ====================
+const q = new URLSearchParams(location.search);
+if (q.get("up") && ethers.isAddress(q.get("up"))) $("upAddress").value = ethers.getAddress(q.get("up"));
+applyI18n();
+loadNetworks().then(() => scheduleCheck(0));
+</script>
+</body>
+</html>
