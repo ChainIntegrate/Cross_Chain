@@ -360,6 +360,7 @@ const I18N = {
     walletCorrectNetwork: (v) => `✅ Wallet firmatario e RPC sulla stessa rete (chainId ${v.chainId}).`,
     signerChangedErr: (v) => `❌ BLOCCANTE — l'account attivo nel wallet (${v.now}) non è quello verificato (${v.checked}). Rifai la verifica.`,
     staleCheckLog: "Dati, rete o wallet modificati dopo la verifica: premi di nuovo Verifica.",
+    editedDuringCheckLog: "❌ Dati, rete o wallet sono cambiati mentre la verifica era in corso: Invia resta spento. Premi di nuovo Verifica.",
     noGasPriceErr: "❌ BLOCCANTE — l'RPC non ha restituito un prezzo del gas.",
 
     footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a>`,
@@ -518,6 +519,7 @@ const I18N = {
     walletCorrectNetwork: (v) => `✅ Signing wallet and RPC are on the same network (chainId ${v.chainId}).`,
     signerChangedErr: (v) => `❌ BLOCKING — the active wallet account (${v.now}) is not the one that was verified (${v.checked}). Check again.`,
     staleCheckLog: "Data, network or wallet changed after the check: press Check again.",
+    editedDuringCheckLog: "❌ Data, network or wallet changed while the check was running: Send stays off. Press Check again.",
     noGasPriceErr: "❌ BLOCKING — the RPC did not return a gas price.",
 
     footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a>`,
@@ -1187,8 +1189,12 @@ let lastKeyManager = null;
 let lastExecuteCalldata = null;
 let lastPlan = null;       // what was checked, for the verification after sending
 let checkedContext = null; // { rpc, chainId, signer } snapshot of a successful Check
+// Bumped by every change of an input, the network or the account. A Check that sees it change while it
+// runs does not enable Send: it checked values that are no longer the ones on screen (AUDIT M-2).
+let inputGen = 0;
 
 function invalidateCheck() {
+  inputGen++;
   if (lastCheckOk) log(t("staleCheckLog"), "line-warn");
   lastCheckOk = false;
   checkedContext = null;
@@ -1333,6 +1339,8 @@ $("checkBtn").addEventListener("click", withBusy(async () => {
   $("log").innerHTML = "";
   lastCheckOk = false;
   $("sendBtn").disabled = true;
+  const gen = inputGen;
+  const edited = () => { if (gen === inputGen) return false; log(t("editedDuringCheckLog"), "line-err"); return true; };
 
   const profile = currentProfile();
   const net = getNetwork();
@@ -1392,6 +1400,7 @@ $("checkBtn").addEventListener("click", withBusy(async () => {
       log(t("relaySimOkLog"), "line-ok");
       log(prep.plan, "line-dim");
       log(t("summaryLog", { what: plan.describe, to: recipient }), "line-warn");
+      if (edited()) return;
       lastCheckOk = true;
       lastKeyManager = null;
       lastExecuteCalldata = null;
@@ -1401,6 +1410,14 @@ $("checkBtn").addEventListener("click", withBusy(async () => {
       log(t("readyRelayLog"), "line-warn");
       return;
     }
+
+    // An operation signed for the site relayer, without a clear outcome, may still run: never send the
+    // same thing by the controller's path meanwhile (AUDIT M-3).
+    try {
+      const pend = await GasRelayClient.pendingStatus(provider, { chainId: chains.chainId, up: ethers.getAddress(profile.address) });
+      if (pend.state === "landed") { log(GasRelayClient.text("pendingLanded", { ...GasRelayClient.pendingView(pend.p), ok: pend.ev.success }), "line-warn"); return; }
+      if (pend.state === "outstanding") { log(GasRelayClient.text("pendingBlocksDirect", GasRelayClient.pendingView(pend.p)), "line-err"); return; }
+    } catch (e) { log(e.shortMessage || e.message, "line-err"); return; }
 
     // UP.execute(CALL, to, value, data) wrapped in KeyManager.execute(bytes)
     const upIface = new ethers.Interface(["function execute(uint256,address,uint256,bytes)"]);
@@ -1432,6 +1449,7 @@ $("checkBtn").addEventListener("click", withBusy(async () => {
     log(t("signerGasOkLog"), "line-ok");
 
     log(t("summaryLog", { what: plan.describe, to: recipient }), "line-warn");
+    if (edited()) return;
     lastCheckOk = true;
     lastKeyManager = keyManagerAddress;
     lastExecuteCalldata = executeCalldata;
@@ -1488,7 +1506,7 @@ $("sendBtn").addEventListener("click", withBusy(async () => {
     }
 
     log(t("sendingTxLog"), "line-dim");
-    const tx = await signerObj.sendTransaction({ to: lastKeyManager, data: lastExecuteCalldata });
+    const tx = await signerObj.sendTransaction({ to: lastKeyManager, data: lastExecuteCalldata, chainId: checkedContext.chainId });
     log(t("txHashLog", { hash: tx.hash }), "line-dim");
     const explorerUrl = getExplorerUrl(net, EXPLORER_PATH, tx.hash);
     if (explorerUrl) log(explorerUrl, "line-dim");

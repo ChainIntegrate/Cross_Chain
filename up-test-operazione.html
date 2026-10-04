@@ -509,7 +509,7 @@ $("testBtn").addEventListener("click", async () => {
     }
 
     log(t("sendingTestTxLog"), "line-dim");
-    const tx = await signerObj.sendTransaction({ to: keyManagerAddress, data: executeCalldata });
+    const tx = await signerObj.sendTransaction({ to: keyManagerAddress, data: executeCalldata, chainId: chains.chainId });
     log(t("txHashLog", { hash: tx.hash }), "line-dim");
     const explorerUrl = getExplorerUrl(net, EXPLORER_PATH, tx.hash);
     if (explorerUrl) log(explorerUrl, "line-dim");

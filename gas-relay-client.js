@@ -101,6 +101,13 @@
       failed: (v) => `❌ La transazione del relayer è confermata, ma l'operazione della UP è fallita${v.why ? `: ${v.why}` : ""}. Costo pagato dal paymaster: ${v.cost}.`,
       noEvent: "❌ Nella transazione del relayer non c'è l'esito di questa operazione.",
       noReceipt: (v) => `⚠️ Dopo un minuto l'RPC non mostra ancora la transazione ${v.hash}: controlla l'esito sull'explorer prima di riprovare.`,
+      unclear: "⚠️ Il relayer non ha dato una risposta chiara: riprovo con la stessa operazione firmata (il relayer non la invia due volte)...",
+      checkingChain: "Controllo sulla chain se l'operazione firmata è arrivata...",
+      landedAfterAll: (v) => `✅ L'operazione firmata è arrivata comunque (transazione ${v.tx}).`,
+      maybeSent: (v) => `⚠️ NON RIPETERE L'INVIO. L'operazione firmata (nonce ${v.nonce}, hash ${v.hash}) potrebbe arrivare ancora: il relayer non ha risposto in modo chiaro e sulla chain non risulta, per ora. Controlla tra qualche minuto (saldi, explorer). Una nuova operazione dal relayer userà lo stesso nonce, quindi al massimo una delle due verrà eseguita.`,
+      pendingLanded: (v) => `⚠️ L'operazione firmata alle ${v.at} che non aveva avuto risposta (hash ${v.hash}) è ARRIVATA${v.ok === null ? "" : v.ok ? " ed è riuscita" : ", ma è fallita dentro la UP"}. Controlla i saldi prima di inviare di nuovo, poi premi di nuovo Verifica.`,
+      pendingSameNonce: (v) => `Nota: l'operazione firmata alle ${v.at} (hash ${v.hash}) non è arrivata; questa usa lo stesso nonce ${v.nonce}, quindi al massimo una delle due verrà eseguita.`,
+      pendingBlocksDirect: (v) => `❌ Un'operazione firmata alle ${v.at} per il relayer del sito (hash ${v.hash}) non ha avuto risposta e potrebbe ancora arrivare. Inviare ora per un'altra strada (il controller paga il gas) potrebbe eseguire il trasferimento due volte. Usa l'opzione del relayer (stesso nonce: al massimo una delle due) oppure aspetta che sia chiaro.`,
     },
     en: {
       option: "Pay the gas with the site relayer",
@@ -146,6 +153,13 @@
       failed: (v) => `❌ The relayer's transaction is confirmed, but the UP's operation failed${v.why ? `: ${v.why}` : ""}. Cost paid by the paymaster: ${v.cost}.`,
       noEvent: "❌ The relayer's transaction carries no outcome for this operation.",
       noReceipt: (v) => `⚠️ After a minute the RPC still does not show transaction ${v.hash}: check the outcome on the explorer before trying again.`,
+      unclear: "⚠️ The relayer gave no clear answer: trying again with the same signed operation (the relayer never sends it twice)...",
+      checkingChain: "Checking on chain whether the signed operation arrived...",
+      landedAfterAll: (v) => `✅ The signed operation arrived after all (transaction ${v.tx}).`,
+      maybeSent: (v) => `⚠️ DO NOT SEND AGAIN. The signed operation (nonce ${v.nonce}, hash ${v.hash}) may still arrive: the relayer gave no clear answer and it is not on chain yet. Check again in a few minutes (balances, explorer). A new operation through the relayer will use the same nonce, so at most one of the two can run.`,
+      pendingLanded: (v) => `⚠️ The operation signed at ${v.at} that had no answer (hash ${v.hash}) DID arrive${v.ok === null ? "" : v.ok ? " and succeeded" : ", but failed inside the UP"}. Check the balances before sending again, then press Check again.`,
+      pendingSameNonce: (v) => `Note: the operation signed at ${v.at} (hash ${v.hash}) did not arrive; this one uses the same nonce ${v.nonce}, so at most one of the two can run.`,
+      pendingBlocksDirect: (v) => `❌ An operation signed at ${v.at} for the site relayer (hash ${v.hash}) had no answer and may still arrive. Sending now another way (the controller pays the gas) could run the transfer twice. Use the relayer option (same nonce: at most one of the two) or wait until it is clear.`,
     },
   };
   const lang = () => (document.documentElement.lang === "en" ? "en" : "it");
@@ -266,9 +280,49 @@
     return ethers.keccak256(enc(["bytes32", "address", "uint256"], [ethers.keccak256(packed), ENTRY_POINT, chainId]));
   }
 
+  // Signed operations whose sending had no clear outcome (AUDIT M-3), per chain and UP, in this browser.
+  // Such an operation can still land later. Until its nonce is used, a new operation through the relayer
+  // takes the same nonce, so at most one of the two runs; a send by another path (the controller pays)
+  // has no such protection and is blocked.
+  const PENDING_KEY = "ci-relay-pending";
+  const pendingKey = (chainId, up) => `${chainId}:${up.toLowerCase()}`;
+  function pendingAll() { try { return JSON.parse(localStorage.getItem(PENDING_KEY) || "{}") || {}; } catch (e) { return {}; } }
+  function pendingPut(key, v) {
+    try { const a = pendingAll(); if (v) a[key] = v; else delete a[key]; localStorage.setItem(PENDING_KEY, JSON.stringify(a)); } catch (e) { /* not kept: the page still warns now */ }
+  }
+  // The UserOperationEvent of `hash`, looked up in the recent blocks: { tx, success } or null.
+  async function findOpEvent(provider, hash) {
+    const ev = EP_IFACE.getEvent("UserOperationEvent");
+    const latest = await provider.getBlockNumber();
+    for (let to = latest, n = 0; n < 5 && to >= 0; n++, to -= 2000) {
+      // A failed read throws: the record is kept, nothing is concluded from it.
+      const logs = await provider.getLogs({ address: ENTRY_POINT, topics: [ev.topicHash, hash], fromBlock: Math.max(0, to - 1999), toBlock: to });
+      if (logs.length) return { tx: logs[0].transactionHash, success: EP_IFACE.parseLog(logs[0]).args.success };
+    }
+    return null;
+  }
+  // { state: "none" } | { state: "outstanding", p } | { state: "landed", p, ev }. Once the nonce is used,
+  // the operation is forgotten: "landed" (reported once) when its own event is found, otherwise another
+  // operation with the same nonce ran instead. An expired sponsor approval can no longer land either.
+  async function pendingStatus(provider, { chainId, up }) {
+    const key = pendingKey(chainId, up), p = pendingAll()[key];
+    if (!p) return { state: "none" };
+    const nonce = await new ethers.Contract(ENTRY_POINT, EP_IFACE, provider).getNonce(up, 0);
+    if (nonce > BigInt(p.nonce)) {
+      const ev = await findOpEvent(provider, p.hash);
+      pendingPut(key, null);
+      return ev ? { state: "landed", p, ev } : { state: "none" };
+    }
+    if (p.validUntil && p.validUntil < Math.floor(Date.now() / 1000)) { pendingPut(key, null); return { state: "none" }; }
+    return { state: "outstanding", p };
+  }
+  const pendingView = (p) => ({ at: new Date(p.at).toLocaleTimeString(), hash: p.hash, nonce: p.nonce });
+
   // Builds the operation for UP.execute(CALL, to, value, data), simulated as the EntryPoint will run
   // it. Throws an Error whose message is ready to show. `ready` is the result of check().
   async function prepare(provider, { chainId, up, ready, to, value, data, fmt }) {
+    const pend = await pendingStatus(provider, { chainId, up });
+    if (pend.state === "landed") throw new Error(text("pendingLanded", { ...pendingView(pend.p), ok: pend.ev.success }));
     const callData = UP_IFACE.encodeFunctionData("execute", [0, to, value, data]);
     let est;
     try {
@@ -297,7 +351,8 @@
     const rpcHash = await ep.getUserOpHash(op);
     if (rpcHash.toLowerCase() !== hash.toLowerCase()) throw new Error(text("hashMismatch"));
     return { op, hash, maxCost, chainId, sponsor: ready.sponsor || null, provider, view: { up, to, value: fmt(value), nonce: op.nonce.toString(), pm: ready.pm, chainId },
-      plan: text(ready.sponsor ? "planSponsor" : "plan", { pm: ready.pm, max: fmt(maxCost), cap: fmt(ready.cap), gas: callGas.toString() }) };
+      plan: text(ready.sponsor ? "planSponsor" : "plan", { pm: ready.pm, max: fmt(maxCost), cap: fmt(ready.cap), gas: callGas.toString() })
+        + (pend.state === "outstanding" && BigInt(pend.p.nonce) === op.nonce ? "\n" + text("pendingSameNonce", pendingView(pend.p)) : "") };
   }
 
   // getHash(userOp, validUntil, validAfter) of UPVerifyingPaymaster, computed in the browser.
@@ -387,14 +442,37 @@
     if (who.toLowerCase() !== signer.toLowerCase()) throw new Error(text("wrongSigner", { who, exp: signer }));
     log(text("signed", { who, hash: prep.hash }), "line-ok");
     log(text("sending"), "line-dim");
-    let r, j;
-    try {
-      r = await fetch("relay/send", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chainId, op: opJson(prep.op) }) });
-      j = await r.json();
-    } catch (e) { throw new Error(text("unreachable")); }
-    if (!r.ok || !j || !j.hash) throw new Error(text("refused", { err: (j && j.error) || `HTTP ${r.status}` }));
-    log(text("sent", { hash: j.hash }), "line-dim");
-    return j.hash;
+    // From here the signed operation exists. A clear refusal (4xx) on the first try means it was not
+    // sent. Anything else (no answer, 5xx, a refusal after an unclear try) may hide a send: the same
+    // operation is posted again (the relayer recognises it), then the chain is asked (AUDIT M-3).
+    const body = JSON.stringify({ chainId, op: opJson(prep.op) });
+    let unclear = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt) { log(text("unclear"), "line-warn"); await new Promise((res) => setTimeout(res, 3000)); }
+      let r = null, j = null;
+      try { r = await fetch("relay/send", { method: "POST", headers: { "content-type": "application/json" }, body }); j = await r.json().catch(() => null); }
+      catch (e) { unclear = true; continue; }
+      if (r.ok && j && j.hash) { log(text("sent", { hash: j.hash }), "line-dim"); return j.hash; }
+      if (!unclear && r.status >= 400 && r.status < 500 && r.status !== 429) throw new Error(text("refused", { err: (j && j.error) || `HTTP ${r.status}` }));
+      unclear = true;
+    }
+    const p = { nonce: prep.op.nonce.toString(), hash: prep.hash, at: Date.now(),
+      validUntil: prep.sponsor ? Number(BigInt(ethers.dataSlice(prep.op.paymasterAndData, 20, 26))) : 0 };
+    pendingPut(pendingKey(chainId, prep.op.sender), p);
+    if (prep.provider) {
+      log(text("checkingChain"), "line-dim");
+      for (let i = 0; i < 12; i++) {
+        if (i) await new Promise((res) => setTimeout(res, 5000));
+        try {
+          const st = await pendingStatus(prep.provider, { chainId, up: prep.op.sender });
+          if (st.state === "landed" && st.ev) { log(text("landedAfterAll", { tx: st.ev.tx }), "line-ok"); return st.ev.tx; }
+          if (st.state !== "outstanding") break;
+        } catch (e) { /* RPC hiccup: try again */ }
+      }
+    }
+    const err = new Error(text("maybeSent", pendingView(p)));
+    err.maybeSent = true;
+    throw err;
   }
 
   // The relayer's transaction succeeds even when the UP's operation fails inside it: the outcome is
@@ -491,5 +569,5 @@
     return { enabled: () => state.state === "ready" && cb.checked, refresh, state: () => state };
   }
 
-  window.GasRelayClient = { check, prepare, signAndSend, waitResult, attach, text, userOpHash, sponsorHash, approvalProblem, ENTRY_POINT };
+  window.GasRelayClient = { check, prepare, signAndSend, waitResult, attach, text, userOpHash, sponsorHash, approvalProblem, pendingStatus, pendingView, ENTRY_POINT };
 })();

@@ -282,6 +282,7 @@ const I18N = {
     decodeErrorMsg: (v) => `Errore di decodifica: ${v.err}. Controlla di aver incollato la calldata per intero.`,
     wrongSelectorErr: (v) => `la calldata non inizia con il selettore di deployERC1167Proxies (0x6a66a753), ma con ${v.sel}`,
     staleCheckLog: "Dati o rete modificati dopo la verifica: premi di nuovo Verifica.",
+    editedDuringCheckLog: "❌ Dati, rete o wallet sono cambiati mentre la verifica era in corso: il deploy resta spento. Premi di nuovo Verifica.",
     rpcChainMismatchErr: (v) => `❌ BLOCCANTE — l'RPC risponde con chainId ${v.rpcChainId}, ma la rete selezionata è ${v.netName} (chainId ${v.chainId}). Non procedere.`,
     signerChangedErr: (v) => `❌ BLOCCANTE — l'account attivo nel wallet (${v.now}) non è quello verificato (${v.checked}). Rifai la verifica.`,
     noGasPriceErr: "❌ BLOCCANTE — l'RPC non ha restituito un prezzo del gas.",
@@ -499,6 +500,7 @@ const I18N = {
     decodeErrorMsg: (v) => `Decode error: ${v.err}. Check that you pasted the whole calldata.`,
     wrongSelectorErr: (v) => `the calldata does not start with the deployERC1167Proxies selector (0x6a66a753), but with ${v.sel}`,
     staleCheckLog: "Data or network changed after verification: press Verify again.",
+    editedDuringCheckLog: "❌ Data, network or wallet changed while the verification was running: Deploy stays off. Press Verify again.",
     rpcChainMismatchErr: (v) => `❌ BLOCKING — the RPC answers with chainId ${v.rpcChainId}, but the selected network is ${v.netName} (chainId ${v.chainId}). Do not proceed.`,
     signerChangedErr: (v) => `❌ BLOCKING — the active wallet account (${v.now}) is not the one that was verified (${v.checked}). Verify again.`,
     noGasPriceErr: "❌ BLOCKING — the RPC did not return a gas price.",
@@ -805,6 +807,7 @@ $("connectUp").addEventListener("click", async () => {
     upAddressConnected = upAddress;
     $("upStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${escapeHtml(upAddress)}`;
     $("expectedAddress").value = ethers.getAddress(upAddress);
+    invalidateCheck();
     $("decodeBtn").disabled = false;
     $("fetchCalldataBtn").disabled = false;
     $("checkBtn").disabled = false;
@@ -1101,7 +1104,7 @@ $("donateBtn").addEventListener("click", async () => {
     const signerObj = await browserProvider.getSigner();
 
     donateLog(t("donateOpeningWalletLog"), "line-dim");
-    const tx = await signerObj.sendTransaction({ to: ethers.getAddress(DONATE_ADDRESS), value: amountWei });
+    const tx = await signerObj.sendTransaction({ to: ethers.getAddress(DONATE_ADDRESS), value: amountWei, chainId: LUKSO_CHAIN_ID });
     donateLog(t("donateTxHashLog", { hash: tx.hash }), "line-dim");
 
     donateLog(t("donateWaitingLog"), "line-dim");
@@ -1118,7 +1121,10 @@ let checkedContext = null; // { rpc, chainId, signer } snapshot taken by a succe
 
 // Any change to inputs, network or wallet after a successful Verify invalidates it: the
 // deploy must only ever run against exactly what was verified.
+// Bumped by every change: a Verify that sees it change while it runs does not enable Deploy (AUDIT M-2).
+let inputGen = 0;
 function invalidateCheck() {
+  inputGen++;
   if (lastCheckOk) log(t("staleCheckLog"), "line-warn");
   lastCheckOk = false;
   checkedContext = null;
@@ -1167,6 +1173,7 @@ $("checkBtn").addEventListener("click", async () => {
   lastCheckOk = false;
   checkedContext = null;
   $("deployBtn").disabled = true;
+  const gen = inputGen;
 
   // Always decode the calldata currently in the textarea: never verify a stale decode.
   if ($("calldataInput").value.trim()) runDecode(); else decoded = null;
@@ -1280,6 +1287,7 @@ $("checkBtn").addEventListener("click", async () => {
     }
     log(t("sufficientBalanceLog"), "line-ok");
 
+    if (gen !== inputGen) { log(t("editedDuringCheckLog"), "line-err"); return; }
     lastCheckOk = true;
     checkedContext = { rpc: net.rpc, chainId: chains.chainId, signer: signerAddress };
     $("deployBtn").disabled = false;
@@ -1314,7 +1322,7 @@ $("deployBtn").addEventListener("click", async () => {
     }
 
     log(t("sendingTxLog"), "line-dim");
-    const tx = await signerObj.sendTransaction({ to: FACTORY_ADDRESS, data: decoded.rawCalldata, value });
+    const tx = await signerObj.sendTransaction({ to: FACTORY_ADDRESS, data: decoded.rawCalldata, value, chainId: checkedContext.chainId });
     log(t("txHashLog", { hash: tx.hash }), "line-dim");
 
     log(t("waitingConfirmLog"), "line-dim");
@@ -1612,7 +1620,7 @@ async function sendBackupTx(b, data, verify) {
   browserProvider.pollingInterval = 1000; // confirm as soon as the block is there (default 4 s)
   const signerObj = await browserProvider.getSigner();
   if (signerObj.address.toLowerCase() !== b.signer.toLowerCase()) { bkLog(t("signerChangedErr", { now: signerObj.address, checked: b.signer }), "line-err"); return false; }
-  const tx = await signerObj.sendTransaction({ to: b.km, data });
+  const tx = await signerObj.sendTransaction({ to: b.km, data, chainId: b.chainId });
   bkLog(t("bkTx", { hash: tx.hash }), "line-dim");
   bkLog(t("bkWaiting"), "line-dim");
   const receipt = await tx.wait();
