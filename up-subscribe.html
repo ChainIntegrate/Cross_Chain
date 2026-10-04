@@ -89,6 +89,7 @@
   <h2 data-i18n="panel1Title">1 · Rete, UP e controller</h2>
   <label for="network" data-i18n="networkLabel">Rete su cui paghi</label>
   <select id="network"></select>
+  <div class="note" id="networkNote" style="margin-top:8px;" data-i18n-html="networkNote"></div>
   <label for="upAddress" data-i18n="upAddressLabel">Indirizzo della tua UP</label>
   <input type="text" id="upAddress" placeholder="0x...">
   <div class="note" style="margin-top:8px;" data-i18n="upNote"></div>
@@ -146,15 +147,17 @@ const I18N = {
     subtitle: "Paga 5 USDC dalla tua Universal Profile e ottieni un saldo con cui il sito paga il gas delle tue operazioni su Base, Polygon e Avalanche.",
     langToggleBtn: "English",
     panel0Title: "0 · Come funziona",
-    panel0Note: "<b>Cosa compri.</b> 5 USDC diventano un <b>saldo unico</b> della tua UP, valido su tutte le reti del servizio. Ogni operazione pagata dal sito scala il prezzo della rete su cui avviene (listino qui sotto), <b>solo quando viene eseguita</b>. Lo stesso pagamento serve anche per le ricariche.<br><br><b>Prima di pagare, sulla rete scelta:</b><ol style=\"margin:6px 0 0; padding-left:20px;\"><li>la tua UP deve esistere su quella rete (se l'hai creata su LUKSO, replicala con la pagina Deploy);</li><li>la UP deve avere la <b>configurazione 4337</b>. È <b>necessaria per la richiesta di attivazione</b> (il sito paga il gas di questo pagamento) <b>e per ogni uso successivo</b> del gas sponsorizzato. È una transazione una tantum per rete, pagata dal tuo controller (pochi centesimi);</li><li>la UP deve avere almeno 5 USDC <b>nativi di Circle</b> su quella rete (puoi mandarli da un exchange all'indirizzo della tua UP).</li></ol><br><b>Dopo il pagamento</b> verifichiamo la transazione e attiviamo il saldo: ricevi un'email di conferma quando è disponibile.",
+    panel0Note: "<b>Cosa compri.</b> 5 USDC diventano un <b>saldo unico</b> della tua UP, valido su tutte le reti disponibili (elenco qui sotto). Ogni operazione pagata dal sito scala il prezzo della rete su cui avviene, <b>solo quando viene eseguita</b>.<br><br><b>Per ricaricare il saldo usa questa stessa pagina:</b> ogni pagamento di 5 USDC si aggiunge al saldo che hai già.<br><br><b>Prima di pagare, sulla rete scelta:</b><ol style=\"margin:6px 0 0; padding-left:20px;\"><li>la tua UP deve esistere su quella rete (se l'hai creata su LUKSO, replicala con la pagina Deploy);</li><li>la UP deve avere la <b>configurazione 4337</b>. È <b>necessaria per la richiesta di attivazione</b> (il sito paga il gas di questo pagamento) <b>e per ogni uso successivo</b> del gas sponsorizzato. È una transazione una tantum per rete, pagata dal tuo controller (pochi centesimi);</li><li>la UP deve avere almeno 5 USDC <b>nativi di Circle</b> su quella rete (puoi mandarli da un exchange all'indirizzo della tua UP).</li></ol><br><b>Dopo il pagamento</b> verifichiamo la transazione e attiviamo il saldo: ricevi un'email di conferma quando è disponibile.",
     priceLoading: "Lettura del listino...",
-    priceLine: (v) => `Listino per operazione: ${v.list}. Con 5 USDC, per esempio, ${v.example}.`,
+    priceTitle: "Reti disponibili e prezzo per operazione",
+    priceItem: (v) => `${v.name}: ${v.price} USDC per operazione (con 5 USDC, ${v.ops} operazioni)`,
     priceNone: "Il servizio di sponsorizzazione non risponde: riprova più tardi.",
     disclaimer: "<b>⚠️ Leggi prima di pagare</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Servizio sperimentale.</b> I contratti usati (paymaster e Extension4337 di LUKSO) non hanno un audit professionale. Transazioni reali e irreversibili.</li><li><b>Il saldo si usa solo per il gas</b> delle operazioni della tua UP pagate dal sito, sulle reti del servizio.</li><li><b>Questa pagina non chiede mai chiavi private</b>: il tuo controller firma un messaggio in MetaMask.</li><li>Per problemi o domande: assistenza via Telegram (in fondo alla pagina).</li></ul>",
     ackLabel: "Ho letto e accetto: uso questo servizio a mio rischio.",
     ackRequired: "Prima accetta le condizioni nel pannello 0.",
     panel1Title: "1 · Rete, UP e controller",
     networkLabel: "Rete su cui paghi",
+    networkNote: "<b>La rete serve solo per questo pagamento.</b> Il saldo vale poi su tutte le reti disponibili, qualunque sia quella che scegli qui. Scegli la rete dove la tua UP ha gli USDC e la configurazione 4337.",
     upAddressLabel: "Indirizzo della tua UP",
     upNote: "Lo stesso indirizzo della tua UP su LUKSO. Il pagamento parte dalla UP: è così che il servizio sa quale UP attivare.",
     connectSignerBtn: "Connetti MetaMask (controller della UP)",
@@ -212,15 +215,17 @@ const I18N = {
     subtitle: "Pay 5 USDC from your Universal Profile and get a balance with which the site pays the gas of your operations on Base, Polygon and Avalanche.",
     langToggleBtn: "Italiano",
     panel0Title: "0 · How it works",
-    panel0Note: "<b>What you buy.</b> 5 USDC become <b>one balance</b> of your UP, valid on every network of the service. Each operation paid by the site takes the price of the network where it runs (price list below), <b>only when it is executed</b>. The same payment is also used for top-ups.<br><br><b>Before paying, on the chosen network:</b><ol style=\"margin:6px 0 0; padding-left:20px;\"><li>your UP must exist on that network (if you created it on LUKSO, replicate it with the Deploy page);</li><li>the UP must have the <b>4337 setup</b>. It is <b>needed for the activation request</b> (the site pays the gas of this payment) <b>and for every later use</b> of the sponsored gas. It is a one-time transaction per network, paid by your controller (a few cents);</li><li>the UP must hold at least 5 <b>Circle-native</b> USDC on that network (you can send them from an exchange to your UP's address).</li></ol><br><b>After the payment</b> we verify the transaction and activate the balance: you get a confirmation e-mail when it is available.",
+    panel0Note: "<b>What you buy.</b> 5 USDC become <b>one balance</b> of your UP, valid on every available network (list below). Each operation paid by the site takes the price of the network where it runs, <b>only when it is executed</b>.<br><br><b>To top up your balance, use this same page:</b> each 5 USDC payment is added to the balance you already have.<br><br><b>Before paying, on the chosen network:</b><ol style=\"margin:6px 0 0; padding-left:20px;\"><li>your UP must exist on that network (if you created it on LUKSO, replicate it with the Deploy page);</li><li>the UP must have the <b>4337 setup</b>. It is <b>needed for the activation request</b> (the site pays the gas of this payment) <b>and for every later use</b> of the sponsored gas. It is a one-time transaction per network, paid by your controller (a few cents);</li><li>the UP must hold at least 5 <b>Circle-native</b> USDC on that network (you can send them from an exchange to your UP's address).</li></ol><br><b>After the payment</b> we verify the transaction and activate the balance: you get a confirmation e-mail when it is available.",
     priceLoading: "Reading the price list...",
-    priceLine: (v) => `Price per operation: ${v.list}. With 5 USDC, for example, ${v.example}.`,
+    priceTitle: "Available networks and price per operation",
+    priceItem: (v) => `${v.name}: ${v.price} USDC per operation (with 5 USDC, ${v.ops} operations)`,
     priceNone: "The sponsor service does not answer: try again later.",
     disclaimer: "<b>⚠️ Read before paying</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Experimental service.</b> The contracts used (the paymaster and LUKSO's Extension4337) have no professional audit. Real, irreversible transactions.</li><li><b>The balance is used only for the gas</b> of your UP's operations paid by the site, on the service's networks.</li><li><b>This page never asks for private keys</b>: your controller signs a message in MetaMask.</li><li>For problems or questions: support via Telegram (bottom of the page).</li></ul>",
     ackLabel: "I have read and accept: I use this service at my own risk.",
     ackRequired: "First accept the conditions in panel 0.",
     panel1Title: "1 · Network, UP and controller",
     networkLabel: "Network you pay on",
+    networkNote: "<b>The network is only for this payment.</b> The balance then works on every available network, whichever you choose here. Choose the network where your UP holds the USDC and has the 4337 setup.",
     upAddressLabel: "Your UP's address",
     upNote: "The same address as your UP on LUKSO. The payment comes from the UP: this is how the service knows which UP to activate.",
     connectSignerBtn: "Connect MetaMask (the UP's controller)",
@@ -306,11 +311,12 @@ async function loadNetworks() {
 function renderPrices() {
   const pr = prices || PRICE_LIST;
   const shown = (nets.length ? nets : CHAINS.filter(c => PRICE_LIST[c.chainId])).filter(c => pr[String(c.chainId)]);
-  const list = shown.map(c => `${c.name} ${pr[String(c.chainId)]} USDC`);
-  const ex = shown.map(c => `${Math.floor(5 / Number(pr[String(c.chainId)]))} ${LANG === "it" ? "operazioni su" : "operations on"} ${c.name}`);
-  const line = t("priceLine", { list: list.join(" · "), example: ex.join(LANG === "it" ? " oppure " : " or ") });
   const note = prices ? "" : priceState === "closed" ? t("subsClosed") : priceState === "down" || !nets.length ? t("priceNone") : "";
-  setStatus("priceBox", line, "");
+  const box = $("priceBox"); box.textContent = "";
+  const h = document.createElement("div"); h.style.fontWeight = "700"; h.style.marginBottom = "6px"; h.textContent = t("priceTitle"); box.appendChild(h);
+  const ul = document.createElement("ul"); ul.style.margin = "0"; ul.style.paddingLeft = "20px";
+  shown.forEach(c => { const p = pr[String(c.chainId)]; const li = document.createElement("li"); li.textContent = t("priceItem", { name: c.name, price: p, ops: Math.floor(5 / Number(p)) }); ul.appendChild(li); });
+  box.appendChild(ul);
   if (note) { const d = document.createElement("div"); d.className = "line-err"; d.style.marginTop = "6px"; d.textContent = note; $("priceBox").appendChild(d); }
 }
 const getNet = () => nets.find(c => c.key === $("network").value) || null;
