@@ -172,7 +172,7 @@ function report(findings) {
   const lines = findings.length
     ? findings.map((f) => `${f.level === "error" ? "PROBLEM" : "warning"} - ${f.where}: ${f.msg}`)
     : ["Every check passed: EntryPoint permissions 0x000500, extension, controllers, allowlist or sponsor service, paymaster code, signer, cap and deposit, relayer service and balance."];
-  return { subject, text: lines.join("\n") + `\n\nChecked at ${new Date().toISOString()}. Manual check: up-gas-relay.html, section 2.\n` };
+  return { subject, text: lines.join("\n") + `\n\nChecked at ${new Date().toISOString()}. Manual check: up-gas-relay-admin.html, section 2.\n` };
 }
 
 async function sendMail(subject, text) {
@@ -203,7 +203,7 @@ function drawdowns(prev, now, mon) {
     if (fell * 100n > caps * cap || fell * 100n > frac * before) {
       const [id, pm] = key.split(":");
       out.push({ level: "error", where: `chain ${id}, ${n.sponsor ? "sponsor paymaster" : "paymaster"} ${pm}`,
-        msg: `deposit fell by ${eth(fell)} since the previous check (${eth(before)} -> ${eth(after)}). If you did not withdraw it, stop the paymaster now (up-gas-relay.html: ${n.sponsor ? "section 3b, Stop now" : "section 3, cap 0"})` });
+        msg: `deposit fell by ${eth(fell)} since the previous check (${eth(before)} -> ${eth(after)}). If you did not withdraw it, stop the paymaster now (up-gas-relay-admin.html: ${n.sponsor ? "section 3b, Stop now" : "section 3, cap 0"})` });
     }
   }
   return out;

@@ -93,7 +93,7 @@ The contract never names a token. On each chain it holds and pays that chain's n
 - **L2 data fees (Base, Optimism, Arbitrum) are not in EntryPoint v0.6's gas accounting.** The relayer covers them through `preVerificationGas`. Set too low, the relayer loses a little on each operation. This is a relayer setting, not a paymaster one.
 
 **What a UP needs, once per chain**
-One transaction signed by the controller, done with `up-gas-relay.html`, section 4:
+One transaction signed by the controller, done with `up-gas-relay.html`, section 3:
 1. Register LUKSO's `Extension4337` (from `@lukso/lsp-smart-contracts`) as the LSP17 extension for `validateUserOp` (`0x3a871cdd`).
 2. Add the EntryPoint as a controller with `SUPER_CALL` and `SUPER_TRANSFERVALUE`.
    - It gets no `SETDATA`: permission changes can never go through the relayer.
@@ -128,7 +128,7 @@ The controller signs the user operation hash with `personal_sign`, so MetaMask w
 
 **Only with the site's own relayer.** The paymaster cannot be staked, so public bundlers that apply the ERC-7562 rules refuse its operations.
 
-**The signing key is a hot key with spending power.** Whoever holds it can approve operations for any sender, up to the cap each, until the deposit runs out. Keep deposits small and caps close to the real maximum cost. If the key may be exposed, press **Stop now** (section 3b; `setSigner(0)`), then create a new key and set it as signer. License GPL-3.0, like `UPPaymaster` (it builds on the same `@account-abstraction/contracts` 0.6.0 interfaces).
+**The signing key is a hot key with spending power.** Whoever holds it can approve operations for any sender, up to the cap each, until the deposit runs out. Keep deposits small and caps close to the real maximum cost. If the key may be exposed, press **Stop now** (`up-gas-relay-admin.html`, section 3b; `setSigner(0)`), then create a new key and set it as signer. License GPL-3.0, like `UPPaymaster` (it builds on the same `@account-abstraction/contracts` 0.6.0 interfaces).
 
 **Where it comes from, and what is not audited.** The approval scheme is the one of the `VerifyingPaymaster` sample of eth-infinitism for EntryPoint v0.6. `getHash` covers the same fields, in the same order, as the `Paymaster.sol` of [base-org/paymaster](https://github.com/base-org/paymaster), a clone of that sample.
 
@@ -162,7 +162,7 @@ The paymaster holds only the deposit its owner puts in it. The cap per operation
 **Same address on every chain for a given owner:** the constructor takes only the EntryPoint and the owner, as in `UPPaymaster` (different creation code, so a different address from `UPPaymaster`). Files: `UPVerifyingPaymaster.input.json` (standard-JSON input, solc 0.8.24, optimizer 200, `paris`, no metadata hash) and `UPVerifyingPaymaster.json` (creation code, ABI, how to compute the address).
 
 **On the site:**
-- The gas page, section 3b, publishes and manages it with the cassa: publish, top up, signer, cap, withdraw, "Stop now".
+- The operator's page `up-gas-relay-admin.html`, section 3b, publishes and manages it with the cassa: publish, top up, signer, cap, withdraw, "Stop now".
 - The relayer accepts its operations when its configuration names it as `sponsorPaymaster` for the chain (`tools/relayer/README.md`).
 - The Send and UP Wallet pages ask the signing service for the approval just before the controller signs. Before anything is signed, they check the approval: paymaster, length, validity window, and a signature by the on-chain `signer()`.
 - The signing service is in a separate, private repository.
