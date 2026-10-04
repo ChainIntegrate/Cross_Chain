@@ -215,12 +215,14 @@ A page that reads and shows a UP's LSP3 identity on any network where it is depl
 ## 3. Other open items
 - **Site index = the guide: done 2026-10-03** on the server: nginx `index up-crosschain-guide.html;` in `/etc/nginx/sites-available/crosschain-lukso` (previous file kept as `crosschain-lukso.bak` next to it).
 - **Site relayer on Avalanche: done 2026-10-03.** Chain 43114 added to `/etc/crosschain-relayer/config.json` (RPC `https://api.avax.network/ext/bc/C/rpc`, paymaster `0xb353…D4eD`, `minBalanceWarn` 0.01) and to the monitor (ChainIntegrate UP, `minPaymasterDeposit` 0.01); relayer funded with 0.05 AVAX. First relayed send: `tools/logs/2026-10-03-avalanche-send-relayer.txt`. The relayer clone in `/opt/crosschain-relayer` checks out the whole repo (sparse checkout not active); harmless, it is outside the web root.
-- **Sponsor (verifying) paymaster: live on Avalanche 2026-10-04.**
-  - Contract `contracts/UPVerifyingPaymaster.sol` (GPL-3.0, unaudited; same `getHash` as base-org/paymaster, which Cantina reviewed) at `0xbEA7…d21e`.
+- **Sponsor (verifying) paymaster: live on Avalanche, Polygon and Base 2026-10-04.**
+  - Contract `contracts/UPVerifyingPaymaster.sol` (GPL-3.0; same `getHash` as base-org/paymaster, which Cantina reviewed; AI-assisted review 2026-10-04, AUDIT.md section 10) at `0xbEA7…d21e` on the three chains, owner the cassa, same signer.
   - Site support merged in PR #93.
-  - Signing service in the private repository `cross-chain-sponsor`, running on the server (`/opt/crosschain-sponsor`, port 8788, nginx `/relay/sponsor/`).
+  - Signing service in the private repository `cross-chain-sponsor`, running on the server (`/opt/crosschain-sponsor`, port 8788, nginx `/relay/sponsor/`), with a weekly report by email (Mondays 08:00, CSV attached).
+  - The ChainIntegrate UP is off the `UPPaymaster` allowlist on all three chains, on purpose: it uses the sponsor paymaster.
+  - The monitor checks the sponsor paymaster and the service, and alarms on a fast deposit drawdown.
   - First sponsored operation: `tools/logs/2026-10-04-avalanche-sponsor-paymaster.txt`.
-  - To do: Snowscan verification; decide whether the ChainIntegrate UP goes back on the UPPaymaster allowlist (removed for the test); an audit before any third-party funds.
+  - To do: one test operation on Polygon and one on Base; source verification on Snowscan, Polygonscan and Basescan; an audit before any third-party funds.
 - **The site relayer is for the maintainer's personal use.** A "pro" version (public service) is under evaluation; it needs a new paymaster contract (verifying paymaster: the service signs each operation it agrees to pay), not the current `UPPaymaster`.
 - **Licenses: done 2026-10-03** (`THIRD_PARTY_NOTICES.md`): paymaster GPL-3.0; WalletConnect bundle under Reown's WalletConnect Community License (notice in the pages' footer, copy in `vendor/`). **For a paid / public version:** that license requires a paid commercial license above 500 monthly active users or 2.5M monthly RPC calls, and requires Reown's relay network; evaluate it (or an alternative) before launching. **To evaluate:** AGPL-3.0 for `tools/relayer/` (the part that would become the service).
 - **Contract source verification (2026-10-03):** all three contracts verified on Basescan, Polygonscan and Snowscan, and on the Base/Polygon Blockscouts except UPPaymaster (submissions seemed to stall; reload later or retry). Table in `contracts/README.md`, "Source verification status".

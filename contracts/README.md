@@ -123,7 +123,11 @@ The controller signs the user operation hash with `personal_sign`, so MetaMask w
 
 `UPVerifyingPaymaster.sol` is an ERC-4337 paymaster for EntryPoint v0.6, like `UPPaymaster`, but it does not keep a list of accounts. It pays for a user operation only when an **off-chain signing service** has approved that operation: the service decides (subscription, quota, which contracts, budget) and signs; the contract checks the signature. It is the base for a sponsored-gas service where the rules live in the service, not on chain.
 
-**Status:** experimental, unaudited. Published on **Avalanche C-Chain** only (2026-10-04), at `0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e` (owner: the cassa), and in use by the site relayer there; log in `tools/logs/2026-10-04-avalanche-sponsor-paymaster.txt`. Source verification on Snowscan: to do. License GPL-3.0, like `UPPaymaster` (it builds on the same `@account-abstraction/contracts` 0.6.0 interfaces).
+**Status:** experimental. No professional audit; an AI-assisted review on 2026-10-04 found no Critical, High or Medium bug in the code (AUDIT.md, section 10). Published on **Avalanche C-Chain, Polygon and Base** (2026-10-04), at the same address `0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e` (owner: the cassa), and in use by the site relayer on all three. Log of the first operation: `tools/logs/2026-10-04-avalanche-sponsor-paymaster.txt`. Source verification on the explorers: to do.
+
+**Only with the site's own relayer.** The paymaster cannot be staked, so public bundlers that apply the ERC-7562 rules refuse its operations.
+
+**The signing key is a hot key with spending power.** Whoever holds it can approve operations for any sender, up to the cap each, until the deposit runs out. Keep deposits small and caps close to the real maximum cost. If the key may be exposed, press **Stop now** (section 3b; `setSigner(0)`), then create a new key and set it as signer. License GPL-3.0, like `UPPaymaster` (it builds on the same `@account-abstraction/contracts` 0.6.0 interfaces).
 
 **Where it comes from, and what is not audited.** The approval scheme is the one of the `VerifyingPaymaster` sample of eth-infinitism for EntryPoint v0.6. `getHash` covers the same fields, in the same order, as the `Paymaster.sol` of [base-org/paymaster](https://github.com/base-org/paymaster), a clone of that sample.
 
@@ -219,7 +223,7 @@ Each contract has the same address on every network where it is published. Statu
 |---|---|---|---|---|---|---|
 | NFTReceiverExtension `0x7F68e74483867058C806218aa05aB5527984C03e` | ✅ | ✅ | ✅ | ✅ partial | ✅ partial | ✅ |
 | UPPaymaster `0xb353565d1f801E7402DBC267b8C0E30E3540D4eD` | ✅ | ✅ | ✅ | ⏳ to do | ⏳ to do | — not published |
-| UPVerifyingPaymaster `0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e` | — not published | — not published | ⏳ to do | — | — | — not published |
+| UPVerifyingPaymaster `0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e` | ⏳ to do | ⏳ to do | ⏳ to do | — | — | — not published |
 | Extension4337 `0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2` | ✅ | ✅ | ✅ | ✅ | ✅ | — (LUKSO's own) |
 
 "Partial" on Blockscout is the best possible result for NFTReceiverExtension and UPPaymaster: they are compiled without the metadata hash (so the address is the same everywhere), and Blockscout can then match the code but not the metadata. On Blockscout the verification runs in the background: if the page seems stuck after "Verify & publish", reload it a few minutes later.

@@ -529,3 +529,27 @@ An AI-assisted review of the whole repository at `40f0bc0`, with the system live
 | L-6 … L-8, I-1 … I-7 | Low / Info | Recipient gaps on the Send page, WalletConnect telemetry and SRI, minor robustness, paymaster panel inputs, guide wording | Open (hardening backlog) |
 
 **Key concentration (report section 7).** The cassa is paymaster owner, deploy payer and full-permission backup of the three UPs on Base and Polygon. Agreed direction: move the backup off the cassa to a separate key (ideally a hardware wallet, never from the same seed as the cassa), then remove the cassa from the six controller lists; the paymaster can also change owner (two-step `transferOwnership` / `acceptOwnership`) without changing its address. **Done on 2026-10-03:** on all six UP/network pairs the cassa was removed and a separate key added as backup (`tools/logs/2026-10-03-backup-rotation.txt`); it is still a hot key, to be replaced by a hardware wallet. The cassa remains paymaster owner and deploy payer; the paymaster is on hold.
+
+## 10. Rev. 7 — `UPVerifyingPaymaster` review (2026-10-04)
+
+An AI-assisted review of `contracts/UPVerifyingPaymaster.sol` alone, on the day it went live. Full report: [tools/audits/2026-10-04-UPVerifyingPaymaster.md](tools/audits/2026-10-04-UPVerifyingPaymaster.md).
+
+No Critical, High or Medium bug in the code. Every property a verifying paymaster must hold was checked and reproduced: 21 checks, 15 unit and 6 through the real EntryPoint v0.6. The properties:
+- only the signer's approval sponsors an operation;
+- an approval is bound to one operation, chain and paymaster, and used once;
+- the cost is pinned and capped;
+- the validity window is signed and enforced;
+- no signature malleability;
+- only the owner withdraws.
+
+| # | Severity | Finding | Status |
+|---|---|---|---|
+| VP-H1 | High (operational, by design) | Whoever holds the signing key can approve operations for any sender, up to the cap each; the total is bounded only by the deposit | **Mitigated off-chain.** The key lives only on the server (mode 600), separate from the owner (the cassa). Approvals last 5 minutes; per-UP daily quotas and per-chain daily budgets are enforced in the service. Deposits are kept small and caps are sized on the real maximum cost (Avalanche lowered to 0.01 AVAX). "Stop now" on the gas page (`setSigner(0)`) is the break-glass. The monitor checks the signer and the deposit every hour, and since this revision raises a problem at once when a deposit falls fast (more than 2 caps, or more than half, between two runs). The weekly report shows what was paid |
+| VP-L1 | Low | Cannot be staked, so public ERC-7562 bundlers refuse it | **Accepted:** it works only with the site's own relayer; written in `contracts/README.md`. Staking functions would need a new contract |
+| VP-L2 | Low | `withdrawTo(0, …)` would burn the funds (owner only) | **Fixed in the page:** the gas page refuses the zero address in both withdraw forms (sections 3 and 3b), before MetaMask. The contract is unchanged: a fix there would need a new address on every chain |
+| VP-L3 | Low | The cap is in native units, which differ per chain | **Done:** set per chain (0.01 AVAX, 0.0003 ETH on Base, its own value on Polygon); the page shows the currency |
+| VP-I1 | Info | Its deterministic address differs from `UPPaymaster`'s | **Done:** `0xbEA7…d21e`, computed from the committed build input; relayer and monitor configured with it |
+| VP-I2 | Info | `acceptOwnership` reverts with `NotOwner()` for a non-pending caller | **Accepted:** cosmetic; would need a new contract |
+| VP-I3 | Info | The service must sign with EIP-191 `personal_sign` | **Done:** it does; covered by the signing-service tests |
+| VP-I4 | Info | No events for funding and withdrawals | **Accepted:** the EntryPoint emits `Deposited` / `Withdrawn`; the weekly report reads the EntryPoint |
+| VP-I5 | Info | No reproducible build committed | **Done before the review was filed:** `UPVerifyingPaymaster.input.json` and `.json` (creation code, runtime hash, address formula) |
