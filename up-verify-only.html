@@ -19,6 +19,7 @@
 <meta name="twitter:image" content="https://crosschain-lukso.chainintegrate.it/banner.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="chains.js"></script>
+<script src="deploy-check.js"></script>
 <style>
   :root {
     --bg: #0f1115; --panel: #171a21; --border: #2a2f3a; --field: #10131a; --chip: #2a2f3a; --disabled: #3a3f4b; --raised: #1d2330;
@@ -174,6 +175,14 @@ const I18N = {
     matchExpectedOk: "✅ La calldata produce esattamente l'indirizzo atteso.",
     queryingLog: (v) => `Interrogo ${v.net}...`,
     deployVerifiedOk: (v) => `✅✅✅ DEPLOY VERIFICATO su ${v.net}.`,
+    initNotCanonicalErr: (v) => `❌ BLOCCANTE — la calldata produce l'indirizzo giusto, ma inizializza il profilo in modo diverso da quello standard di LUKSO: ${v.what}. L'indirizzo della UP non dipende da questi dati, quindi nascerebbe un profilo diverso da quello che ti aspetti. Usa la calldata originale, presa dall'explorer di LUKSO.`,
+    initWhat_primaryInit: "la UP non è inizializzata con il modulo post-deploy come proprietario",
+    initWhat_secondaryInit: "il Key Manager riceve parametri di inizializzazione",
+    initWhat_addPrimary: "il Key Manager non riceve l'indirizzo della UP",
+    initWhat_extra: "parametri extra per il Key Manager",
+    fundingWarn: (v) => `⚠️ La calldata chiede di inviare ${v.amount} ${v.cur} insieme al deploy, come fondi iniziali della UP o del Key Manager. Li paga il tuo wallet, nella valuta di questa rete. Di solito questo importo è 0.`,
+    linkOk: "✅ Collegamento verificato: la UP appartiene al suo Key Manager, e il Key Manager controlla questa UP.",
+    linkBad: (v) => `❌ ATTENZIONE — il collegamento non è quello atteso: la UP appartiene a ${v.owner} (atteso il Key Manager ${v.km}) e il Key Manager controlla ${v.target} (attesa la UP ${v.up}). Non è il profilo che ti aspetti: non usarlo.`,
     upLine: (v) => `UP:          ${v.addr}`,
     kmLine: (v) => `Key Manager: ${v.addr}`,
     noMatchingDeployErr: (v) => `❌ Non risulta un deploy corrispondente su ${v.net}.`,
@@ -242,6 +251,14 @@ const I18N = {
     matchExpectedOk: "✅ The calldata produces exactly the expected address.",
     queryingLog: (v) => `Querying ${v.net}...`,
     deployVerifiedOk: (v) => `✅✅✅ DEPLOY VERIFIED on ${v.net}.`,
+    initNotCanonicalErr: (v) => `❌ BLOCKING — the calldata gives the right address, but it initializes the profile differently from LUKSO's standard: ${v.what}. The UP's address does not depend on these data, so a different profile from the one you expect would be created. Use the original calldata, taken from the LUKSO explorer.`,
+    initWhat_primaryInit: "the UP is not initialized with the post-deployment module as owner",
+    initWhat_secondaryInit: "the Key Manager gets initialization parameters",
+    initWhat_addPrimary: "the Key Manager does not get the UP's address",
+    initWhat_extra: "extra parameters for the Key Manager",
+    fundingWarn: (v) => `⚠️ The calldata asks to send ${v.amount} ${v.cur} with the deploy, as initial funds of the UP or the Key Manager. Your wallet pays them, in this network's currency. Usually this amount is 0.`,
+    linkOk: "✅ Link verified: the UP is owned by its Key Manager, and the Key Manager controls this UP.",
+    linkBad: (v) => `❌ WARNING — the link is not the expected one: the UP is owned by ${v.owner} (expected the Key Manager ${v.km}) and the Key Manager controls ${v.target} (expected the UP ${v.up}). This is not the profile you expect: do not use it.`,
     upLine: (v) => `UP:          ${v.addr}`,
     kmLine: (v) => `Key Manager: ${v.addr}`,
     noMatchingDeployErr: (v) => `❌ No matching deploy found on ${v.net}.`,
@@ -460,6 +477,11 @@ $("verifyBtn").addEventListener("click", async () => {
     const d = decodeCalldata(calldataRaw);
     log(t("predictedUpLog", { addr: d.predictedPrimary }), "line-dim");
     log(t("predictedKmLog", { addr: d.predictedSecondary }), "line-dim");
+    // The address does not cover the UP's initialization nor the funding (AUDIT M-4).
+    const initBad = DeployCheck.initProblems(d);
+    if (initBad.length) { log(t("initNotCanonicalErr", { what: initBad.map(k => t("initWhat_" + k)).join("; ") }), "line-err"); return; }
+    const fund = DeployCheck.funding(d);
+    if (fund > 0n) log(t("fundingWarn", { amount: ethers.formatEther(fund), cur: net.currency && net.currency !== "?" ? net.currency : "" }), "line-warn");
 
     if (expected && !ethers.isAddress(expected)) {
       log(t("invalidExpectedErr"), "line-err");
@@ -502,8 +524,12 @@ $("verifyBtn").addEventListener("click", async () => {
     const primaryOk = actualPrimaryCode === expectedPrimaryCode;
     const secondaryOk = actualSecondaryCode === expectedSecondaryCode;
 
-    if (primaryOk && secondaryOk) {
+    const lk = primaryOk && secondaryOk ? await DeployCheck.link(provider, d.predictedPrimary, d.predictedSecondary) : null;
+    if (lk && !lk.ok) {
+      log(t("linkBad", { owner: lk.owner || "?", target: lk.target || "?", km: d.predictedSecondary, up: d.predictedPrimary }), "line-err");
+    } else if (primaryOk && secondaryOk) {
       log(t("deployVerifiedOk", { net: net.name }), "line-ok");
+      log(t("linkOk"), "line-ok");
       log(t("upLine", { addr: d.predictedPrimary }), "line-ok");
       log(t("kmLine", { addr: d.predictedSecondary }), "line-ok");
     } else {

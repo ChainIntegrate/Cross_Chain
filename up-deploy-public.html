@@ -20,6 +20,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="chains.js"></script>
 <script src="backup-check.js"></script>
+<script src="deploy-check.js"></script>
 <style>
   :root {
     --bg: #0f1115; --panel: #171a21; --border: #2a2f3a; --field: #10131a; --chip: #2a2f3a; --disabled: #3a3f4b; --raised: #1d2330;
@@ -292,6 +293,15 @@ const I18N = {
 
     decodeCalldataFirstLog: "Decodifica prima la calldata (pannello 2).",
     blockingMismatch: "❌ BLOCCANTE — l'indirizzo predetto dalla calldata non corrisponde all'indirizzo atteso. Non procedere: rischio di deployare la UP sbagliata o con calldata sbagliata.",
+    initNotCanonicalErr: (v) => `❌ BLOCCANTE — la calldata produce l'indirizzo giusto, ma inizializza il profilo in modo diverso da quello standard di LUKSO: ${v.what}. L'indirizzo della UP non dipende da questi dati, quindi nascerebbe un profilo diverso da quello che ti aspetti. Usa la calldata originale, presa dall'explorer di LUKSO.`,
+    initWhat_primaryInit: "la UP non è inizializzata con il modulo post-deploy come proprietario",
+    initWhat_secondaryInit: "il Key Manager riceve parametri di inizializzazione",
+    initWhat_addPrimary: "il Key Manager non riceve l'indirizzo della UP",
+    initWhat_extra: "parametri extra per il Key Manager",
+    fundingBadge: (v) => `Fondi da inviare con il deploy: ${v.amount} (nella valuta della rete scelta)`,
+    fundingWarn: (v) => `⚠️ La calldata chiede di inviare ${v.amount} ${v.cur} insieme al deploy, come fondi iniziali della UP o del Key Manager. Li paga il tuo wallet, nella valuta di questa rete. Di solito questo importo è 0.`,
+    linkOk: "✅ Collegamento verificato: la UP appartiene al suo Key Manager, e il Key Manager controlla questa UP.",
+    linkBad: (v) => `❌ ATTENZIONE — il collegamento non è quello atteso: la UP appartiene a ${v.owner} (atteso il Key Manager ${v.km}) e il Key Manager controlla ${v.target} (attesa la UP ${v.up}). Non è il profilo che ti aspetti: non usarlo.`,
     connectSignerFirstLog: "Collega prima il wallet firmatario (pannello 3).",
     missingRpcLog: "Manca l'RPC della rete (pannello 1).",
     walletWrongNetwork: (v) => `❌ BLOCCANTE — il wallet firmatario è connesso alla rete con chainId ${v.walletChainId}, ma qui hai selezionato ${v.netName} (chainId ${v.chainId}). Cambia rete in MetaMask prima di continuare.`,
@@ -382,6 +392,7 @@ const I18N = {
     bkLukso: "Su LUKSO il backup si aggiunge con gli strumenti di LUKSO (estensione Universal Profile): questa pagina lavora sulle reti di destinazione.",
     bkNotDeployed: (v) => `La UP ${v.up} non è deployata su questa rete.`,
     bkReadFail: (v) => `Lettura non riuscita: ${v.err}`,
+    bkRpcBehind: (v) => `L'RPC è ancora al blocco ${v.head}, prima della tua ultima modifica (blocco ${v.block}): mostrerebbe la lista com'era prima. Riprova tra qualche secondo.`,
     bkSummaryOk: (v) => `✅ Backup presente su ${v.net}: ${v.n} controller con gli stessi permessi di amministrazione.`,
     bkSummaryMissing: (v) => `⚠️ Nessun backup su ${v.net}: c'è un solo controller amministratore. Se perdi la sua chiave resti fuori da questa UP su questa rete.`,
     bkSummaryNoAdmin: (v) => `❌ Su ${v.net} nessun controller ha ADDCONTROLLER ed EDITPERMISSIONS: da qui non si può aggiungere un backup.`,
@@ -510,6 +521,15 @@ const I18N = {
 
     decodeCalldataFirstLog: "Decode the calldata first (panel 2).",
     blockingMismatch: "❌ BLOCKING — the address predicted from the calldata does not match the expected address. Do not proceed: risk of deploying the wrong UP or with the wrong calldata.",
+    initNotCanonicalErr: (v) => `❌ BLOCKING — the calldata gives the right address, but it initializes the profile differently from LUKSO's standard: ${v.what}. The UP's address does not depend on these data, so a different profile from the one you expect would be created. Use the original calldata, taken from the LUKSO explorer.`,
+    initWhat_primaryInit: "the UP is not initialized with the post-deployment module as owner",
+    initWhat_secondaryInit: "the Key Manager gets initialization parameters",
+    initWhat_addPrimary: "the Key Manager does not get the UP's address",
+    initWhat_extra: "extra parameters for the Key Manager",
+    fundingBadge: (v) => `Funds sent with the deploy: ${v.amount} (in the chosen network's currency)`,
+    fundingWarn: (v) => `⚠️ The calldata asks to send ${v.amount} ${v.cur} with the deploy, as initial funds of the UP or the Key Manager. Your wallet pays them, in this network's currency. Usually this amount is 0.`,
+    linkOk: "✅ Link verified: the UP is owned by its Key Manager, and the Key Manager controls this UP.",
+    linkBad: (v) => `❌ WARNING — the link is not the expected one: the UP is owned by ${v.owner} (expected the Key Manager ${v.km}) and the Key Manager controls ${v.target} (expected the UP ${v.up}). This is not the profile you expect: do not use it.`,
     connectSignerFirstLog: "Connect the signing wallet first (panel 3).",
     missingRpcLog: "Missing network RPC (panel 1).",
     walletWrongNetwork: (v) => `❌ BLOCKING — the signing wallet is connected to chainId ${v.walletChainId}, but you selected ${v.netName} (chainId ${v.chainId}) here. Switch network in MetaMask before continuing.`,
@@ -600,6 +620,7 @@ const I18N = {
     bkLukso: "On LUKSO the backup is added with LUKSO's own tools (Universal Profile extension): this page works on the destination networks.",
     bkNotDeployed: (v) => `The UP ${v.up} is not deployed on this network.`,
     bkReadFail: (v) => `Reading failed: ${v.err}`,
+    bkRpcBehind: (v) => `The RPC is still at block ${v.head}, before your last change (block ${v.block}): it would show the list as it was before. Try again in a few seconds.`,
     bkSummaryOk: (v) => `✅ Backup in place on ${v.net}: ${v.n} controllers with the same admin permissions.`,
     bkSummaryMissing: (v) => `⚠️ No backup on ${v.net}: there is only one admin controller. If you lose its key you are locked out of this UP on this network.`,
     bkSummaryNoAdmin: (v) => `❌ On ${v.net} no controller has ADDCONTROLLER and EDITPERMISSIONS: a backup cannot be added from here.`,
@@ -973,6 +994,10 @@ function renderDecodeResult(d, expected) {
   } else {
     html = `<span class="badge warn">${t("noExpectedWarn")}</span><br>` + html;
   }
+  const initBad = DeployCheck.initProblems(d);
+  if (initBad.length) html += `<br><span class="badge err">${escapeHtml(initBad.map(k => t("initWhat_" + k)).join("; "))}</span>`;
+  const fund = DeployCheck.funding(d);
+  if (fund > 0n) html += `<br><span class="badge warn">${escapeHtml(t("fundingBadge", { amount: ethers.formatEther(fund) }))}</span>`;
   $("decodeStatus").innerHTML = html;
 
   let cHtml = `<label style="margin-top:16px;">${t("controllersFoundLabel")}</label>`;
@@ -1183,6 +1208,9 @@ $("checkBtn").addEventListener("click", async () => {
     log(t("blockingMismatch"), "line-err");
     return;
   }
+  // The address does not cover the UP's initialization nor the funding (AUDIT M-4).
+  const initBad = DeployCheck.initProblems(decoded);
+  if (initBad.length) { log(t("initNotCanonicalErr", { what: initBad.map(k => t("initWhat_" + k)).join("; ") }), "line-err"); return; }
   if (!signerAddress) { log(t("connectSignerFirstLog"), "line-err"); return; }
   const net = getNetwork();
   if (!net || !net.rpc) { log(t("missingRpcLog"), "line-err"); return; }
@@ -1216,6 +1244,9 @@ $("checkBtn").addEventListener("click", async () => {
     const primaryCode = await provider.getCode(decoded.predictedPrimary);
     if (primaryCode !== "0x") {
       log(t("alreadyDeployedErr", { addr: decoded.predictedPrimary }), "line-err");
+      // Someone else may have deployed it: say whether it is linked as a LUKSO profile should be.
+      const lk = await DeployCheck.link(provider, decoded.predictedPrimary, decoded.predictedSecondary);
+      log(lk.ok ? t("linkOk") : t("linkBad", { owner: lk.owner || "?", target: lk.target || "?", km: decoded.predictedSecondary, up: decoded.predictedPrimary }), lk.ok ? "line-ok" : "line-err");
       const alreadyDeployedExplorerUrl = getExplorerUrl(net, EXPLORER_PATH, decoded.predictedPrimary);
       if (alreadyDeployedExplorerUrl) log(alreadyDeployedExplorerUrl, "line-dim");
       return;
@@ -1266,6 +1297,7 @@ $("checkBtn").addEventListener("click", async () => {
     }
 
     const value = BigInt(decoded.primary.fundingAmount) + BigInt(decoded.secondary.fundingAmount);
+    if (value > 0n) log(t("fundingWarn", { amount: ethers.formatEther(value), cur: net.currency && net.currency !== "?" ? net.currency : "" }), "line-warn");
 
     const gasEstimate = await provider.estimateGas({
       to: FACTORY_ADDRESS, data: decoded.rawCalldata, from: signerAddress, value
@@ -1358,9 +1390,13 @@ $("deployBtn").addEventListener("click", async () => {
 
     const primaryOk = actualPrimaryCode === expectedPrimaryCode;
     const secondaryOk = actualSecondaryCode === expectedSecondaryCode;
-
-    if (primaryOk && secondaryOk) {
+    // The code is right: is the profile linked as it should be (AUDIT M-4)?
+    const lk = primaryOk && secondaryOk ? await DeployCheck.link(provider, decoded.predictedPrimary, decoded.predictedSecondary) : null;
+    if (lk && !lk.ok) {
+      log(t("linkBad", { owner: lk.owner || "?", target: lk.target || "?", km: decoded.predictedSecondary, up: decoded.predictedPrimary }), "line-err");
+    } else if (primaryOk && secondaryOk) {
       log(t("deployConfirmedOk"), "line-ok");
+      log(t("linkOk"), "line-ok");
       log(t("upLine", { addr: decoded.predictedPrimary }), "line-ok");
       log(t("kmLine", { addr: decoded.predictedSecondary }), "line-ok");
       const primaryExplorerUrl = getExplorerUrl(net, EXPLORER_PATH, decoded.predictedPrimary);
@@ -1529,6 +1565,10 @@ function renderBackup() {
 }
 
 // Reads the UP's controllers on the selected network. Returns the state or null (and says why).
+// The block of this page's last backup write, per UP and chain. Later reads are pinned at or after it:
+// a load-balanced RPC answering from an older node would otherwise show the list as it was before the
+// write, and the next write would overwrite an entry (AUDIT 2026-10-02 L-4).
+let bkSeen = { key: "", block: 0 };
 async function readBackup() {
   bk = null;
   $("backupList").innerHTML = "";
@@ -1546,7 +1586,14 @@ async function readBackup() {
     if (LUKSO_CHAIN_IDS.includes(chainId)) { setBackupStatus(t("bkLukso"), "line-warn"); return null; }
     const provider = new ethers.JsonRpcProvider(net.rpc, chainId, { staticNetwork: true, batchMaxCount: 1 });
     if ((await provider.getCode(up)) === "0x") { setBackupStatus(t("bkNotDeployed", { up }), "line-err"); return null; }
-    const r = await BK.read(provider, up);
+    let at;
+    if (bkSeen.key === `${chainId}:${up}`) {
+      let head = 0;
+      for (let i = 0; i < 6; i++) { if (i) await new Promise(res => setTimeout(res, 1500)); head = await provider.getBlockNumber(); if (head >= bkSeen.block) break; }
+      if (head < bkSeen.block) { setBackupStatus(t("bkRpcBehind", { block: bkSeen.block, head }), "line-err"); return null; }
+      at = { blockTag: head };
+    }
+    const r = await BK.read(provider, up, at);
     const signer = signerAddress ? ethers.getAddress(signerAddress) : null;
     const signerCtrl = signer ? r.controllers.find(c => c.role === "controller" && c.address === signer) || null : null;
     // The genesis controllers are known only when the decoded calldata is for this same UP.
@@ -1597,6 +1644,16 @@ async function freshAdminState() {
   return b;
 }
 
+// After a write: every controller listed just before its block (except the one removed) must still be
+// listed. The "before" list is read at the previous block, not taken from the page's own read: a stale
+// read is exactly what could have made the write overwrite an entry (AUDIT 2026-10-02 L-4).
+async function stillListed(b, at, removed) {
+  const [before, after] = await Promise.all([BK.read(b.provider, b.up, { blockTag: at.blockTag - 1 }), BK.read(b.provider, b.up, at)]);
+  const now = new Set(after.controllers.map(c => (c.address || "").toLowerCase()));
+  return before.controllers.filter(c => c.address && c.address.toLowerCase() !== String(removed || "").toLowerCase() && !now.has(c.address.toLowerCase()))
+    .map(c => `${c.address} no longer listed`);
+}
+
 // Simulates, sends through MetaMask, waits, then re-reads with `verify(at)` (a list of problems).
 async function sendBackupTx(b, data, verify) {
   bkLog(t("bkSimulating"), "line-dim");
@@ -1625,6 +1682,7 @@ async function sendBackupTx(b, data, verify) {
   bkLog(t("bkWaiting"), "line-dim");
   const receipt = await tx.wait();
   if (!receipt || receipt.status !== 1) { bkLog(t("bkTxFailed"), "line-err"); return false; }
+  bkSeen = { key: `${b.chainId}:${b.up}`, block: receipt.blockNumber };
   const net = getNetwork();
   const url = net && getExplorerUrl(net, "/tx/", tx.hash);
   if (url) bkLog(url, "line-dim");
@@ -1669,6 +1727,7 @@ $("addBackupBtn").addEventListener("click", async () => {
       if (String(p).toLowerCase() !== String(raw).toLowerCase()) out.push(`permissions ${p}`);
       if (BigInt(lenRaw || "0x0") !== BigInt(b.r.len + 1)) out.push(`list length ${lenRaw}`);
       if (String(item).toLowerCase() !== backup.toLowerCase()) out.push(`list entry ${item}`);
+      out.push(...await stillListed(b, at, null));
       return out;
     });
     if (problems === false) return;
@@ -1720,6 +1779,7 @@ $("removeBtn").addEventListener("click", async () => {
       if (p && p !== "0x") out.push(`permissions ${p}`);
       if (len !== last) out.push(`list length ${len}`);
       if (list.some(v => v && v.toLowerCase() === target.address.toLowerCase())) out.push("still listed");
+      out.push(...await stillListed(b, at, target.address));
       return out;
     });
     if (problems === false) return;

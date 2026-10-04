@@ -27,15 +27,18 @@
   // Reads AddressPermissions[] and each listed controller's permissions.
   // Returns { len, controllers: [{ address, index, perms, raw, role }], hasBackup, admins, km, urd }.
   // role: "entrypoint", "urd" or "controller". Throws when the list is too long to read here.
-  async function read(provider, upAddress) {
+  // `at` (optional, e.g. { blockTag: n }) pins every read to one block, so a load-balanced RPC cannot mix
+  // an old list length with newer entries (AUDIT 2026-10-02 L-4).
+  async function read(provider, upAddress, at) {
+    const o = at || {};
     const up = new ethers.Contract(upAddress, UP_ABI, provider);
-    const [lenRaw, urdRaw] = await up.getDataBatch([ARRAY_KEY, URD_KEY]);
+    const [lenRaw, urdRaw] = await up.getDataBatch([ARRAY_KEY, URD_KEY], o);
     const len = Number(toBig(lenRaw));
     if (len > MAX_LIST) throw new Error(`AddressPermissions[] has ${len} entries`);
     const urd = urdRaw && urdRaw !== "0x" && ethers.dataLength(urdRaw) === 20 ? urdRaw.toLowerCase() : null;
-    const items = len ? await up.getDataBatch(Array.from({ length: len }, (_, i) => indexKey(i))) : [];
+    const items = len ? await up.getDataBatch(Array.from({ length: len }, (_, i) => indexKey(i)), o) : [];
     const addrs = items.map((v) => (v && ethers.dataLength(v) === 20 ? ethers.getAddress(v) : null));
-    const perms = addrs.some(Boolean) ? await up.getDataBatch(addrs.filter(Boolean).map(permKey)) : [];
+    const perms = addrs.some(Boolean) ? await up.getDataBatch(addrs.filter(Boolean).map(permKey), o) : [];
     let k = 0;
     const controllers = addrs.map((address, index) => {
       if (!address) return { address: null, index, perms: 0n, raw: "0x", role: "malformed" };
@@ -54,7 +57,7 @@
     const groups = {};
     admins.forEach((c) => { const g = (c.perms & ~ERC4337).toString(16); groups[g] = (groups[g] || 0) + 1; });
     const hasBackup = Object.values(groups).some((n) => n >= 2);
-    return { len, controllers, admins, hasBackup, urd, km: await up.owner().catch(() => null) };
+    return { len, controllers, admins, hasBackup, urd, km: await up.owner(o).catch(() => null) };
   }
 
   // ---- the alert shown on the pages that use one UP on one network
