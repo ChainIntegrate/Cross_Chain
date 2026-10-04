@@ -76,6 +76,17 @@ const OP_GAS = { call: 150000n, verification: 180000n }; // verification measure
 // OP-stack chains (Base, Optimism, ...) charge an L1 data fee outside the gas used; their GasPriceOracle
 // predeploy tells how much.
 const OP_GAS_ORACLE = "0x420000000000000000000000000000000000000F";
+// Arbitrum charges the L1 data cost as extra L2 gas on the whole transaction, outside what the EntryPoint
+// measures, so preVerificationGas must carry it. NodeInterface is a virtual contract (eth_call only, no code)
+// that gives that extra gas for a given transaction; on other chains the call returns nothing.
+const ARB_NODE_INTERFACE = "0x00000000000000000000000000000000000000C8";
+const NI_IFACE = new ethers.Interface(["function gasEstimateL1Component(address to, bool contractCreation, bytes data) payable returns (uint64 gasEstimateForL1, uint256 baseFee, uint256 l1BaseFeeEstimate)"]);
+async function arbL1Gas(provider, data) {
+  try {
+    const res = await provider.call({ to: ARB_NODE_INTERFACE, data: NI_IFACE.encodeFunctionData("gasEstimateL1Component", [ENTRY_POINT, false, data]) });
+    return BigInt(NI_IFACE.decodeFunctionResult("gasEstimateL1Component", res)[0]);
+  } catch (e) { return null; }
+}
 const UO_TUPLE = "tuple(address,uint256,bytes,bytes,uint256,uint256,uint256,uint256,uint256,bytes,bytes)";
 
 // ==================== I18N ====================
@@ -641,7 +652,7 @@ function revertReason(e) {
   return e?.shortMessage || e?.reason || e?.message || String(e);
 }
 // preVerificationGas: what the EntryPoint does not measure (transaction base cost, calldata, per-operation
-// overhead), with the formula of the ERC-4337 reference bundler, plus the L1 data fee on OP-stack chains,
+// overhead), with the formula of the ERC-4337 reference bundler, plus the L1 data cost on OP-stack chains and Arbitrum,
 // plus a 15% margin. Too low, and the relayer is reimbursed less than it pays.
 async function preVerificationGas(provider, op, maxFee) {
   const probe = { ...op, preVerificationGas: 100000n, signature: "0x" + "ff".repeat(65) };
@@ -656,6 +667,10 @@ async function preVerificationGas(provider, op, maxFee) {
       const oracle = new ethers.Contract(OP_GAS_ORACLE, ["function getL1Fee(bytes) view returns (uint256)"], provider);
       const l1Fee = await oracle.getL1Fee(ethers.concat([tx, "0x" + "ff".repeat(100)])); // + room for the transaction envelope
       if (maxFee > 0n) pvg += (l1Fee + maxFee - 1n) / maxFee;
+    } else {
+      const tx = EP_IFACE.encodeFunctionData("handleOps", [[probe], ethers.ZeroAddress]);
+      const l1Gas = await arbL1Gas(provider, ethers.concat([tx, "0x" + "ff".repeat(100)]));
+      if (l1Gas !== null) pvg += l1Gas; // Arbitrum
     }
   } catch (e) { /* not an OP-stack chain, or the oracle is unavailable */ }
   return pvg + pvg * 15n / 100n;

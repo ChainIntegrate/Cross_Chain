@@ -120,7 +120,7 @@ After that, `git pull` works exactly as before. The root `.htaccess` stays in th
 
 - **Irreversible actions.** Deploys and transfers cannot be undone. Try a testnet or a small amount first.
 - **Chain checks.** Every transaction requires the signing wallet, the RPC and the selected network to be on the same chain. A check is invalidated as soon as any input, the network or the wallet account changes.
-- **Private key handling.** Operating the profile on another chain needs the original controller key (guide, steps 1 and 8). Import it into a dedicated wallet, and treat it as the key that also controls your profile on LUKSO.
+- **Private key handling.** Operating the profile on another chain needs the original controller key (guide, steps 1 and 6). Import it into a dedicated wallet, and treat it as the key that also controls your profile on LUKSO.
 - **Third parties.** The only script loaded from another site is `ethers 6.13.4` from cdnjs, pinned with Subresource Integrity; the WalletConnect bundle is served from this site (`vendor/`). There are no analytics or trackers. Checks are made through public RPCs, which can see your IP address and the addresses you query; you can use the "Custom RPC" option to choose your own provider. Some pages also call, only when used: Blockscout or Alchemy (lists of tokens and NFTs), IPFS gateways (profile images), the WalletConnect relay (UP Wallet), and the site's own relayer and signing service (gas paid by the site, subscriptions).
 - **Support.** Support will never ask for a private key, seed phrase or backup password.
 

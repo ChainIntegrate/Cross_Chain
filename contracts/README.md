@@ -26,11 +26,12 @@ It is published through Nick's deterministic deployment proxy, with a fixed salt
 
 ### Where it is published
 
-Published and source-verified on LUKSO mainnet, Base, Polygon and Avalanche C-Chain, at the same address (full status in [Source verification status](#source-verification-status)):
+Published and source-verified on LUKSO mainnet, Base, Polygon, Avalanche C-Chain and Arbitrum One, at the same address (full status in [Source verification status](#source-verification-status)):
 - [LUKSO explorer](https://explorer.execution.mainnet.lukso.network/address/0x7F68e74483867058C806218aa05aB5527984C03e)
 - [Basescan](https://basescan.org/address/0x7F68e74483867058C806218aa05aB5527984C03e#code)
 - [Polygonscan](https://polygonscan.com/address/0x7F68e74483867058C806218aa05aB5527984C03e#code)
 - [Snowscan](https://snowscan.xyz/address/0x7F68e74483867058C806218aa05aB5527984C03e#code)
+- [Arbiscan](https://arbiscan.io/address/0x7F68e74483867058C806218aa05aB5527984C03e#code)
 
 To verify the source on another explorer, upload `NFTReceiverExtension.input.json` as "Solidity (Standard-JSON input)" with compiler v0.8.24+commit.e11b9ed9. Do not upload `NFTReceiverExtension.json`: it is the summary file, and explorers reject it with `Unknown key "abi"`.
 
@@ -64,7 +65,7 @@ LSP6 checks each payload when it runs, so the three steps work in one transactio
 
 **License:** GPL-3.0 (since 2026-10-03; it was MIT), because it is built on the GPL-3.0 ERC-4337 interfaces of `@account-abstraction/contracts`. Only the header changed: the compiled code is identical, so the address and the already verified source (which still shows the MIT header on Basescan) are the same contract. New verifications show GPL-3.0.
 
-**Status:** experimental. No professional audit (AI-assisted review on 2026-10-01, AUDIT.md section 8). Published on Base, Polygon and Avalanche C-Chain (same address) for the ChainIntegrate cassa (owner `0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9`): `0xb353565d1f801E7402DBC267b8C0E30E3540D4eD`, source verified on Basescan, Polygonscan and Snowscan (see [Source verification status](#source-verification-status)). The first sponsored operation succeeded on 2026-09-30. Keep deposits small.
+**Status:** experimental. No professional audit (AI-assisted review on 2026-10-01, AUDIT.md section 8). Published on Base, Polygon, Avalanche C-Chain and Arbitrum One (same address) for the ChainIntegrate cassa (owner `0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9`): `0xb353565d1f801E7402DBC267b8C0E30E3540D4eD`, source verified on Basescan, Polygonscan, Snowscan and Arbiscan (see [Source verification status](#source-verification-status)). The first sponsored operation succeeded on 2026-09-30. Keep deposits small.
 
 **What it does**
 - `validatePaymasterUserOp` accepts an operation only if the sender UP is on the allowlist and the operation cannot cost more than `maxCostPerOp`. It reads only storage keyed by the sender.
@@ -90,7 +91,7 @@ The contract never names a token. On each chain it holds and pays that chain's n
 - **The allowlist is per chain.** Adding a UP, setting the cap or withdrawing is one owner transaction on each chain, so the owner needs a little native gas there too.
 - **Top-ups are per chain,** in that chain's native currency. One gas-refuel transaction can fund several chains at once.
 - **It works only where EntryPoint v0.6 exists** at `0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789`. The publishing step must check for its code first. zkSync Era is excluded: it has native account abstraction and different deployment addresses.
-- **L2 data fees (Base, Optimism, Arbitrum) are not in EntryPoint v0.6's gas accounting.** The relayer covers them through `preVerificationGas`. Set too low, the relayer loses a little on each operation. This is a relayer setting, not a paymaster one.
+- **L2 data fees (Base, Optimism, Arbitrum) are not in EntryPoint v0.6's gas accounting.** The pages and the relayer add them to `preVerificationGas`: the OP-stack fee from the `GasPriceOracle`, Arbitrum's extra gas from `NodeInterface`. Set too low, the relayer loses a little on each operation. This is a relayer setting, not a paymaster one.
 
 **What a UP needs, once per chain**
 One transaction signed by the controller, done with `up-gas-relay.html`, section 3:
@@ -124,7 +125,7 @@ The controller signs the user operation hash with `personal_sign`, so MetaMask w
 
 `UPVerifyingPaymaster.sol` is an ERC-4337 paymaster for EntryPoint v0.6, like `UPPaymaster`, but it does not keep a list of accounts. It pays for a user operation only when an **off-chain signing service** has approved that operation: the service decides (subscription, quota, which contracts, budget) and signs; the contract checks the signature. It is the base for a sponsored-gas service where the rules live in the service, not on chain.
 
-**Status:** experimental. No professional audit; an AI-assisted review on 2026-10-04 found no Critical, High or Medium bug in the code (AUDIT.md, section 10). Published on **Avalanche C-Chain, Polygon and Base** (2026-10-04), at the same address `0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e` (owner: the cassa), and in use by the site relayer on all three. Log of the first operation: `tools/logs/2026-10-04-avalanche-sponsor-paymaster.txt`. Source verified on Basescan, Polygonscan and Snowscan (2026-10-04); see [Source verification status](#source-verification-status).
+**Status:** experimental. No professional audit; an AI-assisted review on 2026-10-04 found no Critical, High or Medium bug in the code (AUDIT.md, section 10). Published on **Avalanche C-Chain, Polygon and Base** (2026-10-04) and **Arbitrum One** (2026-10-04, not yet served by the relayer), at the same address `0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e` (owner: the cassa), and in use by the site relayer on all three. Log of the first operation: `tools/logs/2026-10-04-avalanche-sponsor-paymaster.txt`. Source verified on Basescan, Polygonscan, Snowscan and Arbiscan (2026-10-04); see [Source verification status](#source-verification-status).
 
 **Only with the site's own relayer.** The paymaster cannot be staked, so public bundlers that apply the ERC-7562 rules refuse its operations.
 
@@ -188,7 +189,7 @@ It has no owner. Its constructor takes only the EntryPoint, so published through
 | EntryPoint | `0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789` |
 | Runtime code hash | `0x91968b95ee6f8e01a554060b775c13e8df3f0173d87a55a48ed54b8ff02c052d` |
 
-Published on Base (2026-09-30), Polygon (2026-10-01) and Avalanche C-Chain. `up-gas-relay.html` publishes it when missing, and checks this code hash before using it. LUKSO confirmed it is experimental and has never been audited: treat it as the least proven part of the system.
+Published on Base (2026-09-30), Polygon (2026-10-01), Avalanche C-Chain and Arbitrum One (2026-10-04). `up-gas-relay.html` publishes it when missing, and checks this code hash before using it. LUKSO confirmed it is experimental and has never been audited: treat it as the least proven part of the system.
 
 **Verify it:**
 1. Compare `creationCode` with the `bytecode` of `artifacts/Extension4337.json` in the npm package `@lukso/lsp-smart-contracts@0.17.4`.
@@ -220,12 +221,12 @@ To verify:
 
 Each contract has the same address on every network where it is published. The reference is the main explorer of each network (the one the site links to). Status checked by the maintainer on 2026-10-04:
 
-| Contract | Basescan | Polygonscan | Snowscan (Avalanche) | LUKSO explorer |
-|---|---|---|---|---|
-| NFTReceiverExtension `0x7F68e74483867058C806218aa05aB5527984C03e` | ✅ | ✅ | ✅ | ✅ |
-| UPPaymaster `0xb353565d1f801E7402DBC267b8C0E30E3540D4eD` | ✅ | ✅ | ✅ | — not published |
-| UPVerifyingPaymaster `0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e` | ✅ | ✅ | ✅ | — not published |
-| Extension4337 `0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2` | ✅ | ✅ | ✅ | — (LUKSO's own) |
+| Contract | Basescan | Polygonscan | Snowscan (Avalanche) | Arbiscan (Arbitrum One) | LUKSO explorer |
+|---|---|---|---|---|---|
+| NFTReceiverExtension `0x7F68e74483867058C806218aa05aB5527984C03e` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| UPPaymaster `0xb353565d1f801E7402DBC267b8C0E30E3540D4eD` | ✅ | ✅ | ✅ | ✅ | — not published |
+| UPVerifyingPaymaster `0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e` | ✅ | ✅ | ✅ | ✅ | — not published |
+| Extension4337 `0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2` | ✅ | ✅ | ✅ | ✅ | — (LUKSO's own) |
 
 **Secondary explorers (best effort).** Base Blockscout, Polygon Blockscout and Snowtrace (Routescan, Avalanche) are not tracked as a requirement. Their status can change on its own: a contract can show as verified there because its code matches one already known, and that match can disappear when the explorer reindexes. On 2026-10-04:
 - NFTReceiverExtension and UPPaymaster: verified on all three;

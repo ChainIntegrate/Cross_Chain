@@ -245,7 +245,7 @@ const I18N = {
     capNftPartial: (v) => `⚠️ Solo in parte: manca ${v.missing}. Rifalla dalla pagina NFT.`,
     capNftNo: "❌ No: un NFT ERC-721 inviato con safeTransferFrom, o un ERC-1155, viene rifiutato. Gli acquisti su OpenSea falliscono.",
     capNftLink: "→ Attiva la ricezione degli NFT (pagina NFT)",
-    capGasT: "Gas pagato dal relayer del sito (ERC-4337)",
+    capGasT: "Gas pagato dal sito (ERC-4337)",
     capGasNo: "Non configurato su questa rete: il controller paga il gas di ogni operazione.",
     capGasOk: (v) => `✅ UP configurata: Extension4337 registrata, EntryPoint con esattamente 0x500 (chiamate e invii, niente dati né permessi). Firmano: ${v.signers}.`,
     capGasNoSigner: "⚠️ Extension4337 ed EntryPoint a posto, ma nessun controller ha il permesso 4337: nessuno può firmare.",
@@ -253,10 +253,16 @@ const I18N = {
     capGasPartial: (v) => `⚠️ Configurazione incompleta: ${v.what}.`,
     capGasWhatExt: "Extension4337 mancante o diversa",
     capGasWhatEp: "EntryPoint non tra i controller",
-    capGasReady: (v) => `✅ Relayer del sito attivo su questa rete: la UP è nella lista del paymaster ${v.pm}, tetto ${v.cap} per operazione, deposito ${v.dep}.`,
+    capGasReady: (v) => `✅ Il sito paga il gas su questa rete: la UP è nella lista del gestore (paymaster ${v.pm}, tetto ${v.cap} per operazione, deposito ${v.dep}).`,
+    capGasSub: (v) => `✅ Il sito paga il gas su questa rete: iscrizione attiva, saldo ${v.bal} USDC (${v.price} USDC per operazione qui).`,
+    capGasSponsored: "✅ Il sito paga il gas su questa rete.",
+    capGasEmpty: (v) => `⚠️ Iscrizione attiva, ma il saldo (${v.balance} USDC) non basta per un'operazione: ricarica.`,
+    capGasPaid: "⚠️ Pagamento dell'iscrizione ricevuto, in attesa di attivazione (riceverai un'email).",
+    capGasNotSub: "Il sito non paga ancora il gas di questa UP: serve un'iscrizione.",
+    capSubLink: "→ Iscrizione, saldo e ricariche (pagina Iscrizione)",
     capGasNotReady: (v) => `⚠️ La UP è nella lista del paymaster ${v.pm}, ma: ${v.why}.`,
-    capGasNoRelay: "Il relayer del sito non serve questa rete, o la UP non è nella lista di un suo paymaster.",
-    capGasLink: "→ Configura il gas relay (pagina gas relay)",
+    capGasNoRelay: "Il sito non paga il gas di questa UP su questa rete (rete non servita, o iscrizioni non ancora aperte).",
+    capGasLink: "→ Configura la UP (pagina Gas pagato dal sito)",
     panel6Title: "6 · Allinea il profilo a LUKSO su questa rete",
     panel6Note: "Copia su questa rete il profilo che la UP ha oggi su LUKSO: <b>una transazione</b> firmata da un controller della UP su questa rete, che paga il gas. Scrive solo la chiave <b>LSP3Profile</b>, con lo stesso valore di LUKSO: lo stesso file e lo stesso hash. Non cambia l'indirizzo della UP né i controller. Non è automatico: se poi cambi il profilo su LUKSO, qui resta questa versione finché non ripubblichi. Serve un controller con il permesso SUPER_SETDATA, oppure SETDATA con la chiave LSP3Profile tra quelle consentite.",
     pubConnectBtn: "Connetti il controller della UP (MetaMask)",
@@ -370,7 +376,7 @@ const I18N = {
     capNftPartial: (v) => `⚠️ Only partly: ${v.missing} missing. Redo it from the NFT page.`,
     capNftNo: "❌ No: an ERC-721 sent with safeTransferFrom, or an ERC-1155, is refused. OpenSea purchases fail.",
     capNftLink: "→ Enable NFT reception (NFT page)",
-    capGasT: "Gas paid by the site relayer (ERC-4337)",
+    capGasT: "Gas paid by the site (ERC-4337)",
     capGasNo: "Not set up on this network: the controller pays the gas of every operation.",
     capGasOk: (v) => `✅ UP set up: Extension4337 registered, EntryPoint with exactly 0x500 (calls and transfers, no data or permissions). Signers: ${v.signers}.`,
     capGasNoSigner: "⚠️ Extension4337 and EntryPoint are fine, but no controller has the 4337 permission: nobody can sign.",
@@ -378,10 +384,16 @@ const I18N = {
     capGasPartial: (v) => `⚠️ Incomplete setup: ${v.what}.`,
     capGasWhatExt: "Extension4337 missing or different",
     capGasWhatEp: "EntryPoint not among the controllers",
-    capGasReady: (v) => `✅ Site relayer active on this network: the UP is on paymaster ${v.pm}'s list, cap ${v.cap} per operation, deposit ${v.dep}.`,
+    capGasReady: (v) => `✅ The site pays the gas on this network: the UP is on the operator's list (paymaster ${v.pm}, cap ${v.cap} per operation, deposit ${v.dep}).`,
+    capGasSub: (v) => `✅ The site pays the gas on this network: subscription active, balance ${v.bal} USDC (${v.price} USDC per operation here).`,
+    capGasSponsored: "✅ The site pays the gas on this network.",
+    capGasEmpty: (v) => `⚠️ Subscription active, but the balance (${v.balance} USDC) does not cover an operation: top up.`,
+    capGasPaid: "⚠️ Subscription payment received, waiting for activation (you will get an e-mail).",
+    capGasNotSub: "The site does not pay this UP's gas yet: it needs a subscription.",
+    capSubLink: "→ Subscription, balance and top-ups (Subscription page)",
     capGasNotReady: (v) => `⚠️ The UP is on paymaster ${v.pm}'s list, but: ${v.why}.`,
-    capGasNoRelay: "The site relayer does not serve this network, or the UP is not on one of its paymasters' lists.",
-    capGasLink: "→ Set up the gas relay (gas relay page)",
+    capGasNoRelay: "The site does not pay this UP's gas on this network (network not served, or subscriptions not open yet).",
+    capGasLink: "→ Set up the UP (Gas paid by the site page)",
     panel6Title: "6 · Align the profile with LUKSO on this network",
     panel6Note: "Copies to this network the profile the UP has on LUKSO today: <b>one transaction</b> signed by a controller of the UP on this network, which pays the gas. It writes only the <b>LSP3Profile</b> key, with the same value as on LUKSO: the same file and the same hash. It changes neither the UP's address nor its controllers. It is not automatic: if you later change the profile on LUKSO, this network keeps this version until you publish again. It needs a controller with SUPER_SETDATA, or SETDATA with the LSP3Profile key among the allowed ones.",
     pubConnectBtn: "Connect the UP's controller (MetaMask)",
@@ -781,8 +793,10 @@ async function readCaps(provider, up, chainId, ctrl) {
     try {
       const r = await GasRelayClient.check(provider, { chainId, up, signer: null });
       const why = (r.reasons || []).filter(x => x[0] !== "noSigner").map(x => GasRelayClient.text(x[0], x[1]));
-      out.relay = r.state === "none" ? { state: "none" } : why.length ? { state: "notReady", pm: r.pm, why: why.join("; ") } : { state: "ready", pm: r.pm };
-      if (out.relay.state === "ready") {
+      out.relay = r.state === "none" ? { state: "none" } : why.length ? { state: "notReady", pm: r.pm, why: why.join("; ") } : { state: "ready", pm: r.pm, sponsor: r.sponsor || null };
+      // Not paid by the site: what the subscription service says (not subscribed, balance used up, waiting)
+      if (out.relay.state !== "ready" && out.gas.state === "ok") { const st = await GasRelayClient.sponsorStatus(chainId, up); out.relay.sub = st && st.subscription ? { status: st.subscription.status, balance: st.balance || "0" } : null; }
+      if (out.relay.state === "ready" && !out.relay.sponsor) {
         const pm = new ethers.Contract(r.pm, ["function maxCostPerOp() view returns (uint256)"], provider);
         const ep6 = new ethers.Contract(GasRelayClient.ENTRY_POINT, ["function balanceOf(address) view returns (uint256)"], provider);
         [out.relay.cap, out.relay.dep] = await Promise.all([pm.maxCostPerOp(), ep6.balanceOf(r.pm)]);
@@ -815,11 +829,18 @@ function renderCaps(c, netDef, up) {
   else lines.push([t("capGasOk", { signers: g.signers.join(", ") }), "line-ok"]);
   if (c.relay) {
     const r = c.relay;
-    if (r.state === "ready") lines.push([t("capGasReady", { pm: r.pm, cap: ethers.formatEther(r.cap) + cur, dep: ethers.formatEther(r.dep) + cur }), "line-ok"]);
+    if (r.state === "ready" && r.sponsor) lines.push([r.sponsor.balance ? t("capGasSub", { bal: r.sponsor.balance, price: r.sponsor.price }) : t("capGasSponsored"), "line-ok"]);
+    else if (r.state === "ready") lines.push([t("capGasReady", { pm: r.pm, cap: ethers.formatEther(r.cap) + cur, dep: ethers.formatEther(r.dep) + cur }), "line-ok"]);
+    else if (r.sub && r.sub.status === "active") lines.push([t("capGasEmpty", r.sub), "line-warn"]);
+    else if (r.sub && r.sub.status === "paid") lines.push([t("capGasPaid"), "line-warn"]);
+    else if (r.sub) lines.push([t("capGasNotSub"), "line-warn"]);
     else if (r.state === "notReady") lines.push([t("capGasNotReady", r), "line-warn"]);
     else lines.push([t("capGasNoRelay"), "line-dim"]);
   }
-  item(t("capGasT"), lines, g.state === "ok" && c.relay && c.relay.state === "ready" ? null : [t("capGasLink"), "up-gas-relay.html"]);
+  // The UP side to fix: the setup page. Set up: the subscription page (subscribe, balance, top-ups),
+  // except for a UP on the operator's list, which needs nothing.
+  const onList = c.relay && c.relay.state === "ready" && !c.relay.sponsor;
+  item(t("capGasT"), lines, g.state !== "ok" ? [t("capGasLink"), "up-gas-relay.html"] : onList ? null : [t("capSubLink"), "up-subscribe.html"]);
 }
 
 // ==================== 6. PUBLISH (align LSP3Profile with LUKSO) ====================

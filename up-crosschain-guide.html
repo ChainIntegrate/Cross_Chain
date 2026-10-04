@@ -105,13 +105,13 @@
   <div class="step-num">1</div>
   <div class="step-body">
     <h3>Extract your private key</h3>
-    <p>You'll need this key later, in step 8, to operate your profile on the new chain — it's simplest to get it out of the way first. Unlock the Universal Profile browser extension, click the <b>gear icon</b> (Settings) top-right, scroll all the way down to the <b>Developer</b> section, and click <b>Reveal private key</b>. Enter your extension password when asked, and the key is shown as plain text.</p>
+    <p>You'll need this key later, in step 6, to operate your profile on the new chain — it's simplest to get it out of the way first. Unlock the Universal Profile browser extension, click the <b>gear icon</b> (Settings) top-right, scroll all the way down to the <b>Developer</b> section, and click <b>Reveal private key</b>. Enter your extension password when asked, and the key is shown as plain text.</p>
     <img class="shot" src="guide-assets/step0-reveal-pk.png" alt="UP extension settings, Developer section, Reveal private key button">
     <div class="shot-caption">Settings → scroll to "Developer" → "Reveal private key".</div>
     <div class="note danger">
       <b>This key is your profile. Whoever has it owns your Universal Profile — on LUKSO and on every chain where you redeploy it — and can move every asset it holds, change its controllers and lock you out. There is no recovery and no one can reverse it.</b>
       <ul>
-        <li><b>Never type or paste it into a website</b> — including this one and the tools linked here: none of them will ever ask for it. The only place it goes is the "import account" screen of your own wallet, in step 8.</li>
+        <li><b>Never type or paste it into a website</b> — including this one and the tools linked here: none of them will ever ask for it. The only place it goes is the "import account" screen of your own wallet, in step 6.</li>
         <li><b>Never send it to anyone</b>: not in chat, email, Telegram, Discord or support tickets. Real support (ours included) will <b>never</b> ask for a private key, seed phrase or backup password — anyone who does is trying to steal your funds.</li>
         <li><b>Don't store it in plain text</b>: no screenshots, photos, notes apps, documents, cloud drives or messages to yourself. Keep it only in a password manager or offline (on paper, in a safe place).</li>
         <li><b>Handle it on a trusted device only</b>: not on a shared or work computer, and not with screen sharing or remote-desktop sessions open. After copying it, clear the clipboard (copy something else) and close the extension panel.</li>
@@ -124,8 +124,13 @@
 <div class="step">
   <div class="step-num">2</div>
   <div class="step-body">
-    <h3>Find your UP's original creation transaction</h3>
-    <div class="note ok"><b>Usually you can skip steps 2 and 3.</b> When you connect your UP in the Deploy tool (step 4), it fetches the deployment calldata from the LUKSO explorer by itself and checks that it produces exactly your UP's address. Follow these two steps only if the automatic fetch fails, or if you want to check the data by hand.</div>
+    <h3>Connect your UP to the Deploy tool</h3>
+    <p>Open the <a href="up-deploy-public.html">Deploy tool</a> and click <b>Connect your Universal Profile</b> in panel 2. Approve the connection in the extension popup: this only reads your address, it never asks for a private key.</p>
+    <p>The tool then does the rest by itself: it fills in your address as the "expected address", fetches your UP's <b>deployment calldata</b> (the original creation transaction, public on-chain data) from the LUKSO explorer, and checks that it produces exactly your address. Nothing to copy or paste.</p>
+    <img class="shot" src="guide-assets/step-connect-up.png" alt="Deploy tool showing the Universal Profile connected, with its address filled in automatically">
+    <div class="shot-caption">Once connected, your UP's address appears here — this is what the decoded calldata will be checked against.</div>
+    <details style="margin-top:14px;"><summary style="cursor:pointer; font-weight:600;">If the automatic fetch fails: find the calldata by hand</summary>
+    <h4>Find your UP's original creation transaction</h4>
     <p>Open your UP's address on the <a href="https://explorer.execution.mainnet.lukso.network" target="_blank" rel="noopener noreferrer">LUKSO mainnet explorer</a>, on its <b>Details</b> tab. Find the <b>Creator</b> row — it shows the creator's address <i>"at txn"</i> followed by a transaction hash. Click that transaction hash link: it takes you straight to the creation transaction.</p>
     <img class="shot" src="guide-assets/step-genesis-link.png" alt="Contract details page with the Creator row showing 'at txn' followed by the creation transaction hash link">
     <div class="shot-caption">On the Details tab, the "at txn" link next to Creator is the shortcut straight to the creation transaction — no need to scroll through the transaction list.</div>
@@ -133,43 +138,29 @@
     <img class="shot" src="guide-assets/step1-tx-details.png" alt="Transaction details page showing method deployERC1167Proxies and the Raw trace tab">
     <div class="shot-caption">The creation transaction: method <code>deployERC1167Proxies</code>, sent to the factory address. Open "Raw trace" from here.</div>
     <div class="note ok">This is public on-chain data. You don't need your wallet's backup file or any decryption to get it — anyone can look up any UP's creation transaction.</div>
+
+    <h4>Copy the transaction's input data</h4>
+    <p>In the raw trace, find the <b>call</b> field (the raw hex, starting with <code>0x6a66a753...</code>). Copy the whole string. This is your <b>deployment calldata</b>.</p>
+    <div class="note">Tip: double-click anywhere on the hex string to select it entirely, then copy — much faster than dragging to select such a long string.</div>
+    <img class="shot" src="guide-assets/step2-raw-trace.png" alt="Raw trace tab showing the call field with the deployment calldata">
+    <div class="shot-caption">The raw trace: the <code>call</code> field is the deployment calldata.</div>
+    </details>
   </div>
 </div>
 
 <div class="step">
   <div class="step-num">3</div>
   <div class="step-body">
-    <h3>Copy the transaction's input data</h3>
-    <p>In the raw trace, find the <b>call</b> field (the raw hex, starting with <code>0x6a66a753...</code>). Copy the whole string. This is your <b>deployment calldata</b>.</p>
-    <div class="note">Tip: double-click anywhere on the hex string to select it entirely, then copy — much faster than dragging to select such a long string.</div>
-    <img class="shot" src="guide-assets/step2-raw-trace.png" alt="Raw trace tab showing the call field with the deployment calldata">
-    <div class="shot-caption">The raw trace: the <code>call</code> field is the deployment calldata.</div>
+    <h3>Check the controller</h3>
+    <p>The calldata is filled in automatically after you connect (otherwise, paste the one you found by hand in step 2). It will show you the address this calldata predicts for your UP on any chain, and — critically — it will decode and display <i>every controller</i> named in the calldata, including which one gets <code>ALL_PERMISSIONS</code>.</p>
+    <img class="shot" src="guide-assets/step3-controllers.png" alt="Deploy tool showing the decoded controllers, one flagged as system infrastructure and one with ALL_PERMISSIONS">
+    <div class="shot-caption">The tool separates known system infrastructure (green) from the actual controller with <code>ALL_PERMISSIONS</code> (red) — that second one is what you need to hold the key for.</div>
+    <div class="note">Compare the predicted address to your actual UP address on LUKSO. They must match exactly before you go any further. The tool already checks this and blocks a deploy that does not match: if they don't match, stop and re-check step 2.</div>
   </div>
 </div>
 
 <div class="step">
   <div class="step-num">4</div>
-  <div class="step-body">
-    <h3>Connect your UP to the Deploy tool</h3>
-    <p>Open the <a href="up-deploy-public.html">Deploy tool</a> and click <b>Connect your Universal Profile</b> in panel 2. Approve the connection in the extension popup — this only reads your address, it never asks for a private key. Once connected, the tool shows your address and pre-fills the "expected address" field with it.</p>
-    <img class="shot" src="guide-assets/step-connect-up.png" alt="Deploy tool showing the Universal Profile connected, with its address filled in automatically">
-    <div class="shot-caption">Once connected, your UP's address appears here — this is what the decoded calldata will be checked against.</div>
-  </div>
-</div>
-
-<div class="step">
-  <div class="step-num">5</div>
-  <div class="step-body">
-    <h3>Decode it and identify the controller</h3>
-    <p>The calldata is filled in automatically after you connect (otherwise, paste the one you copied in step 3). It will show you the address this calldata predicts for your UP on any chain, and — critically — it will decode and display <i>every controller</i> named in the calldata, including which one gets <code>ALL_PERMISSIONS</code>.</p>
-    <img class="shot" src="guide-assets/step3-controllers.png" alt="Deploy tool showing the decoded controllers, one flagged as system infrastructure and one with ALL_PERMISSIONS">
-    <div class="shot-caption">The tool separates known system infrastructure (green) from the actual controller with <code>ALL_PERMISSIONS</code> (red) — that second one is what you need to hold the key for.</div>
-    <div class="note">Compare the predicted address to your actual UP address on LUKSO. They must match exactly before you go any further. If they don't, something is wrong with the calldata you copied — stop and re-check step 3.</div>
-  </div>
-</div>
-
-<div class="step">
-  <div class="step-num">6</div>
   <div class="step-body">
     <h3>Confirm it's the controller shown by your extension</h3>
     <p>The tool shows the address that receives <code>ALL_PERMISSIONS</code> — this is called the <b>controller address</b>, because it's the account that will control the profile after the deploy. The check to make here isn't generically "does this match the key I extracted" — it's whether this is the same account that your Universal Profile <b>browser extension itself labels as the controller</b> for this profile, and that this is the very account you extracted the private key from in step 1 (not a different one also sitting in the extension). If your Universal Profile has ever had more than one controller connected to it over time (for example, from reinstalling a wallet extension, or connecting a new device), make sure it's <i>this specific</i> controller — the one the extension shows for this profile — not just "a" controller that currently has access. They can look functionally identical (same permissions) while only one of them reproduces the same address on another chain.</p>
@@ -180,7 +171,7 @@
 </div>
 
 <div class="step">
-  <div class="step-num">7</div>
+  <div class="step-num">5</div>
   <div class="step-body">
     <h3>Deploy on the destination chain</h3>
     <p>Still on the <a href="up-deploy-public.html">Deploy tool</a>: connect any wallet to pay gas (it does not need to be the controller — it only pays the transaction fee), select the destination network, and run the built-in checks. The tool verifies the predicted address again, checks nothing already exists there, estimates gas, and — after the transaction confirms — verifies the deployed bytecode matches exactly before calling it a success.</p>
@@ -188,7 +179,7 @@
 </div>
 
 <div class="step">
-  <div class="step-num">8</div>
+  <div class="step-num">6</div>
   <div class="step-body">
     <h3>Operate your profile on the new chain</h3>
     <p>Import the private key you extracted in step 1 into MetaMask (or your wallet of choice) — this is standard "import account" functionality in any wallet. From there, use the <a href="up-test-operazione.html">Test tool</a> to confirm the controller actually operates the profile — it writes a timestamp on-chain through the Key Manager and reads it back. Once that works, you can also use the <a href="up-invia-fondi.html">Send tool</a> to transfer native currency, tokens and NFTs from the profile to another address, signed by that same controller. The <a href="up-identity.html">Identity tool</a> shows the profile on that network next to LUKSO's and can align it (name, images, links) with one transaction.</p>
@@ -205,7 +196,7 @@
 </div>
 
 <div class="step">
-  <div class="step-num">9</div>
+  <div class="step-num">7</div>
   <div class="step-body">
     <h3>Add a backup controller — in case you lose the key</h3>
     <p>The key you extracted in step 1 is your profile's <b>genesis key</b>: on every network where you redeploy, the profile is born controlled by that key alone. This step is about <b>losing</b> it, not about having it stolen: a broken computer, a key string you never saved, a forgotten password. If you lose the genesis key and no other controller has the same permissions, you are locked out of the profile on that network for good, with everything it holds. No one can fix it — not LUKSO, not us.</p>
@@ -225,15 +216,15 @@
 <div class="note">
   <b>💡 Funds: two addresses, both yours — don't forget the controller.</b>
   <ul>
-    <li><b>Your UP address</b> (the same on every chain) is your <i>account</i>. Send funds to it <b>only after</b> the deploy (step 7) and the test with the Test tool (step 8) have both succeeded, and preferably after adding the backup (step 9). If something goes wrong — the wrong controller key, a failed deploy — funds sent earlier would stay stuck at that address.</li>
-    <li><b>The controller address</b> (the account you imported into MetaMask in step 8) is the <i>key</i> that signs. Every operation — test, transfer, anything — costs a small fee (gas), and <b>the controller pays it, not the UP</b>. The exception: transfers whose gas is paid by the site, for profiles with an active subscription or on the operator's list (see "Operating without gas on the controller" below). Changes to the profile's data or controllers are always paid by the controller.</li>
+    <li><b>Your UP address</b> (the same on every chain) is your <i>account</i>. Send funds to it <b>only after</b> the deploy (step 5) and the test with the Test tool (step 6) have both succeeded, and preferably after adding the backup (step 7). If something goes wrong — the wrong controller key, a failed deploy — funds sent earlier would stay stuck at that address.</li>
+    <li><b>The controller address</b> (the account you imported into MetaMask in step 6) is the <i>key</i> that signs. Every operation — test, transfer, anything — costs a small fee (gas), and <b>the controller pays it, not the UP</b>. The exception: transfers whose gas is paid by the site, for profiles with an active subscription or on the operator's list (see "Operating without gas on the controller" below). Changes to the profile's data or controllers are always paid by the controller.</li>
     <li>👉 So on the new chain send some funds <b>to the controller too</b> (e.g. POL on Polygon, ETH on Base or Arbitrum): at least enough for a few transactions. Without them the controller cannot sign anything, even if the UP is full.</li>
   </ul>
   One is a smart contract account (the UP), the other a normal wallet (the controller, an EOA): different addresses, but both under your control.
 </div>
 
 <div class="note ok">
-  <b>Two different connections, two different jobs — this trips people up.</b> On the Test and Send tools, "Connect your Universal Profile" only reads your UP's address, on LUKSO, so you don't have to copy-paste it — no signature happens there. The wallet that actually <i>operates</i> the profile is the second connection, the "signing wallet" (MetaMask with the imported controller key), and it must be connected to the <b>destination chain</b> — the network where you redeployed the profile in steps 6–7 — not to LUKSO. It's completely normal to have both the UP extension and MetaMask active in the same browser at once: each one does a different job, on a different network. Both tools show you which network the signing wallet is currently on, right next to its address, and refuse to send anything if the wallet, the RPC and the network you selected are not the same chain — still, check it yourself before doing anything.
+  <b>Two different connections, two different jobs — this trips people up.</b> On the Test and Send tools, "Connect your Universal Profile" only reads your UP's address, on LUKSO, so you don't have to copy-paste it — no signature happens there. The wallet that actually <i>operates</i> the profile is the second connection, the "signing wallet" (MetaMask with the imported controller key), and it must be connected to the <b>destination chain</b> — the network where you redeployed the profile in step 5 — not to LUKSO. It's completely normal to have both the UP extension and MetaMask active in the same browser at once: each one does a different job, on a different network. Both tools show you which network the signing wallet is currently on, right next to its address, and refuse to send anything if the wallet, the RPC and the network you selected are not the same chain — still, check it yourself before doing anything.
 </div>
 
 <div class="note">
@@ -262,7 +253,7 @@
   <ul>
     <li>Whoever holds the controller key controls the profile, with or without gas paid by the site: the key in MetaMask and in the UP extension is a hot key, exposed like any wallet connected to the internet. Keep on the profile only what you are prepared to lose if that key were stolen, or move the controller to a hardware wallet (see below).</li>
     <li>One key controls the profile at the same address on every network: if it is stolen, all of them are exposed at once.</li>
-    <li><b>The genesis key can never be retired for new networks.</b> Every redeploy replays your profile's original creation, so on every new network the profile is born controlled by that key alone, whatever you changed elsewhere. Losing it means no more deploys on new networks, and, without a backup, losing the profile on every network (step 9).</li>
+    <li><b>The genesis key can never be retired for new networks.</b> Every redeploy replays your profile's original creation, so on every new network the profile is born controlled by that key alone, whatever you changed elsewhere. Losing it means no more deploys on new networks, and, without a backup, losing the profile on every network (step 7).</li>
     <li><b>Two setups, your choice.</b> (A) The genesis key is your everyday controller, for example your main MetaMask account, and the backup stays aside. (B) The genesis key stays offline and a second controller, for example a hardware wallet, is used every day. Either way, a backup exists only when a second controller has the same permissions: a daily controller with fewer permissions is not a backup.</li>
     <li>Every extra controller is one more key that could be stolen: keep the backup offline and use it only to recover.</li>
     <li>Gas paid by the site adds one specific risk: none of its contracts has had a professional audit, neither LUKSO's extension (<code>Extension4337</code>, which LUKSO describes as experimental) nor the site's paymasters. AI-assisted reviews found no serious issue; the details are in the project's AUDIT.md, sections 8 and 10. Keep small balances, on the profile and in the subscription.</li>
@@ -332,13 +323,13 @@
   <div class="step-num">1</div>
   <div class="step-body">
     <h3>Estrai la tua chiave privata</h3>
-    <p>Ti servirà più avanti, al passo 8, per operare il profilo sulla nuova rete — conviene toglierla di mezzo subito. Sblocca l'estensione Universal Profile, clicca sull'<b>icona a rotella</b> (Settings) in alto a destra, scorri fino in fondo alla sezione <b>Developer</b> e clicca <b>Reveal private key</b>. Inserisci la password dell'estensione quando richiesto: la chiave viene mostrata in chiaro.</p>
+    <p>Ti servirà più avanti, al passo 6, per operare il profilo sulla nuova rete — conviene toglierla di mezzo subito. Sblocca l'estensione Universal Profile, clicca sull'<b>icona a rotella</b> (Settings) in alto a destra, scorri fino in fondo alla sezione <b>Developer</b> e clicca <b>Reveal private key</b>. Inserisci la password dell'estensione quando richiesto: la chiave viene mostrata in chiaro.</p>
     <img class="shot" src="guide-assets/step0-reveal-pk.png" alt="Impostazioni dell'estensione UP, sezione Developer, pulsante Reveal private key">
     <div class="shot-caption">Settings → scorri fino a "Developer" → "Reveal private key".</div>
     <div class="note danger">
       <b>Questa chiave è il tuo profilo. Chi la possiede controlla la tua Universal Profile — su LUKSO e su ogni rete dove la rideployi — e può spostare tutti gli asset, cambiarne i controller e chiuderti fuori. Non esiste recupero e nessuno può annullare l'operazione.</b>
       <ul>
-        <li><b>Non digitarla né incollarla mai in un sito web</b> — compreso questo e gli strumenti collegati: nessuno di essi te la chiederà mai. L'unico posto dove va inserita è la schermata "importa account" del tuo wallet, al passo 8.</li>
+        <li><b>Non digitarla né incollarla mai in un sito web</b> — compreso questo e gli strumenti collegati: nessuno di essi te la chiederà mai. L'unico posto dove va inserita è la schermata "importa account" del tuo wallet, al passo 6.</li>
         <li><b>Non inviarla mai a nessuno</b>: né in chat, email, Telegram, Discord o ticket di assistenza. La vera assistenza (compresa la nostra) <b>non</b> chiederà <b>mai</b> una chiave privata, una seed phrase o una password di backup — chi lo fa sta cercando di rubarti i fondi.</li>
         <li><b>Non conservarla in chiaro</b>: niente screenshot, foto, app di note, documenti, cloud o messaggi a te stesso. Tienila solo in un password manager oppure offline (su carta, in un luogo sicuro).</li>
         <li><b>Maneggiala solo su un dispositivo fidato</b>: non su un computer condiviso o di lavoro, e senza condivisione schermo o sessioni di desktop remoto aperte. Dopo averla copiata, svuota gli appunti (copia qualcos'altro) e chiudi il pannello dell'estensione.</li>
@@ -351,8 +342,13 @@
 <div class="step">
   <div class="step-num">2</div>
   <div class="step-body">
-    <h3>Trova la transazione di creazione originale della tua UP</h3>
-    <div class="note ok"><b>Di solito puoi saltare i passi 2 e 3.</b> Quando connetti la tua UP nella pagina di Deploy (passo 4), la pagina recupera da sola la calldata di deploy dall'explorer di LUKSO e controlla che produca esattamente l'indirizzo della tua UP. Segui questi due passi solo se il recupero automatico non riesce, o se vuoi controllare i dati a mano.</div>
+    <h3>Connetti la tua UP allo strumento di Deploy</h3>
+    <p>Apri la <a href="up-deploy-public.html">pagina di Deploy</a> e clicca <b>Connetti la tua Universal Profile</b> nel pannello 2. Approva la connessione nel popup dell'estensione: legge solo il tuo indirizzo, non chiede mai una chiave privata.</p>
+    <p>Poi la pagina fa il resto da sola: compila il tuo indirizzo come "indirizzo atteso", recupera dall'explorer di LUKSO la <b>calldata di deploy</b> della tua UP (la transazione di creazione originale, dato pubblico on-chain) e controlla che produca esattamente il tuo indirizzo. Niente da copiare o incollare.</p>
+    <img class="shot" src="guide-assets/step-connect-up.png" alt="Strumento di Deploy con la Universal Profile connessa e l'indirizzo compilato automaticamente">
+    <div class="shot-caption">Una volta connesso, l'indirizzo della tua UP compare qui — è quello con cui verrà confrontata la calldata decodificata.</div>
+    <details style="margin-top:14px;"><summary style="cursor:pointer; font-weight:600;">Se il recupero automatico non riesce: trova la calldata a mano</summary>
+    <h4>Trova la transazione di creazione originale della tua UP</h4>
     <p>Apri l'indirizzo della tua UP sull'<a href="https://explorer.execution.mainnet.lukso.network" target="_blank" rel="noopener noreferrer">explorer di LUKSO mainnet</a>, nella scheda <b>Details</b>. Trova la riga <b>Creator</b> — mostra l'indirizzo del creatore <i>"at txn"</i> seguito da un hash di transazione. Clicca su quel link dell'hash: ti porta direttamente alla transazione di creazione.</p>
     <img class="shot" src="guide-assets/step-genesis-link.png" alt="Pagina dei dettagli del contratto con la riga Creator che mostra 'at txn' seguito dal link all'hash della transazione di creazione">
     <div class="shot-caption">Nella scheda Details, il link "at txn" accanto a Creator è la scorciatoia diretta alla transazione di creazione — non serve scorrere l'elenco delle transazioni.</div>
@@ -360,43 +356,29 @@
     <img class="shot" src="guide-assets/step1-tx-details.png" alt="Pagina dei dettagli della transazione con il metodo deployERC1167Proxies e la scheda Raw trace">
     <div class="shot-caption">La transazione di creazione: metodo <code>deployERC1167Proxies</code>, inviata all'indirizzo della factory. Da qui apri "Raw trace".</div>
     <div class="note ok">È dato pubblico on-chain. Non serve il file di backup del wallet né alcuna decrittazione per ottenerlo — chiunque può consultare la transazione di creazione di qualunque UP.</div>
+
+    <h4>Copia l'input data della transazione</h4>
+    <p>Nel raw trace, trova il campo <b>call</b> (l'esadecimale grezzo, che inizia con <code>0x6a66a753...</code>). Copia l'intera stringa. Questa è la tua <b>calldata di deploy</b>.</p>
+    <div class="note">Consiglio: fai doppio click in un punto qualsiasi della stringa esadecimale per selezionarla tutta, poi copia — molto più rapido che trascinare per selezionare una stringa così lunga.</div>
+    <img class="shot" src="guide-assets/step2-raw-trace.png" alt="Scheda Raw trace con il campo call che contiene la calldata di deploy">
+    <div class="shot-caption">Il raw trace: il campo <code>call</code> è la calldata di deploy.</div>
+    </details>
   </div>
 </div>
 
 <div class="step">
   <div class="step-num">3</div>
   <div class="step-body">
-    <h3>Copia l'input data della transazione</h3>
-    <p>Nel raw trace, trova il campo <b>call</b> (l'esadecimale grezzo, che inizia con <code>0x6a66a753...</code>). Copia l'intera stringa. Questa è la tua <b>calldata di deploy</b>.</p>
-    <div class="note">Consiglio: fai doppio click in un punto qualsiasi della stringa esadecimale per selezionarla tutta, poi copia — molto più rapido che trascinare per selezionare una stringa così lunga.</div>
-    <img class="shot" src="guide-assets/step2-raw-trace.png" alt="Scheda Raw trace con il campo call che contiene la calldata di deploy">
-    <div class="shot-caption">Il raw trace: il campo <code>call</code> è la calldata di deploy.</div>
+    <h3>Controlla il controller</h3>
+    <p>La calldata viene compilata in automatico dopo la connessione (altrimenti incolla quella trovata a mano al passo 2). Ti mostrerà l'indirizzo che questa calldata predice per la tua UP su qualsiasi rete e — punto cruciale — decodificherà e mostrerà <i>ogni controller</i> nominato nella calldata, incluso chi riceve <code>ALL_PERMISSIONS</code>.</p>
+    <img class="shot" src="guide-assets/step3-controllers.png" alt="Pagina di Deploy con i controller decodificati, uno segnato come infrastruttura di sistema e uno con ALL_PERMISSIONS">
+    <div class="shot-caption">Lo strumento separa l'infrastruttura di sistema nota (verde) dal vero controller con <code>ALL_PERMISSIONS</code> (rosso) — di quest'ultimo devi possedere la chiave.</div>
+    <div class="note">Confronta l'indirizzo predetto con l'indirizzo reale della tua UP su LUKSO. Devono coincidere esattamente prima di andare oltre. La pagina lo controlla già e blocca un deploy che non coincide: se non coincidono, fermati e ricontrolla il passo 2.</div>
   </div>
 </div>
 
 <div class="step">
   <div class="step-num">4</div>
-  <div class="step-body">
-    <h3>Connetti la tua UP allo strumento di Deploy</h3>
-    <p>Apri la <a href="up-deploy-public.html">pagina di Deploy</a> e clicca <b>Connetti la tua Universal Profile</b> nel pannello 2. Approva la connessione nel popup dell'estensione — questo passaggio legge solo il tuo indirizzo, non chiede mai una chiave privata. Una volta connesso, lo strumento mostra il tuo indirizzo e precompila il campo "indirizzo atteso" con quello.</p>
-    <img class="shot" src="guide-assets/step-connect-up.png" alt="Strumento di Deploy con la Universal Profile connessa e l'indirizzo compilato automaticamente">
-    <div class="shot-caption">Una volta connesso, l'indirizzo della tua UP compare qui — è quello con cui verrà confrontata la calldata decodificata.</div>
-  </div>
-</div>
-
-<div class="step">
-  <div class="step-num">5</div>
-  <div class="step-body">
-    <h3>Decodificala e identifica il controller</h3>
-    <p>La calldata viene compilata in automatico dopo la connessione (altrimenti incolla quella copiata al passo 3). Ti mostrerà l'indirizzo che questa calldata predice per la tua UP su qualsiasi rete e — punto cruciale — decodificherà e mostrerà <i>ogni controller</i> nominato nella calldata, incluso chi riceve <code>ALL_PERMISSIONS</code>.</p>
-    <img class="shot" src="guide-assets/step3-controllers.png" alt="Pagina di Deploy con i controller decodificati, uno segnato come infrastruttura di sistema e uno con ALL_PERMISSIONS">
-    <div class="shot-caption">Lo strumento separa l'infrastruttura di sistema nota (verde) dal vero controller con <code>ALL_PERMISSIONS</code> (rosso) — di quest'ultimo devi possedere la chiave.</div>
-    <div class="note">Confronta l'indirizzo predetto con l'indirizzo reale della tua UP su LUKSO. Devono coincidere esattamente prima di andare oltre. Se non coincidono, c'è qualcosa che non va nella calldata copiata — fermati e ricontrolla il passo 3.</div>
-  </div>
-</div>
-
-<div class="step">
-  <div class="step-num">6</div>
   <div class="step-body">
     <h3>Conferma che sia il controller indicato dalla tua estensione</h3>
     <p>Lo strumento mostra l'indirizzo che riceve <code>ALL_PERMISSIONS</code> — si chiama <b>indirizzo del controller</b>, perché è l'account che controllerà il profilo dopo il deploy. Il confronto da fare non è genericamente "corrisponde alla chiave che ho estratto" — è se questo è lo stesso account che la tua <b>estensione del browser Universal Profile indica esplicitamente come controller</b> di questo profilo, e che sia proprio quell'account (non un altro presente nell'estensione) da cui hai estratto la chiave privata al passo 1. Se la tua Universal Profile ha mai avuto più di un controller collegato nel tempo (ad esempio dopo aver reinstallato un'estensione wallet, o collegato un nuovo dispositivo), assicurati che sia <i>proprio questo</i> controller — quello che l'estensione mostra per questo profilo — non semplicemente "un" controller che al momento ha accesso. Possono sembrare funzionalmente identici (stessi permessi) mentre solo uno dei due riproduce lo stesso indirizzo su un'altra rete.</p>
@@ -407,7 +389,7 @@
 </div>
 
 <div class="step">
-  <div class="step-num">7</div>
+  <div class="step-num">5</div>
   <div class="step-body">
     <h3>Deploya sulla rete di destinazione</h3>
     <p>Sempre sulla <a href="up-deploy-public.html">pagina di Deploy</a>: collega un wallet qualsiasi per pagare il gas (non deve essere il controller — paga solo la commissione della transazione), scegli la rete di destinazione ed esegui i controlli integrati. Lo strumento riverifica l'indirizzo predetto, controlla che non esista già nulla lì, stima il gas e — dopo la conferma della transazione — verifica che il bytecode deployato corrisponda esattamente prima di dichiarare il successo.</p>
@@ -415,7 +397,7 @@
 </div>
 
 <div class="step">
-  <div class="step-num">8</div>
+  <div class="step-num">6</div>
   <div class="step-body">
     <h3>Opera il tuo profilo sulla nuova rete</h3>
     <p>Importa in MetaMask (o nel wallet che preferisci) la chiave privata estratta al passo 1 — è la normale funzione "importa account" di qualsiasi wallet. Da lì usa la <a href="up-test-operazione.html">pagina di Test</a> per confermare che il controller operi davvero il profilo — scrive un timestamp on-chain tramite il Key Manager e lo rilegge. Una volta verificato, puoi anche usare la <a href="up-invia-fondi.html">pagina di Invio</a> per trasferire valuta nativa, token e NFT dal profilo a un altro indirizzo, firmato dallo stesso controller. La <a href="up-identity.html">pagina Identità</a> mostra il profilo su quella rete accanto a quello di LUKSO e può allinearlo (nome, immagini, link) con una transazione.</p>
@@ -432,7 +414,7 @@
 </div>
 
 <div class="step">
-  <div class="step-num">9</div>
+  <div class="step-num">7</div>
   <div class="step-body">
     <h3>Aggiungi un controller di backup — nel caso perdi la chiave</h3>
     <p>La chiave che hai estratto al passo 1 è la <b>chiave di genesi</b> del tuo profilo: su ogni rete dove rifai il deploy, il profilo nasce controllato solo da quella chiave. Questo passo riguarda la <b>perdita</b>, non il furto: un computer rotto, una stringa mai salvata, una password dimenticata. Se perdi la chiave di genesi e nessun altro controller ha gli stessi permessi, resti fuori dal profilo su quella rete per sempre, con tutto quello che contiene. Nessuno può rimediare — né LUKSO né noi.</p>
@@ -452,15 +434,15 @@
 <div class="note">
   <b>💡 I fondi: due indirizzi, tutti e due tuoi — non dimenticare il controller.</b>
   <ul>
-    <li><b>L'indirizzo della tua UP</b> (uguale su tutte le reti) è il tuo <i>conto</i>. Mandaci fondi <b>solo dopo</b> che il deploy (passo 7) e il test con la pagina di Test (passo 8) sono andati entrambi a buon fine, e meglio ancora dopo aver aggiunto il backup (passo 9). Se qualcosa va storto — chiave del controller sbagliata, deploy fallito — i fondi mandati prima resterebbero bloccati a quell'indirizzo.</li>
-    <li><b>L'indirizzo del controller</b> (l'account che hai importato in MetaMask al passo 8) è la <i>chiave</i> che firma. Ogni operazione — test, invio, qualsiasi cosa — costa una piccola commissione (gas), e <b>la paga il controller, non la UP</b>. L'eccezione: i trasferimenti il cui gas lo paga il sito, per i profili con un'iscrizione attiva o nella lista del gestore (vedi "Operare senza gas sul controller" più sotto). Le modifiche ai dati o ai controller del profilo le paga sempre il controller.</li>
+    <li><b>L'indirizzo della tua UP</b> (uguale su tutte le reti) è il tuo <i>conto</i>. Mandaci fondi <b>solo dopo</b> che il deploy (passo 5) e il test con la pagina di Test (passo 6) sono andati entrambi a buon fine, e meglio ancora dopo aver aggiunto il backup (passo 7). Se qualcosa va storto — chiave del controller sbagliata, deploy fallito — i fondi mandati prima resterebbero bloccati a quell'indirizzo.</li>
+    <li><b>L'indirizzo del controller</b> (l'account che hai importato in MetaMask al passo 6) è la <i>chiave</i> che firma. Ogni operazione — test, invio, qualsiasi cosa — costa una piccola commissione (gas), e <b>la paga il controller, non la UP</b>. L'eccezione: i trasferimenti il cui gas lo paga il sito, per i profili con un'iscrizione attiva o nella lista del gestore (vedi "Operare senza gas sul controller" più sotto). Le modifiche ai dati o ai controller del profilo le paga sempre il controller.</li>
     <li>👉 Quindi sulla nuova rete manda un po' di fondi <b>anche al controller</b> (es. POL su Polygon, ETH su Base o Arbitrum): almeno quanto basta per qualche transazione. Senza, il controller non può firmare nulla, anche se la UP è piena.</li>
   </ul>
   Uno è un account smart contract (la UP), l'altro un normale wallet (il controller, un EOA): indirizzi diversi, ma tutti e due sotto il tuo controllo.
 </div>
 
 <div class="note ok">
-  <b>Due collegamenti diversi, due compiti diversi — qui è facile confondersi.</b> Nelle pagine di Test e Invio, "Connetti la tua Universal Profile" serve solo a leggere l'indirizzo della tua UP, su LUKSO, così non devi copiarlo a mano — nessuna firma avviene in quel passaggio. Il wallet che <i>opera</i> davvero il profilo è il secondo collegamento, il "wallet firmatario" (MetaMask con la chiave del controller importata), e deve essere connesso alla <b>rete di destinazione</b> — quella dove hai rideployato il profilo ai passi 6–7 — non a LUKSO. È del tutto normale avere sia l'estensione UP che MetaMask attivi insieme nello stesso browser: ognuno fa un lavoro diverso, su una rete diversa. Entrambe le pagine mostrano su quale rete è connesso in questo momento il wallet firmatario, accanto al suo indirizzo, e si rifiutano di inviare qualsiasi cosa se wallet, RPC e rete selezionata non sono la stessa chain — controlla comunque tu stesso prima di fare qualsiasi cosa.
+  <b>Due collegamenti diversi, due compiti diversi — qui è facile confondersi.</b> Nelle pagine di Test e Invio, "Connetti la tua Universal Profile" serve solo a leggere l'indirizzo della tua UP, su LUKSO, così non devi copiarlo a mano — nessuna firma avviene in quel passaggio. Il wallet che <i>opera</i> davvero il profilo è il secondo collegamento, il "wallet firmatario" (MetaMask con la chiave del controller importata), e deve essere connesso alla <b>rete di destinazione</b> — quella dove hai rideployato il profilo al passo 5 — non a LUKSO. È del tutto normale avere sia l'estensione UP che MetaMask attivi insieme nello stesso browser: ognuno fa un lavoro diverso, su una rete diversa. Entrambe le pagine mostrano su quale rete è connesso in questo momento il wallet firmatario, accanto al suo indirizzo, e si rifiutano di inviare qualsiasi cosa se wallet, RPC e rete selezionata non sono la stessa chain — controlla comunque tu stesso prima di fare qualsiasi cosa.
 </div>
 
 <div class="note">
@@ -489,7 +471,7 @@
   <ul>
     <li>Chi ha la chiave del controller controlla il profilo, con o senza il gas pagato dal sito: la chiave in MetaMask e nell'estensione UP è una chiave "calda", esposta come qualunque wallet collegato a internet. Tieni sul profilo solo quello che saresti disposto a perdere se quella chiave venisse rubata, oppure sposta il controller su un hardware wallet (vedi sotto).</li>
     <li>Una sola chiave controlla il profilo allo stesso indirizzo su tutte le reti: se viene rubata, sono esposte tutte insieme.</li>
-    <li><b>La chiave di genesi non si può mai dismettere per le reti nuove.</b> Ogni redeploy ripete la creazione originale del profilo, quindi su ogni nuova rete il profilo nasce controllato solo da quella chiave, qualunque cosa tu abbia cambiato altrove. Perderla vuol dire niente più deploy su reti nuove e, senza un backup, perdere il profilo su tutte le reti (passo 9).</li>
+    <li><b>La chiave di genesi non si può mai dismettere per le reti nuove.</b> Ogni redeploy ripete la creazione originale del profilo, quindi su ogni nuova rete il profilo nasce controllato solo da quella chiave, qualunque cosa tu abbia cambiato altrove. Perderla vuol dire niente più deploy su reti nuove e, senza un backup, perdere il profilo su tutte le reti (passo 7).</li>
     <li><b>Due configurazioni, scegli tu.</b> (A) La chiave di genesi è il controller di tutti i giorni, per esempio il tuo account MetaMask principale, e il backup sta da parte. (B) La chiave di genesi resta offline e un secondo controller, per esempio un hardware wallet, si usa tutti i giorni. In entrambi i casi il backup c'è solo se un secondo controller ha gli stessi permessi: un controller quotidiano con meno permessi non è un backup.</li>
     <li>Ogni controller in più è una chiave in più che può essere rubata: tieni il backup offline e usalo solo per recuperare.</li>
     <li>Il gas pagato dal sito aggiunge un rischio specifico: nessuno dei suoi contratti ha un audit professionale, né l'estensione di LUKSO (<code>Extension4337</code>, che LUKSO definisce sperimentale) né i paymaster del sito. Le revisioni assistite da AI non hanno trovato problemi gravi; i dettagli sono nel file AUDIT.md del progetto, sezioni 8 e 10. Tieni saldi piccoli, sul profilo e nell'iscrizione.</li>
