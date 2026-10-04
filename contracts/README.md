@@ -223,10 +223,12 @@ Each contract has the same address on every network where it is published. Statu
 |---|---|---|---|---|---|---|
 | NFTReceiverExtension `0x7F68e74483867058C806218aa05aB5527984C03e` | ✅ | ✅ | ✅ | ✅ partial | ✅ partial | ✅ |
 | UPPaymaster `0xb353565d1f801E7402DBC267b8C0E30E3540D4eD` | ✅ | ✅ | ✅ | ⏳ to do | ⏳ to do | — not published |
-| UPVerifyingPaymaster `0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e` | ⏳ to do | ⏳ to do | ⏳ to do | — | — | — not published |
+| UPVerifyingPaymaster `0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e` | ⏳ to do | ⏳ to do | ⏳ to do | ⏳ to do | ⏳ to do | — not published |
 | Extension4337 `0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2` | ✅ | ✅ | ✅ | ✅ | ✅ | — (LUKSO's own) |
 
-"Partial" on Blockscout is the best possible result for NFTReceiverExtension and UPPaymaster: they are compiled without the metadata hash (so the address is the same everywhere), and Blockscout can then match the code but not the metadata. On Blockscout the verification runs in the background: if the page seems stuck after "Verify & publish", reload it a few minutes later.
+**Still to verify:** UPVerifyingPaymaster on all five explorers (Basescan, Polygonscan, Snowscan, Base Blockscout, Polygon Blockscout), and UPPaymaster on the two Blockscouts. Links: [Basescan](https://basescan.org/address/0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e#code), [Polygonscan](https://polygonscan.com/address/0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e#code), [Snowscan](https://snowscan.xyz/address/0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e#code), [Base Blockscout](https://base.blockscout.com/address/0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e), [Polygon Blockscout](https://polygon.blockscout.com/address/0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e).
+
+"Partial" on Blockscout is the best possible result for NFTReceiverExtension, UPPaymaster and UPVerifyingPaymaster: they are compiled without the metadata hash (so the address is the same everywhere), and Blockscout can then match the code but not the metadata. On Blockscout the verification runs in the background: if the page seems stuck after "Verify & publish", reload it a few minutes later.
 
 Parameters, the same on every explorer (method "Solidity (Standard-JSON input)"; constructor arguments without `0x`, only if asked):
 
@@ -234,4 +236,5 @@ Parameters, the same on every explorer (method "Solidity (Standard-JSON input)";
 |---|---|---|---|---|
 | NFTReceiverExtension | `NFTReceiverExtension.input.json` | v0.8.24+commit.e11b9ed9 | MIT | none |
 | UPPaymaster | `UPPaymaster.input.json` | v0.8.24+commit.e11b9ed9 | GPL-3.0 | `0000000000000000000000005ff137d4b0fdcd49dca30c7cf57e578a026d27890000000000000000000000006c5d0fa04ae90371e809114e9c3932ea7a3715c9` (EntryPoint v0.6, owner) |
+| UPVerifyingPaymaster | `UPVerifyingPaymaster.input.json` | v0.8.24+commit.e11b9ed9 | GPL-3.0 | `0000000000000000000000005ff137d4b0fdcd49dca30c7cf57e578a026d27890000000000000000000000006c5d0fa04ae90371e809114e9c3932ea7a3715c9` (EntryPoint v0.6, owner; the same as UPPaymaster) |
 | Extension4337 | `Extension4337.input.json` | v0.8.17+commit.8df45f5f | Apache-2.0 | `0000000000000000000000005ff137d4b0fdcd49dca30c7cf57e578a026d2789` (EntryPoint v0.6) |
