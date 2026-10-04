@@ -1,0 +1,54 @@
+Sponsor paymaster (UPVerifyingPaymaster) on Avalanche C-Chain (chainId 43114), 2026-10-04: published, connected to the
+site relayer and to the private signing service, then the first sponsored operation.
+
+Set-up, all with the cassa 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9 on up-gas-relay.html, section 3b:
+- published through Nick's factory at 0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e (owner: the cassa), code verified:
+  tx 0xbcdf0d90f128bb20fb2e0fa79b3eb7a18b4196b76e195e9db097d07b3b2e94b9 (gas estimate 885,812)
+- signer 0x7a2b016b32F57298D3851Bf04BDFD62633E4c3f9 (key created on the server by the signing service, never exported):
+  tx 0x7a3e87c1c2ffa650fde7ac3d1577b03c82a303133950270c88c5a7983396a371
+- cap per operation 0.02 AVAX: tx 0xe6acf4caea305293abf2147cbf07ef3beae9713a1295cb3127d0c6613894e1b4
+- deposit 0.05 AVAX. A first top-up attempt failed in MetaMask with "nonce has already been used" (nothing was sent;
+  the deposit was still 0) and succeeded when repeated.
+
+Server:
+- signing service: private repository cloned in /opt/crosschain-sponsor with a read-only deploy key; user up-sponsor;
+  key and config in /etc/crosschain-sponsor (mode 600); systemd unit crosschain-sponsor; listening on 127.0.0.1:8788.
+  Rules for 43114: the ChainIntegrate UP only, 20 approvals per day, daily budget 0.15 AVAX (on maximum costs),
+  maxCostPerOp 0.02, approvals valid 5 minutes. Startup log: "signer on chain 0x7a2b… (this service)".
+- nginx: location /relay/sponsor/ -> 127.0.0.1:8788, before location /relay/ (previous file kept as
+  crosschain-lukso.bak-sponsor). Check from outside: /relay/sponsor/check for the ChainIntegrate UP answered
+  {"sponsored":true,"remainingToday":20}.
+- relayer: code updated (git pull), "sponsorPaymaster" added to chain 43114 in /etc/crosschain-relayer/config.json
+  (previous file kept as config.json.bak-sponsor). Startup log: "chain 43114: ready, paymasters 0xb353…D4eD, sponsor
+  paymaster 0xbEA7…d21e".
+
+For the test, the ChainIntegrate UP 0x4a2605796e0d91A9667d6E30365aEEC384C48c27 was removed from the allowlist of
+UPPaymaster 0xb353565d1f801E7402DBC267b8C0E30E3540D4eD (an allowlist paymaster is always preferred).
+
+First sponsored operation, from up-invia-fondi.html with "Pay the gas with the site relayer": the UP sends 0.01 AVAX
+to the cassa; the signer is the backup controller (4337 permission). The approval is asked for at send time and checked
+by the page before the controller signs.
+
+UP: 0x4a2605796e0d91A9667d6E30365aEEC384C48c27
+Rete: Avalanche C-Chain
+Destinatario: 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9
+Wallet firmatario (controller): 0x406f822ac86b61d4cdf4cd84833f7e5561609c02
+✅ Wallet firmatario e RPC sulla stessa rete (chainId 43114).
+Key Manager: 0x309fcE7B6a96CeF8fCbF926a006CDc6f21Ff280e
+Saldo attuale della UP: 0.01
+✅ Saldo della UP sufficiente per l'importo richiesto.
+✅ Simulazione riuscita sul percorso del relayer (EntryPoint → UP): il controller non paga gas.
+Gas: relayer del sito, con l'approvazione del servizio di sponsorizzazione (chiesta al momento della firma). Paymaster 0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e, costo massimo 0.007485724426686618 AVAX (tetto 0.02 AVAX); limite di gas dell'esecuzione 148562.
+Riepilogo: la UP invierà 0.01 di valuta nativa a 0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9.
+Pronto. Premendo Invia, MetaMask chiede di firmare un messaggio (nessun gas); il relayer del sito invia. Il trasferimento è irreversibile.
+Gas: relayer del sito, con l'approvazione del servizio di sponsorizzazione (chiesta al momento della firma). Paymaster 0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e, costo massimo 0.00741457011121855 AVAX (tetto 0.02 AVAX); limite di gas dell'esecuzione 148562.
+Richiesta di approvazione al servizio di sponsorizzazione...
+✅ Approvazione del servizio di sponsorizzazione verificata (firmatario 0x7a2b016b32F57298D3851Bf04BDFD62633E4c3f9, valida fino alle 08:40:22).
+Firma in MetaMask il messaggio 0x353c112bf22cfdcc1a877e90407fb61dda8a613cb978c3a9a6618aaa60f0cfcd (nessun gas): deve essere identico a quello mostrato da MetaMask.
+✅ Messaggio firmato da 0x406f822aC86b61d4cDf4cD84833f7e5561609C02 (il controller). Hash dell'operazione firmato: 0x353c112bf22cfdcc1a877e90407fb61dda8a613cb978c3a9a6618aaa60f0cfcd
+Invio al relayer del sito...
+Transazione del relayer: 0xe51a5dc1581e1f05ae452003a3bb6e1c2c831557e1e979ef5bf0f159c2b664cd
+https://snowscan.xyz/tx/0xe51a5dc1581e1f05ae452003a3bb6e1c2c831557e1e979ef5bf0f159c2b664cd
+In attesa di conferma...
+✅ Operazione eseguita. Costo pagato dal paymaster: 0.00091896502756895 AVAX.
+✅✅ Trasferimento confermato.

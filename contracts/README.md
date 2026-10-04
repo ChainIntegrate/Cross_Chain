@@ -119,11 +119,11 @@ The controller signs the user operation hash with `personal_sign`, so MetaMask w
   - allowlist changes or withdrawals by anyone but the owner.
 - **The EntryPoint's permissions do not leak:** a signer allowed only to call contracts cannot use the EntryPoint's value-transfer permission.
 
-## UPVerifyingPaymaster (experimental, not published)
+## UPVerifyingPaymaster (experimental)
 
 `UPVerifyingPaymaster.sol` is an ERC-4337 paymaster for EntryPoint v0.6, like `UPPaymaster`, but it does not keep a list of accounts. It pays for a user operation only when an **off-chain signing service** has approved that operation: the service decides (subscription, quota, which contracts, budget) and signs; the contract checks the signature. It is the base for a sponsored-gas service where the rules live in the service, not on chain.
 
-**Status:** experimental, unaudited, **not published** on any network. License GPL-3.0, like `UPPaymaster` (it builds on the same `@account-abstraction/contracts` 0.6.0 interfaces).
+**Status:** experimental, unaudited. Published on **Avalanche C-Chain** only (2026-10-04), at `0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e` (owner: the cassa), and in use by the site relayer there; log in `tools/logs/2026-10-04-avalanche-sponsor-paymaster.txt`. Source verification on Snowscan: to do. License GPL-3.0, like `UPPaymaster` (it builds on the same `@account-abstraction/contracts` 0.6.0 interfaces).
 
 **Where it comes from, and what is not audited.** The approval scheme is the one of the `VerifyingPaymaster` sample of eth-infinitism for EntryPoint v0.6. `getHash` covers the same fields, in the same order, as the `Paymaster.sol` of [base-org/paymaster](https://github.com/base-org/paymaster), a clone of that sample.
 
@@ -213,12 +213,13 @@ To verify:
 
 ## Source verification status
 
-The three contracts have the same address on every network. Status on 2026-10-03:
+Each contract has the same address on every network where it is published. Status on 2026-10-04:
 
 | Contract | Basescan | Polygonscan | Snowscan (Avalanche) | Base Blockscout | Polygon Blockscout | LUKSO explorer |
 |---|---|---|---|---|---|---|
 | NFTReceiverExtension `0x7F68e74483867058C806218aa05aB5527984C03e` | ✅ | ✅ | ✅ | ✅ partial | ✅ partial | ✅ |
 | UPPaymaster `0xb353565d1f801E7402DBC267b8C0E30E3540D4eD` | ✅ | ✅ | ✅ | ⏳ to do | ⏳ to do | — not published |
+| UPVerifyingPaymaster `0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e` | — not published | — not published | ⏳ to do | — | — | — not published |
 | Extension4337 `0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2` | ✅ | ✅ | ✅ | ✅ | ✅ | — (LUKSO's own) |
 
 "Partial" on Blockscout is the best possible result for NFTReceiverExtension and UPPaymaster: they are compiled without the metadata hash (so the address is the same everywhere), and Blockscout can then match the code but not the metadata. On Blockscout the verification runs in the background: if the page seems stuck after "Verify & publish", reload it a few minutes later.
