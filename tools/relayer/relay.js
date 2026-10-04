@@ -235,7 +235,7 @@ async function setupChain(id, ch, wallet) {
   const arbitrum = !opStack && (await arbL1Gas(provider, "0x")) !== null;
   const balance = await provider.getBalance(wallet.address);
   log(`chain ${id}: ready${opStack ? " (OP stack)" : arbitrum ? " (Arbitrum)" : ""}, paymasters ${ch.paymasters.join(", ")}${ch.sponsorPaymaster ? `, sponsor paymaster ${ch.sponsorPaymaster}` : ""}, relayer balance ${ethers.formatEther(balance)}`);
-  return { ...ch, chainId, provider, signer: wallet.connect(provider), opStack, arbitrum, queue: Promise.resolve(), recent: new Map(), pendingSender: new Map() };
+  return { ...ch, chainId, provider, signer: wallet.connect(provider), opStack, arbitrum, queue: Promise.resolve(), recent: new Map(), receipts: new Map(), pendingSender: new Map() };
 }
 
 async function setupChains(config, wallet) {
@@ -306,9 +306,16 @@ async function checkAndSend(chain, id, op, pm, hash) {
   catch (e) { throw new Refused(`send failed: ${revertReason(e)}`, 502); }
   chain.recent.set(hash, tx.hash);
   if (chain.recent.size > 1000) chain.recent.delete(chain.recent.keys().next().value);
+  // The outcome of the relayer's own transactions, for GET /relay/receipt: some public RPCs refuse
+  // receipt lookups (publicnode on Base), and the page has no wallet that knows this transaction.
+  chain.receipts.set(tx.hash.toLowerCase(), null);
+  if (chain.receipts.size > 1000) chain.receipts.delete(chain.receipts.keys().next().value);
   log(`chain ${id}: sent ${tx.hash} sender ${op.sender} nonce ${op.nonce} paymaster ${pm} gasLimit ${gasLimit}`);
   // A UP stays blocked until its transaction is mined, or for 3 minutes at most.
-  tx.wait(1, 180_000).then((rc) => log(`chain ${id}: ${tx.hash} mined in block ${rc.blockNumber}, status ${rc.status}`))
+  tx.wait(1, 180_000).then((rc) => {
+    chain.receipts.set(tx.hash.toLowerCase(), { status: rc.status, blockNumber: rc.blockNumber, logs: rc.logs.map((l) => ({ address: l.address, topics: l.topics, data: l.data })) });
+    log(`chain ${id}: ${tx.hash} mined in block ${rc.blockNumber}, status ${rc.status}`);
+  })
     .catch((e) => log(`chain ${id}: ${tx.hash} not confirmed: ${revertReason(e)}`))
     .finally(async () => {
       chain.pendingSender.delete(op.sender);
@@ -369,6 +376,13 @@ function makeServer(config, wallet, chains) {
           out.chains[id] = { paymasters: ch.paymasters, balance, ...(ch.sponsorPaymaster ? { sponsorPaymaster: ch.sponsorPaymaster } : {}) };
         }));
         return send(res, 200, out);
+      }
+      // Receipt of a transaction this relayer sent (and only those): { pending: true } until it is mined.
+      if (req.method === "GET" && path === "/receipt") {
+        const h = new URL(req.url, "http://x").searchParams.get("hash") || "";
+        if (!/^0x[0-9a-fA-F]{64}$/.test(h)) throw new Refused("hash must be a transaction hash");
+        for (const [, ch] of chains) if (ch.receipts.has(h.toLowerCase())) { const rc = ch.receipts.get(h.toLowerCase()); return send(res, 200, rc || { pending: true }); }
+        throw new Refused("not a transaction of this relayer", 404);
       }
       if (req.method === "POST" && path === "/send") {
         if (!/^application\/json\b/.test(req.headers["content-type"] || "")) throw new Refused("content-type must be application/json", 415);

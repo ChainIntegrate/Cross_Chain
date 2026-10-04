@@ -208,6 +208,7 @@ const I18N = {
     preparing: "Preparazione dell'operazione (5 USDC alla UP di ChainIntegrate)...",
     waitingWatcher: "Operazione eseguita. Attendo che il servizio registri il pagamento (fino a qualche minuto)...",
     paidOk: "✅ Pagamento registrato. Dopo la verifica della transazione attiviamo il saldo: riceverai un'email di conferma.",
+    paidUnknown: "⚠️ Il servizio non ha ancora visto il pagamento. Controlla l'esito sull'explorer (link qui sopra) e riapri questa pagina più tardi: lo stato si aggiorna da solo. Non pagare di nuovo.",
     paidLater: "⚠️ Il pagamento è sulla chain ma il servizio non l'ha ancora registrato. Riapri questa pagina più tardi: lo stato si aggiorna da solo; non pagare di nuovo.",
     opFailed: "❌ L'operazione non è riuscita: niente è stato pagato.",
     genericError: (v) => `Errore: ${v.err}`,
@@ -279,6 +280,7 @@ const I18N = {
     preparing: "Preparing the operation (5 USDC to ChainIntegrate's UP)...",
     waitingWatcher: "Operation executed. Waiting for the service to record the payment (up to a few minutes)...",
     paidOk: "✅ Payment recorded. Once the transaction is verified we activate the balance: you will get a confirmation e-mail.",
+    paidUnknown: "⚠️ The service has not seen the payment yet. Check the outcome on the explorer (link above) and open this page again later: the status updates by itself. Do not pay again.",
     paidLater: "⚠️ The payment is on chain but the service has not recorded it yet. Open this page again later: the status updates by itself; do not pay again.",
     opFailed: "❌ The operation did not succeed: nothing was paid.",
     genericError: (v) => `Error: ${v.err}`,
@@ -480,7 +482,8 @@ $("payBtn").addEventListener("click", async () => {
     const url = getExplorerUrl(c.net, EXPLORER_PATH, hash);
     if (url) log(url, "line-dim");
     const res = await GasRelayClient.waitResult(c.provider, hash, prep.hash, { log, fmt });
-    if (!res.success) { if (!res.unknown) log(t("opFailed"), "line-err"); return; }
+    // Outcome unknown (no receipt anywhere): the service reads the chain itself, so keep asking it.
+    if (!res.success && !res.unknown) { log(t("opFailed"), "line-err"); return; }
     log(t("waitingWatcher"), "line-dim");
     // The service records the payment within about a minute of the block.
     for (let i = 0; i < 24; i++) {
@@ -489,7 +492,7 @@ $("payBtn").addEventListener("click", async () => {
       const s = st && st.subscription && st.subscription.status;
       if (s === "paid" || s === "active") { log(t("paidOk"), "line-ok"); scheduleCheck(0); return; }
     }
-    log(t("paidLater"), "line-warn");
+    log(t(res.unknown ? "paidUnknown" : "paidLater"), "line-warn");
   } catch (e) {
     log(e.message && e.message.length < 600 ? e.message : t("genericError", { err: e.shortMessage || e.message }), "line-err");
   } finally { busy = false; updateButtons(); }
