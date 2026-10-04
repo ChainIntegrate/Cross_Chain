@@ -119,10 +119,15 @@ After that, `git pull` works exactly as before. The root `.htaccess` stays in th
 
 ## Audit trail
 
+**Status: no professional audit yet.** All the reviews below are the maintainer's own or AI-assisted, with local tests. None is a professional security audit. The contracts the gas relay depends on have never had a professional audit: `UPPaymaster`, `UPVerifyingPaymaster` and LUKSO's `Extension4337`, which LUKSO describes as experimental. A professional audit of the paymasters and the 4337 flow is required before the paid relay service holds significant customer funds. Until then, keep balances small and use the service at your own risk.
+
 | Date | Scope | Result | Report |
 |---|---|---|---|
 | 2026-09-27 | Whole repository and git history (commit `f56dd29`) | 2 High, 8 Medium, 9 Low, 6 Informational. All High and Medium findings are fixed. | [AUDIT.md](AUDIT.md) |
 | 2026-09-29 | WalletConnect pages: `up-wallet.html`, `up-walletconnect-basenames.html`, vendored WalletKit (commit `47642bc`) | 1 Medium, 3 Low (all fixed), 7 Informational (accepted or planned). Tested live on Base and Polygon. | [AUDIT.md §7](AUDIT.md#7-rev-4--walletconnect-pages-up-wallet-and-basenames-demo) |
+| 2026-10-01 | Gas relay: `Extension4337`, `UPPaymaster`, relayer, the three Base UPs (AI-assisted) | The 4337 setup adds no way to move funds beyond what the controller key already allows. Findings fixed or tracked. | [AUDIT.md §8](AUDIT.md#8-rev-5--gas-relay-extension4337-paymaster-relayer) |
+| 2026-10-02 | Whole repository at `40f0bc0`, system live (AI-assisted) | 2 High and 3 of 4 Medium fixed; M-1 (paymaster gas per operation) open, bounded by the caps; some Low and Info in the hardening backlog. | [AUDIT.md §9](AUDIT.md#9-rev-6--full-repository-review-2026-10-02) |
+| 2026-10-04 | `UPVerifyingPaymaster` (AI-assisted) | No Critical, High or Medium bug in the code. The signing key's power (VP-H1) is mitigated off-chain; Low and Info fixed or accepted. | [AUDIT.md §10](AUDIT.md#10-rev-7--upverifyingpaymaster-review-2026-10-04) |
 
 Main fixes from the 2026-09-27 audit:
 

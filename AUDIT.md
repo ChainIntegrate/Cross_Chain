@@ -8,6 +8,8 @@
 | **Scope** | Rev. 1–3: every file in the repository at the time: 6 HTML tools, `decrypt.js`, README, images in `guide-assets/`, and the full git history. Rev. 4: the WalletConnect pages `up-wallet.html` and `up-walletconnect-basenames.html`, the vendored `vendor/walletkit-1.6.0.min.js` and `config.example.js`. Rev. 5: `Extension4337`, `contracts/UPPaymaster.sol`, the relayer and the gas-relay setup batches. Rev. 6: the whole repository, pages, shared scripts, contracts and relayer |
 | **Method** | Manual code review, cross-check against the LUKSO reference contracts (`@lukso/lsp6-contracts` 0.16.3, `@lukso/lsp23-contracts` 0.16.3; for rev. 4 also `@lukso/lsp-smart-contracts` 0.14.0 for LSP0, LSP6 `isValidSignature` and LSP17), browser end-to-end tests with mocked wallets/RPCs/WalletConnect (Playwright + Chromium), a git history review for secrets and personal data, and, for rev. 4, live tests by the maintainer on Base and Polygon mainnet |
 
+> **Not a professional audit.** Every review in this file is the maintainer's own or AI-assisted, with local tests. The paymasters and LUKSO's `Extension4337` have never had a professional audit. One is required before the paid relay service holds significant customer funds.
+
 ## Contents
 
 1. [Summary](#1-summary)
@@ -19,6 +21,7 @@
 7. [Rev. 4 — WalletConnect pages (UP Wallet and Basenames demo)](#7-rev-4--walletconnect-pages-up-wallet-and-basenames-demo)
 8. [Rev. 5 — Gas relay: Extension4337, paymaster, relayer](#8-rev-5--gas-relay-extension4337-paymaster-relayer)
 9. [Rev. 6 — Full-repository review (2026-10-02)](#9-rev-6--full-repository-review-2026-10-02)
+10. [Rev. 7 — `UPVerifyingPaymaster` review (2026-10-04)](#10-rev-7--upverifyingpaymaster-review-2026-10-04)
 
 ---
 
