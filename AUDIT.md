@@ -22,6 +22,7 @@
 8. [Rev. 5 — Gas relay: Extension4337, paymaster, relayer](#8-rev-5--gas-relay-extension4337-paymaster-relayer)
 9. [Rev. 6 — Full-repository review (2026-10-02)](#9-rev-6--full-repository-review-2026-10-02)
 10. [Rev. 7 — `UPVerifyingPaymaster` review (2026-10-04)](#10-rev-7--upverifyingpaymaster-review-2026-10-04)
+11. [Design decisions on paid subscriptions (2026-10-04)](#11-design-decisions-on-paid-subscriptions-2026-10-04)
 
 ---
 
@@ -556,3 +557,13 @@ No Critical, High or Medium bug in the code. Every property a verifying paymaste
 | VP-I3 | Info | The service must sign with EIP-191 `personal_sign` | **Done:** it does; covered by the signing-service tests |
 | VP-I4 | Info | No events for funding and withdrawals | **Accepted:** the EntryPoint emits `Deposited` / `Withdrawn`; the weekly report reads the EntryPoint |
 | VP-I5 | Info | No reproducible build committed | **Done before the review was filed:** `UPVerifyingPaymaster.input.json` and `.json` (creation code, runtime hash, address formula) |
+
+## 11. Design decisions on paid subscriptions (2026-10-04)
+
+These are deliberate choices, recorded so that they do not look like oversights later. They are not findings.
+
+| # | Decision | Why | If it ever needs to change |
+|---|---|---|---|
+| D-1 | **Anyone can read a UP's subscription status and balance**, without a signature. The sponsor service's `/check` answers for any address with: none / requested / paid / active, the balance and the price. The subscription page shows this under the UP field, without MetaMask. | The Send page and the UP Wallet call `/check` before every operation, to offer the relayer option and show the balance. A signature there would cost the user one more prompt each time. The data is public anyway: the payment is a USDC transfer from the UP to ChainIntegrate's UP, and every sponsored operation is a public `UserOperationEvent` of the paymaster, with the UP's address. Together with the public price list, they give the subscription, the usage and the balance. Connecting MetaMask on the page would not hide anything: the service can be queried directly. | A read signed by the UP's controller (a `personal_sign` message with a timestamp, checked against the UP's permissions), on the page and in the relayer option. |
+| D-2 | **The e-mail is never returned by the service.** Only the operator (server file, mode 600) and the user's own inbox see it. | Personal data: given only for the activation and the balance alerts. | — |
+| D-3 | **Activation and top-ups are manual.** The service records a payment but credits nothing until the operator runs `activate`. There is no automatic charge or renewal. | The operator checks each payment before crediting. Nothing moves the user's funds except the user's own signed payment. | — |
