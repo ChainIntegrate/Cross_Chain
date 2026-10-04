@@ -58,7 +58,7 @@
   .check-row input { width: auto; }
   .warn-box { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--err); border-radius: 8px; background: rgba(224,90,90,0.08); font-size: 13px; line-height: 1.5; }
   .link-btn { display: block; text-align: center; background: var(--accent); color: white; border-radius: 6px; padding: 12px; font-size: 14px; font-weight: 600; text-decoration: none; margin-top: 12px; }
-  .link-btn[hidden] { display: none; }
+  .link-btn[hidden], .status-box[hidden] { display: none; }
   .plan { font-family: monospace; font-size: 12.5px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
   @media (max-width: 560px) { .kv { grid-template-columns: 1fr; } }
 </style>
@@ -92,6 +92,7 @@
   <div class="note" id="networkNote" style="margin-top:8px;" data-i18n-html="networkNote"></div>
   <label for="upAddress" data-i18n="upAddressLabel">Indirizzo della tua UP</label>
   <input type="text" id="upAddress" placeholder="0x...">
+  <div class="status-box" id="balanceBox" hidden></div>
   <div class="note" style="margin-top:8px;" data-i18n="upNote"></div>
   <button id="connectSigner" data-i18n="connectSignerBtn">Connetti MetaMask (controller della UP)</button>
 </div>
@@ -147,7 +148,7 @@ const I18N = {
     subtitle: "Paga 5 USDC dalla tua Universal Profile e ottieni un saldo con cui il sito paga il gas delle tue operazioni su Base, Polygon e Avalanche.",
     langToggleBtn: "English",
     panel0Title: "0 · Come funziona",
-    panel0Note: "<b>Cosa compri.</b> 5 USDC diventano un <b>saldo unico</b> della tua UP, valido su tutte le reti disponibili (elenco qui sotto). Ogni operazione pagata dal sito scala il prezzo della rete su cui avviene, <b>solo quando viene eseguita</b>.<br><br><b>Per ricaricare il saldo usa questa stessa pagina:</b> ogni pagamento di 5 USDC si aggiunge al saldo che hai già.<br><br><b>Come controllare il saldo:</b> inserisci la tua UP in questa pagina e collega MetaMask (lo vedi nella verifica), oppure guardalo nell'opzione \"Paga il gas con il relayer del sito\" delle pagine Invia e UP Wallet, prima di ogni operazione. Ti mandiamo anche un'email quando scende a 2,5, a 1 e a 0,5 USDC.<br><br><b>Prima di pagare, sulla rete scelta:</b><ol style=\"margin:6px 0 0; padding-left:20px;\"><li>la tua UP deve esistere su quella rete (se l'hai creata su LUKSO, replicala con la pagina Deploy);</li><li>la UP deve avere la <b>configurazione 4337</b>. È <b>necessaria per la richiesta di attivazione</b> (il sito paga il gas di questo pagamento) <b>e per ogni uso successivo</b> del gas sponsorizzato. È una transazione una tantum per rete, pagata dal tuo controller (pochi centesimi);</li><li>la UP deve avere almeno 5 USDC <b>nativi di Circle</b> su quella rete (puoi mandarli da un exchange all'indirizzo della tua UP).</li></ol><br><b>Dopo il pagamento</b> verifichiamo la transazione e attiviamo il saldo: ricevi un'email di conferma quando è disponibile.",
+    panel0Note: "<b>Cosa compri.</b> 5 USDC diventano un <b>saldo unico</b> della tua UP, valido su tutte le reti disponibili (elenco qui sotto). Ogni operazione pagata dal sito scala il prezzo della rete su cui avviene, <b>solo quando viene eseguita</b>.<br><br><b>Per ricaricare il saldo usa questa stessa pagina:</b> ogni pagamento di 5 USDC si aggiunge al saldo che hai già.<br><br><b>Come controllare il saldo:</b> inserisci la tua UP in questa pagina: compare subito sotto l'indirizzo, senza MetaMask, oppure guardalo nell'opzione \"Paga il gas con il relayer del sito\" delle pagine Invia e UP Wallet, prima di ogni operazione. Ti mandiamo anche un'email quando scende a 2,5, a 1 e a 0,5 USDC.<br><br><b>Prima di pagare, sulla rete scelta:</b><ol style=\"margin:6px 0 0; padding-left:20px;\"><li>la tua UP deve esistere su quella rete (se l'hai creata su LUKSO, replicala con la pagina Deploy);</li><li>la UP deve avere la <b>configurazione 4337</b>. È <b>necessaria per la richiesta di attivazione</b> (il sito paga il gas di questo pagamento) <b>e per ogni uso successivo</b> del gas sponsorizzato. È una transazione una tantum per rete, pagata dal tuo controller (pochi centesimi);</li><li>la UP deve avere almeno 5 USDC <b>nativi di Circle</b> su quella rete (puoi mandarli da un exchange all'indirizzo della tua UP).</li></ol><br><b>Dopo il pagamento</b> verifichiamo la transazione e attiviamo il saldo: ricevi un'email di conferma quando è disponibile.",
     priceLoading: "Lettura del listino...",
     priceTitle: "Reti disponibili e prezzo per operazione",
     priceItem: (v) => `${v.name}: ${v.price} USDC per operazione (con 5 USDC, ${v.ops} operazioni)`,
@@ -184,6 +185,9 @@ const I18N = {
     usdcOk: (v) => `${v.bal} USDC (servono ${v.need})`,
     usdcLow: (v) => `${v.bal} USDC: servono almeno ${v.need} USDC nativi (contratto ${v.token}) nella UP su questa rete`,
     stNone: "non ancora iscritta",
+    balActive: (v) => `Saldo: ${v.bal} USDC (iscrizione attiva, vale su tutte le reti)`,
+    balLow: (v) => `Saldo: ${v.bal} USDC: non basta per un'operazione. Ricarica con questa pagina.`,
+    balLabel: "Iscrizione",
     stRequested: "pagamento richiesto, in attesa di conferma sulla chain",
     stPaid: "pagamento ricevuto: in attesa di attivazione (riceverai un'email)",
     stActive: (v) => `attiva: saldo ${v.bal} USDC (questo pagamento è una ricarica)`,
@@ -215,7 +219,7 @@ const I18N = {
     subtitle: "Pay 5 USDC from your Universal Profile and get a balance with which the site pays the gas of your operations on Base, Polygon and Avalanche.",
     langToggleBtn: "Italiano",
     panel0Title: "0 · How it works",
-    panel0Note: "<b>What you buy.</b> 5 USDC become <b>one balance</b> of your UP, valid on every available network (list below). Each operation paid by the site takes the price of the network where it runs, <b>only when it is executed</b>.<br><br><b>To top up your balance, use this same page:</b> each 5 USDC payment is added to the balance you already have.<br><br><b>How to check your balance:</b> enter your UP on this page and connect MetaMask (the check shows it), or see it in the \"Pay the gas with the site relayer\" option of the Send and UP Wallet pages, before each operation. We also e-mail you when it goes down to 2.5, 1 and 0.5 USDC.<br><br><b>Before paying, on the chosen network:</b><ol style=\"margin:6px 0 0; padding-left:20px;\"><li>your UP must exist on that network (if you created it on LUKSO, replicate it with the Deploy page);</li><li>the UP must have the <b>4337 setup</b>. It is <b>needed for the activation request</b> (the site pays the gas of this payment) <b>and for every later use</b> of the sponsored gas. It is a one-time transaction per network, paid by your controller (a few cents);</li><li>the UP must hold at least 5 <b>Circle-native</b> USDC on that network (you can send them from an exchange to your UP's address).</li></ol><br><b>After the payment</b> we verify the transaction and activate the balance: you get a confirmation e-mail when it is available.",
+    panel0Note: "<b>What you buy.</b> 5 USDC become <b>one balance</b> of your UP, valid on every available network (list below). Each operation paid by the site takes the price of the network where it runs, <b>only when it is executed</b>.<br><br><b>To top up your balance, use this same page:</b> each 5 USDC payment is added to the balance you already have.<br><br><b>How to check your balance:</b> enter your UP on this page: it shows right under the address, no MetaMask needed, or see it in the \"Pay the gas with the site relayer\" option of the Send and UP Wallet pages, before each operation. We also e-mail you when it goes down to 2.5, 1 and 0.5 USDC.<br><br><b>Before paying, on the chosen network:</b><ol style=\"margin:6px 0 0; padding-left:20px;\"><li>your UP must exist on that network (if you created it on LUKSO, replicate it with the Deploy page);</li><li>the UP must have the <b>4337 setup</b>. It is <b>needed for the activation request</b> (the site pays the gas of this payment) <b>and for every later use</b> of the sponsored gas. It is a one-time transaction per network, paid by your controller (a few cents);</li><li>the UP must hold at least 5 <b>Circle-native</b> USDC on that network (you can send them from an exchange to your UP's address).</li></ol><br><b>After the payment</b> we verify the transaction and activate the balance: you get a confirmation e-mail when it is available.",
     priceLoading: "Reading the price list...",
     priceTitle: "Available networks and price per operation",
     priceItem: (v) => `${v.name}: ${v.price} USDC per operation (with 5 USDC, ${v.ops} operations)`,
@@ -252,6 +256,9 @@ const I18N = {
     usdcOk: (v) => `${v.bal} USDC (${v.need} needed)`,
     usdcLow: (v) => `${v.bal} USDC: at least ${v.need} Circle-native USDC (contract ${v.token}) are needed in the UP on this network`,
     stNone: "not subscribed yet",
+    balActive: (v) => `Balance: ${v.bal} USDC (subscription active, valid on every network)`,
+    balLow: (v) => `Balance: ${v.bal} USDC: not enough for an operation. Top up with this page.`,
+    balLabel: "Subscription",
     stRequested: "payment requested, waiting for confirmation on chain",
     stPaid: "payment received: waiting for activation (you will get an e-mail)",
     stActive: (v) => `active: balance ${v.bal} USDC (this payment is a top-up)`,
@@ -344,8 +351,29 @@ $("connectSigner").addEventListener("click", async () => {
 
 // ==================== check ====================
 // Bumped by every change: a payment prepared while it changed is not sent (AUDIT M-2).
+// The balance and status of the UP, read-only from the service: no wallet, no other check needed.
+let balGen = 0, balTimer = null;
+function refreshBalance(delay) {
+  const my = ++balGen; clearTimeout(balTimer);
+  balTimer = setTimeout(async () => {
+    const box = $("balanceBox"), net = getNet(), raw = $("upAddress").value.trim();
+    if (!net || !ethers.isAddress(raw)) { box.hidden = true; return; }
+    const st = await GasRelayClient.sponsorStatus(net.chainId, ethers.getAddress(raw));
+    if (my !== balGen) return;
+    const sub = st && st.subscription;
+    if (!sub) { box.hidden = true; return; }
+    let msg, cls;
+    if (sub.status === "active") {
+      const bal = st.balance || "0", low = st.reason === "balance used up";
+      msg = t(low ? "balLow" : "balActive", { bal }); cls = low ? "line-err" : "line-ok";
+    } else {
+      msg = `${t("balLabel")}: ${t(sub.status === "paid" ? "stPaid" : sub.status === "requested" ? "stRequested" : "stNone")}`; cls = sub.status === "paid" ? "line-warn" : "";
+    }
+    setStatus("balanceBox", msg, cls); box.hidden = false;
+  }, delay);
+}
 let gen = 0, check = null, lastCheck = null, checkRun = 0, checkTimer = null;
-function scheduleCheck(delay = 500) { gen++; check = null; updateButtons(); clearTimeout(checkTimer); checkTimer = setTimeout(runCheck, delay); }
+function scheduleCheck(delay = 500) { refreshBalance(delay); gen++; check = null; updateButtons(); clearTimeout(checkTimer); checkTimer = setTimeout(runCheck, delay); }
 ["upAddress"].forEach(id => $(id).addEventListener("input", () => scheduleCheck()));
 $("network").addEventListener("change", () => scheduleCheck(0));
 ["email"].forEach(id => $(id).addEventListener("input", updateButtons));
