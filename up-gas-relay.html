@@ -468,6 +468,7 @@ const I18N = {
     svcReady: (v) => `Relayer del sito: ${v.addr} · saldo su questa rete: ${v.bal}. Anticipa il gas e lo riceve indietro dal paymaster; tu non firmi altro.`,
     svcSending: "Invio dell'operazione firmata al relayer del sito...",
     svcRefused: (v) => `Il relayer del sito ha rifiutato l'operazione: ${v.err}`,
+    svcUnclear: (v) => `⚠️ Nessuna risposta chiara dal relayer (${v.err}): l'operazione potrebbe essere stata inviata. Non firmarne un'altra: premi di nuovo B, che invia la stessa operazione firmata (non viene mai eseguita due volte).`,
     svcRepeated: "Il relayer aveva già inviato questa operazione: segue la stessa transazione.",
     hintBsvc: (v) => `Operazione firmata da ${v.signer}. Ora premi "B · Invia (tramite il relayer del sito)": nessun cambio di account, nessuna firma.`,
     hintNoSvc: (v) => `Operazione firmata da ${v.signer}, ma il relayer del sito ora non è disponibile per questa rete: riprova più tardi. La firma resta finché non ricarichi la pagina.`,
@@ -528,6 +529,7 @@ const I18N = {
     planAtomic: "Se una parte fallisce, l'intera transazione viene annullata e non cambia niente.",
     readyToSign: "Controlla l'elenco qui sopra, poi premi \"Firma e invia\".",
     stale: "I dati sono cambiati dopo la preparazione: prepara di nuovo.",
+    editedDuringCheckLog: "❌ Dati, rete o account sono cambiati mentre la preparazione era in corso: niente è stato preparato. Ripeti.",
     setupOk: "✅ Verifica finale: estensione registrata, EntryPoint con i permessi previsti, permesso 4337 al controller, nessun altro permesso cambiato.",
     setupBad: (v) => `⚠️ Verifica finale non riuscita: ${v.what}. Controlla sull'explorer.`,
     opNeedsSetup: "La UP deve essere configurata (sezione 4) e l'account attivo deve essere un suo controller con il permesso 4337.",
@@ -713,6 +715,7 @@ const I18N = {
     svcReady: (v) => `Site relayer: ${v.addr} · balance on this network: ${v.bal}. It advances the gas and gets it back from the paymaster; you sign nothing else.`,
     svcSending: "Sending the signed operation to the site relayer...",
     svcRefused: (v) => `The site relayer refused the operation: ${v.err}`,
+    svcUnclear: (v) => `⚠️ No clear answer from the relayer (${v.err}): the operation may have been sent. Do not sign another one: press B again, which sends the same signed operation (it never runs twice).`,
     svcRepeated: "The relayer had already sent this operation: following the same transaction.",
     hintBsvc: (v) => `Operation signed by ${v.signer}. Now press "B · Send (through the site relayer)": no account switch, no signature.`,
     hintNoSvc: (v) => `Operation signed by ${v.signer}, but the site relayer is not available for this network now: try again later. The signature is kept until you reload the page.`,
@@ -771,6 +774,7 @@ const I18N = {
     planAtomic: "If any part fails, the whole transaction reverts and nothing changes.",
     readyToSign: "Check the list above, then press \"Sign and send\".",
     stale: "The data changed after preparation: prepare again.",
+    editedDuringCheckLog: "❌ Data, network or account changed while it was being prepared: nothing was prepared. Repeat.",
     setupOk: "✅ Final check: extension registered, EntryPoint with the expected permissions, 4337 permission for the controller, no other permission changed.",
     setupBad: (v) => `⚠️ Final check failed: ${v.what}. Check on the explorer.`,
     opNeedsSetup: "The UP must be set up (section 4) and the active account must be one of its controllers with the 4337 permission.",
@@ -941,12 +945,16 @@ function onInputsChanged() { $("customRpcWrap").style.display = networkSelectEl.
 $("networkFilter").addEventListener("input", (e) => { renderNetworkOptions(e.target.value); onInputsChanged(); });
 networkSelectEl.addEventListener("change", onInputsChanged);
 ["customRpc", "ownerAddress", "upAddress"].forEach(id => $(id).addEventListener("input", () => scheduleCheck()));
-["testTo", "testAmount"].forEach(id => $(id).addEventListener("input", () => { signedOp = null; setStatus("opBox", t("noOp"), "empty"); updateButtons(); }));
+["testTo", "testAmount"].forEach(id => $(id).addEventListener("input", () => { planGen++; signedOp = null; setStatus("opBox", t("noOp"), "empty"); updateButtons(); }));
 $("recheckBtn").addEventListener("click", () => scheduleCheck(0));
 $("ackRisk").addEventListener("change", updateButtons);
 
 // ==================== STATE ====================
 let state = null, checkRun = 0, checkTimer = null, setupPlan = null, signedOp = null, revokePlan = null;
+// Bumped whenever the inputs, the network or the account change. A plan or a signed operation prepared
+// while it changed is not kept: it was built from values no longer on screen (AUDIT M-2).
+let planGen = 0;
+const changedSince = (gen) => { if (gen === planGen) return false; log(t("editedDuringCheckLog"), "line-err"); return true; };
 // One action at a time: every action button is disabled while one is running.
 let busy = false;
 let svcLoadedAt = 0;
@@ -955,6 +963,7 @@ let svc = null; // site relayer, from GET relay/info: { relayer, entryPoint, cha
 function scheduleCheck(delay = 500) {
   // An immediate re-check follows a transaction or an account/network change: refresh section 2 too.
   if (delay === 0) autoCfg.at = 0;
+  planGen++;
   state = null; setupPlan = null; revokePlan = null;
   setStatus("setupPlanBox", t("noPlan"), "empty");
   updateButtons();
@@ -1213,7 +1222,7 @@ async function sendTx(tx, label) {
   const signer = await new ethers.BrowserProvider(signerProvider).getSigner();
   if (signer.address !== s.signer) { log(t("stale"), "line-err"); return null; }
   log(t("sending"), "line-dim");
-  const sent = await signer.sendTransaction({ ...tx, gasLimit });
+  const sent = await signer.sendTransaction({ ...tx, gasLimit, chainId: s.chainId });
   log(t("txSent", { hash: sent.hash }), "line-dim");
   const explorerUrl = getExplorerUrl(s.netInfo, EXPLORER_PATH, sent.hash);
   if (explorerUrl) log(explorerUrl, "line-dim");
@@ -1329,6 +1338,7 @@ function buildSetup(s) {
 }
 $("prepareSetupBtn").addEventListener("click", () => guarded(async () => {
   setupPlan = null;
+  const gen = planGen;
   const s = await freshState();
   if (!s || !s.canSetup) { log(t("notReady"), "line-err"); return; }
   const { payloads, epIndex, finalPerms } = buildSetup(s);
@@ -1349,6 +1359,7 @@ $("prepareSetupBtn").addEventListener("click", () => guarded(async () => {
   log(t("simulating"), "line-dim");
   try { await s.provider.call({ from: s.signer, to: s.km, data }); } catch (e) { log(t("simFail", { err: revertReason(e) }), "line-err"); return; }
   log(t("simOk", { gas: (await s.provider.estimateGas({ from: s.signer, to: s.km, data })).toString() }), "line-ok");
+  if (changedSince(gen)) return;
   setupPlan = { data, s, finalPerms };
   log(t("readyToSign"), "line-warn");
 }, false));
@@ -1403,6 +1414,7 @@ function buildRevoke(s) {
 }
 $("prepareRevokeBtn").addEventListener("click", () => guarded(async () => {
   revokePlan = null;
+  const gen = planGen;
   const s = await freshState();
   if (!s || !s.canRevoke) { log(t("notReady"), "line-err"); return; }
   const { payloads, finalPerms } = buildRevoke(s);
@@ -1423,6 +1435,7 @@ $("prepareRevokeBtn").addEventListener("click", () => guarded(async () => {
   log(t("simulating"), "line-dim");
   try { await s.provider.call({ from: s.signer, to: s.km, data }); } catch (e) { log(t("simFail", { err: revertReason(e) }), "line-err"); return; }
   log(t("simOk", { gas: (await s.provider.estimateGas({ from: s.signer, to: s.km, data })).toString() }), "line-ok");
+  if (changedSince(gen)) return;
   revokePlan = { data, s, finalPerms };
   log(t("readyToSignRevoke"), "line-warn");
 }, false));
@@ -1461,6 +1474,7 @@ $("sendRevokeBtn").addEventListener("click", async () => {
 // ---- test operation: A (controller signs), B (relayer sends)
 $("signOpBtn").addEventListener("click", () => guarded(async () => {
   signedOp = null;
+  const gen = planGen;
   setStatus("opBox", t("noOp"), "empty");
   const s = await freshState();
   if (!s || !s.upDone || !s.has4337) { log(t("opNeedsSetup"), "line-err"); return; }
@@ -1498,6 +1512,7 @@ $("signOpBtn").addEventListener("click", () => guarded(async () => {
   const permRaw = await s.upC.getData(PERM_KEY(who));
   const ok = permRaw && permRaw !== "0x" && (BigInt(permRaw) & P.ERC4337) !== 0n;
   if (!ok) { log(t("signedBad", { addr: who }), "line-err"); return; }
+  if (changedSince(gen)) return;
   signedOp = { op, hash, signerAddr: who, chainId: s.chainId, up: s.upAddr, pm: s.pmAddr, to: ethers.getAddress(to), amount, legacy: fees.legacy };
   log(t("signedOk", { addr: who }), "line-ok");
 }, false));
@@ -1547,9 +1562,12 @@ async function relaySigned() {
     let r, j;
     try {
       r = await fetch("relay/send", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chainId: so.chainId, op: opJson(so.op) }) });
-      j = await r.json();
-    } catch (e) { log(t("svcRefused", { err: e.message }), "line-err"); return; }
-    if (!r.ok || !j.hash) { log(t("svcRefused", { err: (j && j.error) || `HTTP ${r.status}` }), "line-err"); return; }
+      j = await r.json().catch(() => null);
+    } catch (e) { log(t("svcUnclear", { err: e.message }), "line-warn"); return; }
+    // No clear answer (5xx, 429): the operation may have been sent. B stays on: the same signed operation
+    // can be posted again, and the relayer and the EntryPoint never run it twice (AUDIT M-3).
+    if (!r.ok && (r.status >= 500 || r.status === 429)) { log(t("svcUnclear", { err: (j && j.error) || `HTTP ${r.status}` }), "line-warn"); return; }
+    if (!r.ok || !j || !j.hash) { log(t("svcRefused", { err: (j && j.error) || `HTTP ${r.status}` }), "line-err"); return; }
     if (j.repeated) log(t("svcRepeated"), "line-dim");
     const hash = j.hash;
     signedOp = null; setStatus("opBox", t("noOp"), "empty"); updateButtons();

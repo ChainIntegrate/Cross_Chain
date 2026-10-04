@@ -752,7 +752,7 @@ $("enableBtn").addEventListener("click", async () => {
     const signer = await new ethers.BrowserProvider(signerProvider).getSigner();
     if (signer.address.toLowerCase() !== p.c.signer.toLowerCase()) { log(t("stale"), "line-err"); return; }
     log(t("sending"), "line-dim");
-    const sent = await signer.sendTransaction({ to: p.c.km, data: p.data, gasLimit: p.gasLimit });
+    const sent = await signer.sendTransaction({ to: p.c.km, data: p.data, gasLimit: p.gasLimit, chainId: p.c.chainId });
     clearPlan();
     log(t("txSent", { hash: sent.hash }), "line-dim");
     const explorerUrl = getExplorerUrl(p.c.net, EXPLORER_PATH, sent.hash);

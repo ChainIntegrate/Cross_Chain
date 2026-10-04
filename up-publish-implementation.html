@@ -657,7 +657,7 @@ $("publishBtn").addEventListener("click", async () => {
     }
 
     log(t("sendingLog"), "line-dim");
-    const tx = await signerObj.sendTransaction({ to: NICK_FACTORY, data: source.data, gasLimit: ctx.gasLimit });
+    const tx = await signerObj.sendTransaction({ to: NICK_FACTORY, data: source.data, gasLimit: ctx.gasLimit, chainId: ctx.chainId });
     log(t("txHashLog", { hash: tx.hash }), "line-dim");
     log(t("waitingLog"), "line-dim");
     const receipt = await tx.wait();

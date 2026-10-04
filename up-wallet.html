@@ -1279,6 +1279,14 @@ async function handleSendTransaction(topic, id, c, tx, validation, reject) {
       return;
     }
 
+    // An operation signed for the site relayer, without a clear outcome, may still run: never send the
+    // same thing by the controller's path meanwhile (AUDIT M-3).
+    try {
+      const pend = await GasRelayClient.pendingStatus(c.provider, { chainId: c.chainId, up: c.up });
+      if (pend.state === "landed") return reject(GasRelayClient.text("pendingLanded", { ...GasRelayClient.pendingView(pend.p), ok: pend.ev.success }));
+      if (pend.state === "outstanding") return reject(GasRelayClient.text("pendingBlocksDirect", GasRelayClient.pendingView(pend.p)));
+    } catch (e) { return reject(e.shortMessage || e.message); }
+
     // Wrap: KeyManager.execute(UP.execute(CALL, to, value, data)): the dApp sees msg.sender = UP.
     const inner = UP_IFACE.encodeFunctionData("execute", [0, to, value, data]);
     const wrapped = KM_IFACE.encodeFunctionData("execute", [inner]);
@@ -1338,7 +1346,7 @@ $("sendBtn").addEventListener("click", busyWrap(async () => {
         prep = await GasRelayClient.prepare(c.provider, { chainId: c.chainId, up: c.up, ready, to: p.target, value: p.value, data: p.data, fmt: fmtCur });
         log(prep.plan, "line-dim");
         hash = await GasRelayClient.signAndSend(signerProvider, { chainId: c.chainId, prep, signer: c.signer, log });
-      } catch (e) { return fail(e.message, "Relayed operation not sent"); }
+      } catch (e) { return fail(e.message, e.maybeSent ? "Outcome unknown: the relayed operation may still be executed" : "Relayed operation not sent"); }
       log(t("txSentSummaryRelay", { value: p.valueText, to: p.to }), "line-dim");
       const explorerUrl = getExplorerUrl(c.net, EXPLORER_PATH, hash);
       if (explorerUrl) log(explorerUrl, "line-dim");
@@ -1352,7 +1360,7 @@ $("sendBtn").addEventListener("click", busyWrap(async () => {
       return;
     }
     log(t("sending"), "line-dim");
-    const sent = await signer.sendTransaction({ to: p.c.km, data: p.wrapped, gasLimit: p.gasLimit });
+    const sent = await signer.sendTransaction({ to: p.c.km, data: p.wrapped, gasLimit: p.gasLimit, chainId: p.c.chainId });
     log(t("txSent", { hash: sent.hash }), "line-dim");
     log(t("txSentSummary", { value: p.valueText, to: p.to }), "line-dim");
     const explorerUrl = getExplorerUrl(p.c.net, EXPLORER_PATH, sent.hash);

@@ -930,7 +930,7 @@ $("pubBtn").addEventListener("click", async () => {
     pubLog(t("pubSimOk"), "line-ok");
     const signer = await new ethers.BrowserProvider(pubWallet).getSigner();
     if (signer.address.toLowerCase() !== pubAddr.toLowerCase()) { pubLog(t("pubSignerChanged", { now: signer.address, checked: pubAddr }), "line-err"); return; }
-    const tx = await signer.sendTransaction({ to: km, data });
+    const tx = await signer.sendTransaction({ to: km, data, chainId: r.net.chainId });
     pubLog(t("pubTx", { hash: tx.hash }), "line-dim");
     const url = getExplorerUrl(r.netDef, "/tx/", tx.hash);
     if (url) pubLog(url, "line-dim");
