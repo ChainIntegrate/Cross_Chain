@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<script src="theme.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>Gas pagato dal paymaster: gestore — ChainIntegrate</title>
+<link rel="icon" href="favicon.ico">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="chains.js"></script>
+<script src="gas-relay-client.js"></script>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --border: #2a2f3a; --field: #10131a; --chip: #2a2f3a; --disabled: #3a3f4b; --raised: #1d2330;
+    --text: #e6e8ec; --text-dim: #9aa1ad;
+    --accent: #5b8cff; --ok: #3fbf6f; --warn: #e0a83c; --err: #e05a5a;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+         max-width: 760px; margin: 0 auto; padding: 32px 20px 80px; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .subtitle { color: var(--text-dim); font-size: 13px; margin-bottom: 28px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+  .panel h2 { font-size: 14px; margin: 0 0 14px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.03em; }
+  .panel h3 { font-size: 13px; margin: 18px 0 4px; color: var(--text); }
+  .note { font-size: 12.5px; color: var(--text-dim); line-height: 1.5; margin-bottom: 12px; }
+  label { display: block; font-size: 13px; color: var(--text-dim); margin: 14px 0 6px; }
+  select, input { width: 100%; background: var(--field); border: 1px solid var(--border); color: var(--text);
+                  border-radius: 6px; padding: 10px 12px; font-size: 14px; font-family: inherit; }
+  button { width: 100%; background: var(--accent); color: white; border: none; border-radius: 6px;
+           padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; }
+  button:disabled { background: var(--disabled); cursor: not-allowed; }
+  button.danger { background: var(--err); }
+  button.secondary { background: var(--chip); }
+  .row { display: flex; gap: 8px; align-items: flex-end; }
+  .row > * { flex: 1; }
+  .row button { flex: 0 0 auto; width: auto; padding: 10px 14px; }
+  .status-box { background: var(--field); border: 1px solid var(--border); border-radius: 6px; padding: 12px;
+                font-family: monospace; font-size: 12.5px; margin-top: 12px; }
+  .status-box .empty { color: var(--text-dim); }
+  #log { font-family: monospace; font-size: 12.5px; white-space: pre-wrap; word-break: break-all; line-height: 1.6; }
+  .line-ok { color: var(--ok); } .line-warn { color: var(--warn); } .line-err { color: var(--err); } .line-dim { color: var(--text-dim); }
+  .line-compare { color: var(--warn); font-weight: 700; border: 1px solid var(--warn); border-radius: 6px; padding: 8px 10px; margin: 6px 0; }
+  .brand-row { margin-bottom: 24px; }
+  .brand-logo { display: block; width: 100%; height: auto; border-radius: 10px; }
+  .top-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .lang-btn { width: auto; background: var(--chip); padding: 6px 14px; font-size: 12px; margin-top: 0; flex-shrink: 0; }
+  .site-footer { margin-top: 40px; padding: 18px 20px; background: #f5f6f8; border: 1px solid #e3e5ea; border-radius: 10px; color: #4b4f58; }
+  .footer-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .footer-logo { height: 48px; width: auto; flex-shrink: 0; }
+  .footer-text { font-size: 13px; line-height: 1.6; }
+  .footer-li { display: inline-flex; vertical-align: middle; margin: 0 2px; }
+  .site-footer a { color: #2563eb; text-decoration: none; font-weight: 600; }
+  .kv { display: grid; grid-template-columns: 200px 1fr; gap: 6px 12px; font-size: 13px; }
+  .kv .k { color: var(--text-dim); }
+  .kv .v { font-family: monospace; word-break: break-all; white-space: pre-wrap; }
+  .kv .v.ok { color: var(--ok); } .kv .v.warn { color: var(--warn); } .kv .v.err { color: var(--err); }
+  .check-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 13.5px; }
+  .check-row input { width: auto; }
+  .warn-box { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--err); border-radius: 8px; background: rgba(224,90,90,0.08); font-size: 13px; line-height: 1.5; }
+  .plan { font-family: monospace; font-size: 12.5px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  .simple { border: 2px solid var(--accent); border-radius: 10px; padding: 14px 18px; background: rgba(91,140,255,0.08); font-size: 14.5px; line-height: 1.65; margin-bottom: 12px; }
+  .simple h4 { margin: 0 0 6px; font-size: 16px; }
+  .simple p { margin: 8px 0; } .simple ul, .simple ol { margin: 6px 0; padding-left: 22px; } .simple li { margin: 4px 0; }
+  .read-on { font-weight: 700; font-size: 14px; margin: 0 0 12px; color: var(--warn); }
+  details.guide { margin: 4px 0 14px; border: 1px solid var(--accent); border-radius: 8px; padding: 10px 14px; background: rgba(91,140,255,0.06); }
+  details.guide summary { cursor: pointer; font-weight: 600; font-size: 14px; color: var(--text); }
+  details.guide > div { font-size: 13px; line-height: 1.6; color: var(--text); margin-top: 8px; }
+  details.guide h4 { font-size: 13.5px; margin: 14px 0 4px; color: var(--accent); }
+  details.guide ol, details.guide ul { margin: 4px 0; padding-left: 22px; }
+  details.guide li { margin: 3px 0; }
+  /* While an action runs: a fixed box that says what is happening, so the wait before the wallet opens is never silent. */
+  #busyToast { display: none; position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 50;
+               width: calc(100% - 32px); max-width: 720px; background: var(--raised); border: 2px solid var(--warn); border-radius: 10px;
+               padding: 12px 16px; font-size: 14px; line-height: 1.5; color: var(--text); box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
+  #busyToast.on { display: flex; gap: 12px; align-items: center; }
+  #busyToast .spin { width: 18px; height: 18px; flex: 0 0 18px; border: 3px solid var(--warn); border-top-color: transparent; border-radius: 50%; animation: spin 0.9s linear infinite; }
+  #busyToast .msg { word-break: break-word; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { #busyToast .spin { animation: none; } }
+  media (max-width: 560px) { .kv { grid-template-columns: 1fr; } .row { flex-wrap: wrap; } .row button { width: 100%; } }
+</style>
+</head>
+<body>
+
+<div class="brand-row">
+  <img src="banner.png" alt="ChainIntegrate" class="brand-logo" onerror="this.style.display='none'">
+</div>
+
+<div class="top-row">
+  <div>
+    <h1 data-i18n="h1">Gas pagato dal paymaster: pagina del gestore (sperimentale)</h1>
+    <div class="subtitle" data-i18n="subtitle"></div>
+  </div>
+  <button class="lang-btn" id="langToggle" data-i18n="langToggleBtn">English</button>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel0Title">0 · Come funziona</h2>
+  <div class="simple" data-i18n-html="simpleHtml"></div>
+  <div class="read-on" data-i18n="readOn"></div>
+  <details class="guide" id="guideBox"><summary data-i18n="guideSummary">Guida passo passo</summary><div data-i18n-html="guideHtml"></div></details>
+  <div class="note" data-i18n-html="panel0Note"></div>
+  <div class="warn-box" data-i18n-html="disclaimer"></div>
+  <div class="check-row"><input type="checkbox" id="ackRisk"><label for="ackRisk" style="margin:0; color: var(--text);" data-i18n="ackLabel">Ho letto e accetto</label></div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel1Title">1 · Rete, MetaMask e UP</h2>
+  <input type="text" id="networkFilter" data-i18n-placeholder="networkFilterPlaceholder" placeholder="Filtra per nome...">
+  <select id="network" style="margin-top:8px;"></select>
+  <div id="customRpcWrap" style="display:none;">
+    <label data-i18n="customRpcLabel">RPC URL custom</label>
+    <input type="text" id="customRpc" placeholder="https://...">
+    <label data-i18n="customExplorerLabel">Explorer URL custom (opzionale)</label>
+    <input type="text" id="customExplorer" placeholder="https://.../tx/">
+  </div>
+  <label for="upAddress" data-i18n="upAddressLabel">Indirizzo della UP</label>
+  <input type="text" id="upAddress" placeholder="0x...">
+  <button id="connectUp" class="secondary" data-i18n="connectUpBtn">Leggi l'indirizzo dall'estensione UP</button>
+  <div class="note" style="margin-top:12px;" data-i18n="panel1Note"></div>
+  <button id="connectSigner" data-i18n="connectSignerBtn">Connetti MetaMask</button>
+  <div class="status-box" id="netBox"><span class="empty" data-i18n="notChecked">Non ancora verificato.</span></div>
+  <button id="recheckBtn" class="secondary" data-i18n="recheckBtn">Ricontrolla tutto</button>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel5Title">2 · Verifica della configurazione</h2>
+  <div class="note" data-i18n-html="panel5Note"></div>
+  <button id="checkCfgBtn" class="secondary" disabled data-i18n="checkCfgBtn">Verifica la configurazione (sola lettura)</button>
+  <div class="status-box" id="cfgBox"><span class="empty" data-i18n="cfgNone">Nessuna verifica eseguita.</span></div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel2Title">3 · Paymaster (con la cassa)</h2>
+  <div class="note" data-i18n-html="panel2Note"></div>
+  <label for="ownerAddress" data-i18n="ownerLabel">Proprietario del paymaster (la cassa)</label>
+  <input type="text" id="ownerAddress" placeholder="0x...">
+  <div class="note" style="margin-top:8px;" data-i18n-html="ownerNote"></div>
+  <div class="status-box" id="pmBox"><span class="empty" data-i18n="notChecked">Non ancora verificato.</span></div>
+  <button id="publishPmBtn" disabled data-i18n="publishPmBtn">Pubblica il paymaster su questa rete</button>
+  <div class="row">
+    <div><label for="fundAmount" data-i18n="fundLabel">Ricarica (valuta nativa della rete)</label><input type="text" id="fundAmount" placeholder="0.001"></div>
+    <button id="fundBtn" disabled data-i18n="fundBtn">Ricarica</button>
+  </div>
+  <div class="row">
+    <div><label for="capAmount" data-i18n="capLabel">Tetto per operazione (valuta nativa)</label><input type="text" id="capAmount" placeholder="0.0003"></div>
+    <button id="capBtn" disabled data-i18n="capBtn">Imposta</button>
+  </div>
+  <div class="row">
+    <div><label for="withdrawTo" data-i18n="withdrawToLabel">Preleva verso</label><input type="text" id="withdrawTo" placeholder="0x..."></div>
+    <div><label for="withdrawAmount" data-i18n="withdrawAmountLabel">Importo</label><input type="text" id="withdrawAmount" placeholder="0.001"></div>
+    <button id="withdrawBtn" class="secondary" disabled data-i18n="withdrawBtn">Preleva</button>
+  </div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="vpmTitle">3b · Paymaster di sponsorizzazione (con la cassa)</h2>
+  <div class="note" data-i18n-html="vpmNote"></div>
+  <div class="status-box" id="vpmBox"><span class="empty" data-i18n="notChecked">Non ancora verificato.</span></div>
+  <button id="publishVpmBtn" disabled data-i18n="publishVpmBtn">Pubblica il paymaster di sponsorizzazione su questa rete</button>
+  <div class="row">
+    <div><label for="vpmFundAmount" data-i18n="fundLabel">Ricarica (valuta nativa della rete)</label><input type="text" id="vpmFundAmount" placeholder="0.001"></div>
+    <button id="vpmFundBtn" disabled data-i18n="fundBtn">Ricarica</button>
+  </div>
+  <div class="row">
+    <div><label for="vpmSigner" data-i18n="vpmSignerLabel">Firmatario (la chiave del servizio di sponsorizzazione)</label><input type="text" id="vpmSigner" placeholder="0x..."></div>
+    <button id="vpmSignerBtn" disabled data-i18n="capBtn">Imposta</button>
+  </div>
+  <div class="row">
+    <div><label for="vpmCapAmount" data-i18n="capLabel">Tetto per operazione (valuta nativa)</label><input type="text" id="vpmCapAmount" placeholder="0.0003"></div>
+    <button id="vpmCapBtn" disabled data-i18n="capBtn">Imposta</button>
+  </div>
+  <div class="row">
+    <div><label for="vpmWithdrawTo" data-i18n="withdrawToLabel">Preleva verso</label><input type="text" id="vpmWithdrawTo" placeholder="0x..."></div>
+    <div><label for="vpmWithdrawAmount" data-i18n="withdrawAmountLabel">Importo</label><input type="text" id="vpmWithdrawAmount" placeholder="0.001"></div>
+    <button id="vpmWithdrawBtn" class="secondary" disabled data-i18n="withdrawBtn">Preleva</button>
+  </div>
+  <button id="vpmStopBtn" class="secondary" disabled data-i18n="vpmStopBtn">Ferma subito (firmatario a zero)</button>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel3Title">4 · La UP</h2>
+  <h3 data-i18n="listTitle">Lista del paymaster · con la cassa</h3>
+  <div class="note" data-i18n-html="listNote"></div>
+  <div class="status-box" id="listBox"><span class="empty" data-i18n="notChecked">Non ancora verificato.</span></div>
+  <div class="row">
+    <button id="sponsorBtn" disabled data-i18n="sponsorBtn">Aggiungi la UP alla lista</button>
+    <button id="unsponsorBtn" class="secondary" disabled data-i18n="unsponsorBtn">Togli dalla lista</button>
+  </div>
+  <h3 data-i18n="setupTitle">Configurazione della UP · con il controller</h3>
+  <div class="note" data-i18n-html="panel3Note"></div>
+  <div class="status-box" id="upBox"><span class="empty" data-i18n="notChecked">Non ancora verificato.</span></div>
+  <button id="publishExtBtn" class="secondary" disabled data-i18n="publishExtBtn">Pubblica l'Extension4337 su questa rete</button>
+  <button id="prepareSetupBtn" disabled data-i18n="prepareSetupBtn">Prepara e simula la configurazione della UP</button>
+  <div class="status-box plan" id="setupPlanBox"><span class="empty" data-i18n="noPlan">Nessuna operazione preparata.</span></div>
+  <button id="sendSetupBtn" class="danger" disabled data-i18n="sendSetupBtn">Firma e invia la configurazione (una sola transazione)</button>
+  <h3 data-i18n="revokeTitle">Disattivare il 4337 su questa UP</h3>
+  <div class="note" data-i18n-html="revokeNote"></div>
+  <button id="prepareRevokeBtn" class="secondary" disabled data-i18n="prepareRevokeBtn">Prepara e simula la disattivazione</button>
+  <button id="sendRevokeBtn" class="danger" disabled data-i18n="sendRevokeBtn">Firma e invia la disattivazione (una sola transazione)</button>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel4Title">5 · Operazione di prova</h2>
+  <div class="note" data-i18n-html="panel4Note"></div>
+  <label for="testTo" data-i18n="testToLabel">Destinatario</label>
+  <input type="text" id="testTo" placeholder="0x...">
+  <label for="testAmount" data-i18n="testAmountLabel">Importo che la UP invia (valuta nativa)</label>
+  <input type="text" id="testAmount" value="0.0001">
+  <div class="note line-warn" id="opHint" style="margin-top:12px;"></div>
+  <button id="signOpBtn" disabled data-i18n="signOpBtn">A · Prepara e firma con il controller</button>
+  <div class="status-box plan" id="opBox"><span class="empty" data-i18n="noOp">Nessuna operazione firmata.</span></div>
+  <button id="relaySvcBtn" class="danger" disabled data-i18n="relaySvcBtn">B · Invia (tramite il relayer del sito)</button>
+  <div class="note" id="svcInfo"></div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="logTitle">Registro</h2>
+  <div id="log" class="line-dim"></div>
+</div>
+
+<div id="busyToast" role="status" aria-live="polite"><div class="spin"></div><div class="msg" id="busyMsg"></div></div>
+
+<div class="site-footer">
+  <div class="footer-row">
+    <img src="logo.png" alt="ChainIntegrate" class="footer-logo" onerror="this.style.display='none'">
+    <div class="footer-text" data-i18n-html="footerHtml"></div>
+  </div>
+</div>
+
+<script>
+// Operator's page: paymasters (with the cassa), allowlist, sponsor paymaster, test operation. Not linked from the
+// public pages. Users set up their UP on up-gas-relay.html. The code is shared (gas-relay-page.js).
+window.GAS_PAGE = {
+  mode: "admin",
+  i18n: {
+    it: { pageTitle: "Gas pagato dal paymaster: gestore — ChainIntegrate", h1: "Gas pagato dal paymaster: pagina del gestore (sperimentale)" },
+    en: { pageTitle: "Gas paid by the paymaster: operator — ChainIntegrate", h1: "Gas paid by the paymaster: operator's page (experimental)" },
+  },
+};
+</script>
+<script src="gas-relay-page.js"></script>
+
+</body>
+</html>

@@ -1,6 +1,6 @@
 // Gas paid by the site relayer, for the pages that make a UP call a contract or send value
 // (Send, UP Wallet). The controller signs a message, no gas; the site relayer sends the
-// ERC-4337 operation; the site paymaster pays. Same mechanism as up-gas-relay.html, section 5.
+// ERC-4337 operation; the site paymaster pays. Same mechanism as up-gas-relay-admin.html, section 5 (test operation).
 //
 // Only calls and value transfers can go this way: the EntryPoint holds exactly SUPER_CALL and
 // SUPER_TRANSFERVALUE (AUDIT G-M2), so writing data or changing controllers never goes through here.

@@ -1,6 +1,6 @@
 # tools/relayer — gas relayer service (experimental)
 
-A small Node.js service that sends ERC-4337 user operations for Universal Profiles, so their controllers need no gas. It is behind every "Pay the gas with the site relayer" option: the Send page, the UP Wallet and the subscription page (through `gas-relay-client.js`), and button **B · Send (through the site relayer)** of `up-gas-relay.html`. The page posts the signed operation to this service.
+A small Node.js service that sends ERC-4337 user operations for Universal Profiles, so their controllers need no gas. It is behind every "Pay the gas with the site relayer" option: the Send page, the UP Wallet and the subscription page (through `gas-relay-client.js`), and button **B · Send (through the site relayer)** of the operator's page `up-gas-relay-admin.html`. The page posts the signed operation to this service.
 
 **How it works.**
 - The controller signs the operation in the page (step A, `personal_sign`).
@@ -123,7 +123,7 @@ Then reload the web server (`sudo systemctl reload nginx` or `sudo systemctl rel
 curl -s https://crosschain-lukso.chainintegrate.it/relay/info
 ```
 
-It shows the relayer address, the chains and the balance on each chain. In `up-gas-relay.html`, section 5 now says "Site relayer: 0x… · balance on this network: …".
+It shows the relayer address, the chains and the balance on each chain. In `up-gas-relay-admin.html`, section 5 now says "Site relayer: 0x… · balance on this network: …".
 
 ## Monitor (hourly checks, email on change)
 
@@ -179,6 +179,6 @@ Tested on a local chain with the real EntryPoint v0.6, the LUKSO `UniversalProfi
 - each refusal case above is rejected without any transaction;
 - the start-up checks: key file mode, wrong RPC chain, missing paymaster.
 
-The page test (`up-gas-relay.html` in Chromium, with this service behind `relay/`) passes 63 of 63 on each version.
+The page test (`up-gas-relay-admin.html` in Chromium, with this service behind `relay/`) passes 63 of 63 on each version.
 
 The monitor test (31 of 31) runs it against a UP laid out like the Base ones, with the real contracts at their real addresses and a fake SMTP server: no finding and no email on a correct setup; an EntryPoint given SETDATA is an error and sends one email, no repeat on the next run, a reminder after 24 hours, "all clear" once fixed; extension elsewhere, leftover extension permission, no 4337 signer, UP off the allowlist, low deposit, low relayer balance, relayer down and wrong paymaster owner are all reported; `--test-email` and `--dry-run` work. With a sponsor paymaster: a UP off the allowlist but accepted by the signing service gives no finding; a refusal by the service or no answer is a warning; signer zero, an unexpected signer, cap 0 and other code are errors; a low deposit is a warning. Drawdown: normal use gives no finding; a fall of more than 2 caps, or of more than half a small deposit, is a problem; a top-up or a first reading is not; the thresholds come from the config; end to end, the fall is emailed at the next run and not repeated after.
