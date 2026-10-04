@@ -18,10 +18,12 @@ const { readConfig, ENTRY_POINT } = require("./relay.js");
 
 // Expected code: our UPPaymaster and LUKSO's Extension4337 as published by this project.
 const PAYMASTER_RUNTIME_HASH = "0x8754f54c34a8849f40e1156013a403e7308e0e1fbabd2c5a1a68f9ddeec6b25d";
+// UPVerifyingPaymaster (contracts/UPVerifyingPaymaster.json), for a chain's "sponsorPaymaster".
+const SPONSOR_RUNTIME_HASH = "0x95c0efe7fb362c4fa5193c2d01286c69aad1dd3e0e96337924d1f666e51977a9";
 const EXTENSION_4337 = "0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2";
 const EXTENSION_RUNTIME_HASH = "0x91968b95ee6f8e01a554060b775c13e8df3f0173d87a55a48ed54b8ff02c052d";
 const EP_PERMS = 0x500n; // SUPER_CALL | SUPER_TRANSFERVALUE: the invariant everything rests on
-const DEFAULTS = { minPaymasterDeposit: "0.0002", relayerInfoUrl: "http://127.0.0.1:8787/relay/info", reminderHours: 24 };
+const DEFAULTS = { minPaymasterDeposit: "0.0002", relayerInfoUrl: "http://127.0.0.1:8787/relay/info", sponsorCheckUrl: "http://127.0.0.1:8788/relay/sponsor/check", reminderHours: 24 };
 
 const ARRAY_KEY = "0xdf30dba06db6a30e65354d9a64c609861f089545ca58c6b4dbe31a5f338cb0e3";
 const idxKey = (i) => ARRAY_KEY.slice(0, 34) + ethers.toBeHex(i, 16).slice(2);
@@ -30,13 +32,24 @@ const EXT_KEY = "0xcee78b4094da8601109600003a871cdd00000000000000000000000000000
 const P = { CHANGEOWNER: 0x1n, ADDEXTENSIONS: 0x8n, CHANGEEXTENSIONS: 0x10n, SUPER_DELEGATECALL: 0x4000n, DELEGATECALL: 0x8000n, ERC4337: 0x800000n };
 const UP_ABI = ["function owner() view returns (address)", "function getDataBatch(bytes32[]) view returns (bytes[])"];
 const PM_ABI = ["function owner() view returns (address)", "function maxCostPerOp() view returns (uint256)", "function deposit() view returns (uint256)", "function sponsored(address) view returns (bool)"];
+const VPM_ABI = ["function owner() view returns (address)", "function maxCostPerOp() view returns (uint256)", "function deposit() view returns (uint256)", "function signer() view returns (address)"];
 const hex6 = (n) => "0x" + n.toString(16).padStart(6, "0");
 const eth = (w) => `${ethers.formatEther(w)}`;
 
 // ==================== checks ====================
 // Each finding: { level: "error" | "warning", where, msg }. Messages are in English and stable, so the
 // set of findings can be compared between runs.
-async function checkUp(provider, up, paymasters, out, where) {
+// Whether the signing service accepts this UP on this chain: { sponsored, reason } or null when it does not answer.
+async function sponsorAccepts(url, chainId, up) {
+  try {
+    const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chainId: Number(chainId), sender: up }), signal: AbortSignal.timeout(10_000) });
+    const j = r.ok ? await r.json() : null;
+    return j && typeof j.sponsored === "boolean" ? j : null;
+  } catch (e) { return null; }
+}
+
+async function checkUp(provider, up, chain, mon, out, where, chainId) {
+  const paymasters = chain.paymasters;
   const add = (level, msg) => out.push({ level, where, msg });
   if ((await provider.getCode(up)) === "0x") return add("error", "no contract at the UP address");
   const upC = new ethers.Contract(up, UP_ABI, provider);
@@ -70,7 +83,12 @@ async function checkUp(provider, up, paymasters, out, where) {
   if (signers === 0) add("error", "no controller has the 4337 permission");
   const sponsoredBy = [];
   for (const pm of paymasters) if (await new ethers.Contract(pm, PM_ABI, provider).sponsored(up)) sponsoredBy.push(pm);
-  if (!sponsoredBy.length) add("warning", "not on the allowlist of any served paymaster");
+  if (sponsoredBy.length) return;
+  // Not on an allowlist: with a sponsor paymaster on this chain, the signing service decides.
+  if (!chain.sponsorPaymaster) return add("warning", "not on the allowlist of any served paymaster");
+  const ans = await sponsorAccepts(mon.sponsorCheckUrl || DEFAULTS.sponsorCheckUrl, chainId, up);
+  if (!ans) add("warning", "not on any allowlist, and the sponsor signing service does not answer");
+  else if (!ans.sponsored) add("warning", `not on any allowlist, and the sponsor signing service does not accept it (${ans.reason || "no reason given"})`);
 }
 
 async function checkChain(id, chain, mon, info, out) {
@@ -92,13 +110,28 @@ async function checkChain(id, chain, mon, info, out) {
     if (dep < minDeposit) out.push({ level: "warning", where, msg: `deposit ${eth(dep)} below ${eth(minDeposit)}: top it up` });
     else if (dep < cap) out.push({ level: "warning", where, msg: `deposit ${eth(dep)} below the cap ${eth(cap)}` });
   }
+  if (chain.sponsorPaymaster) {
+    const pm = chain.sponsorPaymaster, where = `${where0}, sponsor paymaster ${pm}`;
+    const code = await provider.getCode(pm);
+    if (code === "0x" || ethers.keccak256(code) !== SPONSOR_RUNTIME_HASH) out.push({ level: "error", where, msg: "code missing or different from UPVerifyingPaymaster" });
+    else {
+      const c = new ethers.Contract(pm, VPM_ABI, provider);
+      const [owner, cap, dep, signer] = await Promise.all([c.owner(), c.maxCostPerOp(), c.deposit(), c.signer()]);
+      if (mon.paymasterOwner && ethers.getAddress(owner) !== ethers.getAddress(mon.paymasterOwner)) out.push({ level: "error", where, msg: `owner is ${owner}, expected ${mon.paymasterOwner}` });
+      if (signer === ethers.ZeroAddress) out.push({ level: "error", where, msg: "no signer: sponsoring is stopped" });
+      else if (mon.sponsorSigner && ethers.getAddress(signer) !== ethers.getAddress(mon.sponsorSigner)) out.push({ level: "error", where, msg: `signer is ${signer}, expected ${mon.sponsorSigner}` });
+      if (cap === 0n) out.push({ level: "error", where, msg: "cap is 0: it pays nothing" });
+      if (dep < minDeposit) out.push({ level: "warning", where, msg: `deposit ${eth(dep)} below ${eth(minDeposit)}: top it up` });
+      else if (dep < cap) out.push({ level: "warning", where, msg: `deposit ${eth(dep)} below the cap ${eth(cap)}` });
+    }
+  }
   // The relayer, as the running service reports it.
   const svc = info && info.chains && info.chains[id];
   if (!svc && info && (info.unavailable || []).includes(id)) out.push({ level: "warning", where: `${where0}, relayer`, msg: "the relayer cannot reach this chain's RPC right now; it retries every minute" });
   else if (!svc) out.push({ level: "error", where: `${where0}, relayer`, msg: "the relayer service does not serve this chain" });
   else if (svc.balance != null && chain.minBalanceWarn && BigInt(svc.balance) < chain.minBalanceWarn) out.push({ level: "warning", where: `${where0}, relayer ${info.relayer}`, msg: `balance ${eth(BigInt(svc.balance))} below ${eth(chain.minBalanceWarn)}` });
   for (const up of mon.ups || []) {
-    try { await checkUp(provider, ethers.getAddress(up), chain.paymasters, out, `${where0}, UP ${ethers.getAddress(up)}`); }
+    try { await checkUp(provider, ethers.getAddress(up), chain, mon, out, `${where0}, UP ${ethers.getAddress(up)}`, id); }
     catch (e) { out.push({ level: "error", where: `${where0}, UP ${up}`, msg: `read failed: ${e.shortMessage || e.message}` }); }
   }
 }
@@ -133,7 +166,7 @@ function report(findings) {
   const subject = findings.length ? `[Cross_Chain gas relay] ${errors} problem(s), ${warnings} warning(s)` : "[Cross_Chain gas relay] all clear";
   const lines = findings.length
     ? findings.map((f) => `${f.level === "error" ? "PROBLEM" : "warning"} - ${f.where}: ${f.msg}`)
-    : ["Every check passed: EntryPoint permissions 0x000500, extension, controllers, allowlist, paymaster code, cap and deposit, relayer service and balance."];
+    : ["Every check passed: EntryPoint permissions 0x000500, extension, controllers, allowlist or sponsor service, paymaster code, signer, cap and deposit, relayer service and balance."];
   return { subject, text: lines.join("\n") + `\n\nChecked at ${new Date().toISOString()}. Manual check: up-gas-relay.html, section 2.\n` };
 }
 
