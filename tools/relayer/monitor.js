@@ -23,7 +23,7 @@ const SPONSOR_RUNTIME_HASH = "0x95c0efe7fb362c4fa5193c2d01286c69aad1dd3e0e963379
 const EXTENSION_4337 = "0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2";
 const EXTENSION_RUNTIME_HASH = "0x91968b95ee6f8e01a554060b775c13e8df3f0173d87a55a48ed54b8ff02c052d";
 const EP_PERMS = 0x500n; // SUPER_CALL | SUPER_TRANSFERVALUE: the invariant everything rests on
-const DEFAULTS = { minPaymasterDeposit: "0.0002", relayerInfoUrl: "http://127.0.0.1:8787/relay/info", sponsorCheckUrl: "http://127.0.0.1:8788/relay/sponsor/check", reminderHours: 24 };
+const DEFAULTS = { drawdownCaps: 2, drawdownFraction: 0.5, minPaymasterDeposit: "0.0002", relayerInfoUrl: "http://127.0.0.1:8787/relay/info", sponsorCheckUrl: "http://127.0.0.1:8788/relay/sponsor/check", reminderHours: 24 };
 
 const ARRAY_KEY = "0xdf30dba06db6a30e65354d9a64c609861f089545ca58c6b4dbe31a5f338cb0e3";
 const idxKey = (i) => ARRAY_KEY.slice(0, 34) + ethers.toBeHex(i, 16).slice(2);
@@ -91,7 +91,8 @@ async function checkUp(provider, up, chain, mon, out, where, chainId) {
   else if (!ans.sponsored) add("warning", `not on any allowlist, and the sponsor signing service does not accept it (${ans.reason || "no reason given"})`);
 }
 
-async function checkChain(id, chain, mon, info, out) {
+// deposits: filled with { "<chainId>:<paymaster>": { dep, cap } } for the drawdown check in main().
+async function checkChain(id, chain, mon, info, out, deposits = {}) {
   // One request at a time: some public RPCs (mainnet.base.org) refuse batched or bursty calls with an
   // error ethers reports as "missing revert data".
   const provider = new ethers.JsonRpcProvider(chain.rpc, Number(id), { staticNetwork: true, batchMaxCount: 1 });
@@ -107,6 +108,7 @@ async function checkChain(id, chain, mon, info, out) {
     if (code === "0x" || ethers.keccak256(code) !== PAYMASTER_RUNTIME_HASH) { out.push({ level: "error", where, msg: "code missing or different from UPPaymaster" }); continue; }
     const c = new ethers.Contract(pm, PM_ABI, provider);
     const [owner, cap, dep] = await Promise.all([c.owner(), c.maxCostPerOp(), c.deposit()]);
+    deposits[`${id}:${pm}`] = { dep: dep.toString(), cap: cap.toString() };
     if (mon.paymasterOwner && ethers.getAddress(owner) !== ethers.getAddress(mon.paymasterOwner)) out.push({ level: "error", where, msg: `owner is ${owner}, expected ${mon.paymasterOwner}` });
     if (cap === 0n) out.push({ level: "error", where, msg: "cap is 0: it pays nothing" });
     if (dep < minDeposit) out.push({ level: "warning", where, msg: `deposit ${eth(dep)} below ${eth(minDeposit)}: top it up` });
@@ -119,6 +121,7 @@ async function checkChain(id, chain, mon, info, out) {
     else {
       const c = new ethers.Contract(pm, VPM_ABI, provider);
       const owner = await c.owner(), cap = await c.maxCostPerOp(), dep = await c.deposit(), signer = await c.signer();
+      deposits[`${id}:${pm}`] = { dep: dep.toString(), cap: cap.toString(), sponsor: true };
       if (mon.paymasterOwner && ethers.getAddress(owner) !== ethers.getAddress(mon.paymasterOwner)) out.push({ level: "error", where, msg: `owner is ${owner}, expected ${mon.paymasterOwner}` });
       if (signer === ethers.ZeroAddress) out.push({ level: "error", where, msg: "no signer: sponsoring is stopped" });
       else if (mon.sponsorSigner && ethers.getAddress(signer) !== ethers.getAddress(mon.sponsorSigner)) out.push({ level: "error", where, msg: `signer is ${signer}, expected ${mon.sponsorSigner}` });
@@ -138,7 +141,7 @@ async function checkChain(id, chain, mon, info, out) {
   }
 }
 
-async function runChecks(config) {
+async function runChecks(config, deposits = {}) {
   const mon = config.monitor || {};
   const out = [];
   let info = null;
@@ -154,7 +157,7 @@ async function runChecks(config) {
     for (let attempt = 0; attempt < 3; attempt++) {
       if (attempt) await new Promise((r) => setTimeout(r, (mon.retryDelaySeconds ?? 15) * 1000));
       const found = [];
-      try { await checkChain(id, chain, monChain, info, found); out.push(...found); last = null; break; }
+      try { await checkChain(id, chain, monChain, info, found, deposits); out.push(...found); last = null; break; }
       catch (e) { last = e; }
     }
     if (last) out.push({ level: "error", where: `chain ${id}`, msg: `check failed: ${last.shortMessage || last.message}` });
@@ -183,6 +186,29 @@ async function sendMail(subject, text) {
   await t.sendMail({ from: env.SMTP_FROM, to: env.NOTIFICATION_EMAIL, subject, text });
 }
 
+// A deposit that fell fast since the previous run: more than `drawdownCaps` times the cap per operation,
+// or more than `drawdownFraction` of what it was. Normal use costs a fraction of the cap per operation; a
+// fast fall means many operations at once, e.g. a stolen signing key (AUDIT.md section 10, VP-H1).
+// A withdrawal by the owner also triggers it, once.
+function drawdowns(prev, now, mon) {
+  const out = [];
+  const caps = BigInt(Math.round((mon.drawdownCaps ?? DEFAULTS.drawdownCaps) * 100));
+  const frac = BigInt(Math.round((mon.drawdownFraction ?? DEFAULTS.drawdownFraction) * 100));
+  for (const [key, n] of Object.entries(now)) {
+    const p = prev && prev[key];
+    if (!p) continue;
+    const before = BigInt(p.dep), after = BigInt(n.dep), cap = BigInt(n.cap);
+    if (after >= before) continue;
+    const fell = before - after;
+    if (fell * 100n > caps * cap || fell * 100n > frac * before) {
+      const [id, pm] = key.split(":");
+      out.push({ level: "error", where: `chain ${id}, ${n.sponsor ? "sponsor paymaster" : "paymaster"} ${pm}`,
+        msg: `deposit fell by ${eth(fell)} since the previous check (${eth(before)} -> ${eth(after)}). If you did not withdraw it, stop the paymaster now (up-gas-relay.html: ${n.sponsor ? "section 3b, Stop now" : "section 3, cap 0"})` });
+    }
+  }
+  return out;
+}
+
 function readState(file) { try { return JSON.parse(fs.readFileSync(file, "utf8")); } catch (e) { return {}; } }
 
 async function main(argv) {
@@ -194,14 +220,16 @@ async function main(argv) {
     return 0;
   }
   const config = readConfig(opt("--config"));
-  const findings = await runChecks(config);
+  const stateDir = opt("--state-dir") || process.env.STATE_DIRECTORY || "/var/lib/crosschain-relayer";
+  const stateFile = path.join(stateDir, "monitor-state.json");
+  const state = readState(stateFile);
+  const deposits = {};
+  const findings = await runChecks(config, deposits);
+  findings.push(...drawdowns(state.deposits, deposits, config.monitor || {}));
   const { subject, text } = report(findings);
   console.log(subject + "\n" + text);
   if (has("--dry-run")) return findings.some((f) => f.level === "error") ? 2 : 0;
   // Email only when the set of findings changes, or as a reminder while problems remain.
-  const stateDir = opt("--state-dir") || process.env.STATE_DIRECTORY || "/var/lib/crosschain-relayer";
-  const stateFile = path.join(stateDir, "monitor-state.json");
-  const state = readState(stateFile);
   const signature = findings.map((f) => `${f.level}|${f.where}|${f.msg.replace(/[0-9.]+ below/g, "below")}`).sort().join("\n");
   const reminderMs = ((config.monitor || {}).reminderHours || DEFAULTS.reminderHours) * 3600_000;
   const changed = signature !== state.signature;
@@ -210,8 +238,10 @@ async function main(argv) {
   if (changed || remind) {
     if (firstRun && !findings.length) console.log("first run, all clear: no email");
     else { await sendMail(remind ? subject.replace("]", "] reminder:") : subject, text); console.log(`email sent to ${process.env.NOTIFICATION_EMAIL}`); }
-    fs.writeFileSync(stateFile, JSON.stringify({ signature, sentAt: Date.now() }));
   }
+  // The deposits are kept at every run, for the next drawdown check.
+  const sent = changed || remind;
+  fs.writeFileSync(stateFile, JSON.stringify({ signature: sent ? signature : state.signature, sentAt: sent ? Date.now() : state.sentAt, deposits: { ...(state.deposits || {}), ...deposits } }));
   // Problems are reported by email; the run itself succeeded, so systemd does not mark it failed.
   return 0;
 }
@@ -220,4 +250,4 @@ if (require.main === module) {
   main(process.argv.slice(2)).then((code) => process.exit(code)).catch((e) => { console.error(e.message || e); process.exit(1); });
 }
 
-module.exports = { runChecks, report, main };
+module.exports = { runChecks, report, main, drawdowns };

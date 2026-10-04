@@ -502,6 +502,7 @@ const I18N = {
     notOwner: "L'account attivo in MetaMask non è il proprietario del paymaster.",
     badAmount: "Importo non valido.",
     badAddress: "Indirizzo non valido.",
+    zeroAddress: "L'indirizzo zero (0x000…000) non è un destinatario: i fondi andrebbero persi.",
     simulating: "Simulazione...",
     simOk: (v) => `✅ Simulazione riuscita (gas stimato ${v.gas}).`,
     simFail: (v) => `❌ Simulazione fallita: ${v.err}`,
@@ -744,6 +745,7 @@ const I18N = {
     notOwner: "The account active in MetaMask is not the paymaster's owner.",
     badAmount: "Invalid amount.",
     badAddress: "Invalid address.",
+    zeroAddress: "The zero address (0x000…000) is not a recipient: the funds would be lost.",
     simulating: "Simulating...",
     simOk: (v) => `✅ Simulation succeeded (estimated gas ${v.gas}).`,
     simFail: (v) => `❌ Simulation failed: ${v.err}`,
@@ -1270,6 +1272,7 @@ $("unsponsorBtn").addEventListener("click", () => guarded(() => ownerTx(pmData("
 $("withdrawBtn").addEventListener("click", () => guarded(async () => {
   const to = $("withdrawTo").value.trim(), v = amountWei("withdrawAmount");
   if (!ethers.isAddress(to)) { log(t("badAddress"), "line-err"); return; }
+  if (ethers.getAddress(to) === ethers.ZeroAddress) { log(t("zeroAddress"), "line-err"); return; }
   if (!v) { log(t("badAmount"), "line-err"); return; }
   await ownerTx(pmData("withdrawTo", [ethers.getAddress(to), v]));
 }));
@@ -1305,6 +1308,7 @@ $("vpmCapBtn").addEventListener("click", () => guarded(async () => {
 $("vpmWithdrawBtn").addEventListener("click", () => guarded(async () => {
   const to = $("vpmWithdrawTo").value.trim(), v = amountWei("vpmWithdrawAmount");
   if (!ethers.isAddress(to)) { log(t("badAddress"), "line-err"); return; }
+  if (ethers.getAddress(to) === ethers.ZeroAddress) { log(t("zeroAddress"), "line-err"); return; }
   if (!v) { log(t("badAmount"), "line-err"); return; }
   await vpmOwnerTx(vpmData("withdrawTo", [ethers.getAddress(to), v]));
 }));
