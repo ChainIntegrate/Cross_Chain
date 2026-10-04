@@ -43,6 +43,17 @@ const LSP_IFACE = new ethers.Interface([
   "error InvalidPayload(bytes payload)",
 ]);
 const ORACLE_IFACE = new ethers.Interface(["function getL1Fee(bytes) view returns (uint256)"]);
+// Arbitrum charges the L1 data cost as extra L2 gas on the whole transaction, outside what the EntryPoint
+// measures, so preVerificationGas must carry it. NodeInterface is a virtual contract (eth_call only, no code)
+// that gives that extra gas for a given transaction; on other chains the call returns nothing.
+const ARB_NODE_INTERFACE = "0x00000000000000000000000000000000000000C8";
+const NI_IFACE = new ethers.Interface(["function gasEstimateL1Component(address to, bool contractCreation, bytes data) payable returns (uint64 gasEstimateForL1, uint256 baseFee, uint256 l1BaseFeeEstimate)"]);
+async function arbL1Gas(provider, data) {
+  try {
+    const res = await provider.call({ to: ARB_NODE_INTERFACE, data: NI_IFACE.encodeFunctionData("gasEstimateL1Component", [ENTRY_POINT, false, data]) });
+    return BigInt(NI_IFACE.decodeFunctionResult("gasEstimateL1Component", res)[0]);
+  } catch (e) { return null; }
+}
 
 // Hard limits on what an operation may ask. They bound what one handleOps can cost the relayer.
 const MAX = {
@@ -156,7 +167,7 @@ const opTuple = (op) => [op.sender, op.nonce, op.initCode, op.callData, op.callG
   op.preVerificationGas, op.maxFeePerGas, op.maxPriorityFeePerGas, op.paymasterAndData, op.signature];
 
 // Minimum preVerificationGas: the same formula as the page (ERC-4337 reference bundler, plus the L1 data
-// fee on OP-stack chains) without the page's 15% margin. Below it, the EntryPoint would reimburse the
+// cost on OP-stack chains and on Arbitrum) without the page's 15% margin. Below it, the EntryPoint would reimburse the
 // relayer less than the transaction costs.
 async function minPreVerificationGas(chain, op) {
   const probe = { ...op, preVerificationGas: 100000n, signature: "0x" + "ff".repeat(65) };
@@ -169,6 +180,11 @@ async function minPreVerificationGas(chain, op) {
     const res = await chain.provider.call({ to: OP_GAS_ORACLE, data: ORACLE_IFACE.encodeFunctionData("getL1Fee", [ethers.concat([tx, "0x" + "ff".repeat(100)])]) });
     const l1Fee = ORACLE_IFACE.decodeFunctionResult("getL1Fee", res)[0];
     pvg += (l1Fee + op.maxFeePerGas - 1n) / op.maxFeePerGas;
+  } else if (chain.arbitrum) {
+    const tx = EP_IFACE.encodeFunctionData("handleOps", [[opTuple(probe)], ethers.ZeroAddress]);
+    const l1Gas = await arbL1Gas(chain.provider, ethers.concat([tx, "0x" + "ff".repeat(100)]));
+    if (l1Gas === null) throw new Refused("the L1 data cost of this network cannot be read right now: try again in a minute", 503);
+    pvg += l1Gas;
   }
   return pvg;
 }
@@ -216,9 +232,10 @@ async function setupChain(id, ch, wallet) {
   if ((await provider.getCode(ENTRY_POINT)) === "0x") throw new ConfigError(`chain ${id}: no EntryPoint v0.6 at ${ENTRY_POINT}`);
   for (const pm of ch.paymasters.concat(ch.sponsorPaymaster ? [ch.sponsorPaymaster] : [])) if ((await provider.getCode(pm)) === "0x") throw new ConfigError(`chain ${id}: no contract at paymaster ${pm}`);
   const opStack = (await provider.getCode(OP_GAS_ORACLE)) !== "0x";
+  const arbitrum = !opStack && (await arbL1Gas(provider, "0x")) !== null;
   const balance = await provider.getBalance(wallet.address);
-  log(`chain ${id}: ready${opStack ? " (OP stack)" : ""}, paymasters ${ch.paymasters.join(", ")}${ch.sponsorPaymaster ? `, sponsor paymaster ${ch.sponsorPaymaster}` : ""}, relayer balance ${ethers.formatEther(balance)}`);
-  return { ...ch, chainId, provider, signer: wallet.connect(provider), opStack, queue: Promise.resolve(), recent: new Map(), pendingSender: new Map() };
+  log(`chain ${id}: ready${opStack ? " (OP stack)" : arbitrum ? " (Arbitrum)" : ""}, paymasters ${ch.paymasters.join(", ")}${ch.sponsorPaymaster ? `, sponsor paymaster ${ch.sponsorPaymaster}` : ""}, relayer balance ${ethers.formatEther(balance)}`);
+  return { ...ch, chainId, provider, signer: wallet.connect(provider), opStack, arbitrum, queue: Promise.resolve(), recent: new Map(), pendingSender: new Map() };
 }
 
 async function setupChains(config, wallet) {

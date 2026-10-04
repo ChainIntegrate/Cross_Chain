@@ -26,6 +26,11 @@
   const VERIFICATION_GAS = 180000n;
   const MAX_CALL_GAS = 1000000n;
   const OP_GAS_ORACLE = "0x420000000000000000000000000000000000000F";
+  // Arbitrum charges the L1 data cost as extra L2 gas on the whole transaction, outside what the EntryPoint
+  // measures, so preVerificationGas must carry it. NodeInterface is a virtual contract (eth_call only, no code)
+  // that gives that extra gas for a given transaction; on other chains the call returns nothing.
+  const ARB_NODE_INTERFACE = "0x00000000000000000000000000000000000000C8";
+  const NI_IFACE = new ethers.Interface(["function gasEstimateL1Component(address to, bool contractCreation, bytes data) payable returns (uint64 gasEstimateForL1, uint256 baseFee, uint256 l1BaseFeeEstimate)"]);
   const UO_TUPLE = "tuple(address,uint256,bytes,bytes,uint256,uint256,uint256,uint256,uint256,bytes,bytes)";
   const LSP17_KEY = (sel) => "0xcee78b4094da860110960000" + sel.slice(2) + "00".repeat(16);
   const PERM_KEY = (a) => "0x4b80742de2bf82acb3630000" + a.slice(2).toLowerCase();
@@ -256,6 +261,12 @@
   }
   // Same rule as the relayer (tools/relayer/relay.js), plus 15%: calldata cost of the packed operation,
   // plus the L1 data fee on OP-stack chains.
+  async function arbL1Gas(provider, data) {
+    try {
+      const res = await provider.call({ to: ARB_NODE_INTERFACE, data: NI_IFACE.encodeFunctionData("gasEstimateL1Component", [ENTRY_POINT, false, data]) });
+      return BigInt(NI_IFACE.decodeFunctionResult("gasEstimateL1Component", res)[0]);
+    } catch (e) { return null; }
+  }
   async function preVerificationGas(provider, op, maxFee) {
     const probe = { ...op, preVerificationGas: 100000n, signature: "0x" + "ff".repeat(65) };
     const packed = ethers.getBytes(ethers.AbiCoder.defaultAbiCoder().encode([UO_TUPLE], [[probe.sender, probe.nonce, probe.initCode, probe.callData, probe.callGasLimit,
@@ -269,6 +280,10 @@
         const oracle = new ethers.Contract(OP_GAS_ORACLE, ["function getL1Fee(bytes) view returns (uint256)"], provider);
         const l1Fee = await oracle.getL1Fee(ethers.concat([tx, "0x" + "ff".repeat(100)]));
         if (maxFee > 0n) pvg += (l1Fee + maxFee - 1n) / maxFee;
+      } else {
+        const tx = EP_IFACE.encodeFunctionData("handleOps", [[probe], ethers.ZeroAddress]);
+        const l1Gas = await arbL1Gas(provider, ethers.concat([tx, "0x" + "ff".repeat(100)]));
+        if (l1Gas !== null) pvg += l1Gas; // Arbitrum
       }
     } catch (e) { /* not an OP-stack chain, or the oracle is unavailable */ }
     return pvg + pvg * 15n / 100n;
