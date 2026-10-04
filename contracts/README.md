@@ -123,7 +123,7 @@ The controller signs the user operation hash with `personal_sign`, so MetaMask w
 
 `UPVerifyingPaymaster.sol` is an ERC-4337 paymaster for EntryPoint v0.6, like `UPPaymaster`, but it does not keep a list of accounts. It pays for a user operation only when an **off-chain signing service** has approved that operation: the service decides (subscription, quota, which contracts, budget) and signs; the contract checks the signature. It is the base for a sponsored-gas service where the rules live in the service, not on chain.
 
-**Status:** experimental. No professional audit; an AI-assisted review on 2026-10-04 found no Critical, High or Medium bug in the code (AUDIT.md, section 10). Published on **Avalanche C-Chain, Polygon and Base** (2026-10-04), at the same address `0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e` (owner: the cassa), and in use by the site relayer on all three. Log of the first operation: `tools/logs/2026-10-04-avalanche-sponsor-paymaster.txt`. Source verification on the explorers: to do.
+**Status:** experimental. No professional audit; an AI-assisted review on 2026-10-04 found no Critical, High or Medium bug in the code (AUDIT.md, section 10). Published on **Avalanche C-Chain, Polygon and Base** (2026-10-04), at the same address `0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e` (owner: the cassa), and in use by the site relayer on all three. Log of the first operation: `tools/logs/2026-10-04-avalanche-sponsor-paymaster.txt`. Source verified on Basescan, Polygonscan and Snowscan (2026-10-04); see [Source verification status](#source-verification-status).
 
 **Only with the site's own relayer.** The paymaster cannot be staked, so public bundlers that apply the ERC-7562 rules refuse its operations.
 
@@ -217,16 +217,21 @@ To verify:
 
 ## Source verification status
 
-Each contract has the same address on every network where it is published. Status on 2026-10-04:
+Each contract has the same address on every network where it is published. The reference is the main explorer of each network (the one the site links to). Status checked by the maintainer on 2026-10-04:
 
-| Contract | Basescan | Polygonscan | Snowscan (Avalanche) | Base Blockscout | Polygon Blockscout | LUKSO explorer |
-|---|---|---|---|---|---|---|
-| NFTReceiverExtension `0x7F68e74483867058C806218aa05aB5527984C03e` | ✅ | ✅ | ✅ | ✅ partial | ✅ partial | ✅ |
-| UPPaymaster `0xb353565d1f801E7402DBC267b8C0E30E3540D4eD` | ✅ | ✅ | ✅ | ⏳ to do | ⏳ to do | — not published |
-| UPVerifyingPaymaster `0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e` | ⏳ to do | ⏳ to do | ⏳ to do | ⏳ to do | ⏳ to do | — not published |
-| Extension4337 `0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2` | ✅ | ✅ | ✅ | ✅ | ✅ | — (LUKSO's own) |
+| Contract | Basescan | Polygonscan | Snowscan (Avalanche) | LUKSO explorer |
+|---|---|---|---|---|
+| NFTReceiverExtension `0x7F68e74483867058C806218aa05aB5527984C03e` | ✅ | ✅ | ✅ | ✅ |
+| UPPaymaster `0xb353565d1f801E7402DBC267b8C0E30E3540D4eD` | ✅ | ✅ | ✅ | — not published |
+| UPVerifyingPaymaster `0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e` | ✅ | ✅ | ✅ | — not published |
+| Extension4337 `0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2` | ✅ | ✅ | ✅ | — (LUKSO's own) |
 
-**Still to verify:** UPVerifyingPaymaster on all five explorers (Basescan, Polygonscan, Snowscan, Base Blockscout, Polygon Blockscout), and UPPaymaster on the two Blockscouts. Links: [Basescan](https://basescan.org/address/0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e#code), [Polygonscan](https://polygonscan.com/address/0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e#code), [Snowscan](https://snowscan.xyz/address/0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e#code), [Base Blockscout](https://base.blockscout.com/address/0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e), [Polygon Blockscout](https://polygon.blockscout.com/address/0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e).
+**Secondary explorers (best effort).** Base Blockscout, Polygon Blockscout and Snowtrace (Routescan, Avalanche) are not tracked as a requirement. Their status can change on its own: a contract can show as verified there because its code matches one already known, and that match can disappear when the explorer reindexes. On 2026-10-04:
+- NFTReceiverExtension and UPPaymaster: verified on all three;
+- UPVerifyingPaymaster: verified on Polygon Blockscout; not yet on Base Blockscout and Snowtrace;
+- Extension4337 (LUKSO's contract, not verified by us): verified on Polygon Blockscout and Snowtrace; no longer shown as verified on Base Blockscout, although it was before.
+
+The source of truth does not depend on any explorer. This folder has the build input of each contract, its runtime code hash and the address formula, and the pages check the code hash on chain.
 
 "Partial" on Blockscout is the best possible result for NFTReceiverExtension, UPPaymaster and UPVerifyingPaymaster: they are compiled without the metadata hash (so the address is the same everywhere), and Blockscout can then match the code but not the metadata. On Blockscout the verification runs in the background: if the page seems stuck after "Verify & publish", reload it a few minutes later.
 
