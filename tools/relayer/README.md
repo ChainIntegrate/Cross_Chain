@@ -1,6 +1,6 @@
 # tools/relayer — gas relayer service (experimental)
 
-A small Node.js service that sends ERC-4337 user operations for Universal Profiles, so their controllers need no gas. It is what button **B · Send (through the site relayer)** of `up-gas-relay.html` uses: the page posts the operation signed in step A to this service.
+A small Node.js service that sends ERC-4337 user operations for Universal Profiles, so their controllers need no gas. It is behind every "Pay the gas with the site relayer" option: the Send page, the UP Wallet and the subscription page (through `gas-relay-client.js`), and button **B · Send (through the site relayer)** of `up-gas-relay.html`. The page posts the signed operation to this service.
 
 **How it works.**
 - The controller signs the operation in the page (step A, `personal_sign`).
@@ -13,7 +13,7 @@ A small Node.js service that sends ERC-4337 user operations for Universal Profil
 ## What it accepts
 
 Only operations that:
-- use a paymaster listed in its configuration (ours, `0xb353565d…D4eD`). That paymaster pays only for the UPs on its allowlist, so in practice the service works only for those UPs;
+- use a paymaster listed in its configuration: the allowlist paymaster (`UPPaymaster`, `0xb353565d…D4eD`), which pays only for the UPs on its list, or, where the chain has one, the sponsor paymaster (`UPVerifyingPaymaster`, `0xbEA7Ea65…d21e`), which pays only for operations approved by the signing service (see below). So in practice the service works only for those UPs and operations;
 - have an empty `initCode` (the UP already exists), a 65-byte signature, gas limits within fixed bounds, and at most 16 KB of `callData`;
 - have `maxFeePerGas` at least the current base fee;
 - have `preVerificationGas` at least the reference formula, plus the L1 data fee on OP-stack chains. It is the same rule as the page, without the page's 15% margin, so the reimbursement covers the relayer's transaction;
@@ -29,7 +29,7 @@ Other limits:
 
 Sending the same signed operation again returns the same transaction.
 
-**Residual risk:** an operation can pass the simulation and still fail on chain. For example, the same UP sends another transaction in between. The relayer then pays that transaction's gas. With allowlisted UPs only, this is a nuisance, not an attack surface.
+**Residual risk:** an operation can pass the simulation and still fail on chain. For example, the same UP sends another transaction in between. The relayer then pays that transaction's gas. With allowlisted UPs and service-approved operations only, this is a nuisance, not an attack surface.
 
 ## Endpoints
 
@@ -123,7 +123,7 @@ Then reload the web server (`sudo systemctl reload nginx` or `sudo systemctl rel
 curl -s https://crosschain-lukso.chainintegrate.it/relay/info
 ```
 
-It shows the relayer address, the chains and the balance on each chain. In `up-gas-relay.html`, section 4 now says "Site relayer: 0x… · balance on this network: …".
+It shows the relayer address, the chains and the balance on each chain. In `up-gas-relay.html`, section 5 now says "Site relayer: 0x… · balance on this network: …".
 
 ## Monitor (hourly checks, email on change)
 

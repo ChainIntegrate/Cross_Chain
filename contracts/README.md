@@ -30,6 +30,7 @@ Published and source-verified on LUKSO mainnet, Base, Polygon and Avalanche C-Ch
 - [LUKSO explorer](https://explorer.execution.mainnet.lukso.network/address/0x7F68e74483867058C806218aa05aB5527984C03e)
 - [Basescan](https://basescan.org/address/0x7F68e74483867058C806218aa05aB5527984C03e#code)
 - [Polygonscan](https://polygonscan.com/address/0x7F68e74483867058C806218aa05aB5527984C03e#code)
+- [Snowscan](https://snowscan.xyz/address/0x7F68e74483867058C806218aa05aB5527984C03e#code)
 
 To verify the source on another explorer, upload `NFTReceiverExtension.input.json` as "Solidity (Standard-JSON input)" with compiler v0.8.24+commit.e11b9ed9. Do not upload `NFTReceiverExtension.json`: it is the summary file, and explorers reject it with `Unknown key "abi"`.
 
@@ -59,11 +60,11 @@ LSP6 checks each payload when it runs, so the three steps work in one transactio
 
 ## UPPaymaster (experimental)
 
-`UPPaymaster.sol` is an [ERC-4337](https://eips.ethereum.org/EIPS/eip-4337) paymaster for EntryPoint v0.6. It pays the gas of user operations sent by Universal Profiles on its allowlist, and of nothing else. It is the "who pays?" contract of the planned gas relayer: controllers sign, a relayer sends, the paymaster pays from its deposit, and the controllers never need gas.
+`UPPaymaster.sol` is an [ERC-4337](https://eips.ethereum.org/EIPS/eip-4337) paymaster for EntryPoint v0.6. It pays the gas of user operations sent by Universal Profiles on its allowlist, and of nothing else. It is the "who pays?" contract of the site's gas relayer: controllers sign, the relayer sends, the paymaster pays from its deposit, and the controllers never need gas.
 
 **License:** GPL-3.0 (since 2026-10-03; it was MIT), because it is built on the GPL-3.0 ERC-4337 interfaces of `@account-abstraction/contracts`. Only the header changed: the compiled code is identical, so the address and the already verified source (which still shows the MIT header on Basescan) are the same contract. New verifications show GPL-3.0.
 
-**Status:** experimental and unaudited. Published on Base, Polygon and Avalanche C-Chain (same address) for the ChainIntegrate cassa (owner `0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9`): `0xb353565d1f801E7402DBC267b8C0E30E3540D4eD`, [source verified on Basescan](https://basescan.org/address/0xb353565d1f801E7402DBC267b8C0E30E3540D4eD#code). The first sponsored operation succeeded on 2026-09-30. Keep deposits small.
+**Status:** experimental. No professional audit (AI-assisted review on 2026-10-01, AUDIT.md section 8). Published on Base, Polygon and Avalanche C-Chain (same address) for the ChainIntegrate cassa (owner `0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9`): `0xb353565d1f801E7402DBC267b8C0E30E3540D4eD`, source verified on Basescan, Polygonscan and Snowscan (see [Source verification status](#source-verification-status)). The first sponsored operation succeeded on 2026-09-30. Keep deposits small.
 
 **What it does**
 - `validatePaymasterUserOp` accepts an operation only if the sender UP is on the allowlist and the operation cannot cost more than `maxCostPerOp`. It reads only storage keyed by the sender.
@@ -92,7 +93,7 @@ The contract never names a token. On each chain it holds and pays that chain's n
 - **L2 data fees (Base, Optimism, Arbitrum) are not in EntryPoint v0.6's gas accounting.** The relayer covers them through `preVerificationGas`. Set too low, the relayer loses a little on each operation. This is a relayer setting, not a paymaster one.
 
 **What a UP needs, once per chain**
-One transaction signed by the controller, done with a page like `up-nft-receiver.html`:
+One transaction signed by the controller, done with `up-gas-relay.html`, section 4:
 1. Register LUKSO's `Extension4337` (from `@lukso/lsp-smart-contracts`) as the LSP17 extension for `validateUserOp` (`0x3a871cdd`).
 2. Add the EntryPoint as a controller with `SUPER_CALL` and `SUPER_TRANSFERVALUE`.
    - It gets no `SETDATA`: permission changes can never go through the relayer.
@@ -187,7 +188,7 @@ It has no owner. Its constructor takes only the EntryPoint, so published through
 | EntryPoint | `0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789` |
 | Runtime code hash | `0x91968b95ee6f8e01a554060b775c13e8df3f0173d87a55a48ed54b8ff02c052d` |
 
-Published on Base (2026-09-30) and Polygon (2026-10-01). `up-gas-relay.html` publishes it when missing, and checks this code hash before using it. Its audit status is unknown to this project: treat it as experimental.
+Published on Base (2026-09-30), Polygon (2026-10-01) and Avalanche C-Chain. `up-gas-relay.html` publishes it when missing, and checks this code hash before using it. LUKSO confirmed it is experimental and has never been audited: treat it as the least proven part of the system.
 
 **Verify it:**
 1. Compare `creationCode` with the `bytecode` of `artifacts/Extension4337.json` in the npm package `@lukso/lsp-smart-contracts@0.17.4`.
@@ -207,11 +208,11 @@ Published on Base (2026-09-30) and Polygon (2026-10-01). `up-gas-relay.html` pub
 
 Sources: `@lukso/lsp17-contracts` 0.17.3 (the Extension4337 source), `@lukso/lsp14-contracts` 0.16.3, `@lukso/lsp17contractextension-contracts` 0.17.2, `@lukso/lsp20-contracts` 0.16.2, `@lukso/lsp6-contracts` 0.16.3, `@lukso/lsp1-contracts` 0.16.3, `@lukso/lsp2-contracts` 0.16.2, `@erc725/smart-contracts` 7.0.0, `@openzeppelin/contracts` 4.9.6, `@account-abstraction/contracts` 0.6.0, `solidity-bytes-utils` 0.8.0, named as Hardhat 3 names them (`project/…`, `npm/<package>@<version>/…`).
 
-**Verified on Basescan and Polygonscan (2026-10-01) with this file: both show "Contract Source Code Verified (Exact Match)".** The explorers accepted it although the metadata hash differs, so the steps below are for other chains or for checking it yourself.
+**Verified on Basescan and Polygonscan (2026-10-01) and Snowscan with this file: they show "Contract Source Code Verified (Exact Match)".** The explorers accepted it although the metadata hash differs, so the steps below are for other chains or for checking it yourself.
 
 To verify:
-1. **Basescan / Polygonscan:** contract page → Contract → Verify and Publish → "Solidity (Standard-Json-Input)", the compiler above, upload `Extension4337.input.json`, the constructor arguments above. On Base and Polygon it was accepted as an exact match; if another explorer refuses it with "bytecode mismatch" because of the metadata hash, use Sourcify.
-2. **Sourcify** (sourcify.dev): choose the chain (Base 8453, Polygon 137), the address, and import the standard JSON. A code-identical contract with different metadata is accepted as a **partial match**, publicly visible.
+1. **Basescan / Polygonscan / Snowscan:** contract page → Contract → Verify and Publish → "Solidity (Standard-Json-Input)", the compiler above, upload `Extension4337.input.json`, the constructor arguments above. On Base, Polygon and Avalanche it was accepted as an exact match; if another explorer refuses it with "bytecode mismatch" because of the metadata hash, use Sourcify.
+2. **Sourcify** (sourcify.dev): choose the chain (Base 8453, Polygon 137, Avalanche 43114), the address, and import the standard JSON. A code-identical contract with different metadata is accepted as a **partial match**, publicly visible.
 
 `UPPaymaster.json` also records the paymaster's runtime code hash with the canonical EntryPoint. It is the same for every owner, because the owner lives in storage and the EntryPoint in an immutable. The page checks it the same way.
 

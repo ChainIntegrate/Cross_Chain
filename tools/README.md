@@ -16,11 +16,11 @@ The script asks for SALT and IV (press Enter to use the public defaults of the U
 
 ## `PLAN.md`
 
-Working notes for the maintainer: decisions already taken and next steps (NFT reception test, EURe bridge test, gas-balance email monitor, LSP25 relayer design, open audit items). Not published on the website.
+Working notes for the maintainer: decisions already taken and next steps (gas relay and sponsor paymaster status, paid subscriptions, open audit items, hardening backlog, Ledger test). Not published on the website.
 
 ## `relayer/`
 
-The gas relayer service (experimental): the server version of button B in `up-gas-relay.html`. It runs on the server from **its own clone outside the web root**, never from the site folder. Installation and rules: [relayer/README.md](relayer/README.md).
+The gas relayer service (experimental), behind every "Pay the gas with the site relayer" option (Send page, UP Wallet, subscription page, gas page test), and its hourly monitor (`monitor.js`). It runs on the server from **its own clone outside the web root**, never from the site folder. Installation and rules: [relayer/README.md](relayer/README.md).
 
 ## `audits/`
 
