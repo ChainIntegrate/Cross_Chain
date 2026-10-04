@@ -35,10 +35,21 @@ Sending the same signed operation again returns the same transaction.
 
 | Method and path | Answer |
 |---|---|
-| `GET /relay/info` | `{ relayer, entryPoint, chains: { "<chainId>": { paymasters, balance } } }` |
+| `GET /relay/info` | `{ relayer, entryPoint, chains: { "<chainId>": { paymasters, balance, sponsorPaymaster? } } }` |
 | `POST /relay/send` with `{ "chainId": 8453, "op": { … } }` | `{ "hash": "0x…" }`, or `{ "error": "…" }` with status 4xx/5xx |
 
 In `op`, the numbers are decimal or hex strings and the bytes are 0x-hex strings.
+
+### Sponsor paymaster (optional)
+
+A chain in the configuration can also have `"sponsorPaymaster": "0x…"`, a `UPVerifyingPaymaster` (see `contracts/README.md`). Its operations carry, in `paymasterAndData`, an approval signed by a **separate signing service**, which decides which operations to pay; this relayer only checks the shape (97 bytes, that paymaster) and relays them. The signing service is not in this repository. The pages talk to it through two endpoints, which the web server passes to it:
+
+| Method and path | Body | Answer |
+|---|---|---|
+| `POST /relay/sponsor/check` | `{ "chainId": 43114, "sender": "0x…UP" }` | `{ "sponsored": true }`, or `{ "sponsored": false, "reason": "…" }` |
+| `POST /relay/sponsor/sign` | `{ "chainId": 43114, "op": { … } }` with `paymasterAndData` set to the paymaster followed by 77 placeholder bytes | `{ "paymasterAndData": "0x…" }` (97 bytes: paymaster, validUntil, validAfter, signature), or `{ "error": "…" }` with status 4xx/5xx |
+
+The page checks the approval before the controller signs: right paymaster, 97 bytes, and a signature that recovers to the paymaster's `signer()` over `getHash(op, validUntil, validAfter)`.
 
 ## Install on the server
 

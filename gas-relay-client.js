@@ -8,6 +8,11 @@
 // check(): read-only, says whether the relayer can be used for this UP, network and controller.
 // attach(): shows the "pay the gas with the site relayer" option on a page, only when it applies.
 // prepare() / signAndSend() / waitResult(): build and simulate, sign and post, read the outcome.
+//
+// Two kinds of paymaster: the allowlist ones (UPPaymaster: the UP is on its on-chain list) and, when the
+// relayer names one, the sponsor paymaster (UPVerifyingPaymaster): a separate signing service approves
+// each operation, and the approval travels in paymasterAndData. The approval is asked for in
+// signAndSend(), just before the controller signs, and checked here before anything is signed.
 (function () {
   const ENTRY_POINT = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
   const EXTENSION_4337 = "0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2";
@@ -39,6 +44,10 @@
     "function getDataBatch(bytes32[] dataKeys) view returns (bytes[])",
   ]);
   const PM_ABI = ["function maxCostPerOp() view returns (uint256)", "function sponsored(address) view returns (bool)"];
+  const VPM_ABI = ["function maxCostPerOp() view returns (uint256)", "function signer() view returns (address)", "function entryPoint() view returns (address)"];
+  // UPVerifyingPaymaster: paymaster (20) ++ validUntil (6) ++ validAfter (6) ++ signature (65).
+  const SPONSOR_DATA_BYTES = 97;
+  const HALF_N = 0x7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0n;
   // Errors the UP and the Key Manager can raise, to say in words why a simulation fails.
   const ERR_IFACE = new ethers.Interface([
     "error NotAuthorised(address from, string permission)",
@@ -51,7 +60,16 @@
     it: {
       option: "Paga il gas con il relayer del sito",
       optionNote: (v) => `Il controller firma un messaggio in MetaMask, senza gas; il relayer del sito invia e il paymaster ${v.pm} paga (al massimo ${v.cap} per operazione). Solo chiamate e invii di valore.`,
+      optionNoteSponsor: (v) => `Il controller firma un messaggio in MetaMask, senza gas; il servizio di sponsorizzazione del sito approva l'operazione, il relayer la invia e il paymaster ${v.pm} paga (al massimo ${v.cap} per operazione). Solo chiamate e invii di valore.`,
       notReady: "Il relayer del sito serve questa rete e la UP è nella lista del paymaster, ma manca qualcosa:",
+      notReadySponsor: "Il servizio di sponsorizzazione del sito accetta questa UP, ma manca qualcosa:",
+      noSponsorSigner: "il paymaster di sponsorizzazione non ha un firmatario impostato",
+      planSponsor: (v) => `Gas: relayer del sito, con l'approvazione del servizio di sponsorizzazione (chiesta al momento della firma). Paymaster ${v.pm}, costo massimo ${v.max} (tetto ${v.cap}); limite di gas dell'esecuzione ${v.gas}.`,
+      sponsorAsk: "Richiesta di approvazione al servizio di sponsorizzazione...",
+      sponsorRefused: (v) => `Il servizio di sponsorizzazione non approva l'operazione: ${v.err}. Niente è stato firmato.`,
+      sponsorUnreachable: "Il servizio di sponsorizzazione non risponde. Niente è stato firmato.",
+      sponsorBad: (v) => `❌ L'approvazione del servizio di sponsorizzazione non è valida (${v.why}): niente è stato firmato.`,
+      sponsorOk: (v) => `✅ Approvazione del servizio di sponsorizzazione verificata (firmatario ${v.signer}, valida fino alle ${v.until}).`,
       fix: "→ Sistema nella pagina Gas relay (sezione 2, verifica della configurazione)",
       noSigner: "collega il controller (MetaMask)",
       capZero: "il paymaster ha un tetto per operazione pari a 0",
@@ -87,7 +105,16 @@
     en: {
       option: "Pay the gas with the site relayer",
       optionNote: (v) => `The controller signs a message in MetaMask, no gas; the site relayer sends it and the paymaster ${v.pm} pays (at most ${v.cap} per operation). Calls and value transfers only.`,
+      optionNoteSponsor: (v) => `The controller signs a message in MetaMask, no gas; the site's sponsor service approves the operation, the relayer sends it and the paymaster ${v.pm} pays (at most ${v.cap} per operation). Calls and value transfers only.`,
       notReady: "The site relayer serves this network and the UP is on the paymaster's list, but something is missing:",
+      notReadySponsor: "The site's sponsor service accepts this UP, but something is missing:",
+      noSponsorSigner: "the sponsor paymaster has no signer set",
+      planSponsor: (v) => `Gas: site relayer, with the sponsor service's approval (asked for at signing time). Paymaster ${v.pm}, maximum cost ${v.max} (cap ${v.cap}); execution gas limit ${v.gas}.`,
+      sponsorAsk: "Asking the sponsor service for approval...",
+      sponsorRefused: (v) => `The sponsor service does not approve the operation: ${v.err}. Nothing was signed.`,
+      sponsorUnreachable: "The sponsor service does not answer. Nothing was signed.",
+      sponsorBad: (v) => `❌ The sponsor service's approval is not valid (${v.why}): nothing was signed.`,
+      sponsorOk: (v) => `✅ Sponsor service approval verified (signer ${v.signer}, valid until ${v.until}).`,
       fix: "→ Fix it on the Gas relay page (section 2, configuration check)",
       noSigner: "connect the controller (MetaMask)",
       capZero: "the paymaster's cap per operation is 0",
@@ -146,17 +173,38 @@
     return info;
   }
 
+  // Asks the sponsor service whether it sponsors this UP on this chain. Any failure counts as "no".
+  async function sponsorAccepts(chainId, up) {
+    try {
+      const r = await fetch("relay/sponsor/check", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chainId, sender: up }) });
+      const j = r.ok ? await r.json() : null;
+      return !!(j && j.sponsored === true);
+    } catch (e) { return false; }
+  }
+
   // { state: "none" } when the relayer does not apply (no relayer on this network, UP not on any
-  // paymaster's list); { state: "notReady", reasons } when the UP is listed but something is missing;
-  // { state: "ready", pm, cap, deposit } when it can be used.
+  // paymaster's list and not accepted by the sponsor service); { state: "notReady", reasons } when the
+  // UP is listed but something is missing; { state: "ready", pm, cap, deposit, sponsor } when it can be
+  // used. With the sponsor paymaster, `sponsor` is { signer }: the key its approvals must recover to.
   async function check(provider, { chainId, up, signer }) {
     const inf = await loadInfo();
     const c = inf && inf.chains[String(chainId)];
-    if (!c || !Array.isArray(c.paymasters) || !c.paymasters.length) return { state: "none" };
-    let pm = null;
-    for (const a of c.paymasters) {
+    if (!c) return { state: "none" };
+    let pm = null, sponsor = null;
+    for (const a of Array.isArray(c.paymasters) ? c.paymasters : []) {
       if ((await provider.getCode(a)) === "0x") continue;
       if (await new ethers.Contract(a, PM_ABI, provider).sponsored(up)) { pm = ethers.getAddress(a); break; }
+    }
+    // Only when no allowlist paymaster covers the UP, and only after the paymaster is seen on-chain
+    // with the expected EntryPoint: an address from the relayer is not trusted by itself.
+    if (!pm && c.sponsorPaymaster && ethers.isAddress(c.sponsorPaymaster) && (await provider.getCode(c.sponsorPaymaster)) !== "0x") {
+      const vpm = new ethers.Contract(c.sponsorPaymaster, VPM_ABI, provider);
+      try {
+        if (ethers.getAddress(await vpm.entryPoint()) === ENTRY_POINT && (await sponsorAccepts(chainId, up))) {
+          pm = ethers.getAddress(c.sponsorPaymaster);
+          sponsor = { signer: ethers.getAddress(await vpm.signer()) };
+        }
+      } catch (e) { pm = null; sponsor = null; }
     }
     if (!pm) return { state: "none" };
     const ep = new ethers.Contract(ENTRY_POINT, EP_IFACE, provider);
@@ -167,6 +215,7 @@
       new ethers.Contract(pm, PM_ABI, provider).maxCostPerOp(), ep.balanceOf(pm), provider.getCode(EXTENSION_4337), upC.getDataBatch(keys)]);
     const reasons = [];
     if (!signer) reasons.push(["noSigner"]);
+    if (sponsor && sponsor.signer === ethers.ZeroAddress) reasons.push(["noSponsorSigner"]);
     if (cap === 0n) reasons.push(["capZero"]);
     if (deposit === 0n) reasons.push(["noDeposit"]);
     const ext = data[0];
@@ -174,7 +223,7 @@
     const epPerms = data[1] && data[1] !== "0x" ? BigInt(data[1]) : 0n;
     if (epPerms !== EP_PERMS) reasons.push(["epPerms", { p: "0x" + epPerms.toString(16) }]);
     if (signer && !((data[2] && data[2] !== "0x" ? BigInt(data[2]) : 0n) & ERC4337)) reasons.push(["no4337"]);
-    return reasons.length ? { state: "notReady", pm, reasons } : { state: "ready", pm, cap, deposit };
+    return reasons.length ? { state: "notReady", pm, reasons, sponsor } : { state: "ready", pm, cap, deposit, sponsor };
   }
 
   async function estimateFees(provider) {
@@ -234,7 +283,9 @@
       sender: up, nonce: await ep.getNonce(up, 0), initCode: "0x", callData,
       callGasLimit: callGas, verificationGasLimit: VERIFICATION_GAS, preVerificationGas: 0n,
       maxFeePerGas: fees.maxFee, maxPriorityFeePerGas: fees.tip < fees.maxFee ? fees.tip : fees.maxFee,
-      paymasterAndData: ready.pm, signature: "0x",
+      // With the sponsor paymaster: placeholder approval of the real length (0xff bytes, the most
+      // expensive calldata), so the gas below is an upper bound; the real one comes in signAndSend().
+      paymasterAndData: ready.sponsor ? ethers.concat([ready.pm, "0x" + "ff".repeat(SPONSOR_DATA_BYTES - 20)]) : ready.pm, signature: "0x",
     };
     op.preVerificationGas = await preVerificationGas(provider, op, fees.maxFee);
     const maxCost = (op.callGasLimit + op.verificationGasLimit * 3n + op.preVerificationGas) * op.maxFeePerGas;
@@ -245,8 +296,58 @@
     const hash = userOpHash(op, chainId);
     const rpcHash = await ep.getUserOpHash(op);
     if (rpcHash.toLowerCase() !== hash.toLowerCase()) throw new Error(text("hashMismatch"));
-    return { op, hash, maxCost, chainId, view: { up, to, value: fmt(value), nonce: op.nonce.toString(), pm: ready.pm, chainId },
-      plan: text("plan", { pm: ready.pm, max: fmt(maxCost), cap: fmt(ready.cap), gas: callGas.toString() }) };
+    return { op, hash, maxCost, chainId, sponsor: ready.sponsor || null, provider, view: { up, to, value: fmt(value), nonce: op.nonce.toString(), pm: ready.pm, chainId },
+      plan: text(ready.sponsor ? "planSponsor" : "plan", { pm: ready.pm, max: fmt(maxCost), cap: fmt(ready.cap), gas: callGas.toString() }) };
+  }
+
+  // getHash(userOp, validUntil, validAfter) of UPVerifyingPaymaster, computed in the browser.
+  function sponsorHash(op, chainId, pm, validUntil, validAfter) {
+    return ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(
+      ["address", "uint256", "bytes32", "bytes32", "uint256", "uint256", "uint256", "uint256", "uint256", "uint256", "address", "uint48", "uint48"],
+      [op.sender, op.nonce, ethers.keccak256(op.initCode), ethers.keccak256(op.callData), op.callGasLimit, op.verificationGasLimit,
+        op.preVerificationGas, op.maxFeePerGas, op.maxPriorityFeePerGas, chainId, pm, validUntil, validAfter]));
+  }
+
+  // Why an approval from the sponsor service would not pass the paymaster, or null when it would:
+  // same paymaster, 97 bytes, a canonical signature by the paymaster's signer over this operation,
+  // and a validity window that is open now and lasts long enough to sign and send.
+  function approvalProblem(pmData, op, chainId, pm, signer, nowSec) {
+    if (typeof pmData !== "string" || !ethers.isHexString(pmData) || ethers.dataLength(pmData) !== SPONSOR_DATA_BYTES) return "length";
+    if (ethers.getAddress(ethers.dataSlice(pmData, 0, 20)) !== pm) return "paymaster";
+    const validUntil = Number(BigInt(ethers.dataSlice(pmData, 20, 26)));
+    const validAfter = Number(BigInt(ethers.dataSlice(pmData, 26, 32)));
+    if (validAfter > nowSec + 30) return "not yet valid";
+    if (validUntil !== 0 && validUntil < nowSec + 60) return "expired or about to expire";
+    const sig = ethers.dataSlice(pmData, 32);
+    const v = ethers.getBytes(sig)[64];
+    if (BigInt(ethers.dataSlice(sig, 32, 64)) > HALF_N || (v !== 27 && v !== 28)) return "signature";
+    let who;
+    try { who = ethers.verifyMessage(ethers.getBytes(sponsorHash(op, chainId, pm, validUntil, validAfter)), sig); } catch (e) { return "signature"; }
+    if (who !== signer) return `signed by ${who}, not by the paymaster's signer ${signer}`;
+    return null;
+  }
+
+  // Asks the sponsor service to approve prep.op, checks the approval, and updates prep.op and prep.hash.
+  async function getApproval(prep, log) {
+    log(text("sponsorAsk"), "line-dim");
+    const pm = prep.view.pm;
+    let r, j;
+    try {
+      r = await fetch("relay/sponsor/sign", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chainId: prep.chainId, op: opJson(prep.op) }) });
+      j = await r.json();
+    } catch (e) { throw new Error(text("sponsorUnreachable")); }
+    if (!r.ok || !j || !j.paymasterAndData) throw new Error(text("sponsorRefused", { err: (j && j.error) || `HTTP ${r.status}` }));
+    const why = approvalProblem(j.paymasterAndData, prep.op, prep.chainId, pm, prep.sponsor.signer, Math.floor(Date.now() / 1000));
+    if (why) throw new Error(text("sponsorBad", { why }));
+    prep.op.paymasterAndData = ethers.hexlify(j.paymasterAndData);
+    prep.hash = userOpHash(prep.op, prep.chainId);
+    // Cross-check with the EntryPoint, as in prepare().
+    if (prep.provider) {
+      const rpcHash = await new ethers.Contract(ENTRY_POINT, EP_IFACE, prep.provider).getUserOpHash(prep.op);
+      if (rpcHash.toLowerCase() !== prep.hash.toLowerCase()) throw new Error(text("hashMismatch"));
+    }
+    const until = Number(BigInt(ethers.dataSlice(prep.op.paymasterAndData, 20, 26)));
+    log(text("sponsorOk", { signer: prep.sponsor.signer, until: until ? new Date(until * 1000).toLocaleTimeString() : "∞" }), "line-ok");
   }
 
   // While MetaMask asks for the signature: a box with what MetaMask must show, to compare before signing.
@@ -271,11 +372,14 @@
   const opJson = (op) => Object.fromEntries(Object.entries(op).map(([k, v]) => [k, typeof v === "bigint" ? v.toString() : v]));
 
   // The controller signs the operation hash (personal_sign, as Extension4337 expects); the site relayer
-  // sends it. Returns the relayer's transaction hash. `log(msg, cls)` reports each step.
+  // sends it. Returns the relayer's transaction hash. `log(msg, cls)` reports each step. With the
+  // sponsor paymaster, the service's approval is asked for and checked first: prep.op and prep.hash
+  // change, so the caller must read prep.hash only after this returns.
   async function signAndSend(signerProvider, { chainId, prep, signer, log }) {
+    if (prep.chainId !== chainId) throw new Error(text("hashMismatch"));
+    if (prep.sponsor) await getApproval(prep, log);
     log(text("signAsk", { hash: prep.hash }), "line-warn");
     const s = await new ethers.BrowserProvider(signerProvider).getSigner();
-    if (prep.chainId !== chainId) throw new Error(text("hashMismatch"));
     const box = showSignBox({ hash: prep.hash, signer, view: prep.view });
     try { prep.op.signature = await s.signMessage(ethers.getBytes(prep.hash)); }
     finally { box.remove(); }
@@ -341,9 +445,9 @@
       label.textContent = text("option");
       note.innerHTML = "";
       if (state.state === "ready") {
-        note.textContent = text("optionNote", { pm: state.pm, cap: state.capText });
+        note.textContent = text(state.sponsor ? "optionNoteSponsor" : "optionNote", { pm: state.pm, cap: state.capText });
       } else if (state.state === "notReady") {
-        const p = document.createElement("div"); p.textContent = text("notReady");
+        const p = document.createElement("div"); p.textContent = text(state.sponsor ? "notReadySponsor" : "notReady");
         const ul = document.createElement("ul"); ul.style.margin = "4px 0 0"; ul.style.paddingLeft = "20px";
         state.reasons.forEach(([k, v]) => { const li = document.createElement("li"); li.textContent = text(k, v); ul.appendChild(li); });
         const a = document.createElement("a"); a.href = "up-gas-relay.html"; a.target = "_blank"; a.rel = "noopener";
@@ -387,5 +491,5 @@
     return { enabled: () => state.state === "ready" && cb.checked, refresh, state: () => state };
   }
 
-  window.GasRelayClient = { check, prepare, signAndSend, waitResult, attach, text, userOpHash, ENTRY_POINT };
+  window.GasRelayClient = { check, prepare, signAndSend, waitResult, attach, text, userOpHash, sponsorHash, approvalProblem, ENTRY_POINT };
 })();

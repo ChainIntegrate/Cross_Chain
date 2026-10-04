@@ -125,8 +125,23 @@ The controller signs the user operation hash with `personal_sign`, so MetaMask w
 
 **Status:** experimental, unaudited, **not published** on any network. License GPL-3.0, like `UPPaymaster` (it builds on the same `@account-abstraction/contracts` 0.6.0 interfaces).
 
+**Where it comes from, and what is not audited.** The approval scheme is the one of the `VerifyingPaymaster` sample of eth-infinitism for EntryPoint v0.6. `getHash` covers the same fields, in the same order, as the `Paymaster.sol` of [base-org/paymaster](https://github.com/base-org/paymaster), a clone of that sample.
+
+Cantina reviewed base-org/paymaster in October 2023 (commit `08612ce`, report in that repository, `audits/report-base-paymaster.pdf`): no critical, high or medium findings. That review covers their code, not this contract.
+
+What this contract adds is not audited:
+- a signer the owner can replace or set to zero (stop);
+- the cap per operation;
+- the two-step ownership transfer;
+- the packed 12-byte validity window: `paymasterAndData` is 97 bytes, not 149;
+- the owner passed to the constructor (deterministic address).
+
+The first of these is what that review recommended (finding 3.1.7, "verifyingSigner is immutable and fully trusted"). base-org/paymaster later went back to an immutable signer.
+
+The paymaster holds only the deposit its owner puts in it. The cap per operation bounds what each operation can take from it.
+
 **How an operation is approved**
-1. The client builds the user operation, with `paymasterAndData` still empty.
+1. The client builds the user operation, with `paymasterAndData` set to the paymaster followed by 77 placeholder bytes, so that the gas estimate covers the real length.
 2. The service checks its rules and computes `getHash(userOp, validUntil, validAfter)`: every field of the operation except `paymasterAndData` and `signature`, plus the chain id, the paymaster's address and the validity window. It signs that hash with `personal_sign` (EIP-191), with its approving key.
 3. The client sets `paymasterAndData = paymaster (20 bytes) ++ validUntil (uint48, 6 bytes) ++ validAfter (uint48, 6 bytes) ++ signature (65 bytes)`. Then the controller signs the user operation hash as usual (Extension4337), and the relayer sends it.
 
@@ -140,6 +155,12 @@ The controller signs the user operation hash with `personal_sign`, so MetaMask w
 **Owner** (two-step transfer, as in `UPPaymaster`): funds it with a plain transfer (forwarded to the EntryPoint deposit), sets or replaces the approving key (`setSigner`; `address(0)` stops all sponsoring at once), sets `maxCostPerOp`, withdraws. The signer and the cap start empty: nothing is paid until the owner sets both.
 
 **Same address on every chain for a given owner:** the constructor takes only the EntryPoint and the owner, as in `UPPaymaster` (different creation code, so a different address from `UPPaymaster`). Files: `UPVerifyingPaymaster.input.json` (standard-JSON input, solc 0.8.24, optimizer 200, `paris`, no metadata hash) and `UPVerifyingPaymaster.json` (creation code, ABI, how to compute the address).
+
+**On the site:**
+- The gas page, section 3b, publishes and manages it with the cassa: publish, top up, signer, cap, withdraw, "Stop now".
+- The relayer accepts its operations when its configuration names it as `sponsorPaymaster` for the chain (`tools/relayer/README.md`).
+- The Send and UP Wallet pages ask the signing service for the approval just before the controller signs. Before anything is signed, they check the approval: paymaster, length, validity window, and a signature by the on-chain `signer()`.
+- The signing service is in a separate, private repository.
 
 **Bundlers:** validation reads the paymaster's own storage (signer, cap). Public bundlers that apply the ERC-7562 rules would require the paymaster to be staked; the site's own relayer does not apply them, and Extension4337 reads the Key Manager's storage in any case.
 
