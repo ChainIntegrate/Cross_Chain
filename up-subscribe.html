@@ -171,6 +171,7 @@ const I18N = {
     upOk: "esiste su questa rete",
     signerNone: "collega MetaMask con un controller della UP",
     svcDown: "il servizio di sponsorizzazione non risponde su questa rete",
+    subsClosed: "Iscrizioni non ancora aperte: il servizio funziona, ma non accetta ancora pagamenti. Riprova nei prossimi giorni.",
     svcBadData: "il servizio indica un USDC o un destinatario diversi da quelli attesi: niente verrà firmato",
     svcOk: (v) => `pagamento di ${v.amount} USDC alla UP di ChainIntegrate ${v.receiver}`,
     setupOk: "pronta (estensione, EntryPoint e permesso 4337 del controller)",
@@ -236,6 +237,7 @@ const I18N = {
     upOk: "exists on this network",
     signerNone: "connect MetaMask with a controller of the UP",
     svcDown: "the sponsor service does not answer on this network",
+    subsClosed: "Subscriptions are not open yet: the service is running but does not accept payments yet. Try again in the next few days.",
     svcBadData: "the service gives a USDC or a receiver different from the expected ones: nothing will be signed",
     svcOk: (v) => `payment of ${v.amount} USDC to ChainIntegrate's UP ${v.receiver}`,
     setupOk: "ready (extension, EntryPoint and the controller's 4337 permission)",
@@ -287,7 +289,7 @@ function log(msg, cls) { const d = document.createElement("div"); if (cls) d.cla
 const validEmail = (e) => e.length <= 254 && /^[^\s@<>()",;:\\[\]]+@[^\s@<>()",;:\\[\]]+\.[^\s@<>()",;:\\[\]]{2,}$/.test(e);
 
 // ==================== networks and price list ====================
-let nets = [], prices = null, busy = false;
+let nets = [], prices = null, priceState = "loading", busy = false;
 async function loadNetworks() {
   const info = await GasRelayClient.loadInfo(true);
   nets = CHAINS.filter(c => NATIVE_USDC[c.chainId] && info && info.chains[String(c.chainId)] && info.chains[String(c.chainId)].sponsorPaymaster);
@@ -296,11 +298,14 @@ async function loadNetworks() {
   const want = new URLSearchParams(location.search).get("network");
   if (want && nets.some(c => c.key === want)) sel.value = want;
   // Any address that is not a customer gets the subscription data, price list included.
-  if (nets.length) { const st = await GasRelayClient.sponsorStatus(nets[0].chainId, ethers.ZeroAddress); prices = st && st.subscription ? st.subscription.prices : null; }
+  if (nets.length) { const st = await GasRelayClient.sponsorStatus(nets[0].chainId, ethers.ZeroAddress); prices = st && st.subscription ? st.subscription.prices : null; priceState = prices ? "ok" : st ? "closed" : "down"; }
   renderPrices();
 }
 function renderPrices() {
-  if (!prices) { setStatus("priceBox", nets.length ? t("priceLoading") : t("priceNone"), nets.length ? "empty" : "line-err"); return; }
+  if (!prices) {
+    const k = !nets.length || priceState === "down" ? "priceNone" : priceState === "closed" ? "subsClosed" : "priceLoading";
+    setStatus("priceBox", t(k), k === "priceLoading" ? "empty" : "line-err"); return;
+  }
   const list = nets.filter(c => prices[String(c.chainId)]).map(c => `${c.name} ${prices[String(c.chainId)]} USDC`);
   const ex = nets.filter(c => prices[String(c.chainId)]).map(c => `${Math.floor(5 / Number(prices[String(c.chainId)]))} ${LANG === "it" ? "operazioni su" : "operations on"} ${c.name}`);
   setStatus("priceBox", t("priceLine", { list: list.join(" · "), example: ex.join(LANG === "it" ? " oppure " : " or ") }), "");
@@ -367,7 +372,7 @@ async function computeCheck() {
   // The service: what to pay and to whom. Never trusted alone: checked against the page's own values.
   const st = await GasRelayClient.sponsorStatus(chainId, up);
   const sub = st && st.subscription;
-  if (!sub) { rows.push(["kSvc", t("svcDown"), "err"]); return out; }
+  if (!sub) { rows.push(["kSvc", t(st ? "subsClosed" : "svcDown"), "err"]); return out; }
   if (!sub.usdc || ethers.getAddress(sub.usdc) !== NATIVE_USDC[chainId] || ethers.getAddress(sub.receiver) !== RECEIVER || ethers.parseUnits(String(sub.amount), 6) !== AMOUNT) { rows.push(["kSvc", t("svcBadData"), "err"]); return out; }
   rows.push(["kSvc", t("svcOk", { amount: "5", receiver: RECEIVER }), "ok"]);
   // The UP's 4337 setup, the paymaster and the controller: the relayer client's own checks.
