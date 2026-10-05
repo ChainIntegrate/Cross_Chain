@@ -19,6 +19,7 @@
 <meta name="twitter:image" content="https://crosschain-lukso.chainintegrate.it/banner.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="chains.js"></script>
+<script src="sign-check.js"></script>
 <script src="backup-check.js"></script>
 <style>
   :root {
@@ -509,7 +510,7 @@ $("testBtn").addEventListener("click", async () => {
     }
 
     log(t("sendingTestTxLog"), "line-dim");
-    const tx = await signerObj.sendTransaction({ to: keyManagerAddress, data: executeCalldata, chainId: chains.chainId });
+    const tx = await SignCheck.sendTransaction(signerObj, { to: keyManagerAddress, data: executeCalldata, chainId: chains.chainId }, { what: { it: "Operazione di prova dalla UP", en: "Test operation from the UP" }, toLabel: { it: "Key Manager della UP", en: "the UP's Key Manager" } });
     log(t("txHashLog", { hash: tx.hash }), "line-dim");
     const explorerUrl = getExplorerUrl(net, EXPLORER_PATH, tx.hash);
     if (explorerUrl) log(explorerUrl, "line-dim");

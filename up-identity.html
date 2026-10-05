@@ -16,6 +16,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="chains.js"></script>
+<script src="sign-check.js"></script>
 <script src="backup-check.js"></script>
 <script src="config.js"></script>
 <script src="asset-list.js"></script>
@@ -951,7 +952,7 @@ $("pubBtn").addEventListener("click", async () => {
     pubLog(t("pubSimOk"), "line-ok");
     const signer = await new ethers.BrowserProvider(pubWallet).getSigner();
     if (signer.address.toLowerCase() !== pubAddr.toLowerCase()) { pubLog(t("pubSignerChanged", { now: signer.address, checked: pubAddr }), "line-err"); return; }
-    const tx = await signer.sendTransaction({ to: km, data, chainId: r.net.chainId });
+    const tx = await SignCheck.sendTransaction(signer, { to: km, data, chainId: r.net.chainId }, { what: { it: `Pubblica il profilo LSP3 di LUKSO sulla UP ${up}`, en: `Publish LUKSO's LSP3 profile on the UP ${up}` }, toLabel: { it: "Key Manager della UP", en: "the UP's Key Manager" } });
     pubLog(t("pubTx", { hash: tx.hash }), "line-dim");
     const url = getExplorerUrl(r.netDef, "/tx/", tx.hash);
     if (url) pubLog(url, "line-dim");

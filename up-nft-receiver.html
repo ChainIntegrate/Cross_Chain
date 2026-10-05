@@ -10,6 +10,7 @@
 <link rel="icon" href="favicon.ico">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="chains.js"></script>
+<script src="sign-check.js"></script>
 <style>
   :root {
     --bg: #0f1115; --panel: #171a21; --border: #2a2f3a; --field: #10131a; --chip: #2a2f3a; --disabled: #3a3f4b; --raised: #1d2330;
@@ -752,7 +753,7 @@ $("enableBtn").addEventListener("click", async () => {
     const signer = await new ethers.BrowserProvider(signerProvider).getSigner();
     if (signer.address.toLowerCase() !== p.c.signer.toLowerCase()) { log(t("stale"), "line-err"); return; }
     log(t("sending"), "line-dim");
-    const sent = await signer.sendTransaction({ to: p.c.km, data: p.data, gasLimit: p.gasLimit, chainId: p.c.chainId });
+    const sent = await SignCheck.sendTransaction(signer, { to: p.c.km, data: p.data, gasLimit: p.gasLimit, chainId: p.c.chainId }, { what: { it: `Ricezione NFT sulla UP ${p.c.up}`, en: `NFT receiving on the UP ${p.c.up}` }, toLabel: { it: "Key Manager della UP", en: "the UP's Key Manager" } });
     clearPlan();
     log(t("txSent", { hash: sent.hash }), "line-dim");
     const explorerUrl = getExplorerUrl(p.c.net, EXPLORER_PATH, sent.hash);
