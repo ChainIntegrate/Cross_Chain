@@ -501,7 +501,14 @@
   // the UserOperationEvent of this operation, never the receipt status alone.
   async function waitResult(provider, txHash, userOpHash, { log, fmt }) {
     log(text("waiting"), "line-dim");
-    const rc = await waitReceipt(provider, txHash);
+    // The site relayer answers too, for its own transactions: some public RPCs refuse receipt lookups
+    // (publicnode on Base), and no wallet knows a transaction the relayer sent. The RPC is asked first.
+    const relayerSource = { getTransactionReceipt: async (h) => {
+      const r = await fetch("relay/receipt?hash=" + h, { cache: "no-store" });
+      const j = r.ok ? await r.json() : null;
+      return j && !j.pending && Array.isArray(j.logs) ? j : null;
+    } };
+    const rc = await waitReceipt(provider, txHash, relayerSource);
     if (!rc) { log(text("noReceipt", { hash: txHash }), "line-warn"); return { success: false, unknown: true }; }
     let ev = null, why = null;
     for (const l of (rc && rc.logs) || []) {
