@@ -2,9 +2,9 @@
 
 | | |
 |---|---|
-| **Audit date** | 2026-09-27 (rev. 1–3); 2026-09-29 (rev. 4); 2026-10-01 (rev. 5); 2026-10-02 (rev. 6); 2026-10-04 (rev. 7) |
+| **Audit date** | 2026-09-27 (rev. 1–3); 2026-09-29 (rev. 4); 2026-10-01 (rev. 5); 2026-10-02 (rev. 6); 2026-10-04 (rev. 7, rev. 8); 2026-10-05 (rev. 9) |
 | **Commit audited** | `f56dd29` (rev. 1–3); `47642bc` (rev. 4); `40f0bc0` (rev. 6), all on branch `main`. Rev. 5 covered deployed contracts and the relayer (section 8) |
-| **Revision** | 3 — rev. 2 reclassified H-03, M-05, I-01 and I-02 after the maintainer's feedback (salt/IV are public format values; all profiles and addresses shown belong to the maintainer and are public by choice); rev. 3 adds L-09, found while testing the new implementation-publishing page, and M-08, after the maintainer described how the site is deployed; M-08 was fixed and verified on the live site the same day; rev. 4 adds the two WalletConnect pages (section 7); rev. 5 the gas relay (section 8); rev. 6 a review of the whole repository with the system live (section 9); rev. 7 the sponsor paymaster `UPVerifyingPaymaster` (section 10). Section 11 records the design decisions of the paid subscriptions |
+| **Revision** | 3 — rev. 2 reclassified H-03, M-05, I-01 and I-02 after the maintainer's feedback (salt/IV are public format values; all profiles and addresses shown belong to the maintainer and are public by choice); rev. 3 adds L-09, found while testing the new implementation-publishing page, and M-08, after the maintainer described how the site is deployed; M-08 was fixed and verified on the live site the same day; rev. 4 adds the two WalletConnect pages (section 7); rev. 5 the gas relay (section 8); rev. 6 a review of the whole repository with the system live (section 9); rev. 7 the sponsor paymaster `UPVerifyingPaymaster` (section 10). Section 11 records the design decisions of the paid subscriptions; rev. 8 and 9 are the launch reviews of the whole system, toolkit and signing service (section 12) |
 | **Scope** | Rev. 1–3: every file in the repository at the time: 6 HTML tools, `decrypt.js`, README, images in `guide-assets/`, and the full git history. Rev. 4: the WalletConnect pages `up-wallet.html` and `up-walletconnect-basenames.html`, the vendored `vendor/walletkit-1.6.0.min.js` and `config.example.js`. Rev. 5: `Extension4337`, `contracts/UPPaymaster.sol`, the relayer and the gas-relay setup batches. Rev. 6: the whole repository, pages, shared scripts, contracts and relayer |
 | **Method** | Manual code review, cross-check against the LUKSO reference contracts (`@lukso/lsp6-contracts` 0.16.3, `@lukso/lsp23-contracts` 0.16.3; for rev. 4 also `@lukso/lsp-smart-contracts` 0.14.0 for LSP0, LSP6 `isValidSignature` and LSP17), browser end-to-end tests with mocked wallets/RPCs/WalletConnect (Playwright + Chromium), a git history review for secrets and personal data, and, for rev. 4, live tests by the maintainer on Base and Polygon mainnet |
 
@@ -23,6 +23,7 @@
 9. [Rev. 6 — Full-repository review (2026-10-02)](#9-rev-6--full-repository-review-2026-10-02)
 10. [Rev. 7 — `UPVerifyingPaymaster` review (2026-10-04)](#10-rev-7--upverifyingpaymaster-review-2026-10-04)
 11. [Design decisions on paid subscriptions (2026-10-04)](#11-design-decisions-on-paid-subscriptions-2026-10-04)
+12. [Rev. 8–9 — Launch reviews of the whole system (2026-10-04 and 2026-10-05)](#12-rev-89--launch-reviews-of-the-whole-system-2026-10-04-and-2026-10-05)
 
 ---
 
@@ -567,3 +568,38 @@ These are deliberate choices, recorded so that they do not look like oversights 
 | D-1 | **Anyone can read a UP's subscription status and balance**, without a signature. The sponsor service's `/check` answers for any address with: none / requested / paid / active, the balance and the price. The subscription page shows this under the UP field, without MetaMask. | The Send page and the UP Wallet call `/check` before every operation, to offer the relayer option and show the balance. A signature there would cost the user one more prompt each time. The data is public anyway: the payment is a USDC transfer from the UP to ChainIntegrate's UP, and every sponsored operation is a public `UserOperationEvent` of the paymaster, with the UP's address. Together with the public price list, they give the subscription, the usage and the balance. Connecting MetaMask on the page would not hide anything: the service can be queried directly. | A read signed by the UP's controller (a `personal_sign` message with a timestamp, checked against the UP's permissions), on the page and in the relayer option. |
 | D-2 | **The e-mail is never returned by the service.** Only the operator (server file, mode 600) and the user's own inbox see it. | Personal data: given only for the activation and the balance alerts. | — |
 | D-3 | **Activation and top-ups are manual.** The service records a payment but credits nothing until the operator runs `activate`. There is no automatic charge or renewal. | The operator checks each payment before crediting. Nothing moves the user's funds except the user's own signed payment. | — |
+
+## 12. Rev. 8–9 — Launch reviews of the whole system (2026-10-04 and 2026-10-05)
+
+Two AI-assisted reviews of the whole system, the public toolkit and the private signing service together: on 2026-10-04 (`ae025ea`, service `b68a5cc`) and on 2026-10-05 (`77e9d30`, service `7b5c6e4`, with paid subscriptions). The second supersedes the first. Both reproduced the four contract builds byte for byte, checked the ethers SRI, installed both server lockfiles (0 vulnerabilities) and re-ran the EntryPoint v0.6 harnesses. **Not a professional audit.**
+
+The full reports are in the private repository of the service, because they describe its code and its open issues in detail. This section summarizes them.
+
+**Verdict.**
+- No Critical or High finding.
+- H-1 and H-2 (section 9) are fixed, with no bypass. The split of the gas page into `gas-relay-page.js` preserved both.
+- The contracts are unchanged and reproducible.
+- The new subscription page builds the payment from its own constants and only lets the service's answer *block* a signature, never drive it.
+- One Medium, on the availability of the paid service: no funds at risk and no UP at risk.
+
+| # | Severity | Finding | Status |
+|---|---|---|---|
+| SP-A | Medium | Signing service: the subscription bootstrap can be abused to use up a chain's daily sponsorship budget (denial of sponsorship to paying customers; no funds lost) | **Open.** Fix before advertising subscriptions; details in the private repository |
+| SP-B | Low | Signing service: the address that receives a UP's low-balance e-mails can be set by someone who does not control the UP | **Open**, fixed with SP-A |
+| SP-C | Low | Signing service: balance checked at approval, charged at execution (a small overdraft is possible; financially negligible) | Open |
+| GS-1 | Low | `up-gas-relay-admin.html`: the sponsor paymaster's **Top up** button is not gated on the owner. A page opened with `?owner=<other>` computes another paymaster, and the cassa could fund one it does not own (carries G-N5) | Open |
+| GS-2 | Low | `gas-relay-client.js`: one pending-operation record per network and UP. Signing a second relayed operation while one is outstanding replaces the first record, so a "it arrived after all" notice can be lost (no double spend: same nonce) | Open |
+| N-1 | Low (privacy) | `up-identity.html` / `asset-list.js`: images of airdropped tokens are loaded automatically, so a token's creator can learn the viewer's IP address and when the UP was viewed | Open: fix before promoting the Identity page |
+| N-2 | Low | `up-identity.html`: the profile write takes the Key Manager from the RPC without the `deploy-check.js` link check (impact benign: a call from the controller, value 0) | Open |
+| L-6 | Low | Send page: the UP's own Key Manager, the EntryPoint and the paymasters are not refused as recipients (carried from section 9) | Open |
+| SP-2 | Info | Signing service: no timeout on the RPC calls of an approval | Open |
+| F2-2 | Info | `up-subscribe.html`: the e-mail reaches the service with the approval request, before the user signs | Open, with SP-B |
+| N-3 | Info | No Content-Security-Policy on the site (section 5) | Open |
+| W-tel | Info | WalletConnect: telemetry not turned off on `Core`; `vendor/walletkit-1.6.0.min.js` loaded without SRI (same origin) | Open |
+| — | Info | `/check` gives any UP's status and balance to anyone | Accepted: decision D-1 (section 11) |
+| — | Info | Subscribers' e-mails: erasure on request | Done: written procedure in the service's runbook |
+| M-08 | — | Confirm on the live site that `/.git/HEAD`, `/tools/…` and `*.md` are not served (the reviews had no access to it) | To check on the site |
+
+**Carried, by design:** VP-H1 (the signing key can approve operations up to the cap until the deposit or the daily budget runs out; mitigated by the dedicated key, caps, budgets, 5-minute approvals, `setSigner(0)` and the monitor's drawdown alarm) and VP-L1 (the sponsor paymaster cannot be staked: site relayer only).
+
+**Order of the fixes:** SP-A and SP-B first, because subscriptions are open; then GS-1, N-1 and L-6; then the rest.

@@ -135,6 +135,7 @@ After that, `git pull` works exactly as before. The root `.htaccess` stays in th
 | 2026-10-01 | Gas relay: `Extension4337`, `UPPaymaster`, relayer, the three Base UPs (AI-assisted) | The 4337 setup adds no way to move funds beyond what the controller key already allows. Findings fixed or tracked. | [AUDIT.md §8](AUDIT.md#8-rev-5--gas-relay-extension4337-paymaster-relayer) |
 | 2026-10-02 | Whole repository at `40f0bc0`, system live (AI-assisted) | 2 High and 3 of 4 Medium fixed; M-1 (paymaster gas per operation) open, bounded by the caps; some Low and Info in the hardening backlog. | [AUDIT.md §9](AUDIT.md#9-rev-6--full-repository-review-2026-10-02) |
 | 2026-10-04 | `UPVerifyingPaymaster` (AI-assisted) | No Critical, High or Medium bug in the code. The signing key's power (VP-H1) is mitigated off-chain; Low and Info fixed or accepted. | [AUDIT.md §10](AUDIT.md#10-rev-7--upverifyingpaymaster-review-2026-10-04) |
+| 2026-10-04, 2026-10-05 | Launch reviews of the whole system, toolkit and private signing service (AI-assisted; the second covers paid subscriptions) | No Critical or High. One Medium on the availability of the paid service (SP-A, open, no funds at risk) and Low items open. H-1 and H-2 confirmed fixed. | [AUDIT.md §12](AUDIT.md#12-rev-89--launch-reviews-of-the-whole-system-2026-10-04-and-2026-10-05) |
 
 Main fixes from the 2026-09-27 audit:
 
