@@ -241,7 +241,10 @@ const I18N = {
     capLspOk: "✅ Sì: il Universal Receiver Delegate registra i token ricevuti nella lista LSP5 della UP.",
     capLspNo: "⚠️ Nessun Universal Receiver Delegate: i token LSP7/LSP8 arrivano lo stesso, ma la UP non li registra nella sua lista.",
     capNftT: "NFT ERC-721 ed ERC-1155",
-    capNftOk: "✅ Sì: estensione di ricezione 0x7F68…C03e registrata, con codice verificato.",
+    capNftOk: "✅ Sì: estensione ufficiale di LUKSO ERCTokenCallbacks (0x082d…aBc5) registrata, con codice verificato.",
+    capNftOurs: "✅ Sì: estensione di ricezione di ChainIntegrate (0x7F68…C03e) registrata, con codice verificato.",
+    capNftOursMove: "✅ Sì, con l'estensione di ChainIntegrate (0x7F68…C03e), codice verificato. Su questa rete c'è anche quella ufficiale di LUKSO: puoi passarci dalla pagina NFT (non è obbligatorio).",
+    capNftMoveLink: "→ Passa all'estensione ufficiale di LUKSO (pagina NFT)",
     capNftOther: (v) => `⚠️ Sì, ma con un'altra estensione (${v.addr}), non verificata da questa pagina.`,
     capNftPartial: (v) => `⚠️ Solo in parte: manca ${v.missing}. Rifalla dalla pagina NFT.`,
     capNftNo: "❌ No: un NFT ERC-721 inviato con safeTransferFrom, o un ERC-1155, viene rifiutato. Gli acquisti su OpenSea falliscono.",
@@ -372,7 +375,10 @@ const I18N = {
     capLspOk: "✅ Yes: the Universal Receiver Delegate records received tokens in the UP's LSP5 list.",
     capLspNo: "⚠️ No Universal Receiver Delegate: LSP7/LSP8 tokens still arrive, but the UP does not record them in its list.",
     capNftT: "ERC-721 and ERC-1155 NFTs",
-    capNftOk: "✅ Yes: receiver extension 0x7F68…C03e registered, code verified.",
+    capNftOk: "✅ Yes: LUKSO's official extension ERCTokenCallbacks (0x082d…aBc5) registered, code verified.",
+    capNftOurs: "✅ Yes: ChainIntegrate's receiver extension (0x7F68…C03e) registered, code verified.",
+    capNftOursMove: "✅ Yes, with ChainIntegrate's extension (0x7F68…C03e), code verified. LUKSO's official one is also on this network: you can move to it from the NFT page (not required).",
+    capNftMoveLink: "→ Move to LUKSO's official extension (NFT page)",
     capNftOther: (v) => `⚠️ Yes, but with another extension (${v.addr}), not verified by this page.`,
     capNftPartial: (v) => `⚠️ Only partly: ${v.missing} missing. Redo it from the NFT page.`,
     capNftNo: "❌ No: an ERC-721 sent with safeTransferFrom, or an ERC-1155, is refused. OpenSea purchases fail.",
@@ -756,8 +762,10 @@ function loadAssets(my, net, rn, rl, up) {
 // Read-only, from the UP's ERC725Y data on the chosen network: LSP7/LSP8 recording (URD), ERC-721/1155
 // reception (LSP17 extension), gas relay (Extension4337, EntryPoint permissions, 4337 signers) and
 // whether the site relayer and one of its paymasters serve this UP.
-const NFT_EXT = "0x7F68e74483867058C806218aa05aB5527984C03e";
-const NFT_EXT_HASH = "0xed365f94b64256c4c81311071c739de4a006d09676dc9e2bd5cd49b346ddb955";
+// Receiver extensions recognised (code hash checked): LUKSO's official ERCTokenCallbacks and
+// ChainIntegrate's NFTReceiverExtension (see up-nft-receiver.html).
+const NFT_EXT_OFFICIAL = { addr: "0x082d49D8487d2ed2527440c7879C66d850daaBc5", hash: "0x5c5eafb6feae1a81b17c259942cdfe5f619a6f7593106433791355ceb3326f07" };
+const NFT_EXT_OURS = { addr: "0x7F68e74483867058C806218aa05aB5527984C03e", hash: "0xed365f94b64256c4c81311071c739de4a006d09676dc9e2bd5cd49b346ddb955" };
 const NFT_SELECTORS = [["0x150b7a02", "onERC721Received"], ["0xf23a6e61", "onERC1155Received"], ["0xbc197c81", "onERC1155BatchReceived"]];
 const EXT_4337 = "0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2";
 const EXT_4337_HASH = "0x91968b95ee6f8e01a554060b775c13e8df3f0173d87a55a48ed54b8ff02c052d";
@@ -778,8 +786,14 @@ async function readCaps(provider, up, chainId, ctrl) {
   const set = nft.filter(x => x.addr);
   if (!set.length) out.nft = { state: "no" };
   else if (set.length < nft.length) out.nft = { state: "partial", missing: nft.filter(x => !x.addr).map(x => x.name).join(", ") };
-  else if (set.every(x => x.addr === NFT_EXT) && (await hashOf(NFT_EXT)) === NFT_EXT_HASH) out.nft = { state: "ok" };
-  else out.nft = { state: "other", addr: [...new Set(set.map(x => x.addr))].join(", ") };
+  else {
+    const [offOk, ourOk] = await Promise.all([NFT_EXT_OFFICIAL, NFT_EXT_OURS].map(async (x) => (await hashOf(x.addr)) === x.hash));
+    const known = (a) => (a === NFT_EXT_OFFICIAL.addr && offOk) || (a === NFT_EXT_OURS.addr && ourOk);
+    if (!set.every(x => known(x.addr))) out.nft = { state: "other", addr: [...new Set(set.map(x => x.addr))].join(", ") };
+    else if (set.every(x => x.addr === NFT_EXT_OFFICIAL.addr)) out.nft = { state: "ok" };
+    // ChainIntegrate's on the callbacks: works; the move to LUKSO's is offered where LUKSO's is published.
+    else out.nft = { state: set.some(x => x.addr === NFT_EXT_OURS.addr) && offOk ? "oursMove" : "ours" };
+  }
   // Gas relay: the UP side
   const ext = addrOf(vals[3]);
   const extOk = ext === EXT_4337 && (await hashOf(EXT_4337)) === EXT_4337_HASH;
@@ -820,8 +834,9 @@ function renderCaps(c, netDef, up) {
   };
   item(t("capLspT"), [[c.lsp ? t("capLspOk") : t("capLspNo"), c.lsp ? "line-ok" : "line-warn"]]);
   const n = c.nft;
-  item(t("capNftT"), [[n.state === "ok" ? t("capNftOk") : n.state === "other" ? t("capNftOther", n) : n.state === "partial" ? t("capNftPartial", n) : t("capNftNo"),
-    n.state === "ok" ? "line-ok" : n.state === "no" ? "line-err" : "line-warn"]], n.state === "ok" ? null : [t("capNftLink"), "up-nft-receiver.html"]);
+  const nftOk = n.state === "ok" || n.state === "ours" || n.state === "oursMove";
+  item(t("capNftT"), [[n.state === "ok" ? t("capNftOk") : n.state === "ours" ? t("capNftOurs") : n.state === "oursMove" ? t("capNftOursMove") : n.state === "other" ? t("capNftOther", n) : n.state === "partial" ? t("capNftPartial", n) : t("capNftNo"),
+    nftOk ? "line-ok" : n.state === "no" ? "line-err" : "line-warn"]], n.state === "ok" || n.state === "ours" ? null : [t(n.state === "oursMove" ? "capNftMoveLink" : "capNftLink"), "up-nft-receiver.html"]);
   const g = c.gas, lines = [];
   if (g.state === "no") lines.push([t("capGasNo"), "line-dim"]);
   else if (g.state === "epBad") lines.push([t("capGasEpBad", g), "line-err"]);
