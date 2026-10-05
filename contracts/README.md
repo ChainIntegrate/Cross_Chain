@@ -2,6 +2,8 @@
 
 ## NFTReceiverExtension
 
+> **Since 2026-10-05** the NFT page registers LUKSO's official `ERCTokenCallbacks` (`0x082d49D8487d2ed2527440c7879C66d850daaBc5`) for the three receiver callbacks, where LUKSO has published it. This extension remains in use for `supportsInterface` (it declares exactly the receiver interfaces; `ERCTokenCallbacks` also declares LSP17Extension), on networks without the official one (LUKSO mainnet today), and on UPs set up before. Details in `AUDIT.md`, I-12.
+
 `NFTReceiverExtension.sol` is an [LSP17](https://docs.lukso.tech/standards/generic-standards/lsp17-contract-extension) extension that lets a Universal Profile (LSP0) accept ERC-721 and ERC-1155 tokens sent with `safeTransferFrom`, and answer `supportsInterface` for the receiver interfaces. It is used by `up-nft-receiver.html`.
 
 **What it can and cannot do**
