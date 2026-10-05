@@ -19,6 +19,7 @@
 <meta name="twitter:image" content="https://crosschain-lukso.chainintegrate.it/banner.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="chains.js"></script>
+<script src="sign-check.js"></script>
 <script src="backup-check.js"></script>
 <script src="deploy-check.js"></script>
 <style>
@@ -1129,7 +1130,7 @@ $("donateBtn").addEventListener("click", async () => {
     const signerObj = await browserProvider.getSigner();
 
     donateLog(t("donateOpeningWalletLog"), "line-dim");
-    const tx = await signerObj.sendTransaction({ to: ethers.getAddress(DONATE_ADDRESS), value: amountWei, chainId: LUKSO_CHAIN_ID });
+    const tx = await SignCheck.sendTransaction(signerObj, { to: ethers.getAddress(DONATE_ADDRESS), value: amountWei, chainId: LUKSO_CHAIN_ID }, { what: { it: "Donazione a ChainIntegrate", en: "Donation to ChainIntegrate" }, toLabel: "ChainIntegrate" });
     donateLog(t("donateTxHashLog", { hash: tx.hash }), "line-dim");
 
     donateLog(t("donateWaitingLog"), "line-dim");
@@ -1354,7 +1355,7 @@ $("deployBtn").addEventListener("click", async () => {
     }
 
     log(t("sendingTxLog"), "line-dim");
-    const tx = await signerObj.sendTransaction({ to: FACTORY_ADDRESS, data: decoded.rawCalldata, value, chainId: checkedContext.chainId });
+    const tx = await SignCheck.sendTransaction(signerObj, { to: FACTORY_ADDRESS, data: decoded.rawCalldata, value, chainId: checkedContext.chainId }, { what: { it: "Deploy della UP su questa rete (la stessa transazione fatta su LUKSO)", en: "Deploy of the UP on this network (the same transaction made on LUKSO)" } });
     log(t("txHashLog", { hash: tx.hash }), "line-dim");
 
     log(t("waitingConfirmLog"), "line-dim");
@@ -1655,7 +1656,7 @@ async function stillListed(b, at, removed) {
 }
 
 // Simulates, sends through MetaMask, waits, then re-reads with `verify(at)` (a list of problems).
-async function sendBackupTx(b, data, verify) {
+async function sendBackupTx(b, data, verify, what) {
   bkLog(t("bkSimulating"), "line-dim");
   try { await b.provider.call({ from: b.signer, to: b.km, data }); }
   catch (e) { bkLog(t("bkSimFail", { err: e.shortMessage || e.reason || e.message }), "line-err"); return false; }
@@ -1677,7 +1678,7 @@ async function sendBackupTx(b, data, verify) {
   browserProvider.pollingInterval = 1000; // confirm as soon as the block is there (default 4 s)
   const signerObj = await browserProvider.getSigner();
   if (signerObj.address.toLowerCase() !== b.signer.toLowerCase()) { bkLog(t("signerChangedErr", { now: signerObj.address, checked: b.signer }), "line-err"); return false; }
-  const tx = await signerObj.sendTransaction({ to: b.km, data, chainId: b.chainId });
+  const tx = await SignCheck.sendTransaction(signerObj, { to: b.km, data, chainId: b.chainId }, { what, toLabel: { it: "Key Manager della UP", en: "the UP's Key Manager" } });
   bkLog(t("bkTx", { hash: tx.hash }), "line-dim");
   bkLog(t("bkWaiting"), "line-dim");
   const receipt = await tx.wait();
@@ -1721,6 +1722,7 @@ $("addBackupBtn").addEventListener("click", async () => {
     if (dataKeys && dataKeys !== "0x") { keys.push(BK.dataKeysKey(backup)); vals.push(dataKeys); copy.push("keys"); }
     bkLog(t("bkPlanAdd", { signer: b.signer, km: b.km, len: b.r.len, len1: b.r.len + 1, backup, perms: permHex(b.signerCtrl.perms), names: permNames(b.signerCtrl.perms), extra: copy.length ? t("bkPlanExtra") : "" }), "line-dim");
     const data = KM_EXEC_IFACE.encodeFunctionData("execute", [UP_DATA_IFACE.encodeFunctionData("setDataBatch", [keys, vals])]);
+    const what = { it: `Aggiunge il backup ${backup} alla UP ${b.up}, con gli stessi permessi di ${b.signer}`, en: `Adds the backup ${backup} to the UP ${b.up}, with the same permissions as ${b.signer}` };
     const problems = await sendBackupTx(b, data, async (at) => {
       const [p, lenRaw, item] = await upData.getDataBatch([BK.permKey(backup), BK.ARRAY_KEY, BK.indexKey(b.r.len)], at);
       const out = [];
@@ -1729,7 +1731,7 @@ $("addBackupBtn").addEventListener("click", async () => {
       if (String(item).toLowerCase() !== backup.toLowerCase()) out.push(`list entry ${item}`);
       out.push(...await stillListed(b, at, null));
       return out;
-    });
+    }, what);
     if (problems === false) return;
     bkLog(problems.length ? t("bkVerifyBad", { what: problems.join(", ") }) : t("bkAddOk", { addr: backup }), problems.length ? "line-warn" : "line-ok");
     await readBackup();
@@ -1771,6 +1773,7 @@ $("removeBtn").addEventListener("click", async () => {
     if (b.genesis.includes(target.address.toLowerCase())) bkLog(t("bkGenesisWarn"), "line-warn");
     if (!backupAmong(b.r.controllers.filter(c => c !== target))) bkLog(t("bkNoBackupAfter"), "line-warn");
     const data = KM_EXEC_IFACE.encodeFunctionData("execute", [UP_DATA_IFACE.encodeFunctionData("setDataBatch", [keys, vals])]);
+    const what = { it: `Toglie il controller ${target.address} dalla UP ${b.up}`, en: `Removes the controller ${target.address} from the UP ${b.up}` };
     const problems = await sendBackupTx(b, data, async (at) => {
       const [p, lenRaw] = await upData.getDataBatch([BK.permKey(target.address), BK.ARRAY_KEY], at);
       const len = Number(BigInt(lenRaw || "0x0"));
@@ -1781,7 +1784,7 @@ $("removeBtn").addEventListener("click", async () => {
       if (list.some(v => v && v.toLowerCase() === target.address.toLowerCase())) out.push("still listed");
       out.push(...await stillListed(b, at, target.address));
       return out;
-    });
+    }, what);
     if (problems === false) return;
     bkLog(problems.length ? t("bkVerifyBad", { what: problems.join(", ") }) : t("bkRemoveOk", { addr: target.address }), problems.length ? "line-warn" : "line-ok");
     $("removeAck").checked = false;

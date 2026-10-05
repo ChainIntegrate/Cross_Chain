@@ -20,6 +20,7 @@
 <script src="config.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="chains.js"></script>
+<script src="sign-check.js"></script>
 <script src="backup-check.js"></script>
 <script src="gas-relay-client.js"></script>
 <style>
@@ -1506,7 +1507,7 @@ $("sendBtn").addEventListener("click", withBusy(async () => {
     }
 
     log(t("sendingTxLog"), "line-dim");
-    const tx = await signerObj.sendTransaction({ to: lastKeyManager, data: lastExecuteCalldata, chainId: checkedContext.chainId });
+    const tx = await SignCheck.sendTransaction(signerObj, { to: lastKeyManager, data: lastExecuteCalldata, chainId: checkedContext.chainId }, { what: { it: "Invio dalla UP (il controller paga il gas)", en: "Transfer from the UP (the controller pays the gas)" }, toLabel: { it: "Key Manager della UP", en: "the UP's Key Manager" } });
     log(t("txHashLog", { hash: tx.hash }), "line-dim");
     const explorerUrl = getExplorerUrl(net, EXPLORER_PATH, tx.hash);
     if (explorerUrl) log(explorerUrl, "line-dim");

@@ -1014,7 +1014,7 @@ async function sendTx(tx, label) {
   const signer = await new ethers.BrowserProvider(signerProvider).getSigner();
   if (signer.address !== s.signer) { log(t("stale"), "line-err"); return null; }
   log(t("sending"), "line-dim");
-  const sent = await signer.sendTransaction({ ...tx, gasLimit, chainId: s.chainId });
+  const sent = await SignCheck.sendTransaction(signer, { ...tx, gasLimit, chainId: s.chainId }, { what: label, toLabel: tx.to && s.km && tx.to.toLowerCase() === s.km.toLowerCase() ? { it: "Key Manager della UP", en: "the UP's Key Manager" } : null });
   log(t("txSent", { hash: sent.hash }), "line-dim");
   const explorerUrl = getExplorerUrl(s.netInfo, EXPLORER_PATH, sent.hash);
   if (explorerUrl) log(explorerUrl, "line-dim");
@@ -1166,7 +1166,7 @@ $("sendSetupBtn").addEventListener("click", async () => {
       s.extKey === p.s.extKey && s.epState === p.s.epState && s.len === p.s.len && s.epListed === p.s.epListed;
     if (!same) { log(t("stale"), "line-err"); return; }
     setupPlan = p; // freshState cleared it
-    const r = await sendTx({ to: p.s.km, data: p.data });
+    const r = await sendTx({ to: p.s.km, data: p.data }, { it: `Configura la UP ${p.s.upAddr} per il gas pagato dal sito (ERC-4337)`, en: `Set up the UP ${p.s.upAddr} for gas paid by the site (ERC-4337)` });
     setupPlan = null;
     if (!r) return;
     const at = { blockTag: r.receipt.blockNumber };
@@ -1241,7 +1241,7 @@ $("sendRevokeBtn").addEventListener("click", async () => {
     const same = s && s.canRevoke && s.upAddr === p.s.upAddr && s.km === p.s.km && s.signer === p.s.signer && s.permRaw === p.s.permRaw &&
       s.extKey === p.s.extKey && s.epPerms === p.s.epPerms && s.len === p.s.len && s.epIndex === p.s.epIndex;
     if (!same) { log(t("stale"), "line-err"); return; }
-    const r = await sendTx({ to: p.s.km, data: p.data });
+    const r = await sendTx({ to: p.s.km, data: p.data }, { it: `Revoca la configurazione ERC-4337 della UP ${p.s.upAddr}`, en: `Revoke the ERC-4337 setup of the UP ${p.s.upAddr}` });
     if (!r) return;
     const at = { blockTag: r.receipt.blockNumber };
     let problems = ["not read"];
@@ -1299,7 +1299,9 @@ $("signOpBtn").addEventListener("click", () => guarded(async () => {
   log(text, "line-compare");
   log(t("signAsk"), "line-warn");
   const signer = await new ethers.BrowserProvider(signerProvider).getSigner();
-  op.signature = await signer.signMessage(ethers.getBytes(hash)); // personal_sign, as Extension4337 expects
+  const box = GasRelayClient.showSignBox({ hash, signer: s.signer });
+  try { op.signature = await signer.signMessage(ethers.getBytes(hash)); } // personal_sign, as Extension4337 expects
+  finally { box.remove(); }
   const who = ethers.verifyMessage(ethers.getBytes(hash), op.signature);
   const permRaw = await s.upC.getData(PERM_KEY(who));
   const ok = permRaw && permRaw !== "0x" && (BigInt(permRaw) & P.ERC4337) !== 0n;

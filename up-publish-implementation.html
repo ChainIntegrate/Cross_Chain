@@ -17,6 +17,7 @@
 <meta name="twitter:image" content="https://crosschain-lukso.chainintegrate.it/banner.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="chains.js"></script>
+<script src="sign-check.js"></script>
 <style>
   :root {
     --bg: #0f1115; --panel: #171a21; --border: #2a2f3a; --field: #10131a; --chip: #2a2f3a; --disabled: #3a3f4b; --raised: #1d2330;
@@ -657,7 +658,7 @@ $("publishBtn").addEventListener("click", async () => {
     }
 
     log(t("sendingLog"), "line-dim");
-    const tx = await signerObj.sendTransaction({ to: NICK_FACTORY, data: source.data, gasLimit: ctx.gasLimit, chainId: ctx.chainId });
+    const tx = await SignCheck.sendTransaction(signerObj, { to: NICK_FACTORY, data: source.data, gasLimit: ctx.gasLimit, chainId: ctx.chainId }, { what: { it: "Pubblica il contratto allo stesso indirizzo che ha su LUKSO", en: "Publish the contract at the same address it has on LUKSO" } });
     log(t("txHashLog", { hash: tx.hash }), "line-dim");
     log(t("waitingLog"), "line-dim");
     const receipt = await tx.wait();

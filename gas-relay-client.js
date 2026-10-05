@@ -599,5 +599,5 @@
     return { enabled: () => state.state === "ready" && cb.checked, refresh, state: () => state };
   }
 
-  window.GasRelayClient = { check, prepare, signAndSend, waitResult, attach, text, userOpHash, sponsorHash, approvalProblem, pendingStatus, pendingView, sponsorStatus, loadInfo, ENTRY_POINT };
+  window.GasRelayClient = { check, prepare, signAndSend, showSignBox, waitResult, attach, text, userOpHash, sponsorHash, approvalProblem, pendingStatus, pendingView, sponsorStatus, loadInfo, ENTRY_POINT };
 })();

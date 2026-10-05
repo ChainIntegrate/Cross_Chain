@@ -7,6 +7,7 @@
 <title>DEPRECATED — UP Multi-chain Deploy (initial test page)</title>
 <meta name="robots" content="noindex, nofollow">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="sign-check.js"></script>
 <style>
   :root {
     --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
@@ -480,7 +481,7 @@ $("deployBtn").addEventListener("click", async () => {
     }
 
     log("Sending transaction (confirm in your wallet)...", "line-dim");
-    const tx = await signerObj.sendTransaction({ to: FACTORY_ADDRESS, data: d.rawCalldata, value: d.value });
+    const tx = await SignCheck.sendTransaction(signerObj, { to: FACTORY_ADDRESS, data: d.rawCalldata, value: d.value }, { what: "Deploy of the UP on this network (the same transaction as on LUKSO)" });
     log(`Tx sent: ${tx.hash}`, "line-dim");
     if (net.explorer) log(net.explorer + tx.hash, "line-dim");
 
