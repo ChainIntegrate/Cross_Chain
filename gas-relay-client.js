@@ -99,12 +99,12 @@
       signed: (v) => `✅ Messaggio firmato da ${v.who} (il controller). Hash dell'operazione firmato: ${v.hash}`,
       wrongSigner: (v) => `Ha firmato ${v.who}, non il controller atteso ${v.exp}: niente è stato inviato.`,
       sending: "Invio al relayer del sito...",
-      refused: (v) => `Il relayer ha rifiutato l'operazione: ${v.err}`,
+      refused: (v) => `Il relayer ha rifiutato l'operazione, non è stato inviato niente (puoi riprovare più tardi): ${v.err}`,
       unreachable: "Il relayer del sito non risponde.",
       sent: (v) => `Transazione del relayer: ${v.hash}`,
       waiting: "In attesa di conferma...",
-      ok: (v) => `✅ Operazione eseguita. Costo pagato dal paymaster: ${v.cost}.`,
-      failed: (v) => `❌ La transazione del relayer è confermata, ma l'operazione della UP è fallita${v.why ? `: ${v.why}` : ""}. Costo pagato dal paymaster: ${v.cost}.`,
+      ok: "✅ Operazione eseguita.",
+      failed: (v) => `❌ La transazione del relayer è confermata, ma l'operazione della UP è fallita${v.why ? `: ${v.why}` : ""}.`,
       noEvent: "❌ Nella transazione del relayer non c'è l'esito di questa operazione.",
       noReceipt: (v) => `⚠️ Dopo un minuto l'RPC non mostra ancora la transazione ${v.hash}: controlla l'esito sull'explorer prima di riprovare.`,
       unclear: "⚠️ Il relayer non ha dato una risposta chiara: riprovo con la stessa operazione firmata (il relayer non la invia due volte)...",
@@ -152,12 +152,12 @@
       signed: (v) => `✅ Message signed by ${v.who} (the controller). Operation hash signed: ${v.hash}`,
       wrongSigner: (v) => `Signed by ${v.who}, not the expected controller ${v.exp}: nothing was sent.`,
       sending: "Sending to the site relayer...",
-      refused: (v) => `The relayer refused the operation: ${v.err}`,
+      refused: (v) => `The relayer refused the operation, nothing was sent (you can try again later): ${v.err}`,
       unreachable: "The site relayer does not answer.",
       sent: (v) => `Relayer transaction: ${v.hash}`,
       waiting: "Waiting for confirmation...",
-      ok: (v) => `✅ Operation done. Cost paid by the paymaster: ${v.cost}.`,
-      failed: (v) => `❌ The relayer's transaction is confirmed, but the UP's operation failed${v.why ? `: ${v.why}` : ""}. Cost paid by the paymaster: ${v.cost}.`,
+      ok: "✅ Operation done.",
+      failed: (v) => `❌ The relayer's transaction is confirmed, but the UP's operation failed${v.why ? `: ${v.why}` : ""}.`,
       noEvent: "❌ The relayer's transaction carries no outcome for this operation.",
       noReceipt: (v) => `⚠️ After a minute the RPC still does not show transaction ${v.hash}: check the outcome on the explorer before trying again.`,
       unclear: "⚠️ The relayer gave no clear answer: trying again with the same signed operation (the relayer never sends it twice)...",
@@ -475,7 +475,9 @@
       try { r = await fetch("relay/send", { method: "POST", headers: { "content-type": "application/json" }, body }); j = await r.json().catch(() => null); }
       catch (e) { unclear = true; continue; }
       if (r.ok && j && j.hash) { log(text("sent", { hash: j.hash }), "line-dim"); return j.hash; }
-      if (!unclear && r.status >= 400 && r.status < 500 && r.status !== 429) throw new Error(text("refused", { err: (j && j.error) || `HTTP ${r.status}` }));
+      // A clear refusal on the first try means nothing was sent: a 4xx, or any refusal the relayer marks
+      // notSent (e.g. 503 "not enough gas", checked before sending).
+      if (!unclear && ((r.status >= 400 && r.status < 500 && r.status !== 429) || (j && j.notSent === true))) throw new Error(text("refused", { err: (j && j.error) || `HTTP ${r.status}` }));
       unclear = true;
     }
     const p = { nonce: prep.op.nonce.toString(), hash: prep.hash, at: Date.now(),
@@ -522,9 +524,10 @@
       } catch (e) { /* not an EntryPoint event */ }
     }
     if (!ev) { log(text("noEvent"), "line-err"); return { success: false }; }
-    const cost = fmt(ev.args.actualGasCost);
+    // The cost is returned to the caller but not shown: the public pages do not show the operator's costs
+    // (the operator's page shows them with its own test operation).
     const success = !!ev.args.success && rc.status === 1;
-    log(success ? text("ok", { cost }) : text("failed", { why, cost }), success ? "line-ok" : "line-err");
+    log(success ? text("ok") : text("failed", { why }), success ? "line-ok" : "line-err");
     return { success, why, cost: ev.args.actualGasCost };
   }
 
