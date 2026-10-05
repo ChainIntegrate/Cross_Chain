@@ -2,6 +2,8 @@
 
 A small Node.js service that sends ERC-4337 user operations for Universal Profiles, so their controllers need no gas. It is behind every "Pay the gas with the site relayer" option: the Send page, the UP Wallet and the subscription page (through `gas-relay-client.js`), and button **B · Send (through the site relayer)** of the operator's page `up-gas-relay-admin.html`. The page posts the signed operation to this service.
 
+**The live site relayer** (ChainIntegrate's server) is `0xbb683923c2Df0269996C0E2F276A5097cE863C2F`, the same on every chain it serves: Base, Polygon, Avalanche C-Chain, Arbitrum One and Arc. Fund it with the chain's gas token when you add a chain (on Arc the gas token is USDC). `GET /relay/info` also shows it.
+
 **How it works.**
 - The controller signs the operation in the page (step A, `personal_sign`).
 - The page posts the signed operation to `https://<site>/relay/send`. The web server passes it to this service on `127.0.0.1:8787`.
@@ -86,7 +88,7 @@ sudo install -m 600 -o up-relayer -g up-relayer /opt/crosschain-relayer/tools/re
 - Edit `/etc/crosschain-relayer/config.json`: the chains to serve (RPC and paymasters), and `minBalanceWarn`, the balance below which the log shows a warning.
 - The service refuses to start if the key file is readable by other users.
 
-**4. Fund the relayer.** Send a little native currency to the relayer address on each chain in the configuration (on Base, 0.001 ETH is plenty). Its balance hardly moves, because every operation is reimbursed.
+**4. Fund the relayer.** Send a little native currency (the chain's gas token: ETH, POL, AVAX, USDC on Arc) to the relayer address on each chain in the configuration (on Base, 0.001 ETH is plenty). Its balance hardly moves, because every operation is reimbursed.
 
 **5. Service.**
 

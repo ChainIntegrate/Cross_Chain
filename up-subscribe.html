@@ -136,10 +136,11 @@ const NATIVE_USDC = {
   137: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",    // Polygon PoS (native, not the old USDC.e)
   43114: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",  // Avalanche C-Chain
   42161: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",  // Arbitrum One (native, not the old USDC.e)
+  5042: "0x3600000000000000000000000000000000000000",   // Arc: the ERC-20 interface of USDC, the chain's gas token (6 decimals)
 };
 const AMOUNT = 5_000000n; // 5 USDC, 6 decimals
 // Published price per operation, shown until the service answers with its own (the service's list wins).
-const PRICE_LIST = { 8453: "0.01", 42161: "0.03", 137: "0.02", 43114: "0.02" };
+const PRICE_LIST = { 8453: "0.01", 42161: "0.03", 137: "0.02", 43114: "0.02", 5042: "0.02" };
 const ERC20 = new ethers.Interface(["function balanceOf(address) view returns (uint256)", "function transfer(address to, uint256 amount) returns (bool)"]);
 
 const I18N = {
