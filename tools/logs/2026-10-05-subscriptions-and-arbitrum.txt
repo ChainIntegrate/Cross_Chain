@@ -1,0 +1,41 @@
+Subscriptions opened, first customer, and Arbitrum One live
+2026-10-04 / 2026-10-05 · maintainer, with the site's pages and the server's logs
+
+== Arbitrum One (42161)
+ChainIntegrate UP 0x4a2605796e0d91A9667d6E30365aEEC384C48c27 deployed and set up for 4337.
+UPPaymaster published at 0xb353565d1f801E7402DBC267b8C0E30E3540D4eD (tx 0x50631d49244db3a0365707c0f9a703439603072f320e2a2580a4a6548dfa29cb), cap 0.0003 ETH.
+UPVerifyingPaymaster published at 0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e (tx 0x75a2a3eafbb6825fea030232496e5cdcc002b511703cc178a3e79b406a0646e3), signer 0x7a2b016b32F57298D3851Bf04BDFD62633E4c3f9, cap 0.0003 ETH.
+All four contracts source-verified on Arbiscan.
+Relayer log at start: "chain 42161: ready (Arbitrum)" (NodeInterface answered on mainnet).
+
+Test operation (2026-10-05): the ChainIntegrate UP sends 0.0001 ETH to the cassa, gas paid through the allowlist paymaster.
+  relayer tx 0x4ac5df41149bfa38a35c2ae04b506c62acbcc4273e06ee9d563897abd725d886
+  "Operazione eseguita. Costo pagato dal paymaster: 0.000003940551824 ETH."
+  relayer balance on 42161: 500000000000000 wei before, 500508316402000 wei after (+0.0000005 ETH):
+  the L1 data cost was reimbursed, with the page's margin.
+Monitor dry run with 42161 added: all clear.
+
+== Subscriptions (2026-10-04, 23:43 server time)
+Service log: "subscriptions: 5.0 USDC to 0x4a2605796e0d91A9667d6E30365aEEC384C48c27; prices 137 0.02, 8453 0.01, 42161 0.01, 43114 0.02"
+
+Allowlist changes (UPPaymaster, with the cassa):
+  0x328A19Ab63744AAF3d0AeBfB8e6Dc5246fAf317b removed on Polygon (tx 0x025335e72919e080636ed3d0dd365342eb501d0c486fd0e1c9a69cf5b1fd0d3d) and Base (tx 0x8a3ff37b26ec4526851957b34ffda9d8a7809307957889a5c5d7808ec1eb2432)
+  ChainIntegrate UP added on Avalanche (tx 0xd469c1f563bd9b4c1c2d8f9584cdb0f146667171d832252ee19bf40605010618), Base (tx 0x2e63ec0c8315713d035687954686d164783259d9a594239a9208a535e3de8af5),
+  Polygon (tx 0x5f93bb00a961776a1bf2f2d80560f6ab21cea4266389c825b6706917aa666248) and Arbitrum One (tx 0x43a91e47e7ca38668e9f6952f83f2fee2811f2cd5ed7be08a513675f5f98ee8c)
+
+First customer: 0x328A19Ab63744AAF3d0AeBfB8e6Dc5246fAf317b on Base (controller 0x406f822aC86b61d4cDf4cD84833f7e5561609C02)
+1. Payment of 5 USDC to the ChainIntegrate UP, gas paid by the site (sponsor paymaster)
+   approved 23:53:25, max cost 0.000008704861 ETH
+   relayer tx 0xe41a65c5b273cd2c9b7457bcd7508ce5aaf8a7635587a9800ddfc8775b1f3887, block 52180745, status 1
+   watcher 23:54:26: "chain 8453: subscription paid by 0x328A… (5.0 USDC, tx 0xe41a…)"
+   operator e-mail received
+2. activate: "Credited 5.0 USDC", activation e-mail to the user received (IT/EN)
+3. Sponsored transfer of 0.001 ETH from the UP to the cassa
+   relayer tx 0x3529b764aab01530a5650fb5ba310d1e99befe5d09f8c673514800527f907fef, verified on Basescan
+   "subscriptions" command: 0x328A…  active  balance 4.99 USDC
+
+Found and fixed:
+- After both relayed operations on Base the page said "after one minute the RPC still does not show the transaction":
+  publicnode refuses receipt lookups. Fixed with GET /relay/receipt (relayer) and the pages' fallback to it.
+- The activation e-mail named Arbitrum "chain 42161", linked the subscription page for "Send and UP Wallet",
+  and wrote "1.0 USDC". Fixed in the service.
