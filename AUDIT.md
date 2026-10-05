@@ -2,9 +2,9 @@
 
 | | |
 |---|---|
-| **Audit date** | 2026-09-27 (rev. 1–3); 2026-09-29 (rev. 4); 2026-10-01 (rev. 5); 2026-10-02 (rev. 6); 2026-10-04 (rev. 7, rev. 8); 2026-10-05 (rev. 9) |
+| **Audit date** | 2026-09-27 (rev. 1–3); 2026-09-29 (rev. 4); 2026-10-01 (rev. 5); 2026-10-02 (rev. 6); 2026-10-04 (rev. 7, rev. 8); 2026-10-05 (rev. 9, rev. 10) |
 | **Commit audited** | `f56dd29` (rev. 1–3); `47642bc` (rev. 4); `40f0bc0` (rev. 6), all on branch `main`. Rev. 5 covered deployed contracts and the relayer (section 8) |
-| **Revision** | 3 — rev. 2 reclassified H-03, M-05, I-01 and I-02 after the maintainer's feedback (salt/IV are public format values; all profiles and addresses shown belong to the maintainer and are public by choice); rev. 3 adds L-09, found while testing the new implementation-publishing page, and M-08, after the maintainer described how the site is deployed; M-08 was fixed and verified on the live site the same day; rev. 4 adds the two WalletConnect pages (section 7); rev. 5 the gas relay (section 8); rev. 6 a review of the whole repository with the system live (section 9); rev. 7 the sponsor paymaster `UPVerifyingPaymaster` (section 10). Section 11 records the design decisions of the paid subscriptions; rev. 8 and 9 are the launch reviews of the whole system, toolkit and signing service (section 12) |
+| **Revision** | 3 — rev. 2 reclassified H-03, M-05, I-01 and I-02 after the maintainer's feedback (salt/IV are public format values; all profiles and addresses shown belong to the maintainer and are public by choice); rev. 3 adds L-09, found while testing the new implementation-publishing page, and M-08, after the maintainer described how the site is deployed; M-08 was fixed and verified on the live site the same day; rev. 4 adds the two WalletConnect pages (section 7); rev. 5 the gas relay (section 8); rev. 6 a review of the whole repository with the system live (section 9); rev. 7 the sponsor paymaster `UPVerifyingPaymaster` (section 10). Section 11 records the design decisions of the paid subscriptions; rev. 8 and 9 are the launch reviews of the whole system, toolkit and signing service (section 12); rev. 10 records the fixes of SP-A and SP-B in the signing service |
 | **Scope** | Rev. 1–3: every file in the repository at the time: 6 HTML tools, `decrypt.js`, README, images in `guide-assets/`, and the full git history. Rev. 4: the WalletConnect pages `up-wallet.html` and `up-walletconnect-basenames.html`, the vendored `vendor/walletkit-1.6.0.min.js` and `config.example.js`. Rev. 5: `Extension4337`, `contracts/UPPaymaster.sol`, the relayer and the gas-relay setup batches. Rev. 6: the whole repository, pages, shared scripts, contracts and relayer |
 | **Method** | Manual code review, cross-check against the LUKSO reference contracts (`@lukso/lsp6-contracts` 0.16.3, `@lukso/lsp23-contracts` 0.16.3; for rev. 4 also `@lukso/lsp-smart-contracts` 0.14.0 for LSP0, LSP6 `isValidSignature` and LSP17), browser end-to-end tests with mocked wallets/RPCs/WalletConnect (Playwright + Chromium), a git history review for secrets and personal data, and, for rev. 4, live tests by the maintainer on Base and Polygon mainnet |
 
@@ -585,8 +585,8 @@ The full reports are in the private repository of the service, because they desc
 
 | # | Severity | Finding | Status |
 |---|---|---|---|
-| SP-A | Medium | Signing service: the subscription bootstrap can be abused to use up a chain's daily sponsorship budget (denial of sponsorship to paying customers; no funds lost) | **Open.** Fix before advertising subscriptions; details in the private repository |
-| SP-B | Low | Signing service: the address that receives a UP's low-balance e-mails can be set by someone who does not control the UP | **Open**, fixed with SP-A |
+| SP-A | Medium | Signing service: the subscription bootstrap can be abused to use up a chain's daily sponsorship budget (denial of sponsorship to paying customers; no funds lost) | **Fixed** (rev. 10): a subscription payment is approved only for a set-up Universal Profile holding the amount; budget reserved by an approval ends when the approval expires, and the real on-chain cost replaces it |
+| SP-B | Low | Signing service: the address that receives a UP's low-balance e-mails can be set by someone who does not control the UP | **Fixed** (rev. 10): the address comes from the last paid subscription |
 | SP-C | Low | Signing service: balance checked at approval, charged at execution (a small overdraft is possible; financially negligible) | Open |
 | GS-1 | Low | `up-gas-relay-admin.html`: the sponsor paymaster's **Top up** button is not gated on the owner. A page opened with `?owner=<other>` computes another paymaster, and the cassa could fund one it does not own (carries G-N5) | Open |
 | GS-2 | Low | `gas-relay-client.js`: one pending-operation record per network and UP. Signing a second relayed operation while one is outstanding replaces the first record, so a "it arrived after all" notice can be lost (no double spend: same nonce) | Open |
@@ -603,4 +603,4 @@ The full reports are in the private repository of the service, because they desc
 
 **Carried, by design:** VP-H1 (the signing key can approve operations up to the cap until the deposit or the daily budget runs out; mitigated by the dedicated key, caps, budgets, 5-minute approvals, `setSigner(0)` and the monitor's drawdown alarm) and VP-L1 (the sponsor paymaster cannot be staked: site relayer only).
 
-**Order of the fixes:** SP-A and SP-B first, because subscriptions are open; then GS-1, N-1 and L-6; then the rest.
+**Order of the fixes:** SP-A and SP-B first, because subscriptions are open (fixed in rev. 10); then GS-1, N-1 and L-6; then the rest.
