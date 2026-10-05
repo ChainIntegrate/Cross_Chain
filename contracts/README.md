@@ -230,6 +230,8 @@ Each contract has the same address on every network where it is published. The r
 | UPVerifyingPaymaster `0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e` | ✅ | ✅ | ✅ | ✅ | — not published |
 | Extension4337 `0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2` | ✅ | ✅ | ✅ | ✅ | — (LUKSO's own) |
 
+**Arc (5042):** NFTReceiverExtension, UPPaymaster, UPVerifyingPaymaster and LUKSO's Extension4337 published on 2026-10-05 at the same addresses ([explorer.arc.io](https://explorer.arc.io/)); source verification there not checked yet.
+
 **Secondary explorers (best effort).** Base Blockscout, Polygon Blockscout and Snowtrace (Routescan, Avalanche) are not tracked as a requirement. Their status can change on its own: a contract can show as verified there because its code matches one already known, and that match can disappear when the explorer reindexes. On 2026-10-04:
 - NFTReceiverExtension and UPPaymaster: verified on all three;
 - UPVerifyingPaymaster: verified on Polygon Blockscout; not yet on Base Blockscout and Snowtrace;

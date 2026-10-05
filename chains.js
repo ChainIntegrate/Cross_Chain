@@ -2,6 +2,7 @@ const CHAINS = [
   { key: "0g", name: "0G", chainId: 16661, rpc: "https://evmrpc.0g.ai", explorerBase: "https://chainscan.0g.ai", currency: "0G" },
   { key: "apechain", name: "ApeChain", chainId: 33139, rpc: "https://rpc.apechain.com", explorerBase: "https://apescan.io", currency: "APE" },
   { key: "arbitrum-one", name: "Arbitrum One", chainId: 42161, rpc: "https://arb1.arbitrum.io/rpc", explorerBase: "https://arbiscan.io", currency: "ETH" },
+  { key: "arc", name: "Arc", chainId: 5042, rpc: "https://rpc.mainnet.arc.io", explorerBase: "https://explorer.arc.io", currency: "USDC" }, // gas is paid in USDC
   { key: "avalanche-c-chain", name: "Avalanche C-Chain", chainId: 43114, rpc: "https://api.avax.network/ext/bc/C/rpc", explorerBase: "https://snowscan.xyz", currency: "AVAX" },
   { key: "base", name: "Base", chainId: 8453, rpc: "https://base-rpc.publicnode.com", explorerBase: "https://basescan.org", currency: "ETH" },
   { key: "berachain", name: "Berachain", chainId: 80094, rpc: "https://rpc.berachain.com", explorerBase: "https://berascan.com", currency: "BERA" },
