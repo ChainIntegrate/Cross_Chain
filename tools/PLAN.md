@@ -236,6 +236,7 @@ A page that reads and shows a UP's LSP3 identity on any network where it is depl
 - **Receipts through the relayer (2026-10-05):** on Base the page's public RPC (publicnode) refuses receipt lookups, so after a relayed operation the page waited a minute and said it could not see the transaction, although it had succeeded in seconds. The relayer now answers `GET /relay/receipt` for its own transactions, and the pages ask it when the RPC does not answer.
 - **Launch reviews 2026-10-04 and 2026-10-05 (`AUDIT.md` section 12), to do, in this order:**
   1. ~~SP-A and SP-B in the signing service~~ Done: payment approvals only for a set-up UP holding the amount; budget reserved by an approval released when it expires, then counted from the real on-chain spend; the e-mail taken from the last *paid* subscription.
+  2. ~~GS-1, N-1, L-6~~ Done on 2026-10-06: Top up only by the paymaster's owner (and a warning for an owner from a link); Identity images on outside servers only on a click; the Send page refuses the UP's Key Manager, the EntryPoint and the site's paymasters as recipients.
   2. GS-1 (admin page: Top up gated on the owner and the relayer's paymaster), N-1 (Identity: no automatic images from token metadata), L-6 (Send: refuse the Key Manager, EntryPoint and paymasters as recipients).
   3. SP-C, SP-2, GS-2, N-2, F2-2, WalletConnect telemetry and SRI, CSP; M-08 checked on the live site.
 - **Ledger (hardware wallet), to do:** test with a real Ledger connected to MetaMask, with small amounts on Base:

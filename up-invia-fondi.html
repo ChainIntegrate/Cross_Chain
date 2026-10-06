@@ -353,6 +353,8 @@ const I18N = {
     transferConfirmedLog: "✅✅ Trasferimento confermato.",
     sendErrorLog: (v) => `Errore durante l'invio: ${v.err}`,
     recipientIsSelfErr: "❌ BLOCCANTE — il destinatario coincide con la UP stessa.",
+    recipientIsKmErr: "❌ BLOCCANTE — il destinatario è il Key Manager di questa UP: non è un portafoglio, quello che riceve resterebbe bloccato lì. Controlla l'indirizzo.",
+    recipientSystemErr: (v) => `❌ BLOCCANTE — il destinatario è ${v.name}, un contratto del sistema di gas pagato dal sito, non un portafoglio: quello che riceve non torna indietro (per un paymaster diventa il deposito del gestore). Controlla l'indirizzo.`,
     recipientZeroErr: "❌ BLOCCANTE — il destinatario è l'indirizzo zero: i fondi andrebbero persi.",
     ownerNotKmErr: (v) => `❌ BLOCCANTE — l'owner della UP (${v.addr}) non ha bytecode su questa rete: non è un Key Manager.`,
     rpcChainMismatchErr: (v) => `❌ BLOCCANTE — l'RPC risponde con chainId ${v.rpcChainId}, ma la rete selezionata è ${v.netName} (chainId ${v.chainId}).`,
@@ -512,6 +514,8 @@ const I18N = {
     transferConfirmedLog: "✅✅ Transfer confirmed.",
     sendErrorLog: (v) => `Error while sending: ${v.err}`,
     recipientIsSelfErr: "❌ BLOCKING — the recipient is the UP itself.",
+    recipientIsKmErr: "❌ BLOCKING — the recipient is this UP's Key Manager: it is not a wallet, and what it receives would be stuck there. Check the address.",
+    recipientSystemErr: (v) => `❌ BLOCKING — the recipient is ${v.name}, a contract of the site's gas system, not a wallet: what it receives does not come back (for a paymaster it becomes the operator's deposit). Check the address.`,
     recipientZeroErr: "❌ BLOCKING — the recipient is the zero address: the funds would be lost.",
     ownerNotKmErr: (v) => `❌ BLOCKING — the UP owner (${v.addr}) has no bytecode on this network: it is not a Key Manager.`,
     rpcChainMismatchErr: (v) => `❌ BLOCKING — the RPC answers with chainId ${v.rpcChainId}, but the selected network is ${v.netName} (chainId ${v.chainId}).`,
@@ -1353,6 +1357,15 @@ $("checkBtn").addEventListener("click", withBusy(async () => {
   if (!ethers.isAddress(recipient)) { log(t("invalidRecipientErr"), "line-err"); return; }
   if (BigInt(recipient) === 0n) { log(t("recipientZeroErr"), "line-err"); return; }
   if (recipient.toLowerCase() === profile.address.toLowerCase()) { log(t("recipientIsSelfErr"), "line-err"); return; }
+  // AUDIT L-6: addresses that are part of the gas relay are never a recipient. Value sent to the EntryPoint
+  // becomes a deposit only a technical tool can withdraw; value sent to a paymaster becomes its deposit,
+  // which belongs to the paymaster's owner (the site operator for these two).
+  const SYSTEM_RECIPIENTS = {
+    [GasRelayClient.ENTRY_POINT.toLowerCase()]: "ERC-4337 EntryPoint",
+    "0xb353565d1f801e7402dbc267b8c0e30e3540d4ed": "UPPaymaster",
+    "0xbea7ea6562cea4da9050bcd81e21ca569440d21e": "UPVerifyingPaymaster",
+  };
+  if (SYSTEM_RECIPIENTS[recipient.toLowerCase()]) { log(t("recipientSystemErr", { name: SYSTEM_RECIPIENTS[recipient.toLowerCase()] }), "line-err"); return; }
 
   try {
     log(t("upLog", { addr: profile.address }), "line-dim");
@@ -1378,6 +1391,7 @@ $("checkBtn").addEventListener("click", withBusy(async () => {
       log(t("ownerNotKmErr", { addr: keyManagerAddress }), "line-err");
       return;
     }
+    if (recipient.toLowerCase() === keyManagerAddress.toLowerCase()) { log(t("recipientIsKmErr"), "line-err"); return; } // AUDIT L-6
 
     // An account delegated through EIP-7702 (code 0xef0100 + address, e.g. a MetaMask smart account)
     // is still a wallet: only real contract code counts as a contract here.

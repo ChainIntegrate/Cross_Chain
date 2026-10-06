@@ -79,6 +79,7 @@
   .asset .thumb { width: 40px; height: 40px; flex-shrink: 0; border-radius: 8px; background: var(--chip) center / cover no-repeat;
                   display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-dim); font-family: monospace; overflow: hidden; }
   .asset .thumb.has-img { color: transparent; }
+  .asset .thumb.img-ask { cursor: pointer; outline: 1px dashed var(--accent); outline-offset: -1px; color: var(--accent); }
   .asset .info { min-width: 0; flex: 1; }
   button.danger { background: var(--err); }
   button.danger:disabled { background: var(--disabled); }
@@ -240,6 +241,7 @@ const I18N = {
     capLspT: "Token e NFT LUKSO (LSP7, LSP8)",
     capLspOk: "✅ Sì: il Universal Receiver Delegate registra i token ricevuti nella lista LSP5 della UP.",
     capLspNo: "⚠️ Nessun Universal Receiver Delegate: i token LSP7/LSP8 arrivano lo stesso, ma la UP non li registra nella sua lista.",
+    imgAsk: "Immagine su un server esterno: clicca per mostrarla (quel server vedrà il tuo indirizzo IP)",
     capNftT: "NFT ERC-721 ed ERC-1155",
     capNftOk: "✅ Sì: estensione ufficiale di LUKSO ERCTokenCallbacks (0x082d…aBc5) registrata, con codice verificato.",
     capNftOurs: "✅ Sì: estensione di ricezione di ChainIntegrate (0x7F68…C03e) registrata, con codice verificato.",
@@ -301,7 +303,7 @@ const I18N = {
     pubNoGas: (v) => `❌ ${v.addr} ha ${v.bal} ${v.cur} su questa rete, ne servono circa ${v.cost} per il gas. Niente inviato: aggiungi un po' di ${v.cur || "valuta della rete"} a questo account, oppure connetti un altro controller che ne abbia.`,
     pubGasOk: (v) => `Gas stimato: circa ${v.cost} ${v.cur}, pagato da ${v.addr} (saldo ${v.bal} ${v.cur}).`,
     panel5Title: "5 · Token e NFT",
-    panel5Note: "Quello che la UP possiede su ciascuna rete: la valuta della rete, i token e NFT LUKSO (LSP7, LSP8) dalla lista <b>LSP5ReceivedAssets</b> della UP, letta dalla blockchain, e gli altri token e NFT (ERC-20, ERC-721, ERC-1155) da un <b>indicizzatore</b> (Alchemy o Blockscout), che può essere incompleto. I contratti segnalati come spam sono raccolti a parte. Nessun token qui è stato verificato come autentico: un nome o un simbolo può imitare quello di un altro token.",
+    panel5Note: "Quello che la UP possiede su ciascuna rete: la valuta della rete, i token e NFT LUKSO (LSP7, LSP8) dalla lista <b>LSP5ReceivedAssets</b> della UP, letta dalla blockchain, e gli altri token e NFT (ERC-20, ERC-721, ERC-1155) da un <b>indicizzatore</b> (Alchemy o Blockscout), che può essere incompleto. I contratti segnalati come spam sono raccolti a parte. Nessun token qui è stato verificato come autentico: un nome o un simbolo può imitare quello di un altro token. Le immagini su IPFS si vedono subito; quelle su altri server (per esempio di token ricevuti senza averli chiesti) hanno il bordo tratteggiato e si caricano solo con un clic, perché quel server vedrebbe chi guarda la UP.",
     assetsReading: "Lettura di token e NFT...",
     assetsFail: (v) => `Token e NFT non letti: ${v.err}`,
     nativeBal: (v) => `${v.amount} ${v.cur}`,
@@ -374,6 +376,7 @@ const I18N = {
     capLspT: "LUKSO tokens and NFTs (LSP7, LSP8)",
     capLspOk: "✅ Yes: the Universal Receiver Delegate records received tokens in the UP's LSP5 list.",
     capLspNo: "⚠️ No Universal Receiver Delegate: LSP7/LSP8 tokens still arrive, but the UP does not record them in its list.",
+    imgAsk: "Image on an outside server: click to show it (that server will see your IP address)",
     capNftT: "ERC-721 and ERC-1155 NFTs",
     capNftOk: "✅ Yes: LUKSO's official extension ERCTokenCallbacks (0x082d…aBc5) registered, code verified.",
     capNftOurs: "✅ Yes: ChainIntegrate's receiver extension (0x7F68…C03e) registered, code verified.",
@@ -435,7 +438,7 @@ const I18N = {
     pubNoGas: (v) => `❌ ${v.addr} holds ${v.bal} ${v.cur} on this network; about ${v.cost} is needed for gas. Nothing sent: add a little ${v.cur || "of the network's currency"} to this account, or connect another controller that has some.`,
     pubGasOk: (v) => `Estimated gas: about ${v.cost} ${v.cur}, paid by ${v.addr} (balance ${v.bal} ${v.cur}).`,
     panel5Title: "5 · Tokens and NFTs",
-    panel5Note: "What the UP holds on each network: the network's currency, LUKSO tokens and NFTs (LSP7, LSP8) from the UP's <b>LSP5ReceivedAssets</b> list, read from the chain, and the other tokens and NFTs (ERC-20, ERC-721, ERC-1155) from an <b>indexer</b> (Alchemy or Blockscout), which can be incomplete. Contracts flagged as spam are grouped apart. No token here is verified as genuine: a name or symbol can imitate another token's.",
+    panel5Note: "What the UP holds on each network: the network's currency, LUKSO tokens and NFTs (LSP7, LSP8) from the UP's <b>LSP5ReceivedAssets</b> list, read from the chain, and the other tokens and NFTs (ERC-20, ERC-721, ERC-1155) from an <b>indexer</b> (Alchemy or Blockscout), which can be incomplete. Contracts flagged as spam are grouped apart. No token here is verified as genuine: a name or symbol can imitate another token's. Images on IPFS show at once; those on other servers (for example of tokens received without asking) have a dashed border and load only with a click, because that server would see who looks at the UP.",
     assetsReading: "Reading tokens and NFTs...",
     assetsFail: (v) => `Tokens and NFTs not read: ${v.err}`,
     nativeBal: (v) => `${v.amount} ${v.cur}`,
@@ -733,10 +736,29 @@ function lsp4Image(raw) {
   })().catch(() => null));
   return lsp4Images.get(raw);
 }
+// AUDIT N-1: an image (or a metadata file) on a server chosen by the token's creator would tell that
+// server who looks at this UP, and when (airdropped tokens included). Loaded by themselves only: inline
+// data, ipfs:// through the gateways above, and the hosts of those gateways and of the indexer's own image
+// CDN. Anything else waits for a click on the thumbnail.
+const AUTO_IMAGE_HOSTS = new Set(IPFS_GATEWAYS.map(g => new URL(g).host).concat(["nft-cdn.alchemy.com", "static.alchemyapi.io"]));
+function autoLoad(uri) {
+  if (/^data:image\//i.test(uri || "") || /^ipfs:\/\//i.test(uri || "")) return true;
+  try { return AUTO_IMAGE_HOSTS.has(new URL(uri).host); } catch (e) { return false; }
+}
 function showThumb(thumb, r) {
   const set = (url) => { if (url) setImage(thumb, url, () => thumb.classList.add("has-img")); };
-  if (r.image) { set(r.image); return; }
-  if (r.lsp4Metadata) lsp4Image(r.lsp4Metadata).then(url => { if (url) { r.image = url; set(url); } });
+  const ask = (load) => {
+    thumb.classList.add("img-ask"); thumb.title = t("imgAsk"); thumb.setAttribute("role", "button"); thumb.tabIndex = 0;
+    thumb.setAttribute("aria-label", t("imgAsk"));
+    const go = () => { thumb.classList.remove("img-ask"); thumb.removeAttribute("title"); thumb.removeAttribute("role"); thumb.onclick = thumb.onkeydown = null; load(); };
+    thumb.onclick = go; thumb.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } };
+  };
+  if (r.image) { if (autoLoad(r.image)) set(r.image); else ask(() => set(r.image)); return; }
+  if (!r.lsp4Metadata) return;
+  const resolve = (clicked) => lsp4Image(r.lsp4Metadata).then(url => { if (!url) return; r.image = url; if (clicked || autoLoad(url)) set(url); else ask(() => set(url)); });
+  const v = decodeVerifiableUri(r.lsp4Metadata);
+  if (v && !v.bad && autoLoad(v.uri)) resolve(false);
+  else ask(() => resolve(true));
 }
 
 // Results are kept by read (seq), so a column that finishes before the profile is rendered is not lost.

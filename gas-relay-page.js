@@ -261,6 +261,7 @@ const I18N = {
     // status labels
     kNetwork: "Rete", kRpc: "RPC", kWallet: "MetaMask", kEntryPoint: "EntryPoint v0.6",
     kPmAddress: "Indirizzo del paymaster", kOwnerCheck: "⚠️ Attenzione",
+    ownerFromLink: (v) => `Il proprietario (${v.owner}) viene dal link che hai aperto e NON è quello salvato in questo browser (${v.saved}). I paymaster mostrati sono di quel proprietario: non ricaricarli se non sono tuoi.`,
     ownerNotActive: (v) => `Il proprietario scritto (${v.owner}) NON è l'account attivo in MetaMask (${v.active}). Se stai per pubblicare o ricaricare, controlla che sia davvero il proprietario che vuoi: l'indirizzo del paymaster dipende da lui.`, kPmCode: "Codice", kPmOwner: "Proprietario", kPmDeposit: "Deposito", kPmCap: "Tetto per operazione", kPmUp: "UP in lista", kYou: "Account attivo",
     kUp: "UP", kKm: "Key Manager", kPerms: "Permessi dell'account attivo", kExt: "Extension4337", kExtKey: "Estensione registrata", kEpPerms: "Permessi dell'EntryPoint", kSigner4337: "Permesso 4337 dell'account", kReady: "Stato",
     rpcOk: (v) => `chainId ${v.id}`, rpcFail: (v) => `non risponde: ${v.err}`, rpcWrong: (v) => `chainId ${v.id}, atteso ${v.exp}`,
@@ -507,6 +508,7 @@ const I18N = {
     logTitle: "Log",
     kNetwork: "Network", kRpc: "RPC", kWallet: "MetaMask", kEntryPoint: "EntryPoint v0.6",
     kPmAddress: "Paymaster address", kOwnerCheck: "⚠️ Warning",
+    ownerFromLink: (v) => `The owner (${v.owner}) comes from the link you opened and is NOT the one saved in this browser (${v.saved}). The paymasters shown are that owner's: do not top them up if they are not yours.`,
     ownerNotActive: (v) => `The owner entered (${v.owner}) is NOT the account active in MetaMask (${v.active}). If you are about to publish or top up, check that it really is the owner you want: the paymaster's address depends on it.`, kPmCode: "Code", kPmOwner: "Owner", kPmDeposit: "Deposit", kPmCap: "Cap per operation", kPmUp: "UP on the allowlist", kYou: "Active account",
     kUp: "UP", kKm: "Key Manager", kPerms: "Active account's permissions", kExt: "Extension4337", kExtKey: "Extension registered", kEpPerms: "EntryPoint's permissions", kSigner4337: "Account's 4337 permission", kReady: "Status",
     rpcOk: (v) => `chainId ${v.id}`, rpcFail: (v) => `not answering: ${v.err}`, rpcWrong: (v) => `chainId ${v.id}, expected ${v.exp}`,
@@ -700,7 +702,11 @@ if (params.get("network") && CHAINS.some(c => c.key === params.get("network"))) 
 // Owner field: from the URL, else the value remembered in this browser (it must always be the cassa).
 const OWNER_KEY = "upGasRelay.owner";
 if (!ADMIN) $("ownerAddress").value = PAGE.owner; // user page: always the operator's cassa
-else if (params.get("owner")) $("ownerAddress").value = params.get("owner");
+else if (params.get("owner")) {
+  $("ownerAddress").value = params.get("owner");
+  // A link chose the owner: remember it differs from the one saved in this browser (AUDIT GS-1).
+  try { const r = localStorage.getItem("upGasRelay.owner"); if (r && ethers.isAddress(params.get("owner")) && ethers.getAddress(params.get("owner")) !== r) window.__ownerFromLink = r; } catch (e) { /* storage unavailable */ }
+}
 else { try { const v = localStorage.getItem(OWNER_KEY); if (v && ethers.isAddress(v)) $("ownerAddress").value = v; } catch (e) { /* storage unavailable */ } }
 function rememberOwner() { if (!ADMIN) return; const v = $("ownerAddress").value.trim(); if (ethers.isAddress(v)) { try { localStorage.setItem(OWNER_KEY, ethers.getAddress(v)); } catch (e) { /* storage unavailable */ } } }
 $("ownerAddress").addEventListener("change", rememberOwner);
@@ -862,6 +868,7 @@ async function computeState() {
   else {
     Object.assign(s, { owner, pmInit, pmAddr, pmState });
     s.pm.push(["kPmAddress", pmAddr, ""]);
+    if (window.__ownerFromLink && window.__ownerFromLink !== owner) s.pm.push(["kOwnerCheck", ["ownerFromLink", { owner, saved: window.__ownerFromLink }], "warn"]);
     if (owner !== signerAddress) s.pm.push(["kOwnerCheck", ["ownerNotActive", { owner, active: signerAddress }], "warn"]);
     s.pm.push(["kPmCode", [pmState === "ok" ? "pmOk" : pmState === "missing" ? "pmMissing" : "pmWrong"], pmState === "ok" ? "ok" : pmState === "missing" ? "warn" : "err"]);
     if (pmRead) {
@@ -973,13 +980,15 @@ function updateButtons() {
   syncBusyToast();
   const s = state, ok = !!(s && s.ok && riskAccepted() && !busy);
   $("publishPmBtn").disabled = !(ok && s.pmState === "missing" && s.factoryOk);
-  $("fundBtn").disabled = !(ok && s.pmState === "ok");
   const own = ok && s.pmState === "ok" && s.isOwner;
+  // Top up only from the paymaster's on-chain owner (AUDIT GS-1): the address depends on the owner field,
+  // which a link can prefill with someone else's address.
+  $("fundBtn").disabled = !own;
   $("capBtn").disabled = !own;
   $("withdrawBtn").disabled = !own;
   $("publishVpmBtn").disabled = !(ok && s.vpmState === "missing" && s.factoryOk);
-  $("vpmFundBtn").disabled = !(ok && s.vpmState === "ok");
   const vOwn = ok && s.vpmState === "ok" && s.vpmIsOwner;
+  $("vpmFundBtn").disabled = !vOwn;
   ["vpmSignerBtn", "vpmCapBtn", "vpmWithdrawBtn"].forEach(id => { $(id).disabled = !vOwn; });
   $("vpmStopBtn").disabled = !(vOwn && s.vpmSigner && s.vpmSigner !== ethers.ZeroAddress);
   $("sponsorBtn").disabled = !(own && s.upAddr && !s.sponsored);
@@ -1007,9 +1016,11 @@ function updateButtons() {
 }
 
 // ==================== SENDING ====================
-async function sendTx(tx, label) {
+// must(s): a condition read again on the fresh state, right before sending (e.g. "the active account owns it").
+async function sendTx(tx, label, must) {
   const s = await freshState();
   if (!s || !s.ok) { log(t("notReady"), "line-err"); return null; }
+  if (must && !must(s)) { log(t("notOwner"), "line-err"); return null; }
   log(t("simulating"), "line-dim");
   let gas;
   try { await s.provider.call({ from: s.signer, ...tx }); gas = await s.provider.estimateGas({ from: s.signer, ...tx }); }
@@ -1064,7 +1075,8 @@ $("publishExtBtn").addEventListener("click", () => guarded(async () => {
 }));
 $("fundBtn").addEventListener("click", () => guarded(async () => {
   const v = amountWei("fundAmount"); if (!v) { log(t("badAmount"), "line-err"); return; }
-  await sendTx({ to: state.pmAddr, value: v });
+  if (!state || !state.isOwner) { log(t("notOwner"), "line-err"); return; }
+  await sendTx({ to: state.pmAddr, value: v }, { it: "Ricarica il deposito del paymaster personale (allowlist)", en: "Top up the personal paymaster's deposit (allowlist)" }, (s) => s.isOwner && s.pmAddr === state.pmAddr);
 }));
 const pmData = (fn, args) => new ethers.Interface(PM_ABI).encodeFunctionData(fn, args);
 async function ownerTx(data) {
@@ -1096,7 +1108,8 @@ $("publishVpmBtn").addEventListener("click", () => guarded(async () => {
 }));
 $("vpmFundBtn").addEventListener("click", () => guarded(async () => {
   const v = amountWei("vpmFundAmount"); if (!v) { log(t("badAmount"), "line-err"); return; }
-  await sendTx({ to: state.vpmAddr, value: v });
+  if (!state || !state.vpmIsOwner) { log(t("notOwner"), "line-err"); return; }
+  await sendTx({ to: state.vpmAddr, value: v }, { it: "Ricarica il deposito del paymaster pubblico (servizio di sponsorizzazione)", en: "Top up the public paymaster's deposit (sponsor service)" }, (s) => s.vpmIsOwner && s.vpmAddr === state.vpmAddr);
 }));
 const vpmData = (fn, args) => new ethers.Interface(VPM_ABI).encodeFunctionData(fn, args);
 async function vpmOwnerTx(data) {
