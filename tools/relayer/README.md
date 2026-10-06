@@ -132,11 +132,19 @@ It shows the relayer address, the chains and the balance on each chain. In `up-g
 
 `monitor.js` checks every hour, read-only and without the relayer key, everything the gas relay depends on:
 - for each UP listed in `monitor.chains.<chainId>.ups`: UP and Key Manager code, the `validateUserOp` extension (→ `Extension4337`), **EntryPoint permissions exactly `0x000500`** (AUDIT.md G-M2), the EntryPoint listed once, the controller list (duplicates, empty entries, leftover extension permissions, CHANGEOWNER, DELEGATECALL, at least one 4337 signer), the paymaster allowlist. A UP off every allowlist is fine on a chain with a `sponsorPaymaster`, as long as the signing service accepts it: the monitor asks it (`monitor.sponsorCheckUrl`, default `http://127.0.0.1:8788/relay/sponsor/check`). It warns when the service does not answer or does not accept the UP;
-- for each paymaster: code, owner (`monitor.paymasterOwner`), cap, deposit (warning below `monitor.minPaymasterDeposit`, default 0.0002);
+- for each paymaster: code, owner (`monitor.paymasterOwner`), cap, deposit: a warning when the deposit is worth less than `monitor.minDepositUsd` (default **10 USD**), at the price of the chain's Chainlink feed (`../../usd-price.js`: ETH/USD on Base and Arbitrum, POL/USD on Polygon, AVAX/USD on Avalanche; on Arc the gas token is USDC). A feed whose `description()` is not the expected pair is not used; on a chain without a price the old rule applies (`monitor.minPaymasterDeposit`, in the gas token, default 0.0002);
 - for the sponsor paymaster, if the chain has one: code (`UPVerifyingPaymaster`), owner, the signer (zero means sponsoring is stopped; optionally `monitor.sponsorSigner`, the expected key), cap, deposit;
 - for every paymaster, a **fast drawdown**: a deposit that fell, since the previous run, by more than `monitor.drawdownCaps` times its cap (default 2) or by more than `monitor.drawdownFraction` of its value (default 0.5) is a problem, emailed at once. Normal use costs a fraction of the cap per operation; a fast fall means many operations together, for example a stolen signing key. A withdrawal by the owner also triggers it once. The deposits are kept in the monitor's state file between runs;
 - `Extension4337` code on the chain;
 - the relayer service: it answers on `relay/info` and its balance is above `minBalanceWarn`.
+
+Every e-mail ends with the **balances**: the relayer and each paymaster deposit on every chain, in the gas token and in USD (with "price not up to date" when the feed is more than 24 hours old), and the total in USD. A changing price does not send a new e-mail by itself: only a change in the set of findings does.
+
+**Balances on demand** (the same figures, in the console):
+```bash
+cd /opt/crosschain-relayer/tools/relayer && sudo -u up-relayer node balances.js --config /etc/crosschain-relayer/config.json
+```
+Deposits worth less than `monitor.minDepositUsd` are marked `LOW`.
 
 A chain check that fails on an RPC error is retried twice, 15 seconds apart, before it is reported; a chain the relayer currently cannot reach is a warning, not a problem. It emails only when the set of findings changes (a new problem, or "all clear" when everything is fixed), and repeats a reminder every `monitor.reminderHours` (default 24) while problems remain. The first run with everything in order sends nothing.
 

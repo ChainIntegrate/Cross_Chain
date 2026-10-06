@@ -435,4 +435,4 @@ if (require.main === module) {
   main(process.argv.slice(2)).catch((e) => { console.error(e.message || e); process.exit(1); });
 }
 
-module.exports = { main, userOpHash, parseOp, readConfig, ENTRY_POINT };
+module.exports = { main, userOpHash, parseOp, readConfig, readKey, ENTRY_POINT };

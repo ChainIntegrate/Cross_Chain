@@ -676,6 +676,11 @@ async function preVerificationGas(provider, op, maxFee) {
   return pvg + pvg * 15n / 100n;
 }
 const fmt = (wei, cur) => `${ethers.formatEther(wei)} ${cur || ""}`.trim();
+// With the USD value, when the page has a price for this chain (operator's page only).
+const fmtUsd = (wei, s) => fmt(wei, s.cur) + (s.usd && window.UsdPrice ? UsdPrice.suffix(wei, s.usd, LANG) : "");
+// A paymaster deposit worth less than this is flagged (the monitor e-mails below the same value).
+const MIN_DEPOSIT_USD = 10;
+const depCls = (wei, s) => { const v = s.usd && window.UsdPrice ? UsdPrice.usd(wei, s.usd) : null; return wei === 0n || (v != null && v < MIN_DEPOSIT_USD) ? "warn" : ""; };
 const b32 = (n) => ethers.zeroPadValue(ethers.toBeHex(n), 32);
 const enc = (types, vals) => ethers.AbiCoder.defaultAbiCoder().encode(types, vals);
 
@@ -810,6 +815,8 @@ async function computeState() {
   if (rpcId !== chainId) { s.net.push(["kRpc", ["rpcWrong", { id: rpcId, exp: chainId }], "err"]); return s; }
   s.net.push(["kRpc", ["rpcOk", { id: rpcId }], "ok"]);
   Object.assign(s, { provider, chainId, netInfo: net, cur: net.currency || "" });
+  // Operator's page only: the USD value of deposits and of the relayer's balance (Chainlink, usd-price.js).
+  s.usd = ADMIN && window.UsdPrice ? await UsdPrice.read(provider, chainId, ethers) : null;
   if (!signerProvider || !signerAddress) { s.net.push(["kWallet", ["walletMissing"], "err"]); return s; }
   let walletId;
   try { walletId = parseInt(await signerProvider.request({ method: "eth_chainId" }), 16); } catch (e) { walletId = -1; }
@@ -860,7 +867,7 @@ async function computeState() {
       const [onChainOwner, cap, dep, sponsored] = pmRead;
       Object.assign(s, { pmOwner: onChainOwner, cap, deposit: dep });
       s.pm.push(["kPmOwner", onChainOwner === owner ? owner : ["ownerMismatch", { owner: onChainOwner }], onChainOwner === owner ? "" : "err"]);
-      s.pm.push(["kPmDeposit", fmt(dep, s.cur), dep > 0n ? "" : "warn"]);
+      s.pm.push(["kPmDeposit", fmtUsd(dep, s), depCls(dep, s)]);
       s.pm.push(["kPmCap", cap > 0n ? fmt(cap, s.cur) : ["capZero"], cap > 0n ? "" : "warn"]);
       s.isOwner = onChainOwner === signerAddress;
       s.pm.push(["kYou", [s.isOwner ? "youOwner" : "youNotOwner", { addr: signerAddress }], s.isOwner ? "ok" : "warn"]);
@@ -885,7 +892,7 @@ async function computeState() {
       if (vPending !== ethers.ZeroAddress) s.vpm.push(["kVpmPending", vPending, "warn"]);
       s.vpm.push(["kVpmSigner", vSigner === ethers.ZeroAddress ? ["vpmNoSigner"] : vSigner, vSigner === ethers.ZeroAddress ? "warn" : ""]);
       s.vpm.push(["kPmCap", vCap > 0n ? fmt(vCap, s.cur) : ["capZero"], vCap > 0n ? "" : "warn"]);
-      s.vpm.push(["kPmDeposit", fmt(vDep, s.cur), vDep > 0n ? "" : "warn"]);
+      s.vpm.push(["kPmDeposit", fmtUsd(vDep, s), depCls(vDep, s)]);
       s.vpm.push(["kYou", [s.vpmIsOwner ? "youOwner" : "youNotOwner", { addr: signerAddress }], s.vpmIsOwner ? "ok" : "warn"]);
       const sp = svc && svc.chains[String(chainId)] && svc.chains[String(chainId)].sponsorPaymaster;
       s.vpm.push(["kVpmSvc", !sp ? ["vpmSvcNo"] : sp.toLowerCase() === vpmAddr.toLowerCase() ? ["vpmSvcYes"] : ["vpmSvcOther", { addr: sp }], sp && sp.toLowerCase() === vpmAddr.toLowerCase() ? "ok" : "warn"]);
@@ -1332,7 +1339,7 @@ function svcLine(s) {
   if (!svc) return t("svcNone");
   if (!s || !s.ok || !svcServes(s.chainId, s.pmAddr)) return t("svcNotServed");
   const bal = svc.chains[String(s.chainId)].balance;
-  return t("svcReady", { addr: svc.relayer, bal: bal == null ? "?" : fmt(BigInt(bal), s.cur) });
+  return t("svcReady", { addr: svc.relayer, bal: bal == null ? "?" : fmtUsd(BigInt(bal), s) });
 }
 const opJson = (op) => Object.fromEntries(Object.entries(op).map(([k, v]) => [k, typeof v === "bigint" ? v.toString() : v]));
 
