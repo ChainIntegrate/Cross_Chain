@@ -70,8 +70,10 @@ const DEFAULT_LIMITS = { perIpPerMinute: 6, perSenderPerMinute: 3 };
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 const enc = (types, vals) => ethers.AbiCoder.defaultAbiCoder().encode(types, vals);
 
+// notSent: the refusal came before any transaction was sent, so the page can say so plainly. Only a
+// failure of the send itself (502) leaves it open.
 class Refused extends Error {
-  constructor(message, status = 400) { super(message); this.status = status; }
+  constructor(message, status = 400, notSent = true) { super(message); this.status = status; this.notSent = notSent; }
 }
 
 function readConfig(path) {
@@ -303,7 +305,7 @@ async function checkAndSend(chain, id, op, pm, hash) {
   chain.queue = sent.catch(() => {});
   let tx;
   try { tx = await sent; }
-  catch (e) { throw new Refused(`send failed: ${revertReason(e)}`, 502); }
+  catch (e) { throw new Refused(`send failed: ${revertReason(e)}`, 502, false); }
   chain.recent.set(hash, tx.hash);
   if (chain.recent.size > 1000) chain.recent.delete(chain.recent.keys().next().value);
   // The outcome of the relayer's own transactions, for GET /relay/receipt: some public RPCs refuse
@@ -403,7 +405,7 @@ function makeServer(config, wallet, chains) {
       const status = e instanceof Refused ? e.status : 500;
       if (status >= 500 || !(e instanceof Refused)) log(`error ${req.method} ${req.url} from ${ip}: ${e.stack || e}`);
       else log(`refused ${req.method} ${req.url} from ${ip}: ${e.message}`);
-      if (!res.headersSent) send(res, status, { error: e instanceof Refused ? e.message : "internal error" });
+      if (!res.headersSent) send(res, status, e instanceof Refused ? { error: e.message, notSent: e.notSent } : { error: "internal error" });
     }
   });
 }

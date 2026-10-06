@@ -140,7 +140,7 @@ const NATIVE_USDC = {
 };
 const AMOUNT = 5_000000n; // 5 USDC, 6 decimals
 // Published price per operation, shown until the service answers with its own (the service's list wins).
-const PRICE_LIST = { 8453: "0.01", 42161: "0.03", 137: "0.02", 43114: "0.02", 5042: "0.02" };
+const PRICE_LIST = { 8453: "0.01", 42161: "0.03", 137: "0.02", 43114: "0.02", 5042: "0.01" };
 const ERC20 = new ethers.Interface(["function balanceOf(address) view returns (uint256)", "function transfer(address to, uint256 amount) returns (bool)"]);
 
 const I18N = {

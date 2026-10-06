@@ -64,13 +64,13 @@
   const TEXT = {
     it: {
       option: "Paga il gas con il relayer del sito",
-      optionNote: (v) => `Il controller firma un messaggio in MetaMask, senza gas; il relayer del sito invia e il paymaster ${v.pm} paga (al massimo ${v.cap} per operazione). Solo chiamate e invii di valore.`,
-      optionNoteSponsor: (v) => `Il controller firma un messaggio in MetaMask, senza gas; il servizio di sponsorizzazione del sito approva l'operazione, il relayer la invia e il paymaster ${v.pm} paga (al massimo ${v.cap} per operazione). Solo chiamate e invii di valore.`,
+      optionNote: (v) => `Il controller firma un messaggio in MetaMask, senza gas; il relayer del sito invia e il paymaster ${v.pm} paga. Solo chiamate e invii di valore.`,
+      optionNoteSponsor: (v) => `Il controller firma un messaggio in MetaMask, senza gas; il servizio di sponsorizzazione del sito approva l'operazione, il relayer la invia e il paymaster ${v.pm} paga. Solo chiamate e invii di valore.`,
       balanceNote: (v) => `Saldo della UP: ${v.bal} USDC; questa operazione costa ${v.price} USDC.`,
       notReady: "Il relayer del sito serve questa rete e la UP è nella lista del paymaster, ma manca qualcosa:",
       notReadySponsor: "Il servizio di sponsorizzazione del sito accetta questa UP, ma manca qualcosa:",
       noSponsorSigner: "il paymaster di sponsorizzazione non ha un firmatario impostato",
-      planSponsor: (v) => `Gas: relayer del sito, con l'approvazione del servizio di sponsorizzazione (chiesta al momento della firma). Paymaster ${v.pm}, costo massimo ${v.max} (tetto ${v.cap}); limite di gas dell'esecuzione ${v.gas}.`,
+      planSponsor: (v) => `Gas: relayer del sito, con l'approvazione del servizio di sponsorizzazione (chiesta al momento della firma). Paymaster ${v.pm}; limite di gas dell'esecuzione ${v.gas}.`,
       sponsorAsk: "Richiesta di approvazione al servizio di sponsorizzazione...",
       sponsorRefused: (v) => `Il servizio di sponsorizzazione non approva l'operazione: ${v.err}. Niente è stato firmato.`,
       sponsorUnreachable: "Il servizio di sponsorizzazione non risponde. Niente è stato firmato.",
@@ -85,9 +85,9 @@
       no4337: "il controller collegato non ha il permesso 4337",
       simFail: (v) => `La simulazione (EntryPoint → UP) fallisce: ${v.err}. Niente è stato firmato.`,
       tooHeavy: (v) => `L'operazione richiede troppo gas per il relayer (${v.gas}, massimo 1.000.000).`,
-      overCap: (v) => `Costo massimo ${v.max}, oltre il tetto del paymaster (${v.cap}).`,
-      lowDeposit: (v) => `Costo massimo ${v.max}, oltre il deposito del paymaster (${v.dep}).`,
-      plan: (v) => `Gas: relayer del sito. Paymaster ${v.pm}, costo massimo ${v.max} (tetto ${v.cap}); limite di gas dell'esecuzione ${v.gas}.`,
+      overCap: "Questa operazione supera il limite per operazione del paymaster del sito: invia senza il relayer (il gas lo paga il controller).",
+      lowDeposit: "Il paymaster del sito non ha fondi sufficienti in questo momento: riprova più tardi, o invia senza il relayer.",
+      plan: (v) => `Gas: relayer del sito. Paymaster ${v.pm}; limite di gas dell'esecuzione ${v.gas}.`,
       signAsk: (v) => `Firma in MetaMask il messaggio ${v.hash} (nessun gas): deve essere identico a quello mostrato da MetaMask.`,
       signBoxTitle: "Firma in MetaMask",
       signBoxMsg: "MetaMask mostra un messaggio da firmare. Deve essere esattamente questo:",
@@ -99,12 +99,12 @@
       signed: (v) => `✅ Messaggio firmato da ${v.who} (il controller). Hash dell'operazione firmato: ${v.hash}`,
       wrongSigner: (v) => `Ha firmato ${v.who}, non il controller atteso ${v.exp}: niente è stato inviato.`,
       sending: "Invio al relayer del sito...",
-      refused: (v) => `Il relayer ha rifiutato l'operazione: ${v.err}`,
+      refused: (v) => `Il relayer ha rifiutato l'operazione, non è stato inviato niente (puoi riprovare più tardi): ${v.err}`,
       unreachable: "Il relayer del sito non risponde.",
       sent: (v) => `Transazione del relayer: ${v.hash}`,
       waiting: "In attesa di conferma...",
-      ok: (v) => `✅ Operazione eseguita. Costo pagato dal paymaster: ${v.cost}.`,
-      failed: (v) => `❌ La transazione del relayer è confermata, ma l'operazione della UP è fallita${v.why ? `: ${v.why}` : ""}. Costo pagato dal paymaster: ${v.cost}.`,
+      ok: "✅ Operazione eseguita.",
+      failed: (v) => `❌ La transazione del relayer è confermata, ma l'operazione della UP è fallita${v.why ? `: ${v.why}` : ""}.`,
       noEvent: "❌ Nella transazione del relayer non c'è l'esito di questa operazione.",
       noReceipt: (v) => `⚠️ Dopo un minuto l'RPC non mostra ancora la transazione ${v.hash}: controlla l'esito sull'explorer prima di riprovare.`,
       unclear: "⚠️ Il relayer non ha dato una risposta chiara: riprovo con la stessa operazione firmata (il relayer non la invia due volte)...",
@@ -117,13 +117,13 @@
     },
     en: {
       option: "Pay the gas with the site relayer",
-      optionNote: (v) => `The controller signs a message in MetaMask, no gas; the site relayer sends it and the paymaster ${v.pm} pays (at most ${v.cap} per operation). Calls and value transfers only.`,
-      optionNoteSponsor: (v) => `The controller signs a message in MetaMask, no gas; the site's sponsor service approves the operation, the relayer sends it and the paymaster ${v.pm} pays (at most ${v.cap} per operation). Calls and value transfers only.`,
+      optionNote: (v) => `The controller signs a message in MetaMask, no gas; the site relayer sends it and the paymaster ${v.pm} pays. Calls and value transfers only.`,
+      optionNoteSponsor: (v) => `The controller signs a message in MetaMask, no gas; the site's sponsor service approves the operation, the relayer sends it and the paymaster ${v.pm} pays. Calls and value transfers only.`,
       balanceNote: (v) => `UP balance: ${v.bal} USDC; this operation costs ${v.price} USDC.`,
       notReady: "The site relayer serves this network and the UP is on the paymaster's list, but something is missing:",
       notReadySponsor: "The site's sponsor service accepts this UP, but something is missing:",
       noSponsorSigner: "the sponsor paymaster has no signer set",
-      planSponsor: (v) => `Gas: site relayer, with the sponsor service's approval (asked for at signing time). Paymaster ${v.pm}, maximum cost ${v.max} (cap ${v.cap}); execution gas limit ${v.gas}.`,
+      planSponsor: (v) => `Gas: site relayer, with the sponsor service's approval (asked for at signing time). Paymaster ${v.pm}; execution gas limit ${v.gas}.`,
       sponsorAsk: "Asking the sponsor service for approval...",
       sponsorRefused: (v) => `The sponsor service does not approve the operation: ${v.err}. Nothing was signed.`,
       sponsorUnreachable: "The sponsor service does not answer. Nothing was signed.",
@@ -138,9 +138,9 @@
       no4337: "the connected controller lacks the 4337 permission",
       simFail: (v) => `The simulation (EntryPoint → UP) fails: ${v.err}. Nothing was signed.`,
       tooHeavy: (v) => `The operation needs too much gas for the relayer (${v.gas}, at most 1,000,000).`,
-      overCap: (v) => `Maximum cost ${v.max}, above the paymaster's cap (${v.cap}).`,
-      lowDeposit: (v) => `Maximum cost ${v.max}, above the paymaster's deposit (${v.dep}).`,
-      plan: (v) => `Gas: site relayer. Paymaster ${v.pm}, maximum cost ${v.max} (cap ${v.cap}); execution gas limit ${v.gas}.`,
+      overCap: "This operation is above the site paymaster's limit per operation: send without the relayer (the controller pays the gas).",
+      lowDeposit: "The site paymaster does not have enough funds right now: try again later, or send without the relayer.",
+      plan: (v) => `Gas: site relayer. Paymaster ${v.pm}; execution gas limit ${v.gas}.`,
       signAsk: (v) => `Sign the message ${v.hash} in MetaMask (no gas): it must be identical to the one MetaMask shows.`,
       signBoxTitle: "Sign in MetaMask",
       signBoxMsg: "MetaMask shows a message to sign. It must be exactly this:",
@@ -152,12 +152,12 @@
       signed: (v) => `✅ Message signed by ${v.who} (the controller). Operation hash signed: ${v.hash}`,
       wrongSigner: (v) => `Signed by ${v.who}, not the expected controller ${v.exp}: nothing was sent.`,
       sending: "Sending to the site relayer...",
-      refused: (v) => `The relayer refused the operation: ${v.err}`,
+      refused: (v) => `The relayer refused the operation, nothing was sent (you can try again later): ${v.err}`,
       unreachable: "The site relayer does not answer.",
       sent: (v) => `Relayer transaction: ${v.hash}`,
       waiting: "Waiting for confirmation...",
-      ok: (v) => `✅ Operation done. Cost paid by the paymaster: ${v.cost}.`,
-      failed: (v) => `❌ The relayer's transaction is confirmed, but the UP's operation failed${v.why ? `: ${v.why}` : ""}. Cost paid by the paymaster: ${v.cost}.`,
+      ok: "✅ Operation done.",
+      failed: (v) => `❌ The relayer's transaction is confirmed, but the UP's operation failed${v.why ? `: ${v.why}` : ""}.`,
       noEvent: "❌ The relayer's transaction carries no outcome for this operation.",
       noReceipt: (v) => `⚠️ After a minute the RPC still does not show transaction ${v.hash}: check the outcome on the explorer before trying again.`,
       unclear: "⚠️ The relayer gave no clear answer: trying again with the same signed operation (the relayer never sends it twice)...",
@@ -475,7 +475,9 @@
       try { r = await fetch("relay/send", { method: "POST", headers: { "content-type": "application/json" }, body }); j = await r.json().catch(() => null); }
       catch (e) { unclear = true; continue; }
       if (r.ok && j && j.hash) { log(text("sent", { hash: j.hash }), "line-dim"); return j.hash; }
-      if (!unclear && r.status >= 400 && r.status < 500 && r.status !== 429) throw new Error(text("refused", { err: (j && j.error) || `HTTP ${r.status}` }));
+      // A clear refusal on the first try means nothing was sent: a 4xx, or any refusal the relayer marks
+      // notSent (e.g. 503 "not enough gas", checked before sending).
+      if (!unclear && ((r.status >= 400 && r.status < 500 && r.status !== 429) || (j && j.notSent === true))) throw new Error(text("refused", { err: (j && j.error) || `HTTP ${r.status}` }));
       unclear = true;
     }
     const p = { nonce: prep.op.nonce.toString(), hash: prep.hash, at: Date.now(),
@@ -522,9 +524,10 @@
       } catch (e) { /* not an EntryPoint event */ }
     }
     if (!ev) { log(text("noEvent"), "line-err"); return { success: false }; }
-    const cost = fmt(ev.args.actualGasCost);
+    // The cost is returned to the caller but not shown: the public pages do not show the operator's costs
+    // (the operator's page shows them with its own test operation).
     const success = !!ev.args.success && rc.status === 1;
-    log(success ? text("ok", { cost }) : text("failed", { why, cost }), success ? "line-ok" : "line-err");
+    log(success ? text("ok") : text("failed", { why }), success ? "line-ok" : "line-err");
     return { success, why, cost: ev.args.actualGasCost };
   }
 
