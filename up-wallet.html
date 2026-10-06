@@ -436,6 +436,8 @@ const I18N = {
     signOrder: "⚠️⚠️ Questo messaggio sembra un ORDINE (per esempio di vendita): chi lo esegue può trasferire beni della UP alle condizioni scritte. Controlla ogni campo.",
     siweDomainMismatch: (v) => `⚠️⚠️ Messaggio di accesso per il dominio \"${v.d}\", ma il sito collegato è ${v.site}: possibile phishing. Rifiuta se non sei sicuro.`,
     siweChainMismatch: (v) => `⚠️ Il messaggio di accesso indica chainId ${v.id}, diverso dalla rete scelta.`,
+    siweDomainOk: (v) => `✅ Accesso a ${v.d}: è lo stesso sito della dApp collegata.`,
+    siweWalletAlert: (v) => `ℹ️ MetaMask mostrerà \"Suspicious sign-in request\" e chiederà due conferme: vede un accesso a ${v.d} chiesto da un'altra app o sito (questa pagina). Qui è normale, perché firmi per conto della UP; procedi solo se il controllo qui sopra è verde.`,
     signReplay: "ℹ️ Se questo controller governa anche altre UP, la firma vale anche per quelle.",
     signCompare: (v) => `👉 DA CONTROLLARE IN METAMASK: il messaggio che MetaMask ti chiede di firmare deve essere esattamente questo: ${v.c}\nSe è diverso, rifiuta in MetaMask.`,
     signReady: "Pronto. Leggi il contenuto sopra: se non capisci cosa stai firmando, premi \"Rifiuta\". Altrimenti premi \"Firma il messaggio\" e confronta il messaggio in MetaMask con quello nel riquadro qui sopra.",
@@ -610,6 +612,8 @@ const I18N = {
     signOrder: "⚠️⚠️ This message looks like an ORDER (for example a sale): whoever executes it can transfer the UP's assets on the stated terms. Check every field.",
     siweDomainMismatch: (v) => `⚠️⚠️ Sign-in message for the domain \"${v.d}\", but the connected site is ${v.site}: possible phishing. Reject it unless you are sure.`,
     siweChainMismatch: (v) => `⚠️ The sign-in message states chainId ${v.id}, which is not the chosen network.`,
+    siweDomainOk: (v) => `✅ Sign-in to ${v.d}: the same site as the connected dApp.`,
+    siweWalletAlert: (v) => `ℹ️ MetaMask will show \"Suspicious sign-in request\" and ask for two confirmations: it sees a sign-in to ${v.d} requested by another app or site (this page). Here that is expected, because you sign on behalf of the UP; proceed only if the check above is green.`,
     signReplay: "ℹ️ If this controller also governs other UPs, the signature is valid for them too.",
     signCompare: (v) => `👉 CHECK IN METAMASK: the message MetaMask asks you to sign must be exactly this: ${v.c}\nIf it is different, reject it in MetaMask.`,
     signReady: "Ready. Read the content above: if you do not understand what you are signing, press \"Reject\". Otherwise press \"Sign the message\" and compare the message in MetaMask with the one in the box above.",
@@ -1396,6 +1400,11 @@ function checkSiwe(text, topic, c, warnings) {
   if (!m) return;
   const host = sessionHost(topic);
   if (host && m[1].toLowerCase() !== host) warnings.push([t("siweDomainMismatch", { d: m[1], site: host }), "line-danger"]);
+  else if (host) {
+    warnings.push([t("siweDomainOk", { d: m[1] }), "line-ok"]);
+    // MetaMask sees a sign-in for this domain requested by another site (this page) and warns about it.
+    warnings.push([t("siweWalletAlert", { d: m[1] }), "line-warn"]);
+  }
   const ch = text.match(/^Chain ID: (\d+)$/m);
   if (ch && Number(ch[1]) !== c.chainId) warnings.push([t("siweChainMismatch", { id: ch[1] }), "line-warn"]);
 }
