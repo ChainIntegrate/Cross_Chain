@@ -9,7 +9,9 @@
 const path = require("path");
 const { ethers } = require("ethers");
 const { readConfig, readKey, ENTRY_POINT } = require("./relay.js");
-const UsdPrice = require(path.join(__dirname, "..", "..", "usd-price.js"));
+let UsdPrice;
+try { UsdPrice = require(path.join(__dirname, "..", "..", "usd-price.js")); }
+catch (e) { console.error("usd-price.js is missing at the repository root. Add it once: cd /opt/crosschain-relayer && sudo git sparse-checkout add /usd-price.js"); process.exit(1); }
 
 const PM_ABI = ["function maxCostPerOp() view returns (uint256)"];
 const EP_ABI = ["function balanceOf(address) view returns (uint256)"];

@@ -15,8 +15,15 @@ const fs = require("fs");
 const path = require("path");
 const { ethers } = require("ethers");
 const { readConfig, ENTRY_POINT } = require("./relay.js");
-// USD value of each chain's gas token (Chainlink feeds; the same file the operator's page uses).
-const UsdPrice = require(path.join(__dirname, "..", "..", "usd-price.js"));
+// USD value of each chain's gas token (Chainlink feeds; the same file the operator's page uses, at the
+// repository's root). If it is missing (a sparse clone without /usd-price.js), the monitor keeps working
+// with the native-amount rule and reports the missing file instead of stopping.
+let UsdPrice, usdMissing = false;
+try { UsdPrice = require(path.join(__dirname, "..", "..", "usd-price.js")); }
+catch (e) {
+  usdMissing = true;
+  UsdPrice = { FEEDS: {}, read: async () => null, usd: () => null, suffix: () => "", fmt: (n) => n.toFixed(2), symbol: () => "" };
+}
 
 // Expected code: our UPPaymaster and LUKSO's Extension4337 as published by this project.
 const PAYMASTER_RUNTIME_HASH = "0x8754f54c34a8849f40e1156013a403e7308e0e1fbabd2c5a1a68f9ddeec6b25d";
@@ -164,6 +171,7 @@ async function checkChain(id, chain, mon, info, out, deposits = {}, balances = {
 async function runChecks(config, deposits = {}, balances = {}) {
   const mon = config.monitor || {};
   const out = [];
+  if (usdMissing) out.push({ level: "warning", where: "monitor", msg: "usd-price.js not found next to the repository root: deposits are checked in the gas token only (cd /opt/crosschain-relayer && sudo git sparse-checkout add /usd-price.js)" });
   let info = null;
   try {
     const r = await fetch(mon.relayerInfoUrl || DEFAULTS.relayerInfoUrl, { signal: AbortSignal.timeout(10_000) });

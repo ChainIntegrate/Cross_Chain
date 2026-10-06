@@ -71,7 +71,7 @@ which node       # e.g. /usr/bin/node: not under /root or /home (the service can
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin up-relayer
 sudo git clone --filter=blob:none --no-checkout https://github.com/ChainIntegrate/Cross_Chain.git /opt/crosschain-relayer
 cd /opt/crosschain-relayer
-sudo git sparse-checkout set --no-cone '/tools/relayer/'
+sudo git sparse-checkout set --no-cone '/tools/relayer/' '/usd-price.js'
 sudo git checkout main
 cd tools/relayer && sudo npm ci --omit=dev
 ```
@@ -140,7 +140,8 @@ It shows the relayer address, the chains and the balance on each chain. In `up-g
 
 Every e-mail ends with the **balances**: the relayer and each paymaster deposit on every chain, in the gas token and in USD (with "price not up to date" when the feed is more than 24 hours old), and the total in USD. A changing price does not send a new e-mail by itself: only a change in the set of findings does.
 
-**Balances on demand** (the same figures, in the console):
+**Balances on demand** (the same figures, in the console). The monitor and `balances.js` read `../../usd-price.js` (the repository's root, shared with the operator's page): a clone made before 2026-10-06 needs it added once, `cd /opt/crosschain-relayer && sudo git sparse-checkout add /usd-price.js`.
+
 ```bash
 cd /opt/crosschain-relayer/tools/relayer && sudo -u up-relayer node balances.js --config /etc/crosschain-relayer/config.json
 ```
