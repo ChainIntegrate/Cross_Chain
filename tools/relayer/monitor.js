@@ -22,7 +22,7 @@ let UsdPrice, usdMissing = false;
 try { UsdPrice = require(path.join(__dirname, "..", "..", "usd-price.js")); }
 catch (e) {
   usdMissing = true;
-  UsdPrice = { FEEDS: {}, read: async () => null, usd: () => null, suffix: () => "", fmt: (n) => n.toFixed(2), symbol: () => "" };
+  UsdPrice = { FEEDS: {}, read: async () => null, usd: () => null, suffix: () => "", fmt: (n) => n.toFixed(2), symbol: () => "", name: () => "" };
 }
 
 // Expected code: our UPPaymaster and LUKSO's Extension4337 as published by this project.
@@ -32,7 +32,9 @@ const SPONSOR_RUNTIME_HASH = "0x95c0efe7fb362c4fa5193c2d01286c69aad1dd3e0e963379
 const EXTENSION_4337 = "0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2";
 const EXTENSION_RUNTIME_HASH = "0x91968b95ee6f8e01a554060b775c13e8df3f0173d87a55a48ed54b8ff02c052d";
 const EP_PERMS = 0x500n; // SUPER_CALL | SUPER_TRANSFERVALUE: the invariant everything rests on
-const DEFAULTS = { drawdownCaps: 2, drawdownFraction: 0.5, minPaymasterDeposit: "0.0002", minDepositUsd: 10, relayerInfoUrl: "http://127.0.0.1:8787/relay/info", sponsorCheckUrl: "http://127.0.0.1:8788/relay/sponsor/check", reminderHours: 24 };
+// Deposits below these USD values are a warning: the public paymaster (the sponsor service, paying for
+// subscribers) needs more than the personal one (the allowlist of the operator's own UPs).
+const DEFAULTS = { drawdownCaps: 2, drawdownFraction: 0.5, minPaymasterDeposit: "0.0002", minSponsorDepositUsd: 10, minAllowlistDepositUsd: 1, relayerInfoUrl: "http://127.0.0.1:8787/relay/info", sponsorCheckUrl: "http://127.0.0.1:8788/relay/sponsor/check", reminderHours: 24 };
 
 const ARRAY_KEY = "0xdf30dba06db6a30e65354d9a64c609861f089545ca58c6b4dbe31a5f338cb0e3";
 const idxKey = (i) => ARRAY_KEY.slice(0, 34) + ethers.toBeHex(i, 16).slice(2);
@@ -44,6 +46,10 @@ const PM_ABI = ["function owner() view returns (address)", "function maxCostPerO
 const VPM_ABI = ["function owner() view returns (address)", "function maxCostPerOp() view returns (uint256)", "function deposit() view returns (uint256)", "function signer() view returns (address)"];
 const hex6 = (n) => "0x" + n.toString(16).padStart(6, "0");
 const eth = (w) => `${ethers.formatEther(w)}`;
+const short = (a) => `${a.slice(0, 6)}…${a.slice(-4)}`;
+// A gas-token amount for people: 4 decimals (more only when it is that small).
+const nat = (w) => { const n = Number(ethers.formatEther(w)); return n === 0 ? "0" : n < 0.0001 ? n.toPrecision(2) : n.toFixed(4); };
+const ROLE = { personal: "personal paymaster (allowlist)", public: "public paymaster (sponsor service)", relayer: "site relayer" };
 
 // ==================== checks ====================
 // Each finding: { level: "error" | "warning", where, msg }. Messages are in English and stable, so the
@@ -106,52 +112,54 @@ async function checkChain(id, chain, mon, info, out, deposits = {}, balances = {
   // One request at a time: some public RPCs (mainnet.base.org) refuse batched or bursty calls with an
   // error ethers reports as "missing revert data".
   const provider = new ethers.JsonRpcProvider(chain.rpc, Number(id), { staticNetwork: true, batchMaxCount: 1 });
-  const where0 = `chain ${id}`;
+  const where0 = UsdPrice.name(id) ? `${UsdPrice.name(id)} (${id})` : `chain ${id}`;
   const rpcId = BigInt(await provider.send("eth_chainId", []));
   if (rpcId !== BigInt(id)) return out.push({ level: "error", where: where0, msg: `rpc answers chainId ${rpcId}` });
   const extCode = await provider.getCode(EXTENSION_4337);
   if (extCode === "0x" || ethers.keccak256(extCode) !== EXTENSION_RUNTIME_HASH) out.push({ level: "error", where: where0, msg: "Extension4337 code missing or different" });
   const minDeposit = ethers.parseEther(String(mon.minPaymasterDeposit || DEFAULTS.minPaymasterDeposit));
-  const minUsd = Number(mon.minDepositUsd ?? DEFAULTS.minDepositUsd);
+  const minUsdPublic = Number(mon.minSponsorDepositUsd ?? mon.minDepositUsd ?? DEFAULTS.minSponsorDepositUsd);
+  const minUsdPersonal = Number(mon.minAllowlistDepositUsd ?? DEFAULTS.minAllowlistDepositUsd);
   const price = await UsdPrice.read(provider, id, ethers, mon.priceFeeds ? { feeds: { ...UsdPrice.FEEDS, ...mon.priceFeeds } } : {});
   const sym = (mon.priceFeeds && mon.priceFeeds[id] && mon.priceFeeds[id].symbol) || UsdPrice.symbol(id);
-  const amount = (w) => `${eth(w)}${sym ? " " + sym : ""}${UsdPrice.suffix(w, price, "en")}`;
-  const keep = (what, w) => { balances[`${id}:${what}`] = { chain: id, what, wei: w.toString(), symbol: sym, usd: UsdPrice.usd(w, price), stale: !!(price && price.stale) }; };
-  // A deposit worth less than minDepositUsd (10 USD by default) is a warning. Without a price for this
-  // chain, the old rule in the gas token applies (minPaymasterDeposit). The signature has no amounts,
-  // so a moving price does not send a new e-mail every hour.
-  const lowDeposit = (where, dep) => {
-    const v = UsdPrice.usd(dep, price);
-    if (v != null) { if (v < minUsd) out.push({ level: "warning", where, msg: `deposit ${amount(dep)} below ${minUsd} USD: top it up`, sig: `deposit below ${minUsd} USD` }); return v < minUsd; }
-    if (dep < minDeposit) { out.push({ level: "warning", where, msg: `deposit ${amount(dep)} below ${eth(minDeposit)} (no USD price for this chain): top it up`, sig: "deposit below the minimum" }); return true; }
+  const tok = (w) => `${nat(w)}${sym ? " " + sym : ""}`;
+  const usdOf = (w) => { const v = UsdPrice.usd(w, price); return v == null ? null : `${UsdPrice.fmt(v)} USD${price.stale ? " (price not up to date)" : ""}`; };
+  const keep = (role, addr, w, min) => { const v = UsdPrice.usd(w, price); balances[`${id}:${role}`] = { chain: id, name: UsdPrice.name(id), role, addr, wei: w.toString(), symbol: sym, usd: v, stale: !!(price && price.stale), low: min != null && v != null && v < min, min }; };
+  // A deposit worth less than its minimum (public 10 USD, personal 1 USD by default) is a warning.
+  // Without a price for this chain, the old rule in the gas token applies (minPaymasterDeposit). The
+  // signature has no amounts, so a moving price does not send a new e-mail every hour.
+  const lowDeposit = (where, dep, minUsd, section) => {
+    const v = UsdPrice.usd(dep, price), fix = `top it up (up-gas-relay-admin.html, section ${section}, with the cassa)`;
+    if (v != null) { if (v < minUsd) out.push({ level: "warning", where, msg: `deposit ${usdOf(dep)} (${tok(dep)}), below the minimum of ${minUsd} USD: ${fix}`, sig: `deposit below ${minUsd} USD` }); return v < minUsd; }
+    if (dep < minDeposit) { out.push({ level: "warning", where, msg: `deposit ${eth(dep)}${sym ? " " + sym : ""} below ${eth(minDeposit)} (no USD price on this chain): ${fix}`, sig: "deposit below the minimum" }); return true; }
     return false;
   };
   for (const pm of chain.paymasters) {
-    const where = `${where0}, paymaster ${pm}`;
+    const where = `${where0}, ${ROLE.personal} ${short(pm)}`;
     const code = await provider.getCode(pm);
     if (code === "0x" || ethers.keccak256(code) !== PAYMASTER_RUNTIME_HASH) { out.push({ level: "error", where, msg: "code missing or different from UPPaymaster" }); continue; }
     const c = new ethers.Contract(pm, PM_ABI, provider);
     const [owner, cap, dep] = await Promise.all([c.owner(), c.maxCostPerOp(), c.deposit()]);
     deposits[`${id}:${pm}`] = { dep: dep.toString(), cap: cap.toString() };
-    keep(`UPPaymaster ${pm} deposit`, dep);
+    keep("personal", pm, dep, minUsdPersonal);
     if (mon.paymasterOwner && ethers.getAddress(owner) !== ethers.getAddress(mon.paymasterOwner)) out.push({ level: "error", where, msg: `owner is ${owner}, expected ${mon.paymasterOwner}` });
     if (cap === 0n) out.push({ level: "error", where, msg: "cap is 0: it pays nothing" });
-    if (!lowDeposit(where, dep) && dep < cap) out.push({ level: "warning", where, msg: `deposit ${eth(dep)} below the cap ${eth(cap)}` });
+    if (!lowDeposit(where, dep, minUsdPersonal, "3") && dep < cap) out.push({ level: "warning", where, msg: `deposit ${eth(dep)} below the cap ${eth(cap)}` });
   }
   if (chain.sponsorPaymaster) {
-    const pm = chain.sponsorPaymaster, where = `${where0}, sponsor paymaster ${pm}`;
+    const pm = chain.sponsorPaymaster, where = `${where0}, ${ROLE.public} ${short(pm)}`;
     const code = await provider.getCode(pm);
     if (code === "0x" || ethers.keccak256(code) !== SPONSOR_RUNTIME_HASH) out.push({ level: "error", where, msg: "code missing or different from UPVerifyingPaymaster" });
     else {
       const c = new ethers.Contract(pm, VPM_ABI, provider);
       const owner = await c.owner(), cap = await c.maxCostPerOp(), dep = await c.deposit(), signer = await c.signer();
       deposits[`${id}:${pm}`] = { dep: dep.toString(), cap: cap.toString(), sponsor: true };
-      keep(`UPVerifyingPaymaster ${pm} deposit`, dep);
+      keep("public", pm, dep, minUsdPublic);
       if (mon.paymasterOwner && ethers.getAddress(owner) !== ethers.getAddress(mon.paymasterOwner)) out.push({ level: "error", where, msg: `owner is ${owner}, expected ${mon.paymasterOwner}` });
       if (signer === ethers.ZeroAddress) out.push({ level: "error", where, msg: "no signer: sponsoring is stopped" });
       else if (mon.sponsorSigner && ethers.getAddress(signer) !== ethers.getAddress(mon.sponsorSigner)) out.push({ level: "error", where, msg: `signer is ${signer}, expected ${mon.sponsorSigner}` });
       if (cap === 0n) out.push({ level: "error", where, msg: "cap is 0: it pays nothing" });
-      if (!lowDeposit(where, dep) && dep < cap) out.push({ level: "warning", where, msg: `deposit ${eth(dep)} below the cap ${eth(cap)}` });
+      if (!lowDeposit(where, dep, minUsdPublic, "3b") && dep < cap) out.push({ level: "warning", where, msg: `deposit ${eth(dep)} below the cap ${eth(cap)}` });
     }
   }
   // The relayer, as the running service reports it.
@@ -159,8 +167,12 @@ async function checkChain(id, chain, mon, info, out, deposits = {}, balances = {
   if (!svc && info && (info.unavailable || []).includes(id)) out.push({ level: "warning", where: `${where0}, relayer`, msg: "the relayer cannot reach this chain's RPC right now; it retries every minute" });
   else if (!svc) out.push({ level: "error", where: `${where0}, relayer`, msg: "the relayer service does not serve this chain" });
   else {
-    if (svc.balance != null) keep(`relayer ${info.relayer} balance`, BigInt(svc.balance));
-    if (svc.balance != null && chain.minBalanceWarn && BigInt(svc.balance) < chain.minBalanceWarn) out.push({ level: "warning", where: `${where0}, relayer ${info.relayer}`, msg: `balance ${amount(BigInt(svc.balance))} below ${eth(chain.minBalanceWarn)}`, sig: "relayer balance below the warning" });
+    if (svc.balance != null) keep("relayer", info.relayer, BigInt(svc.balance), null);
+    if (svc.balance != null && chain.minBalanceWarn && BigInt(svc.balance) < chain.minBalanceWarn) {
+      const b = BigInt(svc.balance), u = usdOf(b);
+      out.push({ level: "warning", where: `${where0}, ${ROLE.relayer} ${short(info.relayer)}`, sig: "relayer balance below the warning",
+        msg: `balance ${tok(b)}${u ? ` (${u})` : ""}, below its warning level of ${tok(chain.minBalanceWarn)}: send ${sym || "the gas token"} from the cassa to ${info.relayer}` });
+    }
   }
   for (const up of mon.ups || []) {
     try { await checkUp(provider, ethers.getAddress(up), chain, mon, out, `${where0}, UP ${ethers.getAddress(up)}`, id); }
@@ -194,26 +206,39 @@ async function runChecks(config, deposits = {}, balances = {}) {
 }
 
 // ==================== report and email ====================
-// The balances, with their USD value and a total, in every e-mail (problems or not).
+// The balances, per chain, with their USD value first, and a total; in every e-mail.
 function balanceLines(balances) {
   const rows = Object.values(balances);
   if (!rows.length) return [];
-  const lines = ["", "Balances:"];
+  const lines = ["", "BALANCES"];
   let total = 0, missing = 0;
-  for (const r of rows) {
-    const usd = r.usd == null ? "" : ` (≈ ${UsdPrice.fmt(r.usd)} USD${r.stale ? ", price not up to date" : ""})`;
-    lines.push(`  chain ${r.chain}, ${r.what}: ${eth(BigInt(r.wei))}${r.symbol ? " " + r.symbol : ""}${usd}`);
-    if (r.usd == null) missing++; else total += r.usd;
+  const chains = [...new Set(rows.map((r) => r.chain))];
+  for (const id of chains) {
+    const rs = rows.filter((r) => r.chain === id);
+    lines.push(`${rs[0].name ? `${rs[0].name} (${id})` : `chain ${id}`}${rs[0].symbol ? ", gas token " + rs[0].symbol : ""}`);
+    for (const role of ["relayer", "personal", "public"]) {
+      const r = rs.find((x) => x.role === role);
+      if (!r) continue;
+      if (r.usd == null) missing++; else total += r.usd;
+      const usd = r.usd == null ? "no USD price" : `${UsdPrice.fmt(r.usd)} USD`;
+      lines.push(`  - ${ROLE[role]}: ${usd} (${nat(BigInt(r.wei))}${r.symbol ? " " + r.symbol : ""})${r.low ? `  <- below ${r.min} USD` : ""}`);
+    }
   }
-  lines.push(`  total ≈ ${UsdPrice.fmt(total)} USD${missing ? ` (${missing} without a USD price, not counted)` : ""}`);
+  const stale = rows.some((r) => r.stale);
+  lines.push("", `Total: ${UsdPrice.fmt(total)} USD${missing ? ` (${missing} amount(s) without a USD price, not counted)` : ""}${stale ? ". Some prices are not up to date (Chainlink feed older than 24 hours)" : ""}.`);
   return lines;
 }
 function report(findings, balances = {}) {
-  const errors = findings.filter((f) => f.level === "error").length, warnings = findings.length - errors;
-  const subject = findings.length ? `[Cross_Chain gas relay] ${errors} problem(s), ${warnings} warning(s)` : "[Cross_Chain gas relay] all clear";
-  const lines = findings.length
-    ? findings.map((f) => `${f.level === "error" ? "PROBLEM" : "warning"} - ${f.where}: ${f.msg}`)
-    : ["Every check passed: EntryPoint permissions 0x000500, extension, controllers, allowlist or sponsor service, paymaster code, signer, cap and deposit, relayer service and balance."];
+  const errors = findings.filter((f) => f.level === "error"), warnings = findings.filter((f) => f.level !== "error");
+  const subject = findings.length
+    ? `[Cross_Chain gas relay] ${errors.length ? `${errors.length} problem(s)` : ""}${errors.length && warnings.length ? ", " : ""}${warnings.length ? `${warnings.length} to do` : ""}`
+    : "[Cross_Chain gas relay] all clear";
+  const item = (f) => `- ${f.where}: ${f.msg}`;
+  const lines = [];
+  if (errors.length) lines.push("PROBLEMS (act now)", ...errors.map(item), "");
+  if (warnings.length) lines.push("TO DO", ...warnings.map(item), "");
+  if (lines.length) lines.pop(); // one blank line before BALANCES
+  if (!findings.length) lines.push("Every check passed: EntryPoint permissions 0x000500, extension, controllers, allowlist or sponsor service, paymaster code, signer, cap and deposit, relayer service and balance.");
   return { subject, text: lines.concat(balanceLines(balances)).join("\n") + `\n\nChecked at ${new Date().toISOString()}. Manual check: up-gas-relay-admin.html, section 2.\n` };
 }
 

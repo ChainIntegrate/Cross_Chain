@@ -20,13 +20,15 @@ async function main(argv) {
   const i = argv.indexOf("--config");
   const config = readConfig(i >= 0 ? argv[i + 1] : null);
   const relayer = readKey(config.keyFile).address;
-  const minUsd = Number((config.monitor || {}).minDepositUsd ?? 10);
-  console.log(`Site relayer ${relayer}; deposits below ${minUsd} USD are marked LOW.`);
+  const mon = config.monitor || {};
+  const minPublic = Number(mon.minSponsorDepositUsd ?? mon.minDepositUsd ?? 10), minPersonal = Number(mon.minAllowlistDepositUsd ?? 1);
+  console.log(`Site relayer ${relayer}. A deposit is marked LOW below ${minPublic} USD (public paymaster) or ${minPersonal} USD (personal paymaster).`);
   let total = 0, missing = 0;
   const line = (label, wei, sym, p, extra = "") => {
     const v = UsdPrice.usd(wei, p);
     if (v == null) missing++; else total += v;
-    console.log(`  ${label.padEnd(22)} ${(ethers.formatEther(wei) + " " + sym).padEnd(30)} ${UsdPrice.suffix(wei, p, "en").trim().padEnd(26)}${extra}`);
+    const n = Number(ethers.formatEther(wei)), amt = n === 0 ? "0" : n < 0.0001 ? n.toPrecision(2) : n.toFixed(4);
+    console.log(`  ${label.padEnd(18)} ${(v == null ? "no USD price" : UsdPrice.fmt(v) + " USD").padEnd(14)} ${(amt + " " + sym).padEnd(18)}${extra}`);
     return v;
   };
   for (const [id, chain] of Object.entries(config.chains)) {
@@ -36,14 +38,14 @@ async function main(argv) {
     try {
       const pf = (config.monitor || {}).priceFeeds;
       const p = await UsdPrice.read(provider, id, ethers, pf ? { feeds: { ...UsdPrice.FEEDS, ...pf } } : {});
-      console.log(`chain ${id} (${sym || "?"})${p ? `, price ${p.pair}${p.stale ? " NOT UP TO DATE" : ""}` : ", no USD price"}`);
-      line("relayer", await provider.getBalance(relayer), sym, p);
+      console.log(`${UsdPrice.name(id) || "chain " + id} (${id}), gas token ${sym || "?"}${p ? `, price ${p.pair}${p.stale ? " NOT UP TO DATE" : ""}` : ", no USD price"}`);
+      line("site relayer", await provider.getBalance(relayer), sym, p);
       const ep = new ethers.Contract(ENTRY_POINT, EP_ABI, provider);
-      const pms = chain.paymasters.map((a) => ["UPPaymaster", a]).concat(chain.sponsorPaymaster ? [["UPVerifyingPaymaster", chain.sponsorPaymaster]] : []);
-      for (const [name, a] of pms) {
+      const pms = chain.paymasters.map((a) => ["personal paymaster", a, minPersonal]).concat(chain.sponsorPaymaster ? [["public paymaster", chain.sponsorPaymaster, minPublic]] : []);
+      for (const [name, a, minUsd] of pms) {
         const [dep, cap] = await Promise.all([ep.balanceOf(a), new ethers.Contract(a, PM_ABI, provider).maxCostPerOp().catch(() => null)]);
         const v = UsdPrice.usd(dep, p);
-        line(`${name} deposit`, dep, sym, p, `${cap == null ? "" : `cap ${ethers.formatEther(cap)} ${sym}`}${v != null && v < minUsd ? "  LOW" : ""}`);
+        line(name, dep, sym, p, `${cap == null ? "" : `cap ${ethers.formatEther(cap)} ${sym}`}${v != null && v < minUsd ? `  LOW (below ${minUsd} USD)` : ""}`);
       }
     } catch (e) { console.log(`chain ${id}: not readable (${e.shortMessage || e.message})`); }
   }

@@ -10,11 +10,11 @@
 (function (root) {
   "use strict";
   const FEEDS = {
-    8453: { symbol: "ETH", feed: "0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70", pairs: ["ETH / USD"] },   // Base
-    42161: { symbol: "ETH", feed: "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612", pairs: ["ETH / USD"] },  // Arbitrum One
-    137: { symbol: "POL", feed: "0xAB594600376Ec9fD91F8e885dADF0CE036862dE0", pairs: ["POL / USD", "MATIC / USD"] }, // Polygon (renamed feed)
-    43114: { symbol: "AVAX", feed: "0x0A77230d17318075983913bC2145DB16C7366156", pairs: ["AVAX / USD"] }, // Avalanche C-Chain
-    5042: { symbol: "USDC", stable: true },                                                               // Arc: gas is USDC
+    8453: { name: "Base", symbol: "ETH", feed: "0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70", pairs: ["ETH / USD"] },   // Base
+    42161: { name: "Arbitrum One", symbol: "ETH", feed: "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612", pairs: ["ETH / USD"] },  // Arbitrum One
+    137: { name: "Polygon", symbol: "POL", feed: "0xAB594600376Ec9fD91F8e885dADF0CE036862dE0", pairs: ["POL / USD", "MATIC / USD"] }, // Polygon (renamed feed)
+    43114: { name: "Avalanche", symbol: "AVAX", feed: "0x0A77230d17318075983913bC2145DB16C7366156", pairs: ["AVAX / USD"] }, // Avalanche C-Chain
+    5042: { name: "Arc", symbol: "USDC", stable: true },                                                               // Arc: gas is USDC
   };
   const ABI = ["function description() view returns (string)", "function decimals() view returns (uint8)",
     "function latestRoundData() view returns (uint80, int256, uint256, uint256, uint80)"];
@@ -44,7 +44,7 @@
     if (v == null) return "";
     return ` (≈ ${fmt(v)} USD${p.stale ? (lang === "en" ? ", price not up to date" : ", prezzo non aggiornato") : ""})`;
   }
-  const api = { FEEDS, read, usd, suffix, fmt, symbol: (id) => (FEEDS[Number(id)] || {}).symbol || "" };
+  const api = { FEEDS, read, usd, suffix, fmt, symbol: (id) => (FEEDS[Number(id)] || {}).symbol || "", name: (id) => (FEEDS[Number(id)] || {}).name || "" };
   if (typeof module === "object" && module.exports) module.exports = api;
   else root.UsdPrice = api;
 })(typeof window !== "undefined" ? window : globalThis);
