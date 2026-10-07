@@ -227,6 +227,16 @@ const KNOWN_CONTRACTS = {
   "0x82af49447d8a07e3bd95bd0d56f35241523fbab1": { name: "WETH", role: "roleWrapped" }, // Arbitrum One
   "0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270": { name: "WPOL", role: "roleWrapped" }, // Polygon
 };
+// dApp contracts with a different address on each network, keyed "chainId:address". Their calls are
+// decoded only when sent to these addresses: a generic name such as create() means nothing elsewhere.
+// hup.social: the contracts are not verified on the explorers; the layout of create() was read from
+// hup.social's own transactions and their ContentCreated events (creator, cType, metadata, parentId,
+// allowedComments), and its selector matches that signature.
+const DAPP_CONTRACTS = {
+  "8453:0xe401af10caa79f9bb6945c87ee196503e5de6bea": "hup.social", // Base
+  "5042:0xa5e73b15c1c3ee477aed682741f0324c6787bbb8": "hup.social", // Arc
+};
+const HUP_IFACE = new ethers.Interface(["function create(address creator, uint8 cType, string metadata, uint256 parentId, bool allowedComments)"]);
 // "0x… (Name)" when the address is a known contract with code on this network, else the bare address.
 async function labelAddress(provider, addr) {
   const k = KNOWN_CONTRACTS[String(addr).toLowerCase()];
@@ -356,6 +366,11 @@ const I18N = {
     proposalScam: "❌ WalletConnect segnala questo sito come truffa o dominio non valido: connessione rifiutata.",
     proposalUnverified: "⚠️ Dominio non verificato da WalletConnect: controlla di essere sul sito giusto prima di approvare qualsiasi cosa.",
     proposalRejectedChains: (v) => `❌ Connessione rifiutata: la dApp richiede reti diverse da quella scelta (${v.err}). Scegli nel pannello 1 la rete che la dApp usa e ricollega.`,
+    proposalOtherChains: (v) => `❌ Connessione rifiutata: la dApp chiede ${v.want}, nel pannello 1 è scelta ${v.have}. Scegli la rete della dApp, poi ricollega dalla dApp.`,
+    switchNetworkBtn: (v) => `Scegli ${v.name}`,
+    attnProposal: (v) => `${v.name} chiede di collegarsi alla UP.`,
+    attnRequest: (v) => `${v.who} chiede ${v.what}: torna su UP Wallet per vederla.`,
+    attnTx: "una transazione", attnSign: "una firma",
     sessionActive: (v) => `✅ Sessione attiva con ${v.name} (${v.url}) — account presentato: ${v.acc} su chainId ${v.id}.`,
     sessionClosed: "Sessione chiusa.",
     sessionsDropped: "Rete o UP cambiata: sessioni WalletConnect chiuse. Ricollega la dApp.",
@@ -380,6 +395,10 @@ const I18N = {
     toContract: "contratto", toEoa: "indirizzo senza codice",
     nativeTransfer: (v) => `Invio di ${v.amount} ${v.cur} a ${v.to}`,
     unknownCall: (v) => `Chiamata non riconosciuta (selettore ${v.sel})`,
+    hupCreate: (v) => `hup.social: pubblica un contenuto${v.parent > 0n ? ` in risposta al contenuto #${v.parent}` : ""} (tipo ${v.type}, ${v.meta}, commenti ${v.comments ? "consentiti" : "chiusi"})`,
+    hupCreatorOk: "✅ Autore del contenuto: la tua UP.",
+    hupCreatorOther: (v) => `🛑 Autore del contenuto: ${v.who}, non la tua UP. Il contenuto verrebbe pubblicato a nome di un altro indirizzo: se non sai perché, rifiuta.`,
+    hupNote: "ℹ️ Il contratto di hup.social non è verificato sull'explorer: la pagina legge la chiamata secondo lo schema delle transazioni di hup.social (autore, tipo, metadati, contenuto a cui risponde, commenti).",
     warnUnknownCall: "⚠️ La pagina non riconosce questa chiamata: non può dirti cosa fa. Se non lo sai con certezza, rifiuta.",
     warnEoaData: "⚠️ Il destinatario non è un contratto ma la transazione contiene dati: insolito, controlla.",
     warnApproval: (v) => `⚠️⚠️ APPROVAZIONE: ${v.who} potrà spostare ${v.what} della UP senza altre conferme, anche dopo che chiudi questa pagina, finché non revochi.`,
@@ -531,6 +550,11 @@ const I18N = {
     complianceFirst: "The check in panel 3 must be green first.",
     pairing: "Connecting... confirm on the dApp if asked.",
     proposalFrom: (v) => `Connection request from: ${v.name} (${v.url}) — domain verification: ${v.verify}`,
+    proposalOtherChains: (v) => `❌ Connection rejected: the dApp asks for ${v.want}, panel 1 has ${v.have}. Choose the dApp's network, then reconnect from the dApp.`,
+    switchNetworkBtn: (v) => `Choose ${v.name}`,
+    attnProposal: (v) => `${v.name} asks to connect to the UP.`,
+    attnRequest: (v) => `${v.who} asks for ${v.what}: go back to UP Wallet to see it.`,
+    attnTx: "a transaction", attnSign: "a signature",
     proposalScam: "❌ WalletConnect flags this site as a scam or invalid domain: connection rejected.",
     proposalUnverified: "⚠️ Domain not verified by WalletConnect: check that you are on the right site before approving anything.",
     proposalRejectedChains: (v) => `❌ Connection rejected: the dApp requires networks other than the chosen one (${v.err}). Choose in panel 1 the network the dApp uses and connect again.`,
@@ -557,6 +581,10 @@ const I18N = {
     toContract: "contract", toEoa: "address without code",
     nativeTransfer: (v) => `Send ${v.amount} ${v.cur} to ${v.to}`,
     unknownCall: (v) => `Unrecognised call (selector ${v.sel})`,
+    hupCreate: (v) => `hup.social: publish content${v.parent > 0n ? ` replying to content #${v.parent}` : ""} (type ${v.type}, ${v.meta}, comments ${v.comments ? "allowed" : "closed"})`,
+    hupCreatorOk: "✅ Author of the content: your UP.",
+    hupCreatorOther: (v) => `🛑 Author of the content: ${v.who}, not your UP. The content would be published in the name of another address: unless you know why, reject it.`,
+    hupNote: "ℹ️ hup.social's contract is not verified on the explorer: the page reads the call following the layout of hup.social's transactions (author, type, metadata, content replied to, comments).",
     warnUnknownCall: "⚠️ The page does not recognise this call: it cannot tell you what it does. Unless you know for sure, reject it.",
     warnEoaData: "⚠️ The recipient is not a contract but the transaction carries data: unusual, check it.",
     warnApproval: (v) => `⚠️⚠️ APPROVAL: ${v.who} will be able to move ${v.what} of the UP without further confirmation, even after you close this page, until you revoke it.`,
@@ -675,6 +703,35 @@ function log(msg, cls) {
     // Follow the progress only after a button was pressed; before that the window stays at the top.
     if ($("requestModal").dataset.busy === "1") $("modalNotes").lastChild.scrollIntoView({ block: "nearest" });
   }
+  return l;
+}
+
+// Desktop: the dApp is in another tab or window. When a request arrives while this tab is out of view,
+// the tab title gets a bell and, if allowed, the browser shows a notification; clicking it brings this
+// tab forward. (A page cannot switch to the dApp's tab by itself: going back is up to the user.)
+// In the Android app the app's own notifications do this.
+let attentionNote = null;
+const inApp = () => document.documentElement.classList.contains("in-app");
+function attention(text) {
+  if (!document.hidden || inApp()) return;
+  if (!document.title.startsWith("🔔 ")) document.title = "🔔 " + document.title;
+  if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+  try {
+    if (attentionNote) attentionNote.close();
+    const n = new Notification("UP Wallet", { body: text, tag: "up-wallet-request", icon: "favicon.ico" });
+    n.onclick = () => { window.focus(); n.close(); };
+    attentionNote = n;
+  } catch (e) { /* notifications not available here */ }
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) return;
+  document.title = document.title.replace(/^🔔 /, "");
+  if (attentionNote) { attentionNote.close(); attentionNote = null; }
+});
+// Asked once, on a click (browsers only ask on a user action): when connecting a dApp.
+function askNotifications() {
+  if (inApp() || typeof Notification === "undefined" || Notification.permission !== "default") return;
+  try { Notification.requestPermission().catch(() => null); } catch (e) { /* old API */ }
 }
 // The log keeps the history of the session: each request starts with a separator.
 function logSeparator() {
@@ -992,6 +1049,7 @@ async function dropSessions() {
 }
 
 $("pairBtn").addEventListener("click", async () => {
+  askNotifications();
   const uri = $("wcUri").value.trim();
   if (!riskAccepted()) { setStatus("wcStatus", t("ackRequired"), "line-err"); return; }
   if (!compliance) { setStatus("wcStatus", t("complianceFirst"), "line-err"); return; }
@@ -1022,6 +1080,7 @@ async function onSessionProposal({ id, params, verifyContext }) {
   const validation = verified.validation || "UNKNOWN";
   logSeparator();
   log(t("proposalFrom", { name: meta.name, url: meta.url, verify: validation }), "line-dim");
+  attention(t("attnProposal", { name: meta.name || meta.url || "dApp" }));
   if (verified.isScam || validation === "INVALID") {
     log(t("proposalScam"), "line-err");
     try { await walletKit.rejectSession({ id, reason: getSdkError("USER_REJECTED") }); } catch (e) { /* ignore */ }
@@ -1051,7 +1110,27 @@ async function onSessionProposal({ id, params, verifyContext }) {
     sessionChain = c.caip;
     showSessions();
   } catch (e) {
-    log(t("proposalRejectedChains", { err: e.message }), "line-err");
+    // The networks the dApp requires, other than the chosen one: named, and one click away when the page has it.
+    const wanted = [...new Set(params.requiredNamespaces?.eip155?.chains || [])].filter((x) => x !== c.caip);
+    const known = wanted.map((x) => CHAINS.find((n) => n.chainId && `eip155:${n.chainId}` === x));
+    if (!wanted.length) log(t("proposalRejectedChains", { err: e.message }), "line-err");
+    else {
+      const name = (x, i) => known[i] ? `${known[i].name} (chainId ${known[i].chainId})` : `chainId ${x.split(":")[1]}`;
+      const line = log(t("proposalOtherChains", { want: wanted.map(name).join(", "), have: `${c.net.name} (chainId ${c.net.chainId})` }), "line-err");
+      if (wanted.length === 1 && known[0]) {
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "secondary"; b.style.marginLeft = "8px";
+        b.textContent = t("switchNetworkBtn", { name: known[0].name });
+        b.addEventListener("click", () => {
+          $("networkFilter").value = "";
+          renderNetworkOptions("");
+          networkSelectEl.value = known[0].key;
+          networkSelectEl.dispatchEvent(new Event("change"));
+          b.disabled = true;
+        });
+        line.appendChild(b);
+      }
+    }
     try { await walletKit.rejectSession({ id, reason: getSdkError("UNSUPPORTED_CHAINS") }); } catch (e2) { /* ignore */ }
   }
 }
@@ -1107,6 +1186,9 @@ async function onSessionRequest(event) {
   const { request, chainId } = params;
   logSeparator();
   log(t("reqMethod", { method: request.method }), "line-dim");
+  if (["eth_sendTransaction", "personal_sign", "eth_signTypedData_v4"].includes(request.method)) {
+    attention(t("attnRequest", { who: sessionHost(topic) || "dApp", what: t(request.method === "eth_sendTransaction" ? "attnTx" : "attnSign") }));
+  }
 
   if (["eth_sign", "eth_signTypedData", "eth_signTypedData_v3"].includes(request.method)) {
     log(t("signLegacyRejected", { method: request.method }), "line-err");
@@ -1159,7 +1241,8 @@ async function describeCall(c, to, value, data, rows, warnings) {
   const cur = c.net.currency || "";
   const toCode = await c.provider.getCode(to);
   const known = toCode !== "0x" ? KNOWN_CONTRACTS[to.toLowerCase()] : null;
-  rows.push([t("kTo"), `${to} (${toCode === "0x" ? t("toEoa") : t("toContract")}${known ? " · " + known.name : ""})`, {}]);
+  const dapp = toCode !== "0x" ? DAPP_CONTRACTS[`${c.net.chainId}:${to.toLowerCase()}`] : null;
+  rows.push([t("kTo"), `${to} (${toCode === "0x" ? t("toEoa") : t("toContract")}${known ? " · " + known.name : dapp ? " · " + dapp : ""})`, {}]);
   if (known) warnings.push([t("knownContract", { name: known.name, role: t(known.role) }), "line-dim"]);
   rows.push([t("kValue"), `${ethers.formatEther(value)} ${cur}`, { cls: value > 0n ? "warn" : "" }]);
   if (data === "0x") {
@@ -1168,6 +1251,10 @@ async function describeCall(c, to, value, data, rows, warnings) {
     return op;
   }
   if (toCode === "0x") warnings.push([t("warnEoaData"), "line-warn"]);
+  if (dapp === "hup.social") {
+    const op = describeHup(c, data, rows, warnings);
+    if (op) return op;
+  }
   let parsed = null;
   try { parsed = KNOWN_IFACE.parseTransaction({ data, value }); } catch (e) { parsed = null; }
   if (!parsed) {
@@ -1223,6 +1310,21 @@ async function describeCall(c, to, value, data, rows, warnings) {
     warnings.push([t("infoTransfer", { what, to: a[1] }), "line-warn"]);
   }
   return `${parsed.name}(${parsed.fragment.inputs.map(i => i.type).join(",")})`;
+}
+
+// hup.social create(): publishes a post, or a reply when parentId is set, in the name of `creator`.
+function describeHup(c, data, rows, warnings) {
+  let p = null;
+  try { p = HUP_IFACE.parseTransaction({ data }); } catch (e) { p = null; }
+  if (!p) return null;
+  const [creator, cType, metadata, parentId, allowedComments] = p.args;
+  const op = t("hupCreate", { parent: parentId, type: cType, meta: metadata, comments: allowedComments });
+  rows.push([t("kCall"), `${op}\ncreate(address,uint8,string,uint256,bool)\ncreator: ${creator}\ncType: ${cType}\nmetadata: ${metadata}\nparentId: ${parentId}\nallowedComments: ${allowedComments}`, { block: true }]);
+  rows.push([t("kRaw"), data, { block: true }]);
+  if (creator.toLowerCase() === c.up.toLowerCase()) warnings.push([t("hupCreatorOk"), "line-ok"]);
+  else warnings.push([t("hupCreatorOther", { who: creator }), "line-danger"]);
+  warnings.push([t("hupNote"), "line-dim"]);
+  return op;
 }
 
 async function handleSendTransaction(topic, id, c, tx, validation, reject) {
