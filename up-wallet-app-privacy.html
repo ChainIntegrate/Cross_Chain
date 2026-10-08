@@ -128,7 +128,8 @@ const I18N = {
     </ul>
     Le notifiche delle richieste sono create dall'app sul telefono: non c'è un server di notifiche. MetaMask, Reown e i gestori dei nodi trattano questi dati secondo le loro informative.`,
     s5t: "5 · Cosa conserva ChainIntegrate",
-    s5: `Solo quando usi il relayer del sito, il server registra: data e ora, rete, indirizzo della UP, identificativo della transazione, esito; per le richieste rifiutate anche l'indirizzo IP. Il server web registra a sua volta l'indirizzo IP di chi apre il sito. Questi registri servono al funzionamento e alla sicurezza del servizio e sono conservati <b>al massimo 30 giorni</b>. Le operazioni inviate restano invece sulla blockchain, pubblica e permanente.<br>
+    s5: `Solo quando usi il relayer del sito, il server registra: data e ora, rete, indirizzo della UP, identificativo della transazione, esito; per le richieste rifiutate anche l'indirizzo IP. Il server web registra a sua volta l'indirizzo IP di chi apre il sito. Questi registri servono al funzionamento e alla sicurezza del servizio e sono conservati <b>al massimo 30 giorni</b>.<br>
+    Quando il gas lo paga il paymaster sponsor, il servizio che approva le operazioni tiene anche un elenco delle approvazioni e dei rifiuti (data e ora, rete, indirizzo della UP, numero dell'operazione; nessun indirizzo IP), che serve per i conteggi del servizio e, per gli abbonati, per scalare il saldo: questo elenco resta finché serve al servizio e agli obblighi contabili. Le operazioni inviate restano comunque sulla blockchain, pubblica e permanente.<br>
     Per il servizio di gas a pagamento (abbonamento, pagina <code>up-subscribe.html</code> del sito) vale quanto scritto in quella pagina: l'e-mail che inserisci lì serve solo per l'attivazione e gli avvisi di saldo basso. L'app non chiede e-mail.`,
     s6t: "6 · Permessi dell'app",
     s6: `<ul>
@@ -175,7 +176,8 @@ const I18N = {
     </ul>
     Request notifications are created by the app on the phone: there is no notification server. MetaMask, Reown and the node operators handle this data under their own policies.`,
     s5t: "5 · What ChainIntegrate keeps",
-    s5: `Only when you use the site's relayer, the server records: date and time, network, UP address, transaction identifier, outcome; for refused requests, the IP address too. The web server also records the IP address of whoever opens the site. These logs serve the operation and security of the service and are kept <b>for at most 30 days</b>. The operations sent stay on the blockchain, which is public and permanent.<br>
+    s5: `Only when you use the site's relayer, the server records: date and time, network, UP address, transaction identifier, outcome; for refused requests, the IP address too. The web server also records the IP address of whoever opens the site. These logs serve the operation and security of the service and are kept <b>for at most 30 days</b>.<br>
+    When the gas is paid by the sponsor paymaster, the service that approves operations also keeps a list of approvals and refusals (date and time, network, UP address, operation number; no IP address), used for the service's counts and, for subscribers, to charge the balance: this list is kept as long as the service and accounting obligations need it. The operations sent stay on the blockchain anyway, which is public and permanent.<br>
     For the paid gas service (subscription, the site's <code>up-subscribe.html</code> page), what that page says applies: the e-mail you enter there is used only for activation and low-balance alerts. The app asks for no e-mail.`,
     s6t: "6 · App permissions",
     s6: `<ul>
