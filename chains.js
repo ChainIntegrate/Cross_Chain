@@ -68,6 +68,19 @@ const CHAINS = [
   { key: "custom", name: "Custom RPC...", chainId: null, rpc: null, explorerBase: null, currency: "?" },
 ];
 
+// LUKSO itself: not in CHAINS, which lists the networks a UP can be redeployed to. Pages that act on
+// the UP where it already lives (UP Wallet) add it to their own list.
+const LUKSO_CHAIN = { key: "lukso", name: "LUKSO", chainId: 42, rpc: "https://rpc.mainnet.lukso.network", explorerBase: "https://explorer.execution.mainnet.lukso.network", currency: "LYX" };
+
+// The parameters of wallet_addEthereumChain for a network of these lists, for a wallet that does not
+// know it yet. Native currencies are taken as 18 decimals, as on every network listed here.
+function addChainParams(net, chainId = net.chainId) {
+  const p = { chainId: "0x" + Number(chainId).toString(16), chainName: net.name, rpcUrls: [net.rpc],
+    nativeCurrency: { name: net.currency, symbol: net.currency, decimals: 18 } };
+  if (net.explorerBase) p.blockExplorerUrls = [net.explorerBase];
+  return p;
+}
+
 function getExplorerUrl(net, path, resource) {
   const base = net.explorerBase ? net.explorerBase + path : net.explorer;
   return base ? base + resource : null;

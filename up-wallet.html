@@ -335,6 +335,8 @@ const I18N = {
     walletMissing: "❌ non connesso",
     walletOk: (v) => `✅ ${v.addr} · chainId ${v.id}`,
     walletWrong: (v) => `❌ ${v.addr} è sulla rete con chainId ${v.id}: passa a chainId ${v.exp} in MetaMask`,
+    switchWalletBtn: (v) => `Passa a ${v.name} in MetaMask`,
+    switchWalletFail: (v) => `❌ Cambio di rete non riuscito: ${v.err}. Cambia rete a mano in MetaMask.`,
     walletUnknown: "❌ impossibile leggere la rete di MetaMask",
     upMissing: "❌ indirizzo mancante o non valido",
     upNotDeployed: "❌ non deployata su questa rete",
@@ -523,6 +525,8 @@ const I18N = {
     walletMissing: "❌ not connected",
     walletOk: (v) => `✅ ${v.addr} · chainId ${v.id}`,
     walletWrong: (v) => `❌ ${v.addr} is on chainId ${v.id}: switch MetaMask to chainId ${v.exp}`,
+    switchWalletBtn: (v) => `Switch MetaMask to ${v.name}`,
+    switchWalletFail: (v) => `❌ Network switch failed: ${v.err}. Switch network in MetaMask by hand.`,
     walletUnknown: "❌ could not read MetaMask's network",
     upMissing: "❌ missing or invalid address",
     upNotDeployed: "❌ not deployed on this network",
@@ -778,10 +782,12 @@ async function estimateMaxGasPrice(provider) {
 
 // ==================== 1. Network ====================
 const networkSelectEl = $("network");
+// The networks of this page: LUKSO first (where the UP was created), then every redeploy network.
+const NETWORKS = [LUKSO_CHAIN, ...CHAINS];
 function renderNetworkOptions(filter) {
   const f = (filter || "").toLowerCase();
   networkSelectEl.innerHTML = "";
-  CHAINS.filter(c => c.name.toLowerCase().includes(f)).forEach(c => {
+  NETWORKS.filter(c => c.name.toLowerCase().includes(f)).forEach(c => {
     const opt = document.createElement("option");
     opt.value = c.key;
     opt.textContent = c.chainId ? `${c.name} (chainId ${c.chainId})` : c.name;
@@ -790,10 +796,10 @@ function renderNetworkOptions(filter) {
 }
 renderNetworkOptions("");
 const presetNetworkKey = new URLSearchParams(location.search).get("network");
-if (presetNetworkKey && CHAINS.some(c => c.key === presetNetworkKey)) networkSelectEl.value = presetNetworkKey;
+if (presetNetworkKey && NETWORKS.some(c => c.key === presetNetworkKey)) networkSelectEl.value = presetNetworkKey;
 
 function getNetwork() {
-  const c = CHAINS.find(x => x.key === networkSelectEl.value);
+  const c = NETWORKS.find(x => x.key === networkSelectEl.value);
   if (!c) return null;
   if (c.key === "custom") {
     return { key: "custom", name: t("customNetName"), chainId: null, rpc: $("customRpc").value.trim(), explorer: $("customExplorer").value.trim() || null, currency: "" };
@@ -911,7 +917,11 @@ async function computeCompliance() {
   let walletId;
   try { walletId = parseInt(await signerProvider.request({ method: "eth_chainId" }), 16); }
   catch (e) { step("cWallet", ["walletUnknown"], "err"); return res; }
-  if (walletId !== chainId) { step("cWallet", ["walletWrong", { addr: signerAddress, id: walletId, exp: chainId }], "err"); return res; }
+  if (walletId !== chainId) {
+    step("cWallet", ["walletWrong", { addr: signerAddress, id: walletId, exp: chainId }], "err");
+    res.switchTo = { ...net, chainId };
+    return res;
+  }
   step("cWallet", ["walletOk", { addr: signerAddress, id: walletId }], "ok");
 
   try {
@@ -979,6 +989,40 @@ function renderCompliance(res) {
   if (res.missing) verdict.push([t("verdictMissing"), "line-dim"]);
   else if (!res.ok && !res.verdict.length) verdict.push([t("verdictFail"), "line-err"]);
   renderKv("complianceBox", rows, verdict);
+  if (res.switchTo && res.switchTo.rpc) {
+    const net = res.switchTo;
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "secondary"; b.style.marginTop = "10px";
+    b.textContent = t("switchWalletBtn", { name: net.name });
+    b.addEventListener("click", () => switchWallet(net, b));
+    $("complianceBox").appendChild(b);
+  }
+}
+
+// Asks the signing wallet to move to the chosen network, and to add it first if it does not know it
+// (LUKSO, Arc and other networks are not in a fresh MetaMask). The wallet shows its own confirmation.
+async function switchWallet(net, btn) {
+  if (!signerProvider) return;
+  const hex = "0x" + Number(net.chainId).toString(16);
+  btn.disabled = true;
+  try {
+    try {
+      await signerProvider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: hex }] });
+    } catch (e) {
+      const unknown = e && (e.code === 4902 || e?.data?.originalError?.code === 4902 || /unrecognized|not been added|unknown chain|not supported/i.test(e.message || ""));
+      if (!unknown) throw e;
+      await signerProvider.request({ method: "wallet_addEthereumChain", params: [addChainParams(net)] });
+    }
+  } catch (e) {
+    btn.disabled = false;
+    if (e && e.code === 4001) return;
+    const d = document.createElement("div");
+    d.className = "line-err";
+    d.textContent = t("switchWalletFail", { err: e?.shortMessage || e?.message || String(e) });
+    $("complianceBox").appendChild(d);
+    return;
+  }
+  scheduleCompliance(0);
 }
 
 // Re-run right before acting on a request: accounts, networks and permissions may have changed.
@@ -1112,7 +1156,7 @@ async function onSessionProposal({ id, params, verifyContext }) {
   } catch (e) {
     // The networks the dApp requires, other than the chosen one: named, and one click away when the page has it.
     const wanted = [...new Set(params.requiredNamespaces?.eip155?.chains || [])].filter((x) => x !== c.caip);
-    const known = wanted.map((x) => CHAINS.find((n) => n.chainId && `eip155:${n.chainId}` === x));
+    const known = wanted.map((x) => NETWORKS.find((n) => n.chainId && `eip155:${n.chainId}` === x));
     if (!wanted.length) log(t("proposalRejectedChains", { err: e.message }), "line-err");
     else {
       const name = (x, i) => known[i] ? `${known[i].name} (chainId ${known[i].chainId})` : `chainId ${x.split(":")[1]}`;
