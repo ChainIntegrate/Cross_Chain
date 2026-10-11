@@ -11,7 +11,7 @@ window.CROSSCHAIN_CONFIG = {
   // WalletConnect (Reown) Project ID, used by up-wallet.html (up-walletconnect-basenames.html is deprecated).
   walletConnectProjectId: "",
 
-  // Alchemy API key, used by up-invia-fondi.html and up-identity.html to list the tokens and NFTs a UP holds
+  // Alchemy API key, used by up-wallet.html and up-identity.html to list the tokens and NFTs a UP holds
   // (Token API and NFT API). Enable in the Alchemy app the networks you use (e.g. Polygon, Base).
   alchemyApiKey: "",
 };

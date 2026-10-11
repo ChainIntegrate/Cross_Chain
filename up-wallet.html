@@ -187,6 +187,7 @@
   <div id="sendAmountWrap">
     <label for="sendAmount" id="sendAmountLabel" data-i18n="sendAmountLabel">Importo</label>
     <input type="text" id="sendAmount" inputmode="decimal" placeholder="0.0">
+    <button id="sendMaxBtn" type="button" class="secondary" data-i18n="sendMaxBtn">Tutto</button>
   </div>
   <button id="sendPrepareBtn" disabled data-i18n="sendPrepareBtn">Prepara l'invio</button>
 </div>
@@ -340,7 +341,13 @@ const I18N = {
     panelSendTitle: "6 · Invia dalla UP",
     panelSendNote: "Invia dalla UP la valuta della rete, un token (ERC-20 o LSP7) o un NFT (LSP8, ERC-721 o ERC-1155), senza dApp. L'invio segue lo stesso percorso delle richieste delle dApp: lo vedi nella finestra di conferma, viene simulato, il gas lo paga il relayer del sito dove l'opzione è attiva (pannello 3), altrimenti il controller, e firmi in MetaMask. Con <b>Solo simulazione</b> attivo (pannello 5) viene solo simulato; il registro dell'invio è nel pannello 5. Tocca una riga dei saldi per sceglierla.",
     sendAssetLabel: "Cosa inviare", sendAssetNative: "La valuta della rete", sendAssetToken: "Un token o un NFT: incolla l'indirizzo del contratto",
-    sendIdLabel: "ID del token (NFT)", sendCopiesLabel: "Numero di copie (ERC-1155)",
+    sendIdLabel: "ID del token (NFT)", sendCopiesLabel: "Numero di copie (ERC-1155)", sendMaxBtn: "Tutto",
+    sendMaxNoToken: "Per \"Tutto\" scegli prima un token (o per un ERC-1155 l'ID del token).",
+    sendAfterBalance: (v) => `Dopo l'invio la UP ha ${v.have} ${v.sym} (attesi ${v.want}).`,
+    sendAfterBalanceOff: "Il saldo letto ora non è quello atteso: può arrivare altro sulla UP nel frattempo, o l'RPC può essere indietro di qualche secondo. Controlla sull'explorer.",
+    sendAfterNftOk: "✅ Verificato sulla catena: il token ora appartiene al destinatario.",
+    sendAfterNftWarn: (v) => `⚠️ Il proprietario del token letto ora è ${v.owner}, non il destinatario (l'RPC può essere indietro di qualche secondo). Controlla sull'explorer.`,
+    sendNftRecipientHint: "Il destinatario è un contratto: se è una Universal Profile su una rete diversa da LUKSO, potrebbe non accettare ancora NFT ERC-721 / ERC-1155. La ricezione si abilita con la pagina Ricezione NFT (up-nft-receiver.html).",
     sendNftOk: (v) => `${v.kind} · ${v.name}: scegli l'ID del token da inviare.`,
     sendIdsHeld: "ID della UP (tocca per sceglierlo):",
     sendBadId: "❌ ID del token non valido: un numero, oppure 0x seguito da 64 cifre esadecimali (LSP8).",
@@ -581,7 +588,13 @@ const I18N = {
     panelSendTitle: "6 · Send from the UP",
     panelSendNote: "Send the network's currency, a token (ERC-20 or LSP7) or an NFT (LSP8, ERC-721 or ERC-1155) from the UP, without a dApp. The send follows the same path as dApp requests: you see it in the confirmation window, it is simulated, the gas is paid by the site's relayer where that option is on (panel 3), otherwise by the controller, and you sign in MetaMask. With <b>Simulation only</b> on (panel 5) it is only simulated; the send's log is in panel 5. Tap a row of the balances to choose it.",
     sendAssetLabel: "What to send", sendAssetNative: "The network's currency", sendAssetToken: "A token or an NFT: paste the contract's address",
-    sendIdLabel: "Token ID (NFT)", sendCopiesLabel: "Number of copies (ERC-1155)",
+    sendIdLabel: "Token ID (NFT)", sendCopiesLabel: "Number of copies (ERC-1155)", sendMaxBtn: "All",
+    sendMaxNoToken: "For \"All\" choose a token first (and for an ERC-1155 the token ID).",
+    sendAfterBalance: (v) => `After the send the UP holds ${v.have} ${v.sym} (${v.want} expected).`,
+    sendAfterBalanceOff: "The balance read now is not the expected one: something else may have reached the UP meanwhile, or the RPC may be a few seconds behind. Check on the explorer.",
+    sendAfterNftOk: "✅ Checked on the chain: the token now belongs to the recipient.",
+    sendAfterNftWarn: (v) => `⚠️ The token's owner read now is ${v.owner}, not the recipient (the RPC may be a few seconds behind). Check on the explorer.`,
+    sendNftRecipientHint: "The recipient is a contract: if it is a Universal Profile on a network other than LUKSO, it may not accept ERC-721 / ERC-1155 NFTs yet. Receiving is enabled with the NFT receiving page (up-nft-receiver.html).",
     sendNftOk: (v) => `${v.kind} · ${v.name}: choose the token ID to send.`,
     sendIdsHeld: "IDs held by the UP (tap to choose):",
     sendBadId: "❌ Invalid token ID: a number, or 0x followed by 64 hex digits (LSP8).",
@@ -1511,7 +1524,8 @@ function describeHup(c, data, rows, warnings) {
   return op;
 }
 
-async function handleSendTransaction(topic, id, c, tx, validation, reject) {
+// after (sends from panel 6 only): runs once the operation has succeeded, to check the result on the chain.
+async function handleSendTransaction(topic, id, c, tx, validation, reject, after = null) {
   if (!tx.from || tx.from.toLowerCase() !== c.up.toLowerCase()) return reject(t("reqWrongFrom", { from: tx.from }));
   if (!tx.to) return reject(t("reqCreate"));
   if (!ethers.isAddress(tx.to)) return reject(t("genericError", { err: "invalid to" }));
@@ -1563,7 +1577,7 @@ async function handleSendTransaction(topic, id, c, tx, validation, reject) {
         log(t(topic === LOCAL_TOPIC ? "simOnlyDoneLocal" : "simOnlyDone"), "line-warn");
         return respondError(topic, id, "Simulation only: transaction not sent", 5000);
       }
-      pending = { kind: "tx", relay: true, topic, id, c, to: toLabel, valueText, target: to, value, data };
+      pending = { kind: "tx", relay: true, topic, id, c, to: toLabel, valueText, target: to, value, data, after };
       log(t("readyToSendRelay"), "line-warn");
       showRequestModal("tx", t("actionTitleTx", { site: sessionPeer(topic) }), rows);
       return;
@@ -1602,12 +1616,18 @@ async function handleSendTransaction(topic, id, c, tx, validation, reject) {
     }
     rows.push([t("kGas"), t("gasByController", { need: `${ethers.formatEther(need)} ${cur}`.trim() }), {}]);
     if (relayOption.state().state === "ready") log(t("relayAvailableOff"), "line-warn");
-    pending = { kind: "tx", topic, id, wrapped, gasLimit, c, to: toLabel, valueText };
+    pending = { kind: "tx", topic, id, wrapped, gasLimit, c, to: toLabel, valueText, after };
     log(t("readyToSend"), "line-warn");
     showRequestModal("tx", t("actionTitleTx", { site: sessionPeer(topic) }), rows);
   } catch (e) {
     return reject(t("genericError", { err: e.shortMessage || e.message }));
   }
+}
+
+// The send is confirmed: the extra reading only reports, it never changes the outcome.
+async function checkAfter(p, provider) {
+  if (!p.after) return;
+  try { await p.after(provider); } catch (e) { /* the operation is confirmed; this is only an extra reading */ }
 }
 
 $("sendBtn").addEventListener("click", busyWrap(async () => {
@@ -1647,6 +1667,7 @@ $("sendBtn").addEventListener("click", busyWrap(async () => {
         if (res.success) await respondResult(p.topic, p.id, hash);
         else await respondError(p.topic, p.id, `Operation failed${res.why ? ": " + res.why : ""}`, 5000);
       } catch (e) { log(t("txNotDelivered", { err: e.message || String(e) }), "line-danger"); }
+      if (res.success) await checkAfter(p, c.provider);
       return;
     }
     log(t("sending"), "line-dim");
@@ -1663,7 +1684,7 @@ $("sendBtn").addEventListener("click", busyWrap(async () => {
     log(t("waiting"), "line-dim");
     const receipt = await waitReceipt(p.c.provider, sent.hash, signer.provider);
     if (!receipt) log(t("txUnknown"), "line-warn");
-    else if (receipt.status === 1) log(t("txOk"), "line-ok");
+    else if (receipt.status === 1) { log(t("txOk"), "line-ok"); await checkAfter(p, p.c.provider); }
     else log(t("txFailed"), "line-err");
   } catch (e) {
     if (pending === p) await fail(t("genericError", { err: e.shortMessage || e.message }), "Send failed");
@@ -2110,13 +2131,20 @@ $("sendPrepareBtn").addEventListener("click", busyWrap(async () => {
   // An account delegated through EIP-7702 (code 0xef0100 + address) is still a wallet.
   const code = (await c.provider.getCode(recipient)).toLowerCase();
   const isContract = code !== "0x" && !code.startsWith("0xef0100");
-  let tx, what;
+  let tx, what, after = null, hint = false;
+  // After the send: the UP's balance (or the token's owner) read again, against what is expected.
+  const afterBalance = (read, before, sent, fmt, sym) => async (provider) => {
+    const have = await read(provider), want = before - sent;
+    log(t("sendAfterBalance", { have: fmt(have), want: fmt(want), sym }), have === want ? "line-ok" : "line-warn");
+    if (have !== want) log(t("sendAfterBalanceOff"), "line-warn");
+  };
   if ($("sendAsset").value === "native") {
     let value;
     try { value = ethers.parseEther(amountStr); } catch (e) { return fail(t("sendBadAmount")); }
     if (value <= 0n) return fail(t("sendBadAmount"));
     tx = { from: c.up, to: recipient, value: ethers.toBeHex(value), data: "0x" };
     what = `${amountStr} ${c.net.currency || ""}`.trim();
+    after = afterBalance((pv) => pv.getBalance(c.up), await c.provider.getBalance(c.up), value, ethers.formatEther, c.net.currency || "");
   } else {
     const rawToken = $("sendToken").value.trim();
     if (!ethers.isAddress(rawToken)) return fail(t("sendBadToken"));
@@ -2139,6 +2167,7 @@ $("sendPrepareBtn").addEventListener("click", busyWrap(async () => {
         if (have === null || have < copies) return fail(t("sendNoCopies", { have: have === null ? "?" : have.toString(), need: copies.toString(), id: idText }));
         data = SEND_IFACE.encodeFunctionData("safeTransferFrom(address,address,uint256,uint256,bytes)", [c.up, recipient, id, copies, "0x"]);
         what = `${copies} × ${a.name} #${idText}`;
+        after = afterBalance((pv) => sendRead(pv, token, "balanceOf(address,uint256)", [c.up, id]), have, copies, String, `× #${idText}`);
       } else {
         const owner = await sendRead(c.provider, token, a.kind === "erc721" ? "ownerOf" : "tokenOwnerOf", [id]);
         if (!owner || owner.toLowerCase() !== c.up.toLowerCase()) return fail(t("sendNotOwner", { id: idText, owner: owner || "—" }));
@@ -2146,7 +2175,13 @@ $("sendPrepareBtn").addEventListener("click", busyWrap(async () => {
           ? SEND_IFACE.encodeFunctionData("safeTransferFrom(address,address,uint256)", [c.up, recipient, id])
           : SEND_IFACE.encodeFunctionData("transfer(address,address,bytes32,bool,bytes)", [c.up, recipient, id, force, "0x"]);
         what = `${a.name} #${idText}`;
+        after = async (pv) => {
+          const now = await sendRead(pv, token, a.kind === "erc721" ? "ownerOf" : "tokenOwnerOf", [id]);
+          if (now && now.toLowerCase() === recipient.toLowerCase()) log(t("sendAfterNftOk"), "line-ok");
+          else log(t("sendAfterNftWarn", { owner: now || "—" }), "line-warn");
+        };
       }
+      hint = isContract && a.kind !== "lsp8";
       log(t("sendNftOwned"), "line-ok");
       log(t(a.kind === "lsp8" ? (force ? "sendLspForce" : "sendLspNoForce") : "sendSafeNote"), "line-dim");
       tx = { from: c.up, to: token, value: "0x0", data };
@@ -2160,6 +2195,7 @@ $("sendPrepareBtn").addEventListener("click", busyWrap(async () => {
         : SEND_IFACE.encodeFunctionData("transfer(address,address,uint256,bool,bytes)", [c.up, recipient, amount, force, "0x"]);
       tx = { from: c.up, to: token, value: "0x0", data };
       what = `${amountStr} ${a.symbol || SEND_KIND[a.kind]}`.trim();
+      after = afterBalance((pv) => sendRead(pv, token, "balanceOf(address)", [c.up]), a.balance, amount, (v) => ethers.formatUnits(v, a.decimals), a.symbol || "");
       if (a.kind === "lsp7") log(t(force ? "sendLspForce" : "sendLspNoForce"), "line-dim");
     }
   }
@@ -2169,9 +2205,26 @@ $("sendPrepareBtn").addEventListener("click", busyWrap(async () => {
     if (await sendSupports(c.provider, recipient, SEND_IDS.lsp0)) log(t("sendUpRecipient"), "line-ok");
     else log(t("sendContractRecipient"), "line-warn");
   }
-  const reject = async (msg) => { log(msg, "line-err"); };
-  await handleSendTransaction(LOCAL_TOPIC, ++sendLocalId, c, tx, "LOCAL", reject);
+  // An ERC-721 / ERC-1155 refused by a contract recipient: often a UP that cannot receive them yet.
+  const reject = async (msg) => { log(msg, "line-err"); if (hint) log(t("sendNftRecipientHint"), "line-warn"); };
+  await handleSendTransaction(LOCAL_TOPIC, ++sendLocalId, c, tx, "LOCAL", reject, after);
 }, "busyLocalSend"));
+
+// "All": the UP's whole balance of what is chosen, read now (the gas never comes from the UP).
+$("sendMaxBtn").addEventListener("click", async () => {
+  const c = compliance;
+  if (!c) { log(t("complianceFirst"), "line-err"); return; }
+  try {
+    if ($("sendAsset").value === "native") { $("sendAmount").value = ethers.formatEther(await c.provider.getBalance(c.up)); return; }
+    const raw = $("sendToken").value.trim();
+    const a = ethers.isAddress(raw) ? await sendToken(c.provider, ethers.getAddress(raw), c.up) : { kind: "none" };
+    if (a.kind === "erc20" || a.kind === "lsp7") { $("sendAmount").value = ethers.formatUnits(a.balance, a.decimals); return; }
+    const id = a.kind === "erc1155" ? sendParseId("erc1155", $("sendId").value) : null;
+    if (id === null) { log(t("sendMaxNoToken"), "line-warn"); return; }
+    const n = await sendRead(c.provider, ethers.getAddress(raw), "balanceOf(address,uint256)", [c.up, id]);
+    if (n !== null) $("sendAmount").value = n.toString();
+  } catch (e) { log(t("genericError", { err: e.shortMessage || e.message }), "line-err"); }
+});
 
 $("rejectBtn").addEventListener("click", async () => {
   if (!pending) return;
