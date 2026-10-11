@@ -1842,6 +1842,14 @@ const SEND_KIND = { erc20: "ERC-20", lsp7: "LSP7", lsp8: "LSP8", erc721: "ERC-72
 // LSP7/LSP8 tokens registered in the UP from the chain, other tokens from an index. A row chooses what
 // to send; amounts are read again from the chain when the send is prepared.
 let holdKey = null, holdRun = 0;
+// A long amount, short to read: at most 8 decimals ("< 0.00000001" for less). The exact value stays in
+// the row's tooltip; the send itself reads the balance again from the chain.
+function shortAmount(text) {
+  const [int, frac = ""] = String(text).split(".");
+  const cut = frac.slice(0, 8).replace(/0+$/, "");
+  if (cut) return `${int}.${cut}`;
+  return /^0*$/.test(int.replace(/[^0-9]/g, "")) && /[1-9]/.test(frac) ? "< 0.00000001" : int;
+}
 async function loadHoldings(c) {
   holdKey = `${c.chainId}:${c.up}`;
   const run = ++holdRun, box = $("holdBox");
@@ -1849,8 +1857,9 @@ async function loadHoldings(c) {
   const a = await AssetList.list(c.provider, c.up, c.net.key);
   if (run !== holdRun) return;
   box.textContent = ""; box.className = "status-box";
-  const row = (main, sub, onPick) => {
+  const row = (main, sub, onPick, exact) => {
     const b = document.createElement(onPick ? "button" : "div");
+    if (exact) b.title = exact;
     if (onPick) { b.type = "button"; b.className = "secondary hold-row"; b.addEventListener("click", onPick); } else b.className = "hold-row line-dim";
     b.style.cssText = "display:block; width:100%; text-align:left; margin:4px 0; padding:8px 10px;";
     const m = document.createElement("div"); m.textContent = main;
@@ -1858,16 +1867,17 @@ async function loadHoldings(c) {
     b.append(m, d); box.appendChild(b);
   };
   const cur = c.net.currency || "";
-  row(a.native === null ? `? ${cur}` : `${ethers.formatEther(a.native)} ${cur}`.trim(), t("holdNative"), () => {
+  const nat = a.native === null ? null : ethers.formatEther(a.native);
+  row(nat === null ? `? ${cur}` : `${shortAmount(nat)} ${cur}`.trim(), t("holdNative"), () => {
     $("sendAsset").value = "native"; $("sendAsset").dispatchEvent(new Event("change")); $("sendAmount").focus();
-  });
+  }, nat === null ? null : `${nat} ${cur}`.trim());
   const good = a.rows.filter((r) => !r.spam), spam = a.rows.length - good.length;
   for (const r of good) {
     const label = r.symbol || r.name || r.address;
-    if (r.amount !== undefined) row(`${r.amount} ${label}`, `${r.type} · ${r.name || ""} · ${r.address}`, () => {
+    if (r.amount !== undefined) row(`${shortAmount(r.amount)} ${label}`, `${r.type} · ${r.name || ""} · ${r.address}`, () => {
       $("sendAsset").value = "token"; $("sendAsset").dispatchEvent(new Event("change"));
       $("sendToken").value = r.address; $("sendToken").dispatchEvent(new Event("change")); $("sendAmount").focus();
-    });
+    }, `${r.amount} ${label}`);
     else row(`${r.name || label} · ${r.type}`, `${t("holdNft", { count: r.count || "?" })} · ${r.address}`, null);
   }
   const note = (text, cls) => { const d = document.createElement("div"); d.className = cls; d.style.cssText = "font-size:11.5px; margin-top:6px;"; d.textContent = text; box.appendChild(d); };
