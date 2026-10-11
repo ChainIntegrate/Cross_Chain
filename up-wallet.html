@@ -142,7 +142,27 @@
 </div>
 
 <div class="panel">
-  <h2 data-i18n="panel4Title">4 · Collega una dApp con WalletConnect</h2>
+  <h2 data-i18n="panelSendTitle">4 · Invia dalla UP</h2>
+  <div class="note" data-i18n-html="panelSendNote"></div>
+  <label for="sendAsset" data-i18n="sendAssetLabel">Cosa inviare</label>
+  <select id="sendAsset">
+    <option value="native" data-i18n="sendAssetNative">La valuta della rete</option>
+    <option value="token" data-i18n="sendAssetToken">Un token (ERC-20 o LSP7): incolla il suo indirizzo</option>
+  </select>
+  <div id="sendTokenWrap" hidden>
+    <label for="sendToken" data-i18n="sendTokenLabel">Indirizzo del token</label>
+    <input type="text" id="sendToken" placeholder="0x...">
+    <div class="note" id="sendTokenInfo" style="margin-top:6px;"></div>
+  </div>
+  <label for="sendTo" data-i18n="sendToLabel">Destinatario</label>
+  <input type="text" id="sendTo" placeholder="0x...">
+  <label for="sendAmount" data-i18n="sendAmountLabel">Importo</label>
+  <input type="text" id="sendAmount" inputmode="decimal" placeholder="0.0">
+  <button id="sendPrepareBtn" disabled data-i18n="sendPrepareBtn">Prepara l'invio</button>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel4Title">5 · Collega una dApp con WalletConnect</h2>
   <div class="note" data-i18n-html="panel4Note"></div>
   <label for="wcUri" data-i18n="wcUriLabel">Link WalletConnect (wc:...)</label>
   <input type="text" id="wcUri" placeholder="wc:...">
@@ -152,7 +172,7 @@
 </div>
 
 <div class="panel">
-  <h2 data-i18n="panel5Title">5 · Richieste della dApp</h2>
+  <h2 data-i18n="panel5Title">6 · Richieste (dApp e invii)</h2>
   <div class="check-row"><input type="checkbox" id="simulateOnly" checked><label for="simulateOnly" style="margin:0;" data-i18n="simulateOnlyLabel">Solo simulazione (non inviare nulla)</label></div>
   <div class="note" style="margin-top:6px;" data-i18n="simulateOnlyNote"></div>
   <div id="requestBox" class="status-box"><span class="empty" data-i18n="noRequest">Nessuna richiesta in attesa.</span></div>
@@ -305,13 +325,34 @@ const I18N = {
     connectSignerBtn: "Connetti MetaMask (controller)",
     complianceIdle: "La verifica parte da sola quando rete, UP e MetaMask sono impostati.",
     recheckBtn: "Ricontrolla",
-    panel4Title: "4 · Collega una dApp con WalletConnect",
+    panelSendTitle: "4 · Invia dalla UP",
+    panelSendNote: "Invia dalla UP la valuta della rete o un token (ERC-20 o LSP7), senza dApp. L'invio segue lo stesso percorso delle richieste delle dApp: lo vedi nella finestra di conferma, viene simulato, il gas lo paga il relayer del sito dove l'opzione è attiva (pannello 3), altrimenti il controller, e firmi in MetaMask. Con <b>Solo simulazione</b> attivo (pannello 6) viene solo simulato. NFT e lista di cosa possiede la UP: per ora sulla pagina <a href=\"up-invia-fondi.html\" target=\"_blank\" rel=\"noopener\">Invia</a>.",
+    sendAssetLabel: "Cosa inviare", sendAssetNative: "La valuta della rete", sendAssetToken: "Un token (ERC-20 o LSP7): incolla il suo indirizzo",
+    sendTokenLabel: "Indirizzo del token", sendToLabel: "Destinatario", sendAmountLabel: "Importo", sendPrepareBtn: "Prepara l'invio",
+    sendReading: "Lettura del token…",
+    sendTokenOk: (v) => `${v.kind} · ${v.name} · la UP ha ${v.balance} ${v.symbol}`,
+    sendStart: (v) => `Invio dalla UP: ${v.what} a ${v.to}`,
+    sendBadRecipient: "❌ Destinatario non valido: serve un indirizzo 0x di 40 caratteri esadecimali.",
+    sendZeroRecipient: "❌ Il destinatario è l'indirizzo zero: i fondi andrebbero persi.",
+    sendSelfRecipient: "❌ Il destinatario è la UP stessa o il suo Key Manager.",
+    sendSystemRecipient: (v) => `❌ Il destinatario è ${v.name}, un contratto del gas relay: i fondi non tornerebbero indietro.`,
+    sendBadAmount: "❌ Importo non valido: scrivi un numero maggiore di zero (punto per i decimali).",
+    sendBadToken: "❌ Indirizzo del token non valido.",
+    sendTokenIsRecipient: "❌ Il destinatario è il contratto del token stesso.",
+    sendNotFungible: (v) => `❌ Questo contratto è un ${v.kind}: gli NFT si inviano per ora dalla pagina Invia.`,
+    sendNotToken: "❌ A questo indirizzo non c'è un token ERC-20 o LSP7 leggibile.",
+    sendNoTokens: (v) => `❌ La UP ha ${v.have} ${v.symbol}, non ${v.need}.`,
+    sendContractRecipient: "⚠️ Il destinatario è un contratto: controlla che sia proprio lui a dover ricevere (molti contratti non sanno restituire i fondi).",
+    sendLspForce: "Destinatario senza codice (wallet normale): il trasferimento LSP7 usa force = true, necessario per gli indirizzi senza Universal Receiver.",
+    sendLspNoForce: "Destinatario contratto: il trasferimento LSP7 usa force = false, quindi riesce solo se il destinatario implementa LSP1 (per esempio una UP). La simulazione lo verifica.",
+    localSite: "UP Wallet (invio dalla UP)",
+    panel4Title: "5 · Collega una dApp con WalletConnect",
     panel4Note: "Sulla dApp scegli di connetterti con <b>WalletConnect</b>, copia il link di connessione (sotto il QR code, inizia con <code>wc:</code>) e incollalo qui. Si attiva solo quando la verifica del pannello 3 è verde. Tieni aperta questa pagina mentre usi la dApp.",
     wcUriLabel: "Link WalletConnect (wc:...)",
     pairBtn: "Collega",
     wcIdle: "Nessuna sessione.",
     disconnectBtn: "Disconnetti tutte le sessioni",
-    panel5Title: "5 · Richieste della dApp",
+    panel5Title: "6 · Richieste (dApp e invii)",
     simulateOnlyLabel: "Solo simulazione (non inviare nulla)",
     simulateOnlyNote: "Con la spunta, le transazioni vengono controllate e simulate, poi alla dApp si risponde che è una simulazione: non si invia e non si spende nulla. Le firme di messaggi non si possono simulare: vengono sempre mostrate e firmate solo se premi \"Firma il messaggio\".",
     noRequest: "Nessuna richiesta in attesa.",
@@ -414,6 +455,7 @@ const I18N = {
     relayAvailableOff: "ℹ️ Il relayer del sito è disponibile per questa UP, ma l'opzione è spenta: il gas lo paga il controller. Per usarlo: Rifiuta, spunta \"Paga il gas con il relayer del sito\" nella sezione 3 e ripeti l'operazione dalla dApp.",
     busyProposal: "Richiesta di connessione dalla dApp: verifica di rete, UP e controller...",
     busyRequest: "Richiesta dalla dApp: verifica, lettura dei dati e simulazione...",
+    busyLocalSend: "Invio dalla UP: verifica, lettura dei dati e simulazione...",
     busySend: "Invio in corso...",
     upNoFunds: (v) => `❌ La UP non ha abbastanza fondi per il valore richiesto: servono ${v.need}, ne ha ${v.have}.`,
     chainsOk: "✅ RPC e MetaMask sulla rete scelta; controller verificato.",
@@ -496,13 +538,34 @@ const I18N = {
     connectSignerBtn: "Connect MetaMask (controller)",
     complianceIdle: "The check starts by itself once network, UP and MetaMask are set.",
     recheckBtn: "Check again",
-    panel4Title: "4 · Connect a dApp through WalletConnect",
+    panelSendTitle: "4 · Send from the UP",
+    panelSendNote: "Send the network's currency or a token (ERC-20 or LSP7) from the UP, without a dApp. The send follows the same path as dApp requests: you see it in the confirmation window, it is simulated, the gas is paid by the site's relayer where that option is on (panel 3), otherwise by the controller, and you sign in MetaMask. With <b>Simulation only</b> on (panel 6) it is only simulated. NFTs and the list of what the UP holds: for now on the <a href=\"up-invia-fondi.html\" target=\"_blank\" rel=\"noopener\">Send</a> page.",
+    sendAssetLabel: "What to send", sendAssetNative: "The network's currency", sendAssetToken: "A token (ERC-20 or LSP7): paste its address",
+    sendTokenLabel: "Token address", sendToLabel: "Recipient", sendAmountLabel: "Amount", sendPrepareBtn: "Prepare the send",
+    sendReading: "Reading the token…",
+    sendTokenOk: (v) => `${v.kind} · ${v.name} · the UP holds ${v.balance} ${v.symbol}`,
+    sendStart: (v) => `Send from the UP: ${v.what} to ${v.to}`,
+    sendBadRecipient: "❌ Invalid recipient: a 0x address with 40 hex characters is needed.",
+    sendZeroRecipient: "❌ The recipient is the zero address: the funds would be lost.",
+    sendSelfRecipient: "❌ The recipient is the UP itself or its Key Manager.",
+    sendSystemRecipient: (v) => `❌ The recipient is ${v.name}, a gas relay contract: the funds would not come back.`,
+    sendBadAmount: "❌ Invalid amount: write a number above zero (dot for decimals).",
+    sendBadToken: "❌ Invalid token address.",
+    sendTokenIsRecipient: "❌ The recipient is the token contract itself.",
+    sendNotFungible: (v) => `❌ This contract is an ${v.kind}: NFTs are sent from the Send page for now.`,
+    sendNotToken: "❌ There is no readable ERC-20 or LSP7 token at this address.",
+    sendNoTokens: (v) => `❌ The UP holds ${v.have} ${v.symbol}, not ${v.need}.`,
+    sendContractRecipient: "⚠️ The recipient is a contract: check that it really is the one to receive (many contracts cannot give funds back).",
+    sendLspForce: "Recipient without code (regular wallet): the LSP7 transfer uses force = true, required for addresses without a Universal Receiver.",
+    sendLspNoForce: "Recipient is a contract: the LSP7 transfer uses force = false, so it only succeeds if the recipient implements LSP1 (for example a UP). The simulation checks it.",
+    localSite: "UP Wallet (send from the UP)",
+    panel4Title: "5 · Connect a dApp through WalletConnect",
     panel4Note: "On the dApp choose to connect with <b>WalletConnect</b>, copy the connection link (below the QR code, it starts with <code>wc:</code>) and paste it here. It is enabled only when the check in panel 3 is green. Keep this page open while you use the dApp.",
     wcUriLabel: "WalletConnect link (wc:...)",
     pairBtn: "Connect",
     wcIdle: "No session.",
     disconnectBtn: "Disconnect all sessions",
-    panel5Title: "5 · Requests from the dApp",
+    panel5Title: "6 · Requests (dApps and sends)",
     simulateOnlyLabel: "Simulation only (send nothing)",
     simulateOnlyNote: "When checked, transactions are checked and simulated, then the dApp is told it was a simulation: nothing is sent and nothing is spent. Message signatures cannot be simulated: they are always shown and signed only if you press \"Sign the message\".",
     noRequest: "No pending request.",
@@ -602,6 +665,7 @@ const I18N = {
     relayAvailableOff: "ℹ️ The site relayer is available for this UP, but the option is off: the controller pays the gas. To use it: Reject, tick \"Pay the gas with the site relayer\" in section 3 and repeat the operation from the dApp.",
     busyProposal: "Connection request from the dApp: checking network, UP and controller...",
     busyRequest: "Request from the dApp: checking, reading data and simulating...",
+    busyLocalSend: "Send from the UP: checking, reading data and simulating...",
     busySend: "Sending...",
     upNoFunds: (v) => `❌ The UP does not have enough funds for the requested value: ${v.need} needed, it has ${v.have}.`,
     chainsOk: "✅ RPC and MetaMask on the chosen network; controller verified.",
@@ -1037,7 +1101,7 @@ let walletKit = null;
 let pending = null; // { kind: "tx" | "sign", topic, id, ... }
 let sessionChain = null; // CAIP chain of the approved sessions
 
-function updatePairButton() { $("pairBtn").disabled = !compliance; }
+function updatePairButton() { $("pairBtn").disabled = !compliance; $("sendPrepareBtn").disabled = !compliance; }
 
 async function getWalletKit() {
   if (walletKit) return walletKit;
@@ -1180,10 +1244,14 @@ async function onSessionProposal({ id, params, verifyContext }) {
 }
 
 // ==================== 5. Requests ====================
+// Sends from the UP (panel 4) take the dApp requests' path with this topic: nobody to answer.
+const LOCAL_TOPIC = "local:send";
 async function respondResult(topic, id, result) {
+  if (topic === LOCAL_TOPIC) return;
   await walletKit.respondSessionRequest({ topic, response: { id, jsonrpc: "2.0", result } });
 }
 async function respondError(topic, id, message, code = 5000) {
+  if (topic === LOCAL_TOPIC) return;
   await walletKit.respondSessionRequest({ topic, response: { id, jsonrpc: "2.0", error: { code, message } } });
 }
 function clearPending(msg) {
@@ -1218,6 +1286,7 @@ function showRequestModal(kind, title, rows) {
   $("requestModal").querySelector(".modal-body").scrollTop = 0;
 }
 function sessionPeer(topic) {
+  if (topic === LOCAL_TOPIC) return t("localSite");
   const s = walletKit?.getActiveSessions?.()[topic];
   return s ? `${s.peer.metadata.name} (${s.peer.metadata.url})` : "—";
 }
@@ -1389,7 +1458,7 @@ async function handleSendTransaction(topic, id, c, tx, validation, reject) {
   try {
     const rows = [
       [t("kSite"), sessionPeer(topic), {}],
-      [t("kVerify"), validation, { cls: validation === "VALID" ? "ok" : "warn" }],
+      ...(topic === LOCAL_TOPIC ? [] : [[t("kVerify"), validation, { cls: validation === "VALID" ? "ok" : "warn" }]]),
       [t("kNetwork"), c.net.name, {}],
       [t("kFrom"), c.up, {}],
     ];
@@ -1681,6 +1750,112 @@ $("signBtn").addEventListener("click", async () => {
     await fail(t("genericError", { err: e.shortMessage || e.message }), "Signing failed");
   }
 });
+
+// ==================== 4. Send from the UP ====================
+// Builds the call (native value, or a token transfer) and hands it to the dApp requests' path
+// (handleSendTransaction): the same window, decoding, simulation, gas choice and signature.
+// AUDIT L-6, as on the Send page: addresses of the gas relay are never a recipient.
+const SEND_SYSTEM = {
+  [GasRelayClient.ENTRY_POINT.toLowerCase()]: "ERC-4337 EntryPoint",
+  "0xb353565d1f801e7402dbc267b8c0e30e3540d4ed": "UPPaymaster",
+  "0xbea7ea6562cea4da9050bcd81e21ca569440d21e": "UPVerifyingPaymaster",
+};
+// LSP7 / LSP8 interface IDs across @lukso/lsp-smart-contracts releases, as on the Send page.
+const SEND_IDS = { lsp7: ["0x05519512", "0xc52d6008", "0xb3c4928f", "0xdaa746b7"], lsp8: ["0x1ae9ba1f", "0x3a271706", "0xecad9f75", "0x30dc5278"], erc721: ["0x80ac58cd"], erc1155: ["0xd9b67a26"] };
+const SEND_IFACE = new ethers.Interface([
+  "function supportsInterface(bytes4) view returns (bool)", "function decimals() view returns (uint8)",
+  "function balanceOf(address) view returns (uint256)", "function name() view returns (string)", "function symbol() view returns (string)",
+  "function getData(bytes32) view returns (bytes)",
+  "function transfer(address,uint256) returns (bool)", "function transfer(address,address,uint256,bool,bytes)",
+]);
+let sendLocalId = 0;
+async function sendRead(provider, to, fn, args = []) {
+  try { return SEND_IFACE.decodeFunctionResult(fn, await provider.call({ to, data: SEND_IFACE.encodeFunctionData(fn, args) }))[0]; } catch (e) { return null; }
+}
+// Strict ERC-165: exactly one 32-byte word equal to 1 (a permissive fallback is not an NFT collection).
+async function sendSupports(provider, to, ids) {
+  for (const id of ids) {
+    try { const raw = await provider.call({ to, data: SEND_IFACE.encodeFunctionData("supportsInterface", [id]) }); if (ethers.dataLength(raw) === 32 && BigInt(raw) === 1n) return true; } catch (e) { /* no */ }
+  }
+  return false;
+}
+// What the token is, read from the chain each time: kind, name, symbol, decimals, the UP's balance.
+async function sendToken(provider, address, up) {
+  if ((await provider.getCode(address)) === "0x") return { kind: "none" };
+  for (const k of ["lsp8", "erc721", "erc1155"]) if (await sendSupports(provider, address, SEND_IDS[k])) return { kind: k };
+  const lsp7 = await sendSupports(provider, address, SEND_IDS.lsp7);
+  const decimals = await sendRead(provider, address, "decimals");
+  const balance = await sendRead(provider, address, "balanceOf", [up]);
+  if (decimals === null || balance === null) return { kind: "none" };
+  const text = async (key) => { const v = await sendRead(provider, address, "getData", [ethers.id(key)]); try { return v && v !== "0x" ? ethers.toUtf8String(v) : null; } catch (e) { return null; } };
+  const name = lsp7 ? await text("LSP4TokenName") : await sendRead(provider, address, "name");
+  const symbol = lsp7 ? await text("LSP4TokenSymbol") : await sendRead(provider, address, "symbol");
+  return { kind: lsp7 ? "lsp7" : "erc20", decimals: Number(decimals), balance, name: name || "?", symbol: symbol || "" };
+}
+const SEND_KIND = { erc20: "ERC-20", lsp7: "LSP7", lsp8: "LSP8", erc721: "ERC-721", erc1155: "ERC-1155" };
+
+$("sendAsset").addEventListener("change", () => { $("sendTokenWrap").hidden = $("sendAsset").value !== "token"; });
+$("sendToken").addEventListener("change", async () => {
+  const info = $("sendTokenInfo"), raw = $("sendToken").value.trim();
+  info.textContent = ""; info.className = "note";
+  const c = compliance;
+  if (!c || !ethers.isAddress(raw)) return;
+  info.textContent = t("sendReading");
+  const a = await sendToken(c.provider, ethers.getAddress(raw), c.up);
+  if ($("sendToken").value.trim() !== raw) return;
+  if (a.kind === "erc20" || a.kind === "lsp7") { info.textContent = t("sendTokenOk", { kind: SEND_KIND[a.kind], name: a.name, balance: ethers.formatUnits(a.balance, a.decimals), symbol: a.symbol }); info.className = "note line-ok"; }
+  else { info.textContent = a.kind === "none" ? t("sendNotToken") : t("sendNotFungible", { kind: SEND_KIND[a.kind] }); info.className = "note line-err"; }
+});
+
+$("sendPrepareBtn").addEventListener("click", busyWrap(async () => {
+  logSeparator();
+  const fail = (msg) => { log(msg, "line-err"); };
+  if (!riskAccepted()) return fail(t("ackRequired"));
+  if (pending) return fail(t("reqBusy"));
+  const c = await freshCompliance();
+  if (!c) return fail(t("complianceFirst"));
+  const rawTo = $("sendTo").value.trim();
+  if (!ethers.isAddress(rawTo)) return fail(t("sendBadRecipient"));
+  const recipient = ethers.getAddress(rawTo);
+  if (BigInt(recipient) === 0n) return fail(t("sendZeroRecipient"));
+  if (recipient === c.up || recipient === c.km) return fail(t("sendSelfRecipient"));
+  if (SEND_SYSTEM[recipient.toLowerCase()]) return fail(t("sendSystemRecipient", { name: SEND_SYSTEM[recipient.toLowerCase()] }));
+  const amountStr = $("sendAmount").value.trim().replace(",", ".");
+  // An account delegated through EIP-7702 (code 0xef0100 + address) is still a wallet.
+  const code = (await c.provider.getCode(recipient)).toLowerCase();
+  const isContract = code !== "0x" && !code.startsWith("0xef0100");
+  let tx, what;
+  if ($("sendAsset").value === "native") {
+    let value;
+    try { value = ethers.parseEther(amountStr); } catch (e) { return fail(t("sendBadAmount")); }
+    if (value <= 0n) return fail(t("sendBadAmount"));
+    tx = { from: c.up, to: recipient, value: ethers.toBeHex(value), data: "0x" };
+    what = `${amountStr} ${c.net.currency || ""}`.trim();
+  } else {
+    const rawToken = $("sendToken").value.trim();
+    if (!ethers.isAddress(rawToken)) return fail(t("sendBadToken"));
+    const token = ethers.getAddress(rawToken);
+    if (token === recipient) return fail(t("sendTokenIsRecipient"));
+    const a = await sendToken(c.provider, token, c.up);
+    if (a.kind === "none") return fail(t("sendNotToken"));
+    if (a.kind !== "erc20" && a.kind !== "lsp7") return fail(t("sendNotFungible", { kind: SEND_KIND[a.kind] }));
+    let amount;
+    try { amount = ethers.parseUnits(amountStr, a.decimals); } catch (e) { return fail(t("sendBadAmount")); }
+    if (amount <= 0n) return fail(t("sendBadAmount"));
+    if (a.balance < amount) return fail(t("sendNoTokens", { have: ethers.formatUnits(a.balance, a.decimals), need: amountStr, symbol: a.symbol }));
+    const force = !isContract;
+    const data = a.kind === "erc20"
+      ? SEND_IFACE.encodeFunctionData("transfer(address,uint256)", [recipient, amount])
+      : SEND_IFACE.encodeFunctionData("transfer(address,address,uint256,bool,bytes)", [c.up, recipient, amount, force, "0x"]);
+    tx = { from: c.up, to: token, value: "0x0", data };
+    what = `${amountStr} ${a.symbol || SEND_KIND[a.kind]}`.trim();
+    if (a.kind === "lsp7") log(t(force ? "sendLspForce" : "sendLspNoForce"), "line-dim");
+  }
+  log(t("sendStart", { what, to: recipient }), "line-dim");
+  if (isContract) log(t("sendContractRecipient"), "line-warn");
+  const reject = async (msg) => { log(msg, "line-err"); };
+  await handleSendTransaction(LOCAL_TOPIC, ++sendLocalId, c, tx, "LOCAL", reject);
+}, "busyLocalSend"));
 
 $("rejectBtn").addEventListener("click", async () => {
   if (!pending) return;
