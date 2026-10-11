@@ -4,8 +4,10 @@
 // otherwise Blockscout's public API. An RPC node cannot list an address's tokens by itself; the
 // indexer rows are only as complete as the indexer. No wallet, no signature.
 //
-// Used by up-identity.html. Rows: { address, type, name, symbol, amount, ids, count, spam, source,
-// image, lsp4Metadata } (amount: formatted fungible balance; ids: NFT token IDs, at most MAX_IDS;
+// Used by up-identity.html and up-wallet.html. Rows: { address, type, name, symbol, amount, ids,
+// rawIds, count, spam, source, image, lsp4Metadata } (amount: formatted fungible balance; ids: NFT token
+// IDs to show, at most MAX_IDS; rawIds: the same IDs in full, as the contract takes them: bytes32 for
+// LSP8, decimal strings otherwise;
 // count: NFTs held; image: URL from the indexer; lsp4Metadata: the asset's LSP4Metadata value, a
 // VerifiableURI the page resolves to the token or collection image).
 (function () {
@@ -112,7 +114,8 @@
           if (idFmt === 1) { const t = text(id.replace(/(00)+$/, "")); if (t) return shortId(t); }
           return shortId(id);
         };
-        return { ...row, count: bal.toString(), ids: ids ? Array.from(ids).slice(0, MAX_IDS).map(showId) : [] };
+        const raw = ids ? Array.from(ids).slice(0, MAX_IDS) : [];
+        return { ...row, count: bal.toString(), ids: raw.map(showId), rawIds: raw };
       }
       const dec = await tryCall(provider, address, "decimals", []);
       return { ...row, amount: fmt(bal, dec === null ? 18 : dec), zero: bal === 0n };
@@ -149,7 +152,7 @@
         const ids = insts.map(i => String(i.id));
         // The collection's icon, else the first token's image.
         const image = imageUrl(tok.icon_url) || insts.map(i => imageUrl(i.image_url) || imageUrl(i.metadata && i.metadata.image)).find(Boolean) || null;
-        rows.push({ address: ethers.getAddress(address), type: tok.type || "?", name: tok.name, symbol: tok.symbol, count: String(c.amount || ids.length), ids: ids.slice(0, MAX_IDS).map(shortId), spam: bsSpam(tok), source: "blockscout", image });
+        rows.push({ address: ethers.getAddress(address), type: tok.type || "?", name: tok.name, symbol: tok.symbol, count: String(c.amount || ids.length), ids: ids.slice(0, MAX_IDS).map(shortId), rawIds: ids.slice(0, MAX_IDS), spam: bsSpam(tok), source: "blockscout", image });
       });
       if (!res.next_page_params) break;
       params = "?" + new URLSearchParams(res.next_page_params).toString();
@@ -190,12 +193,12 @@
         let id; try { id = BigInt(n.tokenId).toString(); } catch (e) { continue; }
         const type = c.tokenType === "ERC1155" ? "ERC-1155" : c.tokenType === "ERC721" ? "ERC-721" : (c.tokenType || "?");
         // Only Alchemy's verdict counts as spam (its spamClassifications also flag popular collections).
-        const row = nfts[address] || (nfts[address] = { address, type, name: c.name || (c.openSeaMetadata && c.openSeaMetadata.collectionName), symbol: c.symbol, ids: [], n: 0, spam: c.isSpam === true || c.isSpam === "true", source: "alchemy",
+        const row = nfts[address] || (nfts[address] = { address, type, name: c.name || (c.openSeaMetadata && c.openSeaMetadata.collectionName), symbol: c.symbol, ids: [], rawIds: [], n: 0, spam: c.isSpam === true || c.isSpam === "true", source: "alchemy",
           image: imageUrl(c.openSeaMetadata && c.openSeaMetadata.imageUrl) });
         // No collection image: the first token's (Alchemy's cached thumbnail first).
         if (!row.image) row.image = imageUrl(n.image && (n.image.thumbnailUrl || n.image.cachedUrl || n.image.originalUrl)) || null;
         row.n++;
-        if (row.ids.length < MAX_IDS) row.ids.push(shortId(id) + (n.balance && n.balance !== "1" ? ` ×${n.balance}` : ""));
+        if (row.ids.length < MAX_IDS) { row.ids.push(shortId(id) + (n.balance && n.balance !== "1" ? ` ×${n.balance}` : "")); row.rawIds.push(id); }
       }
       pageKey = res.pageKey;
       if (!pageKey) break;
