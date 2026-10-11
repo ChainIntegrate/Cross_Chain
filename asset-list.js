@@ -4,12 +4,13 @@
 // otherwise Blockscout's public API. An RPC node cannot list an address's tokens by itself; the
 // indexer rows are only as complete as the indexer. No wallet, no signature.
 //
-// Used by up-identity.html and up-wallet.html. Rows: { address, type, name, symbol, amount, ids,
-// rawIds, count, spam, source, image, lsp4Metadata } (amount: formatted fungible balance; ids: NFT token
-// IDs to show, at most MAX_IDS; rawIds: the same IDs in full, as the contract takes them: bytes32 for
-// LSP8, decimal strings otherwise;
-// count: NFTs held; image: URL from the indexer; lsp4Metadata: the asset's LSP4Metadata value, a
-// VerifiableURI the page resolves to the token or collection image).
+// Used by up-identity.html and up-wallet.html. Indexed ERC-721 / ERC-1155 are read again on the chain
+// (ownerOf, or the balance of each ID) and dropped when the UP no longer holds them.
+// Rows: { address, type, name, symbol, amount, ids, rawIds, count, spam, source, image, lsp4Metadata }
+// (amount: formatted fungible balance; ids: NFT token IDs to show, at most MAX_IDS; rawIds: the same
+// IDs in full, as the contract takes them: bytes32 for LSP8, decimal strings otherwise; count: NFTs held;
+// image: URL from the indexer; lsp4Metadata: the asset's LSP4Metadata value, a VerifiableURI the page
+// resolves to the token or collection image).
 (function () {
   const LSP5_ARRAY = "0x6460ee3c0aac563ccbf76d6e1d07bada78e3a9514e6382b736ed3f478ab7b90b"; // LSP5ReceivedAssets[]
   const LSP5_MAP = "0x812c4334633eb816c80d0000"; // LSP5ReceivedAssetsMap:<address>
@@ -27,6 +28,8 @@
   const IFACE = new ethers.Interface([
     "function getDataBatch(bytes32[]) view returns (bytes[])",
     "function balanceOf(address) view returns (uint256)",
+    "function balanceOf(address,uint256) view returns (uint256)",
+    "function ownerOf(uint256) view returns (address)",
     "function decimals() view returns (uint8)",
     "function tokenIdsOf(address) view returns (bytes32[])",
   ]);
@@ -101,7 +104,7 @@
     const rows = await pool(entries, 4, async ({ address, iid }) => {
       const type = LSP8_IDS.includes(iid) ? "LSP8" : "LSP7";
       const meta = await tryCall(provider, address, "getDataBatch", [[LSP4_NAME, LSP4_SYMBOL, LSP8_ID_FORMAT, LSP8_ID_TYPE, LSP4_METADATA]]);
-      const bal = await tryCall(provider, address, "balanceOf", [up]);
+      const bal = await tryCall(provider, address, "balanceOf(address)", [up]);
       const row = { address, type, name: meta ? text(meta[0]) : null, symbol: meta ? text(meta[1]) : null, spam: false, source: "lsp5",
         lsp4Metadata: meta && meta[4] && meta[4] !== "0x" ? meta[4] : null };
       if (bal === null) return { ...row, unreadable: true };
@@ -207,8 +210,37 @@
     return rows;
   }
 
+  // Indexed ERC-721 / ERC-1155 read again on the chain: an index can still list tokens the UP has sent
+  // away (Alchemy lags behind). An ID the chain says the UP no longer holds is dropped, a collection with
+  // none left too; an ID that cannot be read stays as the index has it. Returns { rows, gone }.
+  async function checkIndexedNfts(provider, up, rows) {
+    let gone = 0;
+    const out = await pool(rows, 3, async (r) => {
+      if ((r.type !== "ERC-721" && r.type !== "ERC-1155") || !r.rawIds || !r.rawIds.length) return r;
+      const held = await pool(r.rawIds, 4, async (id) => {
+        let n;
+        try { n = BigInt(id); } catch (e) { return true; }
+        if (r.type === "ERC-721") {
+          const owner = await tryCall(provider, r.address, "ownerOf", [n]);
+          return owner === null || owner.toLowerCase() === up.toLowerCase();
+        }
+        const bal = await tryCall(provider, r.address, "balanceOf(address,uint256)", [up, n]);
+        return bal === null || bal > 0n;
+      });
+      const keep = held.map((h, k) => (h ? k : -1)).filter((k) => k >= 0);
+      const lost = r.rawIds.length - keep.length;
+      if (!lost) return r;
+      gone += lost;
+      if (!keep.length && Number(r.count) <= r.rawIds.length) return null;
+      const count = Number.isFinite(Number(r.count)) ? String(Math.max(Number(r.count) - lost, keep.length)) : r.count;
+      return { ...r, ids: keep.map((k) => r.ids[k]), rawIds: keep.map((k) => r.rawIds[k]), count };
+    });
+    return { rows: out.filter(Boolean), gone };
+  }
+
   // Everything for one network. Never throws: each part reports its own error.
-  // Returns { native, lsp5, lsp5Total, indexer: { kind, rows, err } | null, rows, errors }.
+  // Returns { native, lsp5, lsp5Total, indexer: { kind, rows, err, gone } | null, rows, errors }
+  // (gone: indexed NFT IDs the chain says the UP no longer holds, left out).
   async function list(provider, up, netKey) {
     const out = { native: null, lsp5: [], lsp5Total: 0, indexer: null, rows: [], errors: {} };
     try { out.native = await provider.getBalance(up); } catch (e) { out.errors.native = e.shortMessage || e.message; }
@@ -218,6 +250,10 @@
       out.indexer = { kind: ix.kind, rows: [] };
       try { out.indexer.rows = ix.kind === "alchemy" ? await fromAlchemy(ix.net, ix.key, up) : await fromBlockscout(ix.base, up); }
       catch (e) { out.indexer.err = e.message; }
+      if (!out.indexer.err) {
+        const c = await checkIndexedNfts(provider, up, out.indexer.rows);
+        out.indexer.rows = c.rows; out.indexer.gone = c.gone;
+      }
     }
     // The chain's own LSP5 rows win; indexer rows for the same contract are dropped.
     const seen = new Set(out.lsp5.map(r => r.address));
