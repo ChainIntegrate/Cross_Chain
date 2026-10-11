@@ -343,6 +343,7 @@ const I18N = {
     sendNotToken: "❌ A questo indirizzo non c'è un token ERC-20 o LSP7 leggibile.",
     sendNoTokens: (v) => `❌ La UP ha ${v.have} ${v.symbol}, non ${v.need}.`,
     sendContractRecipient: "⚠️ Il destinatario è un contratto: controlla che sia proprio lui a dover ricevere (molti contratti non sanno restituire i fondi).",
+    sendUpRecipient: "✅ Il destinatario è una Universal Profile (LSP0).",
     sendLspForce: "Destinatario senza codice (wallet normale): il trasferimento LSP7 usa force = true, necessario per gli indirizzi senza Universal Receiver.",
     sendLspNoForce: "Destinatario contratto: il trasferimento LSP7 usa force = false, quindi riesce solo se il destinatario implementa LSP1 (per esempio una UP). La simulazione lo verifica.",
     localSite: "UP Wallet (invio dalla UP)",
@@ -464,6 +465,7 @@ const I18N = {
     simFail: (v) => `❌ La simulazione fallisce: ${v.err}. Niente viene inviato.`,
     signerNoGas: (v) => `❌ Il controller non ha abbastanza fondi per il gas: servono circa ${v.need}, ne ha ${v.have}.`,
     simOnlyDone: "Modalità simulazione: niente inviato. Alla dApp è stato risposto che si tratta di una simulazione.",
+    simOnlyDoneLocal: "Modalità simulazione: niente inviato.",
     readyToSendRelay: "Pronto. Controlla i dati sopra, poi premi \"Firma e invia\": MetaMask chiede di firmare un messaggio (nessun gas) e il relayer del sito invia. Alla dApp torna l'hash solo quando l'operazione della UP è riuscita.",
     relaySimOk: "✅ Simulazione riuscita sul percorso del relayer (EntryPoint → UP): il controller non paga gas.",
     relayNotReady: "Il relayer del sito non è più utilizzabile per questa UP: vedi la nota nella sezione 3.",
@@ -556,6 +558,7 @@ const I18N = {
     sendNotToken: "❌ There is no readable ERC-20 or LSP7 token at this address.",
     sendNoTokens: (v) => `❌ The UP holds ${v.have} ${v.symbol}, not ${v.need}.`,
     sendContractRecipient: "⚠️ The recipient is a contract: check that it really is the one to receive (many contracts cannot give funds back).",
+    sendUpRecipient: "✅ The recipient is a Universal Profile (LSP0).",
     sendLspForce: "Recipient without code (regular wallet): the LSP7 transfer uses force = true, required for addresses without a Universal Receiver.",
     sendLspNoForce: "Recipient is a contract: the LSP7 transfer uses force = false, so it only succeeds if the recipient implements LSP1 (for example a UP). The simulation checks it.",
     localSite: "UP Wallet (send from the UP)",
@@ -674,6 +677,7 @@ const I18N = {
     simFail: (v) => `❌ The simulation fails: ${v.err}. Nothing is sent.`,
     signerNoGas: (v) => `❌ The controller does not have enough funds for gas: about ${v.need} needed, it has ${v.have}.`,
     simOnlyDone: "Simulation mode: nothing sent. The dApp was told this was a simulation.",
+    simOnlyDoneLocal: "Simulation mode: nothing sent.",
     readyToSendRelay: "Ready. Check the data above, then press \"Sign and send\": MetaMask asks you to sign a message (no gas) and the site relayer sends it. The dApp gets the hash only once the UP's operation has succeeded.",
     relaySimOk: "✅ Simulation passed on the relayer path (EntryPoint → UP): the controller pays no gas.",
     relayNotReady: "The site relayer can no longer be used for this UP: see the note in section 3.",
@@ -1489,7 +1493,7 @@ async function handleSendTransaction(topic, id, c, tx, validation, reject) {
       rows.push([t("kGas"), prep.plan, { cls: "ok" }]);
       renderKv("requestBox", rows);
       if ($("simulateOnly").checked) {
-        log(t("simOnlyDone"), "line-warn");
+        log(t(topic === LOCAL_TOPIC ? "simOnlyDoneLocal" : "simOnlyDone"), "line-warn");
         return respondError(topic, id, "Simulation only: transaction not sent", 5000);
       }
       pending = { kind: "tx", relay: true, topic, id, c, to: toLabel, valueText, target: to, value, data };
@@ -1526,7 +1530,7 @@ async function handleSendTransaction(topic, id, c, tx, validation, reject) {
     if (signerBal < need) return reject(t("signerNoGas", { need: `${ethers.formatEther(need)} ${cur}`, have: `${ethers.formatEther(signerBal)} ${cur}` }));
 
     if ($("simulateOnly").checked) {
-      log(t("simOnlyDone"), "line-warn");
+      log(t(topic === LOCAL_TOPIC ? "simOnlyDoneLocal" : "simOnlyDone"), "line-warn");
       return respondError(topic, id, "Simulation only: transaction not sent", 5000);
     }
     rows.push([t("kGas"), t("gasByController", { need: `${ethers.formatEther(need)} ${cur}`.trim() }), {}]);
@@ -1761,7 +1765,7 @@ const SEND_SYSTEM = {
   "0xbea7ea6562cea4da9050bcd81e21ca569440d21e": "UPVerifyingPaymaster",
 };
 // LSP7 / LSP8 interface IDs across @lukso/lsp-smart-contracts releases, as on the Send page.
-const SEND_IDS = { lsp7: ["0x05519512", "0xc52d6008", "0xb3c4928f", "0xdaa746b7"], lsp8: ["0x1ae9ba1f", "0x3a271706", "0xecad9f75", "0x30dc5278"], erc721: ["0x80ac58cd"], erc1155: ["0xd9b67a26"] };
+const SEND_IDS = { lsp0: ["0x24871b3d", "0x3e89ad98"], lsp7: ["0x05519512", "0xc52d6008", "0xb3c4928f", "0xdaa746b7"], lsp8: ["0x1ae9ba1f", "0x3a271706", "0xecad9f75", "0x30dc5278"], erc721: ["0x80ac58cd"], erc1155: ["0xd9b67a26"] };
 const SEND_IFACE = new ethers.Interface([
   "function supportsInterface(bytes4) view returns (bool)", "function decimals() view returns (uint8)",
   "function balanceOf(address) view returns (uint256)", "function name() view returns (string)", "function symbol() view returns (string)",
@@ -1852,7 +1856,11 @@ $("sendPrepareBtn").addEventListener("click", busyWrap(async () => {
     if (a.kind === "lsp7") log(t(force ? "sendLspForce" : "sendLspNoForce"), "line-dim");
   }
   log(t("sendStart", { what, to: recipient }), "line-dim");
-  if (isContract) log(t("sendContractRecipient"), "line-warn");
+  // A Universal Profile (LSP0, ERC-165) is a contract made to hold and send funds: no warning for it.
+  if (isContract) {
+    if (await sendSupports(c.provider, recipient, SEND_IDS.lsp0)) log(t("sendUpRecipient"), "line-ok");
+    else log(t("sendContractRecipient"), "line-warn");
+  }
   const reject = async (msg) => { log(msg, "line-err"); };
   await handleSendTransaction(LOCAL_TOPIC, ++sendLocalId, c, tx, "LOCAL", reject);
 }, "busyLocalSend"));
