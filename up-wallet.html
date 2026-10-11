@@ -176,7 +176,9 @@
     <div class="note" id="sendTokenInfo" style="margin-top:6px;"></div>
   </div>
   <label for="sendTo" data-i18n="sendToLabel">Destinatario</label>
-  <input type="text" id="sendTo" placeholder="0x...">
+  <input type="text" id="sendTo" data-i18n-placeholder="sendToPlaceholder" placeholder="0x… oppure il nome di una Universal Profile">
+  <div id="sendToResults"></div>
+  <div class="note" id="sendToInfo" style="margin-top:6px;"></div>
   <label for="sendAmount" data-i18n="sendAmountLabel">Importo</label>
   <input type="text" id="sendAmount" inputmode="decimal" placeholder="0.0">
   <button id="sendPrepareBtn" disabled data-i18n="sendPrepareBtn">Prepara l'invio</button>
@@ -331,11 +333,19 @@ const I18N = {
     panelSendTitle: "6 · Invia dalla UP",
     panelSendNote: "Invia dalla UP la valuta della rete o un token (ERC-20 o LSP7), senza dApp. L'invio segue lo stesso percorso delle richieste delle dApp: lo vedi nella finestra di conferma, viene simulato, il gas lo paga il relayer del sito dove l'opzione è attiva (pannello 3), altrimenti il controller, e firmi in MetaMask. Con <b>Solo simulazione</b> attivo (pannello 5) viene solo simulato; il registro dell'invio è nel pannello 5. Tocca una riga dei saldi per sceglierla. Gli NFT: per ora sulla pagina <a href=\"up-invia-fondi.html\" target=\"_blank\" rel=\"noopener\">Invia</a>.",
     sendAssetLabel: "Cosa inviare", sendAssetNative: "La valuta della rete", sendAssetToken: "Un token (ERC-20 o LSP7): incolla il suo indirizzo",
-    sendTokenLabel: "Indirizzo del token", sendToLabel: "Destinatario", sendAmountLabel: "Importo", sendPrepareBtn: "Prepara l'invio",
+    sendTokenLabel: "Indirizzo del token", sendToLabel: "Destinatario",
+    sendToPlaceholder: "0x… oppure il nome di una Universal Profile",
+    nameSearching: "Ricerca del nome nell'indice dei profili di LUKSO…",
+    nameNone: "Nessun profilo con questo nome nell'indice di LUKSO.",
+    nameFail: (v) => `Ricerca non riuscita (${v.err}): scrivi l'indirizzo 0x.`,
+    namePicked: (v) => `Scelto: ${v.label} — ${v.addr}. Il nome viene dall'indice di LUKSO e non è unico: chiunque può chiamarsi così. Conta solo l'indirizzo: confrontalo con quello che ti ha dato il destinatario.`,
+    nameUpHere: "✅ Su questa rete a questo indirizzo c'è una Universal Profile.",
+    nameNoUpHere: (v) => `⚠️ Su ${v.net} questa Universal Profile non esiste (ancora): l'indirizzo è lo stesso su ogni rete, ma il proprietario non l'ha creata qui. La valuta della rete arriverebbe comunque, ma la potrebbe usare solo ricreando la UP su ${v.net}; i token LSP7 verrebbero rifiutati.`,
+    nameOtherHere: (v) => `⚠️ Su ${v.net} a questo indirizzo c'è un contratto che non risulta una Universal Profile.`, sendAmountLabel: "Importo", sendPrepareBtn: "Prepara l'invio",
     sendReading: "Lettura del token…",
     sendTokenOk: (v) => `${v.kind} · ${v.name} · la UP ha ${v.balance} ${v.symbol}`,
     sendStart: (v) => `Invio dalla UP: ${v.what} a ${v.to}`,
-    sendBadRecipient: "❌ Destinatario non valido: serve un indirizzo 0x di 40 caratteri esadecimali.",
+    sendBadRecipient: "❌ Destinatario non valido: scrivi un indirizzo 0x di 40 caratteri esadecimali, oppure cerca un nome e scegli un profilo dall'elenco.",
     sendZeroRecipient: "❌ Il destinatario è l'indirizzo zero: i fondi andrebbero persi.",
     sendSelfRecipient: "❌ Il destinatario è la UP stessa o il suo Key Manager.",
     sendSystemRecipient: (v) => `❌ Il destinatario è ${v.name}, un contratto del gas relay: i fondi non tornerebbero indietro.`,
@@ -554,11 +564,19 @@ const I18N = {
     panelSendTitle: "6 · Send from the UP",
     panelSendNote: "Send the network's currency or a token (ERC-20 or LSP7) from the UP, without a dApp. The send follows the same path as dApp requests: you see it in the confirmation window, it is simulated, the gas is paid by the site's relayer where that option is on (panel 3), otherwise by the controller, and you sign in MetaMask. With <b>Simulation only</b> on (panel 5) it is only simulated; the send's log is in panel 5. Tap a row of the balances to choose it. NFTs: for now on the <a href=\"up-invia-fondi.html\" target=\"_blank\" rel=\"noopener\">Send</a> page.",
     sendAssetLabel: "What to send", sendAssetNative: "The network's currency", sendAssetToken: "A token (ERC-20 or LSP7): paste its address",
-    sendTokenLabel: "Token address", sendToLabel: "Recipient", sendAmountLabel: "Amount", sendPrepareBtn: "Prepare the send",
+    sendTokenLabel: "Token address", sendToLabel: "Recipient",
+    sendToPlaceholder: "0x… or the name of a Universal Profile",
+    nameSearching: "Searching the name in LUKSO's profile index…",
+    nameNone: "No profile with this name in LUKSO's index.",
+    nameFail: (v) => `Search failed (${v.err}): write the 0x address.`,
+    namePicked: (v) => `Chosen: ${v.label} — ${v.addr}. The name comes from LUKSO's index and is not unique: anyone can use it. Only the address counts: compare it with the one the recipient gave you.`,
+    nameUpHere: "✅ On this network there is a Universal Profile at this address.",
+    nameNoUpHere: (v) => `⚠️ On ${v.net} this Universal Profile does not exist (yet): the address is the same on every network, but its owner has not created it here. The network's currency would arrive anyway, but it could be used only by recreating the UP on ${v.net}; LSP7 tokens would be refused.`,
+    nameOtherHere: (v) => `⚠️ On ${v.net} the address holds a contract that is not a Universal Profile.`, sendAmountLabel: "Amount", sendPrepareBtn: "Prepare the send",
     sendReading: "Reading the token…",
     sendTokenOk: (v) => `${v.kind} · ${v.name} · the UP holds ${v.balance} ${v.symbol}`,
     sendStart: (v) => `Send from the UP: ${v.what} to ${v.to}`,
-    sendBadRecipient: "❌ Invalid recipient: a 0x address with 40 hex characters is needed.",
+    sendBadRecipient: "❌ Invalid recipient: write a 0x address with 40 hex characters, or search a name and choose a profile from the list.",
     sendZeroRecipient: "❌ The recipient is the zero address: the funds would be lost.",
     sendSelfRecipient: "❌ The recipient is the UP itself or its Key Manager.",
     sendSystemRecipient: (v) => `❌ The recipient is ${v.name}, a gas relay contract: the funds would not come back.`,
@@ -1861,6 +1879,68 @@ async function loadHoldings(c) {
 }
 $("holdRefresh").addEventListener("click", () => { if (compliance) loadHoldings(compliance); });
 
+// Recipient by name: LUKSO's public profile index (Envio, search_profiles, as in LUKSO's docs) lists
+// Universal Profiles by their LSP3 name. Names are not unique: results show name#abcd (the address's
+// first 4 hex digits) and the full address, and what is sent always goes to the chosen address,
+// checked on the chosen network. No images are loaded from the index.
+const PROFILE_INDEX = "https://envio.lukso-mainnet.universal.tech/v1/graphql";
+const PROFILE_QUERY = "query($search: String!) { search_profiles(args: { search: $search }, limit: 8) { id name fullName } }";
+let picked = null, nameTimer = null, nameRun = 0;
+const tag = (addr) => addr.slice(2, 6).toLowerCase();
+async function searchProfiles(text) {
+  const [name, suffix] = text.split("#");
+  const r = await fetch(PROFILE_INDEX, { method: "POST", headers: { "content-type": "application/json", accept: "application/json" }, credentials: "omit", referrerPolicy: "no-referrer",
+    body: JSON.stringify({ query: PROFILE_QUERY, variables: { search: name.trim() } }) });
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  const j = await r.json();
+  if (j.errors) throw new Error(String(j.errors[0] && j.errors[0].message || "error").slice(0, 80));
+  return (j.data && j.data.search_profiles || [])
+    .filter((p) => p && typeof p.id === "string" && ethers.isAddress(p.id))
+    .map((p) => ({ address: ethers.getAddress(p.id), name: String(p.name || "").slice(0, 60), fullName: String(p.fullName || "").slice(0, 80) }))
+    .filter((p) => !suffix || tag(p.address).startsWith(suffix.trim().toLowerCase()));
+}
+async function checkPicked(addr) {
+  const info = $("sendToInfo"), c = compliance;
+  if (!c) return;
+  const code = (await c.provider.getCode(addr)).toLowerCase();
+  if ($("sendTo").value.trim() !== addr) return;
+  const line = (text, cls) => { const d = document.createElement("div"); d.className = cls; d.textContent = text; info.appendChild(d); };
+  if (code === "0x" || code.startsWith("0xef0100")) line(t("nameNoUpHere", { net: c.net.name }), "line-warn");
+  else if (await sendSupports(c.provider, addr, SEND_IDS.lsp0)) line(t("nameUpHere"), "line-ok");
+  else line(t("nameOtherHere", { net: c.net.name }), "line-warn");
+}
+$("sendTo").addEventListener("input", () => {
+  clearTimeout(nameTimer);
+  const v = $("sendTo").value.trim(), box = $("sendToResults"), info = $("sendToInfo");
+  box.textContent = "";
+  if (!picked || v !== picked.address) { picked = null; info.textContent = ""; info.className = "note"; }
+  if (!v || ethers.isAddress(v) || v.startsWith("0x") || v.split("#")[0].trim().length < 2) return;
+  nameTimer = setTimeout(async () => {
+    const run = ++nameRun;
+    info.textContent = t("nameSearching"); info.className = "note line-dim";
+    let list;
+    try { list = await searchProfiles(v); } catch (e) { if (run === nameRun) { info.textContent = t("nameFail", { err: e.message }); info.className = "note line-warn"; } return; }
+    if (run !== nameRun || $("sendTo").value.trim() !== v) return;
+    info.textContent = list.length ? "" : t("nameNone");
+    for (const p of list) {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "secondary"; b.style.cssText = "display:block; width:100%; text-align:left; margin:4px 0; padding:8px 10px;";
+      const label = `${p.name || "?"}#${tag(p.address)}`;
+      const m = document.createElement("div"); m.textContent = label + (p.fullName && p.fullName !== p.name ? ` · ${p.fullName}` : "");
+      const d = document.createElement("div"); d.textContent = p.address; d.style.cssText = "font-size:11.5px; opacity:0.8; overflow-wrap:anywhere;";
+      b.append(m, d);
+      b.addEventListener("click", () => {
+        picked = { address: p.address, label };
+        $("sendTo").value = p.address; box.textContent = "";
+        info.textContent = ""; info.className = "note";
+        const d2 = document.createElement("div"); d2.textContent = t("namePicked", { label, addr: p.address }); info.appendChild(d2);
+        checkPicked(p.address).catch(() => null);
+      });
+      box.appendChild(b);
+    }
+  }, 500);
+});
+
 $("sendAsset").addEventListener("change", () => { $("sendTokenWrap").hidden = $("sendAsset").value !== "token"; });
 $("sendToken").addEventListener("change", async () => {
   const info = $("sendTokenInfo"), raw = $("sendToken").value.trim();
@@ -1918,7 +1998,7 @@ $("sendPrepareBtn").addEventListener("click", busyWrap(async () => {
     what = `${amountStr} ${a.symbol || SEND_KIND[a.kind]}`.trim();
     if (a.kind === "lsp7") log(t(force ? "sendLspForce" : "sendLspNoForce"), "line-dim");
   }
-  log(t("sendStart", { what, to: recipient }), "line-dim");
+  log(t("sendStart", { what, to: picked && picked.address === recipient ? `${picked.label} (${recipient})` : recipient }), "line-dim");
   // A Universal Profile (LSP0, ERC-165) is a contract made to hold and send funds: no warning for it.
   if (isContract) {
     if (await sendSupports(c.provider, recipient, SEND_IDS.lsp0)) log(t("sendUpRecipient"), "line-ok");
