@@ -40,7 +40,7 @@
   button.danger { background: var(--err); }
   button.secondary { background: var(--chip); }
   .status-box { background: var(--field); border: 1px solid var(--border); border-radius: 6px; padding: 12px;
-                font-family: monospace; font-size: 12.5px; margin-top: 12px; }
+                font-family: monospace; font-size: 12.5px; margin-top: 12px; overflow-wrap: anywhere; }
   .status-box .empty { color: var(--text-dim); }
   #log { font-family: monospace; font-size: 12.5px; white-space: pre-wrap; word-break: break-all; line-height: 1.6; }
   .line-ok { color: var(--ok); } .line-warn { color: var(--warn); } .line-err { color: var(--err); } .line-dim { color: var(--text-dim); }
@@ -62,6 +62,8 @@
   .kv .v { font-family: monospace; word-break: break-all; }
   .kv .v.ok { color: var(--ok); } .kv .v.warn { color: var(--warn); } .kv .v.err { color: var(--err); }
   .kv pre { margin: 0; white-space: pre-wrap; word-break: break-all; font-size: 12px; max-height: 320px; overflow: auto; }
+  .kv details summary { cursor: pointer; color: var(--accent); font-size: 12px; }
+  .kv details pre { margin-top: 6px; }
   .verdict { margin-top: 12px; font-weight: 700; }
   .check-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 13.5px; }
   .check-row input { width: auto; }
@@ -262,14 +264,27 @@ const KNOWN_CONTRACTS = {
 };
 // dApp contracts with a different address on each network, keyed "chainId:address". Their calls are
 // decoded only when sent to these addresses: a generic name such as create() means nothing elsewhere.
-// hup.social: the contracts are not verified on the explorers; the layout of create() was read from
+// hup.social: the contracts are not verified on the explorers. The layout of create() was read from
 // hup.social's own transactions and their ContentCreated events (creator, cType, metadata, parentId,
-// allowedComments), and its selector matches that signature.
+// allowedComments); batchLike() from a like sent on LUKSO (the UP, then the liked content IDs). Each
+// signature's selector matches the one hup.social sends, so name and argument types are exact.
 const DAPP_CONTRACTS = {
   "8453:0xe401af10caa79f9bb6945c87ee196503e5de6bea": "hup.social", // Base
   "5042:0xa5e73b15c1c3ee477aed682741f0324c6787bbb8": "hup.social", // Arc
+  "42:0xf6eec4e32a532b23acc56b72865e79c79877cec8": "hup.social", // LUKSO
+  // LUKSO's LSP26 Follower System (the standard's own contract; hup.social uses it for follows).
+  "42:0xf01103e5a9909fc0dbe8166da7085e0285daddca": "LSP26 Follower System",
 };
-const HUP_IFACE = new ethers.Interface(["function create(address creator, uint8 cType, string metadata, uint256 parentId, bool allowedComments)"]);
+// LSP26: the follower is always the caller (msg.sender), here the UP itself.
+const LSP26_IFACE = new ethers.Interface([
+  "function follow(address addr)", "function unfollow(address addr)",
+  "function followBatch(address[] addresses)", "function unfollowBatch(address[] addresses)",
+]);
+const HUP_IFACE = new ethers.Interface([
+  "function create(address creator, uint8 cType, string metadata, uint256 parentId, bool allowedComments)",
+  "function batchLike(address user, uint256[] contentIds)",
+  "function batchUnlike(address user, uint256[] contentIds)",
+]);
 // "0x… (Name)" when the address is a known contract with code on this network, else the bare address.
 async function labelAddress(provider, addr) {
   const k = KNOWN_CONTRACTS[String(addr).toLowerCase()];
@@ -478,7 +493,7 @@ const I18N = {
     reqNoCall: "❌ Il controller non ha il permesso CALL né SUPER_CALL: non può fare chiamate a contratti. Rifiutata.",
     reqNoValue: "❌ Il controller non ha il permesso TRANSFERVALUE né SUPER_TRANSFERVALUE: non può inviare valore. Rifiutata.",
     kSite: "Sito", kVerify: "Verifica dominio", kNetwork: "Rete", kFrom: "Mittente (UP)", kTo: "Destinatario", kValue: "Valore (dalla UP)",
-    kCall: "Operazione", kRaw: "Dati grezzi", kSigner: "Firma (controller)", kKm: "Tramite Key Manager",
+    kCall: "Operazione", kRaw: "Dati grezzi", kParams: "Parametri", rawShow: (v) => `Mostra (${v.n} byte)`, kSigner: "Firma (controller)", kKm: "Tramite Key Manager",
     kMethod: "Metodo", kAccount: "Account (UP)", kContentType: "Tipo di contenuto", kContent: "Contenuto da firmare (deve coincidere con MetaMask)",
     kHash: "Hash verificato dalla UP", kDomain: "Dominio (EIP-712)", kPrimaryType: "Tipo di messaggio",
     toContract: "contratto", toEoa: "indirizzo senza codice",
@@ -487,7 +502,15 @@ const I18N = {
     hupCreate: (v) => `hup.social: pubblica un contenuto${v.parent > 0n ? ` in risposta al contenuto #${v.parent}` : ""} (tipo ${v.type}, ${v.meta}, commenti ${v.comments ? "consentiti" : "chiusi"})`,
     hupCreatorOk: "✅ Autore del contenuto: la tua UP.",
     hupCreatorOther: (v) => `🛑 Autore del contenuto: ${v.who}, non la tua UP. Il contenuto verrebbe pubblicato a nome di un altro indirizzo: se non sai perché, rifiuta.`,
-    hupNote: "ℹ️ Il contratto di hup.social non è verificato sull'explorer: la pagina legge la chiamata secondo lo schema delle transazioni di hup.social (autore, tipo, metadati, contenuto a cui risponde, commenti).",
+    hupLike: (v) => `hup.social: mette like ${v.n === 1 ? "al contenuto" : "ai contenuti"} ${v.ids}`,
+    hupUnlike: (v) => `hup.social: toglie il like ${v.n === 1 ? "al contenuto" : "ai contenuti"} ${v.ids}`,
+    hupUserOk: "✅ Il like è a nome della tua UP.",
+    hupIpfs: "ℹ️ Il testo e gli eventuali allegati sono già stati caricati su IPFS da hup.social prima di questa richiesta (il link ipfs:// qui sopra): anche se rifiuti, quei file restano pubblici su IPFS.",
+    lsp26Follow: (v) => `LSP26: la tua UP inizia a seguire ${v.n === 1 ? "" : v.n + " indirizzi: "}${v.who}`,
+    lsp26Unfollow: (v) => `LSP26: la tua UP smette di seguire ${v.n === 1 ? "" : v.n + " indirizzi: "}${v.who}`,
+    lsp26Note: "ℹ️ Follower System LSP26 di LUKSO (contratto dello standard): chi segue è sempre chi chiama, cioè la tua UP. Il follow è pubblico e si può togliere in qualsiasi momento.",
+    hupUserOther: (v) => `🛑 Il like sarebbe a nome di ${v.who}, non della tua UP: se non sai perché, rifiuta.`,
+    hupNote: "ℹ️ Il contratto di hup.social non è verificato sull'explorer: la pagina riconosce la chiamata dalla sua firma (nome e tipi corrispondono esattamente al selettore) e la legge secondo lo schema delle transazioni di hup.social.",
     warnUnknownCall: "⚠️ La pagina non riconosce questa chiamata: non può dirti cosa fa. Se non lo sai con certezza, rifiuta.",
     warnEoaData: "⚠️ Il destinatario non è un contratto ma la transazione contiene dati: insolito, controlla.",
     warnApproval: (v) => `⚠️⚠️ APPROVAZIONE: ${v.who} potrà spostare ${v.what} della UP senza altre conferme, anche dopo che chiudi questa pagina, finché non revochi.`,
@@ -547,6 +570,10 @@ const I18N = {
     siweDomainMismatch: (v) => `⚠️⚠️ Messaggio di accesso per il dominio \"${v.d}\", ma il sito collegato è ${v.site}: possibile phishing. Rifiuta se non sei sicuro.`,
     siweChainMismatch: (v) => `⚠️ Il messaggio di accesso indica chainId ${v.id}, diverso dalla rete scelta.`,
     siweDomainOk: (v) => `✅ Accesso a ${v.d}: è lo stesso sito della dApp collegata.`,
+    hupChatLogin: "✅ Accesso alla chat di hup.social: è un login con la tua UP, non autorizza transazioni né spese.",
+    hupChatOtherWallet: (v) => `🛑 Il messaggio di accesso nomina ${v.who}, non la tua UP: se non sai perché, rifiuta.`,
+    hupChatOld: "⚠️ L'orario scritto nel messaggio di accesso non è di adesso (più di 10 minuti di differenza): se non hai appena aperto la chat, rifiuta.",
+    hupChatOtherSite: (v) => `🛑 Questo è il messaggio di accesso alla chat di hup.social, ma lo chiede ${v.site}: firmandolo, quel sito potrebbe entrare nella tua chat di hup. Rifiuta.`,
     siweWalletAlert: (v) => `ℹ️ MetaMask mostrerà \"Suspicious sign-in request\" e chiederà due conferme: vede un accesso a ${v.d} chiesto da un'altra app o sito (questa pagina). Qui è normale, perché firmi per conto della UP; procedi solo se il controllo qui sopra è verde.`,
     signReplay: "ℹ️ Se questo controller governa anche altre UP, la firma vale anche per quelle.",
     signCompare: (v) => `👉 DA CONTROLLARE IN METAMASK: il messaggio che MetaMask ti chiede di firmare deve essere esattamente questo: ${v.c}\nSe è diverso, rifiuta in MetaMask.`,
@@ -722,7 +749,7 @@ const I18N = {
     reqNoCall: "❌ The controller has neither CALL nor SUPER_CALL: it cannot call contracts. Rejected.",
     reqNoValue: "❌ The controller has neither TRANSFERVALUE nor SUPER_TRANSFERVALUE: it cannot send value. Rejected.",
     kSite: "Site", kVerify: "Domain verification", kNetwork: "Network", kFrom: "Sender (UP)", kTo: "Recipient", kValue: "Value (from the UP)",
-    kCall: "Operation", kRaw: "Raw data", kSigner: "Signer (controller)", kKm: "Through Key Manager",
+    kCall: "Operation", kRaw: "Raw data", kParams: "Parameters", rawShow: (v) => `Show (${v.n} bytes)`, kSigner: "Signer (controller)", kKm: "Through Key Manager",
     kMethod: "Method", kAccount: "Account (UP)", kContentType: "Content type", kContent: "Content to sign (must match MetaMask)",
     kHash: "Hash checked by the UP", kDomain: "Domain (EIP-712)", kPrimaryType: "Message type",
     toContract: "contract", toEoa: "address without code",
@@ -731,7 +758,15 @@ const I18N = {
     hupCreate: (v) => `hup.social: publish content${v.parent > 0n ? ` replying to content #${v.parent}` : ""} (type ${v.type}, ${v.meta}, comments ${v.comments ? "allowed" : "closed"})`,
     hupCreatorOk: "✅ Author of the content: your UP.",
     hupCreatorOther: (v) => `🛑 Author of the content: ${v.who}, not your UP. The content would be published in the name of another address: unless you know why, reject it.`,
-    hupNote: "ℹ️ hup.social's contract is not verified on the explorer: the page reads the call following the layout of hup.social's transactions (author, type, metadata, content replied to, comments).",
+    hupLike: (v) => `hup.social: like ${v.n === 1 ? "content" : "contents"} ${v.ids}`,
+    hupUnlike: (v) => `hup.social: remove the like from ${v.n === 1 ? "content" : "contents"} ${v.ids}`,
+    hupUserOk: "✅ The like is in the name of your UP.",
+    hupIpfs: "ℹ️ The text and any attachments were already uploaded to IPFS by hup.social before this request (the ipfs:// link above): even if you reject, those files stay public on IPFS.",
+    lsp26Follow: (v) => `LSP26: your UP starts following ${v.n === 1 ? "" : v.n + " addresses: "}${v.who}`,
+    lsp26Unfollow: (v) => `LSP26: your UP stops following ${v.n === 1 ? "" : v.n + " addresses: "}${v.who}`,
+    lsp26Note: "ℹ️ LUKSO's LSP26 Follower System (the standard's contract): the follower is always the caller, that is your UP. A follow is public and can be removed at any time.",
+    hupUserOther: (v) => `🛑 The like would be in the name of ${v.who}, not your UP: unless you know why, reject it.`,
+    hupNote: "ℹ️ hup.social's contract is not verified on the explorer: the page recognises the call by its signature (name and types match the selector exactly) and reads it following the layout of hup.social's transactions.",
     warnUnknownCall: "⚠️ The page does not recognise this call: it cannot tell you what it does. Unless you know for sure, reject it.",
     warnEoaData: "⚠️ The recipient is not a contract but the transaction carries data: unusual, check it.",
     warnApproval: (v) => `⚠️⚠️ APPROVAL: ${v.who} will be able to move ${v.what} of the UP without further confirmation, even after you close this page, until you revoke it.`,
@@ -790,6 +825,10 @@ const I18N = {
     siweDomainMismatch: (v) => `⚠️⚠️ Sign-in message for the domain \"${v.d}\", but the connected site is ${v.site}: possible phishing. Reject it unless you are sure.`,
     siweChainMismatch: (v) => `⚠️ The sign-in message states chainId ${v.id}, which is not the chosen network.`,
     siweDomainOk: (v) => `✅ Sign-in to ${v.d}: the same site as the connected dApp.`,
+    hupChatLogin: "✅ Sign-in to hup.social's chat: a login with your UP, it authorises no transaction or spending.",
+    hupChatOtherWallet: (v) => `🛑 The sign-in message names ${v.who}, not your UP: unless you know why, reject it.`,
+    hupChatOld: "⚠️ The time written in the sign-in message is not now (more than 10 minutes apart): unless you just opened the chat, reject it.",
+    hupChatOtherSite: (v) => `🛑 This is the sign-in message of hup.social's chat, but ${v.site} asks for it: if you sign it, that site could get into your hup chat. Reject it.`,
     siweWalletAlert: (v) => `ℹ️ MetaMask will show \"Suspicious sign-in request\" and ask for two confirmations: it sees a sign-in to ${v.d} requested by another app or site (this page). Here that is expected, because you sign on behalf of the UP; proceed only if the check above is green.`,
     signReplay: "ℹ️ If this controller also governs other UPs, the signature is valid for them too.",
     signCompare: (v) => `👉 CHECK IN METAMASK: the message MetaMask asks you to sign must be exactly this: ${v.c}\nIf it is different, reject it in MetaMask.`,
@@ -899,7 +938,13 @@ function renderKv(boxId, rows, verdict) {
   for (const [k, v, opt] of rows) {
     const kd = document.createElement("div"); kd.className = "k"; kd.textContent = k;
     const vd = document.createElement("div"); vd.className = "v" + (opt?.cls ? " " + opt.cls : "");
-    if (opt?.block) { const pre = document.createElement("pre"); pre.textContent = v; vd.appendChild(pre); }
+    if (opt?.raw) {
+      // Raw data of a decoded call: closed by default, so the request reads well on a phone.
+      const det = document.createElement("details");
+      const sum = document.createElement("summary"); sum.textContent = t("rawShow", { n: (String(v).length - 2) / 2 });
+      const pre = document.createElement("pre"); pre.textContent = v;
+      det.append(sum, pre); vd.appendChild(det);
+    } else if (opt?.block) { const pre = document.createElement("pre"); pre.textContent = v; vd.appendChild(pre); }
     else vd.textContent = v;
     grid.appendChild(kd); grid.appendChild(vd);
   }
@@ -1452,6 +1497,10 @@ async function describeCall(c, to, value, data, rows, warnings) {
     const op = describeHup(c, data, rows, warnings);
     if (op) return op;
   }
+  if (dapp === "LSP26 Follower System") {
+    const op = describeLsp26(data, rows, warnings);
+    if (op) return op;
+  }
   let parsed = null;
   try { parsed = KNOWN_IFACE.parseTransaction({ data, value }); } catch (e) { parsed = null; }
   if (!parsed) {
@@ -1475,7 +1524,7 @@ async function describeCall(c, to, value, data, rows, warnings) {
   const amount = (x) => decimals !== null ? `${ethers.formatUnits(x, decimals)} ${symbol}`.trim() : `${x.toString()} ${symbol}`.trim();
   const args = parsed.fragment.inputs.map((inp, i) => `${inp.name || "arg" + i}: ${String(parsed.args[i])}`);
   rows.push([t("kCall"), `${parsed.name}(${parsed.fragment.inputs.map(i => i.type).join(",")})\n${args.join("\n")}`, { block: true }]);
-  rows.push([t("kRaw"), data, { block: true }]);
+  rows.push([t("kRaw"), data, { raw: true }]);
 
   const sig = parsed.signature;
   const a = parsed.args;
@@ -1509,18 +1558,50 @@ async function describeCall(c, to, value, data, rows, warnings) {
   return `${parsed.name}(${parsed.fragment.inputs.map(i => i.type).join(",")})`;
 }
 
-// hup.social create(): publishes a post, or a reply when parentId is set, in the name of `creator`.
+// hup.social: create() publishes a post, or a reply when parentId is set, in the name of `creator`;
+// batchLike() / batchUnlike() add or remove likes on contents, in the name of `user`.
 function describeHup(c, data, rows, warnings) {
   let p = null;
   try { p = HUP_IFACE.parseTransaction({ data }); } catch (e) { p = null; }
   if (!p) return null;
-  const [creator, cType, metadata, parentId, allowedComments] = p.args;
-  const op = t("hupCreate", { parent: parentId, type: cType, meta: metadata, comments: allowedComments });
-  rows.push([t("kCall"), `${op}\ncreate(address,uint8,string,uint256,bool)\ncreator: ${creator}\ncType: ${cType}\nmetadata: ${metadata}\nparentId: ${parentId}\nallowedComments: ${allowedComments}`, { block: true }]);
-  rows.push([t("kRaw"), data, { block: true }]);
-  if (creator.toLowerCase() === c.up.toLowerCase()) warnings.push([t("hupCreatorOk"), "line-ok"]);
-  else warnings.push([t("hupCreatorOther", { who: creator }), "line-danger"]);
+  const sig = `${p.name}(${p.fragment.inputs.map((i) => i.type).join(",")})`;
+  let op, who, params;
+  if (p.name === "create") {
+    const [creator, cType, metadata, parentId, allowedComments] = p.args;
+    op = t("hupCreate", { parent: parentId, type: cType, meta: metadata, comments: allowedComments });
+    who = creator;
+    params = `creator: ${creator}\ncType: ${cType}\nmetadata: ${metadata}\nparentId: ${parentId}\nallowedComments: ${allowedComments}`;
+  } else {
+    const [user, ids] = p.args;
+    const list = ids.slice(0, 20).map((i) => "#" + i).join(", ") + (ids.length > 20 ? ` … (${ids.length})` : "");
+    op = t(p.name === "batchLike" ? "hupLike" : "hupUnlike", { ids: list || "—", n: ids.length });
+    who = user;
+    params = `user: ${user}\ncontentIds: ${ids.map(String).join(", ") || "—"}`;
+  }
+  rows.push([t("kCall"), op, {}]);
+  rows.push([t("kParams"), `${sig}\n${params}`, { block: true }]);
+  rows.push([t("kRaw"), data, { raw: true }]);
+  const mine = who.toLowerCase() === c.up.toLowerCase();
+  if (p.name === "create") warnings.push(mine ? [t("hupCreatorOk"), "line-ok"] : [t("hupCreatorOther", { who }), "line-danger"]);
+  else warnings.push(mine ? [t("hupUserOk"), "line-ok"] : [t("hupUserOther", { who }), "line-danger"]);
+  // The post's text and attachments are already on IPFS (uploaded by the dApp before asking to sign).
+  if (p.name === "create" && /^ipfs:\/\//i.test(p.args[2])) warnings.push([t("hupIpfs"), "line-dim"]);
   warnings.push([t("hupNote"), "line-dim"]);
+  return op;
+}
+
+// LSP26 follow / unfollow: the UP starts or stops following one or more addresses.
+function describeLsp26(data, rows, warnings) {
+  let p = null;
+  try { p = LSP26_IFACE.parseTransaction({ data }); } catch (e) { p = null; }
+  if (!p) return null;
+  const list = p.name.endsWith("Batch") ? [...p.args[0]] : [p.args[0]];
+  const shown = list.slice(0, 10).join(", ") + (list.length > 10 ? ` … (${list.length})` : "");
+  const op = t(p.name.startsWith("unfollow") ? "lsp26Unfollow" : "lsp26Follow", { who: shown || "—", n: list.length });
+  rows.push([t("kCall"), op, {}]);
+  rows.push([t("kParams"), `${p.name}(${p.fragment.inputs.map((i) => i.type).join(",")})\n${list.join("\n") || "—"}`, { block: true }]);
+  rows.push([t("kRaw"), data, { raw: true }]);
+  warnings.push([t("lsp26Note"), "line-dim"]);
   return op;
 }
 
@@ -1716,6 +1797,19 @@ function checkSiwe(text, topic, c, warnings) {
   if (ch && Number(ch[1]) !== c.chainId) warnings.push([t("siweChainMismatch", { id: ch[1] }), "line-warn"]);
 }
 
+// hup.social's chat sign-in ("Sign in to Hup chat", wallet, nonce, timestamp): a login to its chat,
+// which authorises no transaction. Asked by another site, it would let that site into the user's chat.
+function checkHupChat(text, topic, c, warnings) {
+  const m = text.match(/^Sign in to Hup chat\s*\n\s*\nWallet: (0x[0-9a-fA-F]{40})\s*\nNonce: (\S+)\s*\nTimestamp: (\d+)\s*$/);
+  if (!m) return;
+  const host = sessionHost(topic).replace(/^www\./, "");
+  if (host !== "hup.social") { warnings.push([t("hupChatOtherSite", { site: host || "?" }), "line-danger"]); return; }
+  warnings.push([t("hupChatLogin"), "line-ok"]);
+  if (m[1].toLowerCase() !== c.up.toLowerCase()) warnings.push([t("hupChatOtherWallet", { who: m[1] }), "line-danger"]);
+  const age = Math.abs(Date.now() - Number(m[3])) / 60000;
+  if (age > 10) warnings.push([t("hupChatOld"), "line-warn"]);
+}
+
 async function handleSignRequest(topic, id, c, request, validation, reject) {
   if (!(c.perms & P.SIGN)) return reject(t("signNoPermission"));
   const p = request.params || [];
@@ -1744,7 +1838,7 @@ async function handleSignRequest(topic, id, c, request, validation, reject) {
       rows.push([t("kContentType"), text !== null ? t("ctText") : t("ctOpaque"), { cls: text !== null ? "" : "warn" }]);
       rows.push([t("kContent"), compare, { block: true }]);
       if (text === null) warnings.push([t("signOpaque"), "line-warn"]);
-      else checkSiwe(text, topic, c, warnings);
+      else { checkSiwe(text, topic, c, warnings); checkHupChat(text, topic, c, warnings); }
     } else {
       account = p[0];
       const raw = p[1];
@@ -1884,7 +1978,8 @@ async function sendToken(provider, address, up) {
   for (const k of SEND_NFT) {
     if (!(await sendSupports(provider, address, SEND_IDS[k]))) continue;
     const name = k === "lsp8" ? await text("LSP4TokenName") : await sendRead(provider, address, "name");
-    return { kind: k, name: name || "?" };
+    // A collection without a name on the chain (many ERC-1155): the index's name, from the balances list.
+    return { kind: k, name: name || holdNames[address] || "?" };
   }
   const lsp7 = await sendSupports(provider, address, SEND_IDS.lsp7);
   const decimals = await sendRead(provider, address, "decimals");
@@ -1924,7 +2019,7 @@ function sendFields(kind) {
 }
 // Token IDs the balances list found for each collection (full IDs, by contract address), and the
 // contracts the index flags as spam.
-let holdIds = {}, holdSpam = new Set();
+let holdIds = {}, holdSpam = new Set(), holdNames = {};
 
 // What the UP holds, in panel 6 (shared asset-list.js, as on the Identity page): the currency and the
 // LSP7/LSP8 tokens registered in the UP from the chain, other tokens from an index. A row chooses what
@@ -1941,7 +2036,7 @@ function shortAmount(text) {
 async function loadHoldings(c) {
   holdKey = `${c.chainId}:${c.up}`;
   const run = ++holdRun, box = $("holdBox");
-  holdIds = {};
+  holdIds = {}; holdNames = {};
   box.textContent = t("holdReading"); box.className = "status-box line-dim";
   const a = await AssetList.list(c.provider, c.up, c.net.key);
   if (run !== holdRun) return;
@@ -1972,6 +2067,7 @@ async function loadHoldings(c) {
     if (r.amount !== undefined) row(`${flag}${shortAmount(r.amount)} ${label}`, `${r.type} · ${name} · ${r.address}`, choose("sendAmount"), `${r.amount} ${label}`, parent);
     else {
       holdIds[r.address] = r.rawIds || [];
+      if (r.name) holdNames[r.address] = String(r.name).slice(0, 60);
       row(`${flag}${name || label} · ${r.type}`, `${t("holdNft", { count: r.count || "?" })} · ${r.address}`, choose("sendId"), null, parent);
     }
   };
