@@ -84,6 +84,7 @@ The notes below are kept for reference.
   4. Send only if the fees are acceptable. Check that the Base EURe address is the official Monerium one.
 - **Route 2 (fallback):** send EURe from the UP to the historical wallet **on Polygon** (plain transfer), then bridge with the Monerium app from the historical wallet. Only the historical wallet must be linked to the Monerium profile, on both networks; the UP does not.
 - **Done (2026-09-29/30):** the Send page (`up-invia-fondi.html`) now transfers ERC-20 tokens and NFTs (ERC-721, ERC-1155, LSP7/LSP8) as well as native currency, so a plain token or NFT transfer does not need an external dApp. It lists what the UP holds through Alchemy (verified live on Polygon and Base) or Blockscout. PRs #37–#42.
+- **Done (2026-10-11):** the Send page was merged into UP Wallet, panel 6 (currency, ERC-20 / LSP7, NFTs, spam-flagged tokens on request, "All", recipient by UP name, result re-read after sending). `up-invia-fondi.html` now only links there.
 
 ### 2.3 Gas monitoring by email (to build)
 - **What:** a small read-only script on the VPS, run hourly by cron. It needs no private key.
