@@ -168,19 +168,26 @@
   <label for="sendAsset" data-i18n="sendAssetLabel">Cosa inviare</label>
   <select id="sendAsset">
     <option value="native" data-i18n="sendAssetNative">La valuta della rete</option>
-    <option value="token" data-i18n="sendAssetToken">Un token (ERC-20 o LSP7): incolla il suo indirizzo</option>
+    <option value="token" data-i18n="sendAssetToken">Un token o un NFT: incolla l'indirizzo del contratto</option>
   </select>
   <div id="sendTokenWrap" hidden>
     <label for="sendToken" data-i18n="sendTokenLabel">Indirizzo del token</label>
     <input type="text" id="sendToken" placeholder="0x...">
     <div class="note" id="sendTokenInfo" style="margin-top:6px;"></div>
+    <div id="sendIdWrap" hidden>
+      <label for="sendId" data-i18n="sendIdLabel">ID del token (NFT)</label>
+      <input type="text" id="sendId" placeholder="1">
+      <div id="sendIdPick"></div>
+    </div>
   </div>
   <label for="sendTo" data-i18n="sendToLabel">Destinatario</label>
   <input type="text" id="sendTo" data-i18n-placeholder="sendToPlaceholder" placeholder="0x… oppure il nome di una Universal Profile">
   <div id="sendToResults"></div>
   <div class="note" id="sendToInfo" style="margin-top:6px;"></div>
-  <label for="sendAmount" data-i18n="sendAmountLabel">Importo</label>
-  <input type="text" id="sendAmount" inputmode="decimal" placeholder="0.0">
+  <div id="sendAmountWrap">
+    <label for="sendAmount" id="sendAmountLabel" data-i18n="sendAmountLabel">Importo</label>
+    <input type="text" id="sendAmount" inputmode="decimal" placeholder="0.0">
+  </div>
   <button id="sendPrepareBtn" disabled data-i18n="sendPrepareBtn">Prepara l'invio</button>
 </div>
 
@@ -331,8 +338,17 @@ const I18N = {
     complianceIdle: "La verifica parte da sola quando rete, UP e MetaMask sono impostati.",
     recheckBtn: "Ricontrolla",
     panelSendTitle: "6 · Invia dalla UP",
-    panelSendNote: "Invia dalla UP la valuta della rete o un token (ERC-20 o LSP7), senza dApp. L'invio segue lo stesso percorso delle richieste delle dApp: lo vedi nella finestra di conferma, viene simulato, il gas lo paga il relayer del sito dove l'opzione è attiva (pannello 3), altrimenti il controller, e firmi in MetaMask. Con <b>Solo simulazione</b> attivo (pannello 5) viene solo simulato; il registro dell'invio è nel pannello 5. Tocca una riga dei saldi per sceglierla. Gli NFT: per ora sulla pagina <a href=\"up-invia-fondi.html\" target=\"_blank\" rel=\"noopener\">Invia</a>.",
-    sendAssetLabel: "Cosa inviare", sendAssetNative: "La valuta della rete", sendAssetToken: "Un token (ERC-20 o LSP7): incolla il suo indirizzo",
+    panelSendNote: "Invia dalla UP la valuta della rete, un token (ERC-20 o LSP7) o un NFT (LSP8, ERC-721 o ERC-1155), senza dApp. L'invio segue lo stesso percorso delle richieste delle dApp: lo vedi nella finestra di conferma, viene simulato, il gas lo paga il relayer del sito dove l'opzione è attiva (pannello 3), altrimenti il controller, e firmi in MetaMask. Con <b>Solo simulazione</b> attivo (pannello 5) viene solo simulato; il registro dell'invio è nel pannello 5. Tocca una riga dei saldi per sceglierla.",
+    sendAssetLabel: "Cosa inviare", sendAssetNative: "La valuta della rete", sendAssetToken: "Un token o un NFT: incolla l'indirizzo del contratto",
+    sendIdLabel: "ID del token (NFT)", sendCopiesLabel: "Numero di copie (ERC-1155)",
+    sendNftOk: (v) => `${v.kind} · ${v.name}: scegli l'ID del token da inviare.`,
+    sendIdsHeld: "ID della UP (tocca per sceglierlo):",
+    sendBadId: "❌ ID del token non valido: un numero, oppure 0x seguito da 64 cifre esadecimali (LSP8).",
+    sendBadCopies: "❌ Numero di copie non valido: un numero intero maggiore di zero.",
+    sendNotOwner: (v) => `❌ La UP non possiede il token ${v.id} (proprietario: ${v.owner}).`,
+    sendNoCopies: (v) => `❌ La UP ha ${v.have} copie del token ${v.id}, ne servono ${v.need}.`,
+    sendNftOwned: "La UP possiede il token: verificato sulla catena.",
+    sendSafeNote: "Trasferimento con safeTransferFrom: se il destinatario è un contratto che non accetta NFT, la transazione fallisce (la simulazione lo mostra) invece di bloccarlo lì.",
     sendTokenLabel: "Indirizzo del token", sendToLabel: "Destinatario",
     sendToPlaceholder: "0x… oppure il nome di una Universal Profile",
     nameSearching: "Ricerca del nome nell'indice dei profili di LUKSO…",
@@ -352,18 +368,17 @@ const I18N = {
     sendBadAmount: "❌ Importo non valido: scrivi un numero maggiore di zero (punto per i decimali).",
     sendBadToken: "❌ Indirizzo del token non valido.",
     sendTokenIsRecipient: "❌ Il destinatario è il contratto del token stesso.",
-    sendNotFungible: (v) => `❌ Questo contratto è un ${v.kind}: gli NFT si inviano per ora dalla pagina Invia.`,
-    sendNotToken: "❌ A questo indirizzo non c'è un token ERC-20 o LSP7 leggibile.",
+    sendNotToken: "❌ A questo indirizzo non c'è un token ERC-20, LSP7, LSP8, ERC-721 o ERC-1155 leggibile.",
     sendNoTokens: (v) => `❌ La UP ha ${v.have} ${v.symbol}, non ${v.need}.`,
     sendContractRecipient: "⚠️ Il destinatario è un contratto: controlla che sia proprio lui a dover ricevere (molti contratti non sanno restituire i fondi).",
     sendUpRecipient: "✅ Il destinatario è una Universal Profile (LSP0).",
-    sendLspForce: "Destinatario senza codice (wallet normale): il trasferimento LSP7 usa force = true, necessario per gli indirizzi senza Universal Receiver.",
-    sendLspNoForce: "Destinatario contratto: il trasferimento LSP7 usa force = false, quindi riesce solo se il destinatario implementa LSP1 (per esempio una UP). La simulazione lo verifica.",
+    sendLspForce: "Destinatario senza codice (wallet normale): il trasferimento LSP7/LSP8 usa force = true, necessario per gli indirizzi senza Universal Receiver.",
+    sendLspNoForce: "Destinatario contratto: il trasferimento LSP7/LSP8 usa force = false, quindi riesce solo se il destinatario implementa LSP1 (per esempio una UP). La simulazione lo verifica.",
     localSite: "UP Wallet (invio dalla UP)",
     holdIdle: "Il saldo della UP compare quando la verifica del pannello 3 è verde.", holdRefreshBtn: "Aggiorna i saldi",
     holdReading: "Lettura dei saldi…",
     holdNative: "valuta della rete",
-    holdNft: (v) => `${v.count} NFT · si inviano per ora dalla pagina Invia`,
+    holdNft: (v) => `${v.count} NFT`,
     holdNone: "Nessun token trovato oltre alla valuta della rete.",
     holdSpam: (v) => `${v.n} token segnalati come spam dall'indice (nascosti)`,
     holdSrc: (v) => v.ix ? `Fonti: la blockchain (valuta, token LSP7/LSP8 registrati nella UP) e l'indice ${v.ix} (gli altri token; può essere incompleto).` : "Fonte: la blockchain (valuta, token LSP7/LSP8 registrati nella UP). Su questa rete non c'è un indice per gli altri token: incolla l'indirizzo del token.",
@@ -562,8 +577,17 @@ const I18N = {
     complianceIdle: "The check starts by itself once network, UP and MetaMask are set.",
     recheckBtn: "Check again",
     panelSendTitle: "6 · Send from the UP",
-    panelSendNote: "Send the network's currency or a token (ERC-20 or LSP7) from the UP, without a dApp. The send follows the same path as dApp requests: you see it in the confirmation window, it is simulated, the gas is paid by the site's relayer where that option is on (panel 3), otherwise by the controller, and you sign in MetaMask. With <b>Simulation only</b> on (panel 5) it is only simulated; the send's log is in panel 5. Tap a row of the balances to choose it. NFTs: for now on the <a href=\"up-invia-fondi.html\" target=\"_blank\" rel=\"noopener\">Send</a> page.",
-    sendAssetLabel: "What to send", sendAssetNative: "The network's currency", sendAssetToken: "A token (ERC-20 or LSP7): paste its address",
+    panelSendNote: "Send the network's currency, a token (ERC-20 or LSP7) or an NFT (LSP8, ERC-721 or ERC-1155) from the UP, without a dApp. The send follows the same path as dApp requests: you see it in the confirmation window, it is simulated, the gas is paid by the site's relayer where that option is on (panel 3), otherwise by the controller, and you sign in MetaMask. With <b>Simulation only</b> on (panel 5) it is only simulated; the send's log is in panel 5. Tap a row of the balances to choose it.",
+    sendAssetLabel: "What to send", sendAssetNative: "The network's currency", sendAssetToken: "A token or an NFT: paste the contract's address",
+    sendIdLabel: "Token ID (NFT)", sendCopiesLabel: "Number of copies (ERC-1155)",
+    sendNftOk: (v) => `${v.kind} · ${v.name}: choose the token ID to send.`,
+    sendIdsHeld: "IDs held by the UP (tap to choose):",
+    sendBadId: "❌ Invalid token ID: a number, or 0x followed by 64 hex digits (LSP8).",
+    sendBadCopies: "❌ Invalid number of copies: a whole number greater than zero.",
+    sendNotOwner: (v) => `❌ The UP does not own token ${v.id} (owner: ${v.owner}).`,
+    sendNoCopies: (v) => `❌ The UP has ${v.have} copies of token ${v.id}, ${v.need} needed.`,
+    sendNftOwned: "The UP owns the token: checked on the chain.",
+    sendSafeNote: "Transfer with safeTransferFrom: if the recipient is a contract that does not accept NFTs, the transaction fails (the simulation shows it) instead of locking it there.",
     sendTokenLabel: "Token address", sendToLabel: "Recipient",
     sendToPlaceholder: "0x… or the name of a Universal Profile",
     nameSearching: "Searching the name in LUKSO's profile index…",
@@ -583,18 +607,17 @@ const I18N = {
     sendBadAmount: "❌ Invalid amount: write a number above zero (dot for decimals).",
     sendBadToken: "❌ Invalid token address.",
     sendTokenIsRecipient: "❌ The recipient is the token contract itself.",
-    sendNotFungible: (v) => `❌ This contract is an ${v.kind}: NFTs are sent from the Send page for now.`,
-    sendNotToken: "❌ There is no readable ERC-20 or LSP7 token at this address.",
+    sendNotToken: "❌ There is no readable ERC-20, LSP7, LSP8, ERC-721 or ERC-1155 token at this address.",
     sendNoTokens: (v) => `❌ The UP holds ${v.have} ${v.symbol}, not ${v.need}.`,
     sendContractRecipient: "⚠️ The recipient is a contract: check that it really is the one to receive (many contracts cannot give funds back).",
     sendUpRecipient: "✅ The recipient is a Universal Profile (LSP0).",
-    sendLspForce: "Recipient without code (regular wallet): the LSP7 transfer uses force = true, required for addresses without a Universal Receiver.",
-    sendLspNoForce: "Recipient is a contract: the LSP7 transfer uses force = false, so it only succeeds if the recipient implements LSP1 (for example a UP). The simulation checks it.",
+    sendLspForce: "Recipient without code (regular wallet): the LSP7/LSP8 transfer uses force = true, required for addresses without a Universal Receiver.",
+    sendLspNoForce: "Recipient is a contract: the LSP7/LSP8 transfer uses force = false, so it only succeeds if the recipient implements LSP1 (for example a UP). The simulation checks it.",
     localSite: "UP Wallet (send from the UP)",
     holdIdle: "The UP's balance appears once the check in panel 3 is green.", holdRefreshBtn: "Refresh balances",
     holdReading: "Reading balances…",
     holdNative: "network currency",
-    holdNft: (v) => `${v.count} NFT · sent from the Send page for now`,
+    holdNft: (v) => `${v.count} NFT`,
     holdNone: "No tokens found besides the network currency.",
     holdSpam: (v) => `${v.n} tokens flagged as spam by the index (hidden)`,
     holdSrc: (v) => v.ix ? `Sources: the blockchain (currency, LSP7/LSP8 tokens registered in the UP) and the ${v.ix} index (other tokens; it may be incomplete).` : "Source: the blockchain (currency, LSP7/LSP8 tokens registered in the UP). This network has no index for other tokens: paste the token address.",
@@ -1811,7 +1834,12 @@ const SEND_IFACE = new ethers.Interface([
   "function balanceOf(address) view returns (uint256)", "function name() view returns (string)", "function symbol() view returns (string)",
   "function getData(bytes32) view returns (bytes)",
   "function transfer(address,uint256) returns (bool)", "function transfer(address,address,uint256,bool,bytes)",
+  "function ownerOf(uint256) view returns (address)", "function tokenOwnerOf(bytes32) view returns (address)",
+  "function tokenIdsOf(address) view returns (bytes32[])", "function balanceOf(address,uint256) view returns (uint256)",
+  "function safeTransferFrom(address,address,uint256)", "function safeTransferFrom(address,address,uint256,uint256,bytes)",
+  "function transfer(address,address,bytes32,bool,bytes)",
 ]);
+const SEND_NFT = ["lsp8", "erc721", "erc1155"];
 let sendLocalId = 0;
 async function sendRead(provider, to, fn, args = []) {
   try { return SEND_IFACE.decodeFunctionResult(fn, await provider.call({ to, data: SEND_IFACE.encodeFunctionData(fn, args) }))[0]; } catch (e) { return null; }
@@ -1823,20 +1851,54 @@ async function sendSupports(provider, to, ids) {
   }
   return false;
 }
-// What the token is, read from the chain each time: kind, name, symbol, decimals, the UP's balance.
+// What the token is, read from the chain each time: kind, name, symbol, decimals, the UP's balance
+// (fungible tokens); kind and name for NFT collections, whose token is checked by ID when sending.
 async function sendToken(provider, address, up) {
   if ((await provider.getCode(address)) === "0x") return { kind: "none" };
-  for (const k of ["lsp8", "erc721", "erc1155"]) if (await sendSupports(provider, address, SEND_IDS[k])) return { kind: k };
+  const text = async (key) => { const v = await sendRead(provider, address, "getData", [ethers.id(key)]); try { return v && v !== "0x" ? ethers.toUtf8String(v) : null; } catch (e) { return null; } };
+  for (const k of SEND_NFT) {
+    if (!(await sendSupports(provider, address, SEND_IDS[k]))) continue;
+    const name = k === "lsp8" ? await text("LSP4TokenName") : await sendRead(provider, address, "name");
+    return { kind: k, name: name || "?" };
+  }
   const lsp7 = await sendSupports(provider, address, SEND_IDS.lsp7);
   const decimals = await sendRead(provider, address, "decimals");
-  const balance = await sendRead(provider, address, "balanceOf", [up]);
+  const balance = await sendRead(provider, address, "balanceOf(address)", [up]);
   if (decimals === null || balance === null) return { kind: "none" };
-  const text = async (key) => { const v = await sendRead(provider, address, "getData", [ethers.id(key)]); try { return v && v !== "0x" ? ethers.toUtf8String(v) : null; } catch (e) { return null; } };
   const name = lsp7 ? await text("LSP4TokenName") : await sendRead(provider, address, "name");
   const symbol = lsp7 ? await text("LSP4TokenSymbol") : await sendRead(provider, address, "symbol");
   return { kind: lsp7 ? "lsp7" : "erc20", decimals: Number(decimals), balance, name: name || "?", symbol: symbol || "" };
 }
 const SEND_KIND = { erc20: "ERC-20", lsp7: "LSP7", lsp8: "LSP8", erc721: "ERC-721", erc1155: "ERC-1155" };
+// A token ID as typed: a number, or for LSP8 also its 32-byte hex form (as on the Send page).
+function sendParseId(kind, str) {
+  const s = (str || "").trim();
+  if (!s) return null;
+  try {
+    if (kind === "lsp8") {
+      if (/^0x[0-9a-fA-F]{64}$/.test(s)) return s.toLowerCase();
+      const n = BigInt(s);
+      return n < 0n || n >= 2n ** 256n ? null : ethers.zeroPadValue(ethers.toBeHex(n), 32);
+    }
+    const n = BigInt(s);
+    return n < 0n || n >= 2n ** 256n ? null : n;
+  } catch (e) { return null; }
+}
+function sendIdText(kind, id) {
+  if (kind === "lsp8") { const n = BigInt(id); return n < 2n ** 53n ? n.toString() : id; }
+  return id.toString();
+}
+// The fields that apply to what is being sent: token ID for NFTs, amount (copies for ERC-1155).
+function sendFields(kind) {
+  const nft = SEND_NFT.includes(kind);
+  $("sendIdWrap").hidden = !nft;
+  $("sendAmountWrap").hidden = kind === "lsp8" || kind === "erc721";
+  const key = kind === "erc1155" ? "sendCopiesLabel" : "sendAmountLabel";
+  $("sendAmountLabel").dataset.i18n = key; $("sendAmountLabel").textContent = t(key);
+  if (!nft) { $("sendId").value = ""; $("sendIdPick").textContent = ""; }
+}
+// Token IDs the balances list found for each collection (full IDs, by contract address).
+let holdIds = {};
 
 // What the UP holds, in panel 6 (shared asset-list.js, as on the Identity page): the currency and the
 // LSP7/LSP8 tokens registered in the UP from the chain, other tokens from an index. A row chooses what
@@ -1853,6 +1915,7 @@ function shortAmount(text) {
 async function loadHoldings(c) {
   holdKey = `${c.chainId}:${c.up}`;
   const run = ++holdRun, box = $("holdBox");
+  holdIds = {};
   box.textContent = t("holdReading"); box.className = "status-box line-dim";
   const a = await AssetList.list(c.provider, c.up, c.net.key);
   if (run !== holdRun) return;
@@ -1878,7 +1941,13 @@ async function loadHoldings(c) {
       $("sendAsset").value = "token"; $("sendAsset").dispatchEvent(new Event("change"));
       $("sendToken").value = r.address; $("sendToken").dispatchEvent(new Event("change")); $("sendAmount").focus();
     }, `${r.amount} ${label}`);
-    else row(`${r.name || label} · ${r.type}`, `${t("holdNft", { count: r.count || "?" })} · ${r.address}`, null);
+    else {
+      holdIds[r.address] = r.rawIds || [];
+      row(`${r.name || label} · ${r.type}`, `${t("holdNft", { count: r.count || "?" })} · ${r.address}`, () => {
+        $("sendAsset").value = "token"; $("sendAsset").dispatchEvent(new Event("change"));
+        $("sendToken").value = r.address; $("sendToken").dispatchEvent(new Event("change")); $("sendId").focus();
+      });
+    }
   }
   const note = (text, cls) => { const d = document.createElement("div"); d.className = cls; d.style.cssText = "font-size:11.5px; margin-top:6px;"; d.textContent = text; box.appendChild(d); };
   if (!good.length) note(t("holdNone"), "line-dim");
@@ -1951,17 +2020,55 @@ $("sendTo").addEventListener("input", () => {
   }, 500);
 });
 
-$("sendAsset").addEventListener("change", () => { $("sendTokenWrap").hidden = $("sendAsset").value !== "token"; });
+$("sendAsset").addEventListener("change", () => {
+  $("sendTokenWrap").hidden = $("sendAsset").value !== "token";
+  sendFields($("sendAsset").value === "token" ? null : "native");
+  sendTokenShown = null;
+  if ($("sendAsset").value === "token" && $("sendToken").value.trim()) $("sendToken").dispatchEvent(new Event("change"));
+});
+// The contract last read, per network and UP: a repeated change event (focus leaving the field again)
+// does not read it again nor clear the token ID already chosen.
+let sendTokenShown = null;
 $("sendToken").addEventListener("change", async () => {
-  const info = $("sendTokenInfo"), raw = $("sendToken").value.trim();
+  const info = $("sendTokenInfo"), raw = $("sendToken").value.trim(), c = compliance;
+  const key = c ? `${c.chainId}:${c.up}:${raw}` : null;
+  if (key && key === sendTokenShown) return;
+  sendTokenShown = key;
   info.textContent = ""; info.className = "note";
-  const c = compliance;
+  sendFields(null);
   if (!c || !ethers.isAddress(raw)) return;
   info.textContent = t("sendReading");
-  const a = await sendToken(c.provider, ethers.getAddress(raw), c.up);
+  const address = ethers.getAddress(raw);
+  let a;
+  try { a = await sendToken(c.provider, address, c.up); }
+  catch (e) {
+    // The RPC failed: say so, and read again at the next change.
+    if ($("sendToken").value.trim() === raw) { sendTokenShown = null; info.textContent = "❌ " + (e.shortMessage || e.message); info.className = "note line-err"; }
+    return;
+  }
   if ($("sendToken").value.trim() !== raw) return;
   if (a.kind === "erc20" || a.kind === "lsp7") { info.textContent = t("sendTokenOk", { kind: SEND_KIND[a.kind], name: a.name, balance: ethers.formatUnits(a.balance, a.decimals), symbol: a.symbol }); info.className = "note line-ok"; }
-  else { info.textContent = a.kind === "none" ? t("sendNotToken") : t("sendNotFungible", { kind: SEND_KIND[a.kind] }); info.className = "note line-err"; }
+  else if (SEND_NFT.includes(a.kind)) {
+    info.textContent = t("sendNftOk", { kind: SEND_KIND[a.kind], name: a.name }); info.className = "note line-ok";
+    sendFields(a.kind);
+    // LSP8 lists the UP's IDs on the chain; other collections take them from the balances' index.
+    let ids = a.kind === "lsp8" ? await sendRead(c.provider, address, "tokenIdsOf", [c.up]) : null;
+    if ($("sendToken").value.trim() !== raw) return;
+    ids = (ids ? Array.from(ids) : holdIds[address] || []).slice(0, 20);
+    const pick = $("sendIdPick");
+    pick.textContent = "";
+    if (!ids.length) return;
+    const head = document.createElement("div"); head.className = "note"; head.textContent = t("sendIdsHeld"); pick.appendChild(head);
+    for (const id of ids) {
+      const txt = a.kind === "lsp8" ? sendIdText("lsp8", id) : String(id);
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "secondary"; b.textContent = txt.length > 24 ? txt.slice(0, 12) + "…" + txt.slice(-8) : txt; b.title = txt;
+      b.style.cssText = "margin:4px 6px 0 0; padding:6px 10px;";
+      b.addEventListener("click", () => { $("sendId").value = txt; if (a.kind === "erc1155" && !$("sendAmount").value.trim()) $("sendAmount").value = "1"; });
+      pick.appendChild(b);
+    }
+  }
+  else { info.textContent = t("sendNotToken"); info.className = "note line-err"; }
 });
 
 $("sendPrepareBtn").addEventListener("click", busyWrap(async () => {
@@ -1995,18 +2102,43 @@ $("sendPrepareBtn").addEventListener("click", busyWrap(async () => {
     if (token === recipient) return fail(t("sendTokenIsRecipient"));
     const a = await sendToken(c.provider, token, c.up);
     if (a.kind === "none") return fail(t("sendNotToken"));
-    if (a.kind !== "erc20" && a.kind !== "lsp7") return fail(t("sendNotFungible", { kind: SEND_KIND[a.kind] }));
-    let amount;
-    try { amount = ethers.parseUnits(amountStr, a.decimals); } catch (e) { return fail(t("sendBadAmount")); }
-    if (amount <= 0n) return fail(t("sendBadAmount"));
-    if (a.balance < amount) return fail(t("sendNoTokens", { have: ethers.formatUnits(a.balance, a.decimals), need: amountStr, symbol: a.symbol }));
     const force = !isContract;
-    const data = a.kind === "erc20"
-      ? SEND_IFACE.encodeFunctionData("transfer(address,uint256)", [recipient, amount])
-      : SEND_IFACE.encodeFunctionData("transfer(address,address,uint256,bool,bytes)", [c.up, recipient, amount, force, "0x"]);
-    tx = { from: c.up, to: token, value: "0x0", data };
-    what = `${amountStr} ${a.symbol || SEND_KIND[a.kind]}`.trim();
-    if (a.kind === "lsp7") log(t(force ? "sendLspForce" : "sendLspNoForce"), "line-dim");
+    if (SEND_NFT.includes(a.kind)) {
+      const id = sendParseId(a.kind, $("sendId").value);
+      if (id === null) return fail(t("sendBadId"));
+      const idText = sendIdText(a.kind, id);
+      let data;
+      if (a.kind === "erc1155") {
+        let copies;
+        try { copies = BigInt($("sendAmount").value.trim() || "1"); } catch (e) { return fail(t("sendBadCopies")); }
+        if (copies <= 0n) return fail(t("sendBadCopies"));
+        const have = await sendRead(c.provider, token, "balanceOf(address,uint256)", [c.up, id]);
+        if (have === null || have < copies) return fail(t("sendNoCopies", { have: have === null ? "?" : have.toString(), need: copies.toString(), id: idText }));
+        data = SEND_IFACE.encodeFunctionData("safeTransferFrom(address,address,uint256,uint256,bytes)", [c.up, recipient, id, copies, "0x"]);
+        what = `${copies} × ${a.name} #${idText}`;
+      } else {
+        const owner = await sendRead(c.provider, token, a.kind === "erc721" ? "ownerOf" : "tokenOwnerOf", [id]);
+        if (!owner || owner.toLowerCase() !== c.up.toLowerCase()) return fail(t("sendNotOwner", { id: idText, owner: owner || "—" }));
+        data = a.kind === "erc721"
+          ? SEND_IFACE.encodeFunctionData("safeTransferFrom(address,address,uint256)", [c.up, recipient, id])
+          : SEND_IFACE.encodeFunctionData("transfer(address,address,bytes32,bool,bytes)", [c.up, recipient, id, force, "0x"]);
+        what = `${a.name} #${idText}`;
+      }
+      log(t("sendNftOwned"), "line-ok");
+      log(t(a.kind === "lsp8" ? (force ? "sendLspForce" : "sendLspNoForce") : "sendSafeNote"), "line-dim");
+      tx = { from: c.up, to: token, value: "0x0", data };
+    } else {
+      let amount;
+      try { amount = ethers.parseUnits(amountStr, a.decimals); } catch (e) { return fail(t("sendBadAmount")); }
+      if (amount <= 0n) return fail(t("sendBadAmount"));
+      if (a.balance < amount) return fail(t("sendNoTokens", { have: ethers.formatUnits(a.balance, a.decimals), need: amountStr, symbol: a.symbol }));
+      const data = a.kind === "erc20"
+        ? SEND_IFACE.encodeFunctionData("transfer(address,uint256)", [recipient, amount])
+        : SEND_IFACE.encodeFunctionData("transfer(address,address,uint256,bool,bytes)", [c.up, recipient, amount, force, "0x"]);
+      tx = { from: c.up, to: token, value: "0x0", data };
+      what = `${amountStr} ${a.symbol || SEND_KIND[a.kind]}`.trim();
+      if (a.kind === "lsp7") log(t(force ? "sendLspForce" : "sendLspNoForce"), "line-dim");
+    }
   }
   log(t("sendStart", { what, to: picked && picked.address === recipient ? `${picked.label} (${recipient})` : recipient }), "line-dim");
   // A Universal Profile (LSP0, ERC-165) is a contract made to hold and send funds: no warning for it.
