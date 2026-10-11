@@ -380,7 +380,9 @@ const I18N = {
     holdNative: "valuta della rete",
     holdNft: (v) => `${v.count} NFT`,
     holdNone: "Nessun token trovato oltre alla valuta della rete.",
-    holdSpam: (v) => `${v.n} token segnalati come spam dall'indice (nascosti)`,
+    holdSpam: (v) => `Mostra ${v.n} token segnalati come spam dall'indice`,
+    holdSpamNote: "Segnalati come spam dall'indice: di solito arrivano senza averli chiesti. Si possono inviare (per esempio per toglierli dalla UP), ma non aprire siti o link scritti nel loro nome.",
+    sendSpamWarn: "⚠️ Questo token è segnalato come spam dall'indice. Inviarlo è possibile, ma non aprire siti o link scritti nel suo nome o nella sua descrizione: è la truffa tipica di questi token.",
     holdSrc: (v) => v.ix ? `Fonti: la blockchain (valuta, token LSP7/LSP8 registrati nella UP) e l'indice ${v.ix} (gli altri token; può essere incompleto).` : "Fonte: la blockchain (valuta, token LSP7/LSP8 registrati nella UP). Su questa rete non c'è un indice per gli altri token: incolla l'indirizzo del token.",
     holdIxFail: (v) => `L'indice ${v.ix} non ha risposto (${v.err}): mostrati solo valuta e token registrati nella UP.`,
     panel4Title: "4 · Collega una dApp con WalletConnect",
@@ -619,7 +621,9 @@ const I18N = {
     holdNative: "network currency",
     holdNft: (v) => `${v.count} NFT`,
     holdNone: "No tokens found besides the network currency.",
-    holdSpam: (v) => `${v.n} tokens flagged as spam by the index (hidden)`,
+    holdSpam: (v) => `Show ${v.n} tokens flagged as spam by the index`,
+    holdSpamNote: "Flagged as spam by the index: they usually arrive unasked. They can be sent (for example to remove them from the UP), but do not open sites or links written in their name.",
+    sendSpamWarn: "⚠️ This token is flagged as spam by the index. Sending it is possible, but do not open sites or links written in its name or description: that is the usual scam of these tokens.",
     holdSrc: (v) => v.ix ? `Sources: the blockchain (currency, LSP7/LSP8 tokens registered in the UP) and the ${v.ix} index (other tokens; it may be incomplete).` : "Source: the blockchain (currency, LSP7/LSP8 tokens registered in the UP). This network has no index for other tokens: paste the token address.",
     holdIxFail: (v) => `The ${v.ix} index did not answer (${v.err}): only the currency and the tokens registered in the UP are shown.`,
     panel4Title: "4 · Connect a dApp through WalletConnect",
@@ -1897,8 +1901,9 @@ function sendFields(kind) {
   $("sendAmountLabel").dataset.i18n = key; $("sendAmountLabel").textContent = t(key);
   if (!nft) { $("sendId").value = ""; $("sendIdPick").textContent = ""; }
 }
-// Token IDs the balances list found for each collection (full IDs, by contract address).
-let holdIds = {};
+// Token IDs the balances list found for each collection (full IDs, by contract address), and the
+// contracts the index flags as spam.
+let holdIds = {}, holdSpam = new Set();
 
 // What the UP holds, in panel 6 (shared asset-list.js, as on the Identity page): the currency and the
 // LSP7/LSP8 tokens registered in the UP from the chain, other tokens from an index. A row chooses what
@@ -1920,38 +1925,54 @@ async function loadHoldings(c) {
   const a = await AssetList.list(c.provider, c.up, c.net.key);
   if (run !== holdRun) return;
   box.textContent = ""; box.className = "status-box";
-  const row = (main, sub, onPick, exact) => {
+  const row = (main, sub, onPick, exact, parent = box) => {
     const b = document.createElement(onPick ? "button" : "div");
     if (exact) b.title = exact;
     if (onPick) { b.type = "button"; b.className = "secondary hold-row"; b.addEventListener("click", onPick); } else b.className = "hold-row line-dim";
     b.style.cssText = "display:block; width:100%; text-align:left; margin:4px 0; padding:8px 10px;";
     const m = document.createElement("div"); m.textContent = main;
     const d = document.createElement("div"); d.textContent = sub; d.style.cssText = "font-size:11.5px; opacity:0.8; overflow-wrap:anywhere;";
-    b.append(m, d); box.appendChild(b);
+    b.append(m, d); parent.appendChild(b);
   };
   const cur = c.net.currency || "";
   const nat = a.native === null ? null : ethers.formatEther(a.native);
   row(nat === null ? `? ${cur}` : `${shortAmount(nat)} ${cur}`.trim(), t("holdNative"), () => {
     $("sendAsset").value = "native"; $("sendAsset").dispatchEvent(new Event("change")); $("sendAmount").focus();
   }, nat === null ? null : `${nat} ${cur}`.trim());
-  const good = a.rows.filter((r) => !r.spam), spam = a.rows.length - good.length;
-  for (const r of good) {
-    const label = r.symbol || r.name || r.address;
-    if (r.amount !== undefined) row(`${shortAmount(r.amount)} ${label}`, `${r.type} · ${r.name || ""} · ${r.address}`, () => {
+  const good = a.rows.filter((r) => !r.spam), spam = a.rows.filter((r) => r.spam);
+  // Spam names often carry a link or a "claim" message: shown as plain text, cut short, never as a link.
+  const asset = (r, parent, flag) => {
+    const cut = (v) => (v && v.length > 40 ? v.slice(0, 40) + "…" : v);
+    const label = cut(r.symbol || r.name || r.address), name = cut(r.name) || "";
+    const choose = (focus) => () => {
       $("sendAsset").value = "token"; $("sendAsset").dispatchEvent(new Event("change"));
-      $("sendToken").value = r.address; $("sendToken").dispatchEvent(new Event("change")); $("sendAmount").focus();
-    }, `${r.amount} ${label}`);
+      $("sendToken").value = r.address; $("sendToken").dispatchEvent(new Event("change")); $(focus).focus();
+    };
+    if (r.amount !== undefined) row(`${flag}${shortAmount(r.amount)} ${label}`, `${r.type} · ${name} · ${r.address}`, choose("sendAmount"), `${r.amount} ${label}`, parent);
     else {
       holdIds[r.address] = r.rawIds || [];
-      row(`${r.name || label} · ${r.type}`, `${t("holdNft", { count: r.count || "?" })} · ${r.address}`, () => {
-        $("sendAsset").value = "token"; $("sendAsset").dispatchEvent(new Event("change"));
-        $("sendToken").value = r.address; $("sendToken").dispatchEvent(new Event("change")); $("sendId").focus();
-      });
+      row(`${flag}${name || label} · ${r.type}`, `${t("holdNft", { count: r.count || "?" })} · ${r.address}`, choose("sendId"), null, parent);
     }
-  }
+  };
+  good.forEach((r) => asset(r, box, ""));
   const note = (text, cls) => { const d = document.createElement("div"); d.className = cls; d.style.cssText = "font-size:11.5px; margin-top:6px;"; d.textContent = text; box.appendChild(d); };
   if (!good.length) note(t("holdNone"), "line-dim");
-  if (spam) note(t("holdSpam", { n: spam }), "line-dim");
+  // Spam-flagged assets: hidden behind a button; they can still be chosen, e.g. to send them away.
+  holdSpam = new Set(spam.map((r) => r.address));
+  if (spam.length) {
+    const list = document.createElement("div"); list.hidden = true;
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "secondary"; b.style.cssText = "margin-top:6px; padding:6px 10px; font-size:12px;";
+    b.textContent = t("holdSpam", { n: spam.length });
+    b.addEventListener("click", () => {
+      list.hidden = !list.hidden;
+      if (list.childElementCount) return;
+      const w = document.createElement("div"); w.className = "line-warn"; w.style.cssText = "font-size:11.5px; margin:6px 0;"; w.textContent = t("holdSpamNote");
+      list.appendChild(w);
+      spam.forEach((r) => asset(r, list, "⚠️ "));
+    });
+    box.append(b, list);
+  }
   const ix = a.indexer && (a.indexer.kind === "alchemy" ? "Alchemy" : "Blockscout");
   if (a.indexer && a.indexer.err) note(t("holdIxFail", { ix, err: a.indexer.err }), "line-warn");
   else note(t("holdSrc", { ix }), "line-dim");
@@ -2047,9 +2068,10 @@ $("sendToken").addEventListener("change", async () => {
     return;
   }
   if ($("sendToken").value.trim() !== raw) return;
-  if (a.kind === "erc20" || a.kind === "lsp7") { info.textContent = t("sendTokenOk", { kind: SEND_KIND[a.kind], name: a.name, balance: ethers.formatUnits(a.balance, a.decimals), symbol: a.symbol }); info.className = "note line-ok"; }
+  const spamNote = () => { if (!holdSpam.has(address)) return; const w = document.createElement("div"); w.className = "line-warn"; w.textContent = t("sendSpamWarn"); info.appendChild(w); };
+  if (a.kind === "erc20" || a.kind === "lsp7") { info.textContent = t("sendTokenOk", { kind: SEND_KIND[a.kind], name: a.name, balance: ethers.formatUnits(a.balance, a.decimals), symbol: a.symbol }); info.className = "note line-ok"; spamNote(); }
   else if (SEND_NFT.includes(a.kind)) {
-    info.textContent = t("sendNftOk", { kind: SEND_KIND[a.kind], name: a.name }); info.className = "note line-ok";
+    info.textContent = t("sendNftOk", { kind: SEND_KIND[a.kind], name: a.name }); info.className = "note line-ok"; spamNote();
     sendFields(a.kind);
     // LSP8 lists the UP's IDs on the chain; other collections take them from the balances' index.
     let ids = a.kind === "lsp8" ? await sendRead(c.provider, address, "tokenIdsOf", [c.up]) : null;
@@ -2102,6 +2124,7 @@ $("sendPrepareBtn").addEventListener("click", busyWrap(async () => {
     if (token === recipient) return fail(t("sendTokenIsRecipient"));
     const a = await sendToken(c.provider, token, c.up);
     if (a.kind === "none") return fail(t("sendNotToken"));
+    if (holdSpam.has(token)) log(t("sendSpamWarn"), "line-warn");
     const force = !isContract;
     if (SEND_NFT.includes(a.kind)) {
       const id = sendParseId(a.kind, $("sendId").value);
