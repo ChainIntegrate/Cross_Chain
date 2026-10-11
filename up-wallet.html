@@ -405,6 +405,7 @@ const I18N = {
     holdSpam: (v) => `Mostra ${v.n} token segnalati come spam dall'indice`,
     holdSpamNote: "Segnalati come spam dall'indice: di solito arrivano senza averli chiesti. Si possono inviare (per esempio per toglierli dalla UP), ma non aprire siti o link scritti nel loro nome.",
     sendSpamWarn: "⚠️ Questo token è segnalato come spam dall'indice. Inviarlo è possibile, ma non aprire siti o link scritti nel suo nome o nella sua descrizione: è la truffa tipica di questi token.",
+    holdGone: (v) => `${v.n} NFT che l'indice ${v.ix} elenca ancora non sono più della UP (verificato sulla blockchain): non sono mostrati.`,
     holdSrc: (v) => v.ix ? `Fonti: la blockchain (valuta, token LSP7/LSP8 registrati nella UP) e l'indice ${v.ix} (gli altri token; può essere incompleto).` : "Fonte: la blockchain (valuta, token LSP7/LSP8 registrati nella UP). Su questa rete non c'è un indice per gli altri token: incolla l'indirizzo del token.",
     holdIxFail: (v) => `L'indice ${v.ix} non ha risposto (${v.err}): mostrati solo valuta e token registrati nella UP.`,
     panel4Title: "4 · Collega una dApp con WalletConnect",
@@ -664,6 +665,7 @@ const I18N = {
     holdSpam: (v) => `Show ${v.n} tokens flagged as spam by the index`,
     holdSpamNote: "Flagged as spam by the index: they usually arrive unasked. They can be sent (for example to remove them from the UP), but do not open sites or links written in their name.",
     sendSpamWarn: "⚠️ This token is flagged as spam by the index. Sending it is possible, but do not open sites or links written in its name or description: that is the usual scam of these tokens.",
+    holdGone: (v) => `${v.n} NFTs the ${v.ix} index still lists no longer belong to the UP (checked on the blockchain): not shown.`,
     holdSrc: (v) => v.ix ? `Sources: the blockchain (currency, LSP7/LSP8 tokens registered in the UP) and the ${v.ix} index (other tokens; it may be incomplete).` : "Source: the blockchain (currency, LSP7/LSP8 tokens registered in the UP). This network has no index for other tokens: paste the token address.",
     holdIxFail: (v) => `The ${v.ix} index did not answer (${v.err}): only the currency and the tokens registered in the UP are shown.`,
     panel4Title: "4 · Connect a dApp through WalletConnect",
@@ -2093,6 +2095,7 @@ async function loadHoldings(c) {
   const ix = a.indexer && (a.indexer.kind === "alchemy" ? "Alchemy" : "Blockscout");
   if (a.indexer && a.indexer.err) note(t("holdIxFail", { ix, err: a.indexer.err }), "line-warn");
   else note(t("holdSrc", { ix }), "line-dim");
+  if (a.indexer && a.indexer.gone) note(t("holdGone", { n: a.indexer.gone, ix }), "line-dim");
 }
 $("holdRefresh").addEventListener("click", () => { if (compliance) loadHoldings(compliance); });
 
