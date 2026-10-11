@@ -10,6 +10,7 @@
 <link rel="icon" href="favicon.ico">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="chains.js"></script>
+<script src="asset-list.js"></script>
 <script src="backup-check.js"></script>
 <script src="gas-relay-client.js"></script>
 <script src="vendor/walletkit-1.6.0.min.js"></script>
@@ -142,8 +143,28 @@
 </div>
 
 <div class="panel">
-  <h2 data-i18n="panelSendTitle">4 · Invia dalla UP</h2>
+  <h2 data-i18n="panel4Title">4 · Collega una dApp con WalletConnect</h2>
+  <div class="note" data-i18n-html="panel4Note"></div>
+  <label for="wcUri" data-i18n="wcUriLabel">Link WalletConnect (wc:...)</label>
+  <input type="text" id="wcUri" placeholder="wc:...">
+  <button id="pairBtn" disabled data-i18n="pairBtn">Collega</button>
+  <div class="status-box" id="wcStatus"><span class="empty" data-i18n="wcIdle">Nessuna sessione.</span></div>
+  <button id="disconnectBtn" class="secondary" disabled data-i18n="disconnectBtn">Disconnetti tutte le sessioni</button>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel5Title">5 · Richieste (dApp e invii)</h2>
+  <div class="check-row"><input type="checkbox" id="simulateOnly" checked><label for="simulateOnly" style="margin:0;" data-i18n="simulateOnlyLabel">Solo simulazione (non inviare nulla)</label></div>
+  <div class="note" style="margin-top:6px;" data-i18n="simulateOnlyNote"></div>
+  <div id="requestBox" class="status-box"><span class="empty" data-i18n="noRequest">Nessuna richiesta in attesa.</span></div>
+  <div id="log" class="line-dim" style="margin-top:10px;"></div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panelSendTitle">6 · Invia dalla UP</h2>
   <div class="note" data-i18n-html="panelSendNote"></div>
+  <div class="status-box" id="holdBox"><span class="empty" data-i18n="holdIdle">Il saldo della UP compare quando la verifica del pannello 3 è verde.</span></div>
+  <button id="holdRefresh" class="secondary" disabled data-i18n="holdRefreshBtn">Aggiorna i saldi</button>
   <label for="sendAsset" data-i18n="sendAssetLabel">Cosa inviare</label>
   <select id="sendAsset">
     <option value="native" data-i18n="sendAssetNative">La valuta della rete</option>
@@ -159,24 +180,6 @@
   <label for="sendAmount" data-i18n="sendAmountLabel">Importo</label>
   <input type="text" id="sendAmount" inputmode="decimal" placeholder="0.0">
   <button id="sendPrepareBtn" disabled data-i18n="sendPrepareBtn">Prepara l'invio</button>
-</div>
-
-<div class="panel">
-  <h2 data-i18n="panel4Title">5 · Collega una dApp con WalletConnect</h2>
-  <div class="note" data-i18n-html="panel4Note"></div>
-  <label for="wcUri" data-i18n="wcUriLabel">Link WalletConnect (wc:...)</label>
-  <input type="text" id="wcUri" placeholder="wc:...">
-  <button id="pairBtn" disabled data-i18n="pairBtn">Collega</button>
-  <div class="status-box" id="wcStatus"><span class="empty" data-i18n="wcIdle">Nessuna sessione.</span></div>
-  <button id="disconnectBtn" class="secondary" disabled data-i18n="disconnectBtn">Disconnetti tutte le sessioni</button>
-</div>
-
-<div class="panel">
-  <h2 data-i18n="panel5Title">6 · Richieste (dApp e invii)</h2>
-  <div class="check-row"><input type="checkbox" id="simulateOnly" checked><label for="simulateOnly" style="margin:0;" data-i18n="simulateOnlyLabel">Solo simulazione (non inviare nulla)</label></div>
-  <div class="note" style="margin-top:6px;" data-i18n="simulateOnlyNote"></div>
-  <div id="requestBox" class="status-box"><span class="empty" data-i18n="noRequest">Nessuna richiesta in attesa.</span></div>
-  <div id="log" class="line-dim" style="margin-top:10px;"></div>
 </div>
 
 <div class="modal-backdrop" id="requestModal" hidden>
@@ -325,8 +328,8 @@ const I18N = {
     connectSignerBtn: "Connetti MetaMask (controller)",
     complianceIdle: "La verifica parte da sola quando rete, UP e MetaMask sono impostati.",
     recheckBtn: "Ricontrolla",
-    panelSendTitle: "4 · Invia dalla UP",
-    panelSendNote: "Invia dalla UP la valuta della rete o un token (ERC-20 o LSP7), senza dApp. L'invio segue lo stesso percorso delle richieste delle dApp: lo vedi nella finestra di conferma, viene simulato, il gas lo paga il relayer del sito dove l'opzione è attiva (pannello 3), altrimenti il controller, e firmi in MetaMask. Con <b>Solo simulazione</b> attivo (pannello 6) viene solo simulato. NFT e lista di cosa possiede la UP: per ora sulla pagina <a href=\"up-invia-fondi.html\" target=\"_blank\" rel=\"noopener\">Invia</a>.",
+    panelSendTitle: "6 · Invia dalla UP",
+    panelSendNote: "Invia dalla UP la valuta della rete o un token (ERC-20 o LSP7), senza dApp. L'invio segue lo stesso percorso delle richieste delle dApp: lo vedi nella finestra di conferma, viene simulato, il gas lo paga il relayer del sito dove l'opzione è attiva (pannello 3), altrimenti il controller, e firmi in MetaMask. Con <b>Solo simulazione</b> attivo (pannello 5) viene solo simulato; il registro dell'invio è nel pannello 5. Tocca una riga dei saldi per sceglierla. Gli NFT: per ora sulla pagina <a href=\"up-invia-fondi.html\" target=\"_blank\" rel=\"noopener\">Invia</a>.",
     sendAssetLabel: "Cosa inviare", sendAssetNative: "La valuta della rete", sendAssetToken: "Un token (ERC-20 o LSP7): incolla il suo indirizzo",
     sendTokenLabel: "Indirizzo del token", sendToLabel: "Destinatario", sendAmountLabel: "Importo", sendPrepareBtn: "Prepara l'invio",
     sendReading: "Lettura del token…",
@@ -347,13 +350,21 @@ const I18N = {
     sendLspForce: "Destinatario senza codice (wallet normale): il trasferimento LSP7 usa force = true, necessario per gli indirizzi senza Universal Receiver.",
     sendLspNoForce: "Destinatario contratto: il trasferimento LSP7 usa force = false, quindi riesce solo se il destinatario implementa LSP1 (per esempio una UP). La simulazione lo verifica.",
     localSite: "UP Wallet (invio dalla UP)",
-    panel4Title: "5 · Collega una dApp con WalletConnect",
+    holdIdle: "Il saldo della UP compare quando la verifica del pannello 3 è verde.", holdRefreshBtn: "Aggiorna i saldi",
+    holdReading: "Lettura dei saldi…",
+    holdNative: "valuta della rete",
+    holdNft: (v) => `${v.count} NFT · si inviano per ora dalla pagina Invia`,
+    holdNone: "Nessun token trovato oltre alla valuta della rete.",
+    holdSpam: (v) => `${v.n} token segnalati come spam dall'indice (nascosti)`,
+    holdSrc: (v) => v.ix ? `Fonti: la blockchain (valuta, token LSP7/LSP8 registrati nella UP) e l'indice ${v.ix} (gli altri token; può essere incompleto).` : "Fonte: la blockchain (valuta, token LSP7/LSP8 registrati nella UP). Su questa rete non c'è un indice per gli altri token: incolla l'indirizzo del token.",
+    holdIxFail: (v) => `L'indice ${v.ix} non ha risposto (${v.err}): mostrati solo valuta e token registrati nella UP.`,
+    panel4Title: "4 · Collega una dApp con WalletConnect",
     panel4Note: "Sulla dApp scegli di connetterti con <b>WalletConnect</b>, copia il link di connessione (sotto il QR code, inizia con <code>wc:</code>) e incollalo qui. Si attiva solo quando la verifica del pannello 3 è verde. Tieni aperta questa pagina mentre usi la dApp.",
     wcUriLabel: "Link WalletConnect (wc:...)",
     pairBtn: "Collega",
     wcIdle: "Nessuna sessione.",
     disconnectBtn: "Disconnetti tutte le sessioni",
-    panel5Title: "6 · Richieste (dApp e invii)",
+    panel5Title: "5 · Richieste (dApp e invii)",
     simulateOnlyLabel: "Solo simulazione (non inviare nulla)",
     simulateOnlyNote: "Con la spunta, le transazioni vengono controllate e simulate, poi alla dApp si risponde che è una simulazione: non si invia e non si spende nulla. Le firme di messaggi non si possono simulare: vengono sempre mostrate e firmate solo se premi \"Firma il messaggio\".",
     noRequest: "Nessuna richiesta in attesa.",
@@ -540,8 +551,8 @@ const I18N = {
     connectSignerBtn: "Connect MetaMask (controller)",
     complianceIdle: "The check starts by itself once network, UP and MetaMask are set.",
     recheckBtn: "Check again",
-    panelSendTitle: "4 · Send from the UP",
-    panelSendNote: "Send the network's currency or a token (ERC-20 or LSP7) from the UP, without a dApp. The send follows the same path as dApp requests: you see it in the confirmation window, it is simulated, the gas is paid by the site's relayer where that option is on (panel 3), otherwise by the controller, and you sign in MetaMask. With <b>Simulation only</b> on (panel 6) it is only simulated. NFTs and the list of what the UP holds: for now on the <a href=\"up-invia-fondi.html\" target=\"_blank\" rel=\"noopener\">Send</a> page.",
+    panelSendTitle: "6 · Send from the UP",
+    panelSendNote: "Send the network's currency or a token (ERC-20 or LSP7) from the UP, without a dApp. The send follows the same path as dApp requests: you see it in the confirmation window, it is simulated, the gas is paid by the site's relayer where that option is on (panel 3), otherwise by the controller, and you sign in MetaMask. With <b>Simulation only</b> on (panel 5) it is only simulated; the send's log is in panel 5. Tap a row of the balances to choose it. NFTs: for now on the <a href=\"up-invia-fondi.html\" target=\"_blank\" rel=\"noopener\">Send</a> page.",
     sendAssetLabel: "What to send", sendAssetNative: "The network's currency", sendAssetToken: "A token (ERC-20 or LSP7): paste its address",
     sendTokenLabel: "Token address", sendToLabel: "Recipient", sendAmountLabel: "Amount", sendPrepareBtn: "Prepare the send",
     sendReading: "Reading the token…",
@@ -562,13 +573,21 @@ const I18N = {
     sendLspForce: "Recipient without code (regular wallet): the LSP7 transfer uses force = true, required for addresses without a Universal Receiver.",
     sendLspNoForce: "Recipient is a contract: the LSP7 transfer uses force = false, so it only succeeds if the recipient implements LSP1 (for example a UP). The simulation checks it.",
     localSite: "UP Wallet (send from the UP)",
-    panel4Title: "5 · Connect a dApp through WalletConnect",
+    holdIdle: "The UP's balance appears once the check in panel 3 is green.", holdRefreshBtn: "Refresh balances",
+    holdReading: "Reading balances…",
+    holdNative: "network currency",
+    holdNft: (v) => `${v.count} NFT · sent from the Send page for now`,
+    holdNone: "No tokens found besides the network currency.",
+    holdSpam: (v) => `${v.n} tokens flagged as spam by the index (hidden)`,
+    holdSrc: (v) => v.ix ? `Sources: the blockchain (currency, LSP7/LSP8 tokens registered in the UP) and the ${v.ix} index (other tokens; it may be incomplete).` : "Source: the blockchain (currency, LSP7/LSP8 tokens registered in the UP). This network has no index for other tokens: paste the token address.",
+    holdIxFail: (v) => `The ${v.ix} index did not answer (${v.err}): only the currency and the tokens registered in the UP are shown.`,
+    panel4Title: "4 · Connect a dApp through WalletConnect",
     panel4Note: "On the dApp choose to connect with <b>WalletConnect</b>, copy the connection link (below the QR code, it starts with <code>wc:</code>) and paste it here. It is enabled only when the check in panel 3 is green. Keep this page open while you use the dApp.",
     wcUriLabel: "WalletConnect link (wc:...)",
     pairBtn: "Connect",
     wcIdle: "No session.",
     disconnectBtn: "Disconnect all sessions",
-    panel5Title: "6 · Requests (dApps and sends)",
+    panel5Title: "5 · Requests (dApps and sends)",
     simulateOnlyLabel: "Simulation only (send nothing)",
     simulateOnlyNote: "When checked, transactions are checked and simulated, then the dApp is told it was a simulation: nothing is sent and nothing is spent. Message signatures cannot be simulated: they are always shown and signed only if you press \"Sign the message\".",
     noRequest: "No pending request.",
@@ -1105,7 +1124,10 @@ let walletKit = null;
 let pending = null; // { kind: "tx" | "sign", topic, id, ... }
 let sessionChain = null; // CAIP chain of the approved sessions
 
-function updatePairButton() { $("pairBtn").disabled = !compliance; $("sendPrepareBtn").disabled = !compliance; }
+function updatePairButton() {
+  $("pairBtn").disabled = !compliance; $("sendPrepareBtn").disabled = !compliance; $("holdRefresh").disabled = !compliance;
+  if (compliance && holdKey !== `${compliance.chainId}:${compliance.up}`) loadHoldings(compliance);
+}
 
 async function getWalletKit() {
   if (walletKit) return walletKit;
@@ -1797,6 +1819,47 @@ async function sendToken(provider, address, up) {
   return { kind: lsp7 ? "lsp7" : "erc20", decimals: Number(decimals), balance, name: name || "?", symbol: symbol || "" };
 }
 const SEND_KIND = { erc20: "ERC-20", lsp7: "LSP7", lsp8: "LSP8", erc721: "ERC-721", erc1155: "ERC-1155" };
+
+// What the UP holds, in panel 6 (shared asset-list.js, as on the Identity page): the currency and the
+// LSP7/LSP8 tokens registered in the UP from the chain, other tokens from an index. A row chooses what
+// to send; amounts are read again from the chain when the send is prepared.
+let holdKey = null, holdRun = 0;
+async function loadHoldings(c) {
+  holdKey = `${c.chainId}:${c.up}`;
+  const run = ++holdRun, box = $("holdBox");
+  box.textContent = t("holdReading"); box.className = "status-box line-dim";
+  const a = await AssetList.list(c.provider, c.up, c.net.key);
+  if (run !== holdRun) return;
+  box.textContent = ""; box.className = "status-box";
+  const row = (main, sub, onPick) => {
+    const b = document.createElement(onPick ? "button" : "div");
+    if (onPick) { b.type = "button"; b.className = "secondary hold-row"; b.addEventListener("click", onPick); } else b.className = "hold-row line-dim";
+    b.style.cssText = "display:block; width:100%; text-align:left; margin:4px 0; padding:8px 10px;";
+    const m = document.createElement("div"); m.textContent = main;
+    const d = document.createElement("div"); d.textContent = sub; d.style.cssText = "font-size:11.5px; opacity:0.8; overflow-wrap:anywhere;";
+    b.append(m, d); box.appendChild(b);
+  };
+  const cur = c.net.currency || "";
+  row(a.native === null ? `? ${cur}` : `${ethers.formatEther(a.native)} ${cur}`.trim(), t("holdNative"), () => {
+    $("sendAsset").value = "native"; $("sendAsset").dispatchEvent(new Event("change")); $("sendAmount").focus();
+  });
+  const good = a.rows.filter((r) => !r.spam), spam = a.rows.length - good.length;
+  for (const r of good) {
+    const label = r.symbol || r.name || r.address;
+    if (r.amount !== undefined) row(`${r.amount} ${label}`, `${r.type} · ${r.name || ""} · ${r.address}`, () => {
+      $("sendAsset").value = "token"; $("sendAsset").dispatchEvent(new Event("change"));
+      $("sendToken").value = r.address; $("sendToken").dispatchEvent(new Event("change")); $("sendAmount").focus();
+    });
+    else row(`${r.name || label} · ${r.type}`, `${t("holdNft", { count: r.count || "?" })} · ${r.address}`, null);
+  }
+  const note = (text, cls) => { const d = document.createElement("div"); d.className = cls; d.style.cssText = "font-size:11.5px; margin-top:6px;"; d.textContent = text; box.appendChild(d); };
+  if (!good.length) note(t("holdNone"), "line-dim");
+  if (spam) note(t("holdSpam", { n: spam }), "line-dim");
+  const ix = a.indexer && (a.indexer.kind === "alchemy" ? "Alchemy" : "Blockscout");
+  if (a.indexer && a.indexer.err) note(t("holdIxFail", { ix, err: a.indexer.err }), "line-warn");
+  else note(t("holdSrc", { ix }), "line-dim");
+}
+$("holdRefresh").addEventListener("click", () => { if (compliance) loadHoldings(compliance); });
 
 $("sendAsset").addEventListener("change", () => { $("sendTokenWrap").hidden = $("sendAsset").value !== "token"; });
 $("sendToken").addEventListener("change", async () => {
