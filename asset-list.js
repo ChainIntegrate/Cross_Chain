@@ -61,6 +61,7 @@
     "sonic": "sonic-mainnet", "berachain": "berachain-mainnet", "apechain": "apechain-mainnet",
     "ethereum-sepolia": "eth-sepolia", "base-sepolia": "base-sepolia",
     "arbitrum-sepolia": "arb-sepolia", "polygon-amoy": "polygon-amoy",
+    "arc": "arc-mainnet",
   };
   function alchemyKey() {
     const k = (window.CROSSCHAIN_CONFIG && window.CROSSCHAIN_CONFIG.alchemyApiKey) || "";
@@ -254,6 +255,12 @@
       out.indexer = { kind: ix.kind, rows: [] };
       try { out.indexer.rows = ix.kind === "alchemy" ? await fromAlchemy(ix.net, ix.key, up) : await fromBlockscout(ix.base, up); }
       catch (e) { out.indexer.err = e.message; }
+      // Alchemy refused (a network whose token API it does not serve, the key's limits): the network's
+      // Blockscout, when it has one.
+      if (out.indexer.err && ix.kind === "alchemy" && BLOCKSCOUT[netKey]) {
+        try { out.indexer = { kind: "blockscout", rows: await fromBlockscout(BLOCKSCOUT[netKey], up), fallback: out.indexer.err }; }
+        catch (e) { out.indexer.err += "; Blockscout: " + e.message; }
+      }
       if (!out.indexer.err) {
         const c = await checkIndexedNfts(provider, up, out.indexer.rows);
         out.indexer.rows = c.rows; out.indexer.gone = c.gone;
