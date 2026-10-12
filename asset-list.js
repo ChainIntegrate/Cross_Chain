@@ -45,7 +45,11 @@
     "mode": "https://explorer.mode.network", "ink": "https://explorer.inkonchain.com",
     "ethereum-sepolia": "https://eth-sepolia.blockscout.com", "base-sepolia": "https://base-sepolia.blockscout.com",
     "arbitrum-sepolia": "https://arbitrum-sepolia.blockscout.com",
+    "arc": "https://explorer.arc.io",
   };
+  // Networks whose gas token also has an ERC-20 interface over the same balance (Arc's USDC): that token is
+  // the native balance shown again, so it is not listed as a separate asset.
+  const NATIVE_TWIN = { "arc": "0x3600000000000000000000000000000000000000" };
   // Alchemy network names, by chains.js key (same list as the Send page).
   const ALCHEMY = {
     "ethereum": "eth-mainnet", "polygon": "polygon-mainnet", "base": "base-mainnet",
@@ -257,9 +261,10 @@
     }
     // The chain's own LSP5 rows win; indexer rows for the same contract are dropped.
     const seen = new Set(out.lsp5.map(r => r.address));
+    if (NATIVE_TWIN[netKey]) seen.add(ethers.getAddress(NATIVE_TWIN[netKey]));
     out.rows = out.lsp5.concat(out.indexer ? out.indexer.rows.filter(r => !seen.has(r.address)) : []);
     return out;
   }
 
-  window.AssetList = { list, imageUrl, LSP4_METADATA, indexerFor, fromLsp5, BLOCKSCOUT, ALCHEMY, LSP5_ARRAY, LSP5_MAP, MAX_ASSETS, MAX_IDS };
+  window.AssetList = { list, imageUrl, LSP4_METADATA, indexerFor, fromLsp5, BLOCKSCOUT, ALCHEMY, NATIVE_TWIN, LSP5_ARRAY, LSP5_MAP, MAX_ASSETS, MAX_IDS };
 })();
