@@ -315,6 +315,20 @@ const KNOWN_IFACE = new ethers.Interface([
   "function deposit() payable",
   "function withdraw(uint256 amount)",
 ]);
+// ERC-4626 tokenized vaults (Morpho vaults among them): deposit an asset, get vault shares, and back.
+// Recognised only when the target answers asset() with a contract: the selectors alone are not enough.
+const VAULT_IFACE = new ethers.Interface([
+  "function deposit(uint256 assets, address receiver)",
+  "function mint(uint256 shares, address receiver)",
+  "function withdraw(uint256 assets, address receiver, address owner)",
+  "function redeem(uint256 shares, address receiver, address owner)",
+]);
+const VAULT_READ = [
+  "function asset() view returns (address)", "function name() view returns (string)", "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)", "function previewDeposit(uint256) view returns (uint256)",
+  "function previewMint(uint256) view returns (uint256)", "function previewWithdraw(uint256) view returns (uint256)",
+  "function previewRedeem(uint256) view returns (uint256)",
+];
 // LSP6 errors, to explain why a simulation fails.
 const KM_ERRORS = new ethers.Interface([
   "error NotAuthorised(address from, string permission)",
@@ -510,6 +524,21 @@ const I18N = {
     hupIpfs: "ℹ️ Il testo e gli eventuali allegati sono già stati caricati su IPFS da hup.social prima di questa richiesta (il link ipfs:// qui sopra): anche se rifiuti, quei file restano pubblici su IPFS.",
     lsp26Follow: (v) => `LSP26: la tua UP inizia a seguire ${v.n === 1 ? "" : v.n + " indirizzi: "}${v.who}`,
     lsp26Unfollow: (v) => `LSP26: la tua UP smette di seguire ${v.n === 1 ? "" : v.n + " indirizzi: "}${v.who}`,
+    vaultDeposit: (v) => `Vault ERC-4626: deposita ${v.amount}`,
+    vaultMint: (v) => `Vault ERC-4626: ottiene ${v.amount} depositando l'asset del vault`,
+    vaultWithdraw: (v) => `Vault ERC-4626: preleva ${v.amount}`,
+    vaultRedeem: (v) => `Vault ERC-4626: riscatta ${v.amount}`,
+    vaultShares: "quote del vault",
+    vaultAsset: "asset",
+    vaultPreview: "(stima del vault adesso)",
+    kVault: "Vault", kVaultShares: "Quote", kVaultAssets: "Asset",
+    vaultReceiverOk: "✅ Le quote del vault vanno alla tua UP.",
+    vaultReceiverOther: (v) => `⛔ Le quote del vault NON vanno alla tua UP ma a ${v.who}: chi le riceve potrà prelevare quello che depositi.`,
+    vaultAssetsOk: "✅ Quello che prelevi torna alla tua UP.",
+    vaultAssetsOther: (v) => `⛔ Quello che prelevi NON va alla tua UP ma a ${v.who}.`,
+    vaultOwnerOther: (v) => `⛔ Le quote prelevate non sono della tua UP ma di ${v.who}: la tua UP agirebbe sulle quote di un altro (serve una sua approvazione).`,
+    vaultValue: "⚠️ La chiamata invia anche valore nativo al vault: un vault ERC-4626 normalmente non lo richiede.",
+    vaultNote: "ℹ️ Vault ERC-4626 (standard dei vault a quote, usato per esempio da Morpho): riconosciuto perché il contratto dichiara il suo asset. Prima del deposito serve un'approvazione dell'asset a questo vault (controlla che l'indirizzo approvato sia lo stesso). Un vault presta o investe quello che depositi: controlla chi lo gestisce e i suoi rischi sul sito della dApp.",
     lsp26Note: "ℹ️ Follower System LSP26 di LUKSO (contratto dello standard): chi segue è sempre chi chiama, cioè la tua UP. Il follow è pubblico e si può togliere in qualsiasi momento.",
     hupUserOther: (v) => `🛑 Il like sarebbe a nome di ${v.who}, non della tua UP: se non sai perché, rifiuta.`,
     hupNote: "ℹ️ Il contratto di hup.social non è verificato sull'explorer: la pagina riconosce la chiamata dalla sua firma (nome e tipi corrispondono esattamente al selettore) e la legge secondo lo schema delle transazioni di hup.social.",
@@ -768,6 +797,21 @@ const I18N = {
     hupIpfs: "ℹ️ The text and any attachments were already uploaded to IPFS by hup.social before this request (the ipfs:// link above): even if you reject, those files stay public on IPFS.",
     lsp26Follow: (v) => `LSP26: your UP starts following ${v.n === 1 ? "" : v.n + " addresses: "}${v.who}`,
     lsp26Unfollow: (v) => `LSP26: your UP stops following ${v.n === 1 ? "" : v.n + " addresses: "}${v.who}`,
+    vaultDeposit: (v) => `ERC-4626 vault: deposit ${v.amount}`,
+    vaultMint: (v) => `ERC-4626 vault: get ${v.amount} by depositing the vault's asset`,
+    vaultWithdraw: (v) => `ERC-4626 vault: withdraw ${v.amount}`,
+    vaultRedeem: (v) => `ERC-4626 vault: redeem ${v.amount}`,
+    vaultShares: "vault shares",
+    vaultAsset: "asset",
+    vaultPreview: "(the vault's estimate now)",
+    kVault: "Vault", kVaultShares: "Shares", kVaultAssets: "Assets",
+    vaultReceiverOk: "✅ The vault shares go to your UP.",
+    vaultReceiverOther: (v) => `⛔ The vault shares do NOT go to your UP but to ${v.who}: whoever receives them can withdraw what you deposit.`,
+    vaultAssetsOk: "✅ What you withdraw comes back to your UP.",
+    vaultAssetsOther: (v) => `⛔ What you withdraw does NOT go to your UP but to ${v.who}.`,
+    vaultOwnerOther: (v) => `⛔ The shares withdrawn are not your UP's but ${v.who}'s: your UP would act on someone else's shares (this needs their approval).`,
+    vaultValue: "⚠️ The call also sends native value to the vault: an ERC-4626 vault normally does not need it.",
+    vaultNote: "ℹ️ ERC-4626 vault (the standard for share-based vaults, used for example by Morpho): recognised because the contract declares its asset. Before a deposit the asset must be approved to this vault (check that the approved address is the same). A vault lends or invests what you deposit: check who curates it and its risks on the dApp's site.",
     lsp26Note: "ℹ️ LUKSO's LSP26 Follower System (the standard's contract): the follower is always the caller, that is your UP. A follow is public and can be removed at any time.",
     hupUserOther: (v) => `🛑 The like would be in the name of ${v.who}, not your UP: unless you know why, reject it.`,
     hupNote: "ℹ️ hup.social's contract is not verified on the explorer: the page recognises the call by its signature (name and types match the selector exactly) and reads it following the layout of hup.social's transactions.",
@@ -1505,6 +1549,10 @@ async function describeCall(c, to, value, data, rows, warnings) {
     const op = describeLsp26(data, rows, warnings);
     if (op) return op;
   }
+  if (toCode !== "0x") {
+    const op = await describeVault(c, to, value, data, rows, warnings);
+    if (op) return op;
+  }
   let parsed = null;
   try { parsed = KNOWN_IFACE.parseTransaction({ data, value }); } catch (e) { parsed = null; }
   if (!parsed) {
@@ -1591,6 +1639,51 @@ function describeHup(c, data, rows, warnings) {
   // The post's text and attachments are already on IPFS (uploaded by the dApp before asking to sign).
   if (p.name === "create" && /^ipfs:\/\//i.test(p.args[2])) warnings.push([t("hupIpfs"), "line-dim"]);
   warnings.push([t("hupNote"), "line-dim"]);
+  return op;
+}
+
+// ERC-4626 vault: deposit / mint put the asset in and give shares to `receiver`; withdraw / redeem take
+// shares of `owner` out and send the asset to `receiver`. The amounts are shown in both units, with the
+// vault's own preview of the other side. Shares or assets going to an address other than the UP are flagged.
+async function describeVault(c, to, value, data, rows, warnings) {
+  let p = null;
+  try { p = VAULT_IFACE.parseTransaction({ data }); } catch (e) { p = null; }
+  if (!p) return null;
+  const v = new ethers.Contract(to, VAULT_READ, c.provider);
+  let asset;
+  try { asset = ethers.getAddress(await v.asset()); } catch (e) { return null; }
+  if ((await c.provider.getCode(asset)) === "0x") return null;
+  const tok = new ethers.Contract(asset, ["function symbol() view returns (string)", "function decimals() view returns (uint8)"], c.provider);
+  const [vName, vSym, vDec, aSym, aDec] = await Promise.all([
+    v.name().catch(() => ""), v.symbol().catch(() => ""), v.decimals().then(Number).catch(() => null),
+    tok.symbol().catch(() => ""), tok.decimals().then(Number).catch(() => null),
+  ]);
+  const fmt = (x, dec, sym) => dec !== null ? `${ethers.formatUnits(x, dec)} ${sym}`.trim() : `${x.toString()} ${sym}`.trim();
+  const assets = (x) => fmt(x, aDec, aSym), shares = (x) => fmt(x, vDec, vSym || t("vaultShares"));
+  const [amt, receiver] = [p.args[0], p.args[1]];
+  const owner = p.args.length > 2 ? p.args[2] : null;
+  let op, expected = null;
+  try {
+    if (p.name === "deposit") { op = t("vaultDeposit", { amount: assets(amt) }); expected = shares(await v.previewDeposit(amt)); }
+    else if (p.name === "mint") { op = t("vaultMint", { amount: shares(amt) }); expected = assets(await v.previewMint(amt)); }
+    else if (p.name === "withdraw") { op = t("vaultWithdraw", { amount: assets(amt) }); expected = shares(await v.previewWithdraw(amt)); }
+    else { op = t("vaultRedeem", { amount: shares(amt) }); expected = assets(await v.previewRedeem(amt)); }
+  } catch (e) {
+    op = op || t(p.name === "deposit" ? "vaultDeposit" : p.name === "mint" ? "vaultMint" : p.name === "withdraw" ? "vaultWithdraw" : "vaultRedeem",
+      { amount: p.name === "deposit" || p.name === "withdraw" ? assets(amt) : shares(amt) });
+  }
+  const sig = `${p.name}(${p.fragment.inputs.map((i) => i.type).join(",")})`;
+  rows.push([t("kCall"), op, {}]);
+  rows.push([t("kVault"), `${vName || "?"}${vSym ? " (" + vSym + ")" : ""} · ${t("vaultAsset")}: ${aSym || "?"} ${asset}`, {}]);
+  if (expected) rows.push([t(p.name === "deposit" || p.name === "withdraw" ? "kVaultShares" : "kVaultAssets"), `${p.name === "deposit" || p.name === "mint" ? "" : "−"}${expected} ${t("vaultPreview")}`, {}]);
+  rows.push([t("kParams"), `${sig}\n${p.fragment.inputs.map((inp, i) => `${inp.name}: ${String(p.args[i])}`).join("\n")}`, { block: true }]);
+  rows.push([t("kRaw"), data, { raw: true }]);
+  const up = c.up.toLowerCase();
+  if (receiver.toLowerCase() === up) warnings.push([t(p.name === "deposit" || p.name === "mint" ? "vaultReceiverOk" : "vaultAssetsOk"), "line-ok"]);
+  else warnings.push([t(p.name === "deposit" || p.name === "mint" ? "vaultReceiverOther" : "vaultAssetsOther", { who: receiver }), "line-danger"]);
+  if (owner && owner.toLowerCase() !== up) warnings.push([t("vaultOwnerOther", { who: owner }), "line-danger"]);
+  if (value > 0n) warnings.push([t("vaultValue"), "line-warn"]);
+  warnings.push([t("vaultNote"), "line-dim"]);
   return op;
 }
 
