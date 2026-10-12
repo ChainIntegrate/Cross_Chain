@@ -594,7 +594,7 @@ The full reports are in the private repository of the service, because they desc
 | N-1 | Low (privacy) | `up-identity.html` / `asset-list.js`: images of airdropped tokens are loaded automatically, so a token's creator can learn the viewer's IP address and when the UP was viewed | **Fixed** (2026-10-06): images and LSP4 metadata load by themselves only from inline data, ipfs:// through the page's gateways, and the gateways' and the indexer's own image hosts; anything else shows a dashed thumbnail and loads on a click, with a note saying that server will see the IP. The profile's own LSP3 images are unchanged |
 | N-2 | Low | `up-identity.html`: the profile write takes the Key Manager from the RPC without the `deploy-check.js` link check (impact benign: a call from the controller, value 0) | Open |
 | L-6 | Low | Send page: the UP's own Key Manager, the EntryPoint and the paymasters are not refused as recipients (carried from section 9) | **Fixed** (2026-10-06): the Send page refuses them before any simulation, naming the contract and why |
-| SP-2 | Info | Signing service: no timeout on the RPC calls of an approval | Open |
+| SP-2 | Info | Signing service: no timeout on the RPC calls of an approval | **Fixed** (2026-10-12): every RPC request of the service fails after 30 s (configurable) instead of 5 minutes |
 | F2-2 | Info | `up-subscribe.html`: the e-mail reaches the service with the approval request, before the user signs | Open, with SP-B |
 | N-3 | Info | No Content-Security-Policy on the site (section 5) | Open |
 | W-tel | Info | WalletConnect: telemetry not turned off on `Core`; `vendor/walletkit-1.6.0.min.js` loaded without SRI (same origin) | Open |
@@ -633,6 +633,6 @@ AI-assisted review of `Cross_Chain` @ `1eabad2`, the signing service @ `f423066`
 | — | Info | No CSP; browser-visible Alchemy / WalletConnect keys (domain-restricted) | Open (N-3, section 12) |
 | — | Info | MetaMask Connect license (non-commercial or up to 10,000 monthly users) | Noted in the app's README and footer |
 
-The items still open from section 12 (SP-C, GS-2, N-2, SP-2, F2-2, N-3, W-tel, M-08) keep their status there.
+The items still open from section 12 (SP-C, GS-2, N-2, F2-2, N-3, W-tel, M-08) keep their status there; SP-2 was fixed the same day.
 
 **Server follow-up the same day (operations, not a finding).** Free public RPCs throttled the server on Polygon (`polygon.drpc.org` refused about one log read in five, then `polygon-bor-rpc.publicnode.com` refused some too). The relayer and the signing service's approvals now use an Alchemy key made for the server: Node API only, no domain restriction, allowlisted to the server's IP, kept only in the two configuration files under `/etc` (mode 600), written without appearing on a command line. The signing service reads events through a separate public RPC (`logsRpc`), whose failures only delay charges, never lose them. The site keeps a public RPC (each visitor's browser makes its own requests). See `tools/relayer/README.md` and the service's `OPERATIONS.md`.
