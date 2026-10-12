@@ -604,3 +604,32 @@ The full reports are in the private repository of the service, because they desc
 **Carried, by design:** VP-H1 (the signing key can approve operations up to the cap until the deposit or the daily budget runs out; mitigated by the dedicated key, caps, budgets, 5-minute approvals, `setSigner(0)` and the monitor's drawdown alarm) and VP-L1 (the sponsor paymaster cannot be staked: site relayer only).
 
 **Order of the fixes:** SP-A and SP-B first, because subscriptions are open (fixed in rev. 10, verified live on 2026-10-05 on Base, Polygon and Arbitrum One); then GS-1, N-1 and L-6 (fixed on 2026-10-06); then the rest.
+
+## 13. Rev. 10 — Re-audit of the whole system (2026-10-12)
+
+AI-assisted review of `Cross_Chain` @ `1eabad2`, the signing service @ `f423066` and the new Android app `up-wallet-android` @ `dd67424`; it supersedes the reviews of section 12. The full report is in the service's private repository. Not a professional audit.
+
+**Verdict.**
+- Good for the current scope once W-H1 is fixed; it is fixed below.
+- The contracts are byte-identical and unchanged.
+- SP-A, SP-B, GS-1, N-1, L-6, and H-1 / H-2 of section 9 were checked again and are fixed.
+- The Android app has a minimal attack surface: no backup, no cleartext, no exported service, no keys. Its native `fetch` only reaches the site's `relay/` paths.
+
+| # | Severity | Finding | Status |
+|---|---|---|---|
+| W-H1 | High | `up-wallet.html`: the refusal of 32-byte `personal_sign` (H-2) was checked only on the chosen network. A `personal_sign` signature carries no chain: asked on LUKSO, or on any network without the 4337 setup, it could authorize an operation of the same UP on a network where the UP has it, and drain the UP there | **Fixed** (2026-10-12): every 32-byte `personal_sign` from a dApp is refused, whatever the network; the message says why. Tested: refused with a controller without the ERC4337 permission and a UP without the extension |
+| W-L1 | Low (privacy) | `up-identity.html`: the profile's own avatar and background loaded by themselves; a link to the page with a crafted UP made the viewer's browser call a server chosen by that UP's owner (N-1 residual) | **Fixed** (2026-10-12): the same rule as token images. IPFS and inline images load by themselves; others wait for a click |
+| W-L2 | Low | Arc: the native currency (USDC) is handled with 18 decimals; if Arc used 6, native amounts would be off | To confirm: the project relies on Arc's native USDC having 18 decimals at the native level (its ERC-20 interface, used by the subscription page, has 6). Neither review could check Arc's parameters from its environment; confirm against Arc's documentation or a known native balance before relying on Arc for native sends |
+| W-L3 | Low | Relayer: the minimum `preVerificationGas` adds an L1 data fee only on OP-stack and Arbitrum chains; an L2 of another kind would be under-reimbursed | To confirm with W-L2: Arc is presented as a layer 1, so no L1 data fee is expected. The risk is only to the relayer's own funds, watched by the monitor |
+| W-L4 | Low | `usd-price.js`: a Chainlink price up to 24 h old is accepted, and round completeness is not checked | **Fixed** (2026-10-12): a price is also stale when its round is not complete (`answeredInRound < roundId`) or its update time is missing or in the future. The 24 h window stays, since some of these feeds update once a day. Operator tools only |
+| — | Info | dApp requests: the gas relay's EntryPoint and paymasters were refused only by panel 6, not on the dApp path | **Fixed** (2026-10-12): refused on the dApp path too |
+| — | Info | `asset-list.js` accepted `data:image/svg+xml` image URLs | **Fixed** (2026-10-12): removed from the accepted formats |
+| — | Info | EIP-7702 delegated accounts are accepted as plain wallets by panel 6 | Accepted: they are wallets |
+| — | Info | Recipient by name: index names are not unique | Accepted: name, full address and the warning are shown, and the address is checked on the chain |
+| — | Info | Relayer `allowedOrigins` defaults to `[]` | `config.example.json` sets the site's origin; check it on the server |
+| — | Info | `up-subscribe.html`: the sign box does not decode the inner USDC transfer (receiver and amount are page constants, checked against the service and covered by the signed hash) | Open: optional |
+| — | Info | Android: `uuid` advisory reaching the app through `@metamask/connect-evm` (no upstream fix yet; negligible for this use); the `ws` advisory is only in the build toolchain | Tracked |
+| — | Info | No CSP; browser-visible Alchemy / WalletConnect keys (domain-restricted) | Open (N-3, section 12) |
+| — | Info | MetaMask Connect license (non-commercial or up to 10,000 monthly users) | Noted in the app's README and footer |
+
+The items still open from section 12 (SP-C, GS-2, N-2, SP-2, F2-2, N-3, W-tel, M-08) keep their status there.

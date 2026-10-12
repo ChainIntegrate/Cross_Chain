@@ -2,7 +2,10 @@
 // Used by the operator's gas page (up-gas-relay-admin.html), the relayer monitor and its balance
 // script (tools/relayer), and the sponsor service's weekly report (a copy in that repository).
 // No external API: the feed is read through the same RPC as everything else. Before a feed is used,
-// its description() must be exactly the expected pair; a price older than maxAgeSec is marked stale.
+// its description() must be exactly the expected pair. A price is marked stale when it is older than
+// maxAgeSec (24 h by default: some of these feeds update only once a day when the price is calm), when
+// its update time is missing or in the future, or when its round is not complete (answeredInRound <
+// roundId).
 // On Arc the gas token is USDC itself: 1 USD, no feed.
 //   const p = await UsdPrice.read(provider, chainId, ethers)   -> { price, decimals, stale, pair } | null
 //   UsdPrice.usd(amountWei, p)                                 -> number (USD) or null
@@ -27,9 +30,10 @@
       const c = new ethers.Contract(f.feed, ABI, provider);
       const [desc, decimals, round] = await Promise.all([c.description(), c.decimals(), c.latestRoundData()]);
       if (!f.pairs.includes(desc)) return null;          // not the feed we expect: show nothing
-      const price = BigInt(round[1]), updatedAt = Number(round[3]);
+      const roundId = BigInt(round[0]), price = BigInt(round[1]), updatedAt = Number(round[3]), answeredIn = BigInt(round[4]);
       if (price <= 0n) return null;
-      return { price, decimals: Number(decimals), stale: now - updatedAt > maxAgeSec, pair: desc };
+      const stale = !updatedAt || updatedAt > now + 300 || now - updatedAt > maxAgeSec || answeredIn < roundId;
+      return { price, decimals: Number(decimals), stale, pair: desc };
     } catch (e) { return null; }
   }
   // amountWei has 18 decimals (the gas token, Arc's USDC included).
