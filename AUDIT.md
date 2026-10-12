@@ -2,10 +2,10 @@
 
 | | |
 |---|---|
-| **Audit date** | 2026-09-27 (rev. 1–3); 2026-09-29 (rev. 4); 2026-10-01 (rev. 5); 2026-10-02 (rev. 6); 2026-10-04 (rev. 7, rev. 8); 2026-10-05 (rev. 9, rev. 10) |
-| **Commit audited** | `f56dd29` (rev. 1–3); `47642bc` (rev. 4); `40f0bc0` (rev. 6), all on branch `main`. Rev. 5 covered deployed contracts and the relayer (section 8) |
-| **Revision** | 3 — rev. 2 reclassified H-03, M-05, I-01 and I-02 after the maintainer's feedback (salt/IV are public format values; all profiles and addresses shown belong to the maintainer and are public by choice); rev. 3 adds L-09, found while testing the new implementation-publishing page, and M-08, after the maintainer described how the site is deployed; M-08 was fixed and verified on the live site the same day; rev. 4 adds the two WalletConnect pages (section 7); rev. 5 the gas relay (section 8); rev. 6 a review of the whole repository with the system live (section 9); rev. 7 the sponsor paymaster `UPVerifyingPaymaster` (section 10). Section 11 records the design decisions of the paid subscriptions; rev. 8 and 9 are the launch reviews of the whole system, toolkit and signing service (section 12); rev. 10 records the fixes of SP-A and SP-B in the signing service |
-| **Scope** | Rev. 1–3: every file in the repository at the time: 6 HTML tools, `decrypt.js`, README, images in `guide-assets/`, and the full git history. Rev. 4: the WalletConnect pages `up-wallet.html` and `up-walletconnect-basenames.html`, the vendored `vendor/walletkit-1.6.0.min.js` and `config.example.js`. Rev. 5: `Extension4337`, `contracts/UPPaymaster.sol`, the relayer and the gas-relay setup batches. Rev. 6: the whole repository, pages, shared scripts, contracts and relayer |
+| **Audit date** | 2026-09-27 (rev. 1–3); 2026-09-29 (rev. 4); 2026-10-01 (rev. 5); 2026-10-02 (rev. 6); 2026-10-04 (rev. 7, rev. 8); 2026-10-05 (rev. 9, rev. 10); 2026-10-12 (rev. 11) |
+| **Commit audited** | `f56dd29` (rev. 1–3); `47642bc` (rev. 4); `40f0bc0` (rev. 6); `1eabad2` (rev. 11), all on branch `main`. Rev. 5 covered deployed contracts and the relayer (section 8) |
+| **Revision** | 3 — rev. 2 reclassified H-03, M-05, I-01 and I-02 after the maintainer's feedback (salt/IV are public format values; all profiles and addresses shown belong to the maintainer and are public by choice); rev. 3 adds L-09, found while testing the new implementation-publishing page, and M-08, after the maintainer described how the site is deployed; M-08 was fixed and verified on the live site the same day; rev. 4 adds the two WalletConnect pages (section 7); rev. 5 the gas relay (section 8); rev. 6 a review of the whole repository with the system live (section 9); rev. 7 the sponsor paymaster `UPVerifyingPaymaster` (section 10). Section 11 records the design decisions of the paid subscriptions; rev. 8 and 9 are the launch reviews of the whole system, toolkit and signing service (section 12); rev. 10 records the fixes of SP-A and SP-B in the signing service; rev. 11 is the re-audit of the whole system with the Android app (section 13) |
+| **Scope** | Rev. 1–3: every file in the repository at the time: 6 HTML tools, `decrypt.js`, README, images in `guide-assets/`, and the full git history. Rev. 4: the WalletConnect pages `up-wallet.html` and `up-walletconnect-basenames.html`, the vendored `vendor/walletkit-1.6.0.min.js` and `config.example.js`. Rev. 5: `Extension4337`, `contracts/UPPaymaster.sol`, the relayer and the gas-relay setup batches. Rev. 6: the whole repository, pages, shared scripts, contracts and relayer. Rev. 11: the whole system again, with the signing service and the Android app `up-wallet-android` |
 | **Method** | Manual code review, cross-check against the LUKSO reference contracts (`@lukso/lsp6-contracts` 0.16.3, `@lukso/lsp23-contracts` 0.16.3; for rev. 4 also `@lukso/lsp-smart-contracts` 0.14.0 for LSP0, LSP6 `isValidSignature` and LSP17), browser end-to-end tests with mocked wallets/RPCs/WalletConnect (Playwright + Chromium), a git history review for secrets and personal data, and, for rev. 4, live tests by the maintainer on Base and Polygon mainnet |
 
 > **Not a professional audit.** Every review in this file is the maintainer's own or AI-assisted, with local tests. The paymasters and LUKSO's `Extension4337` have never had a professional audit. One is required before the paid relay service holds significant customer funds.
@@ -24,6 +24,7 @@
 10. [Rev. 7 — `UPVerifyingPaymaster` review (2026-10-04)](#10-rev-7--upverifyingpaymaster-review-2026-10-04)
 11. [Design decisions on paid subscriptions (2026-10-04)](#11-design-decisions-on-paid-subscriptions-2026-10-04)
 12. [Rev. 8–9 — Launch reviews of the whole system (2026-10-04 and 2026-10-05)](#12-rev-89--launch-reviews-of-the-whole-system-2026-10-04-and-2026-10-05)
+13. [Rev. 11 — Re-audit of the whole system (2026-10-12)](#13-rev-11--re-audit-of-the-whole-system-2026-10-12)
 
 ---
 
@@ -605,7 +606,7 @@ The full reports are in the private repository of the service, because they desc
 
 **Order of the fixes:** SP-A and SP-B first, because subscriptions are open (fixed in rev. 10, verified live on 2026-10-05 on Base, Polygon and Arbitrum One); then GS-1, N-1 and L-6 (fixed on 2026-10-06); then the rest.
 
-## 13. Rev. 10 — Re-audit of the whole system (2026-10-12)
+## 13. Rev. 11 — Re-audit of the whole system (2026-10-12)
 
 AI-assisted review of `Cross_Chain` @ `1eabad2`, the signing service @ `f423066` and the new Android app `up-wallet-android` @ `dd67424`; it supersedes the reviews of section 12. The full report is in the service's private repository. Not a professional audit.
 
