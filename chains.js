@@ -37,7 +37,7 @@ const CHAINS = [
   { key: "optimism", name: "Optimism", chainId: 10, rpc: "https://mainnet.optimism.io", explorerBase: "https://optimistic.etherscan.io", currency: "ETH" },
   { key: "plasma", name: "Plasma", chainId: 9745, rpc: "https://rpc.plasma.to", explorerBase: "https://plasmascan.to", currency: "XPL" },
   { key: "plume", name: "Plume", chainId: 98866, rpc: "https://rpc.plume.org", explorerBase: "https://explorer.plume.org", currency: "PLUME" },
-  { key: "polygon", name: "Polygon", chainId: 137, rpc: "https://polygon.drpc.org", explorerBase: "https://polygonscan.com", currency: "POL" },
+  { key: "polygon", name: "Polygon", chainId: 137, rpc: "https://polygon-bor-rpc.publicnode.com", explorerBase: "https://polygonscan.com", currency: "POL" },
   { key: "pulsechain", name: "Pulsechain", chainId: 369, rpc: "https://rpc.pulsechain.com", explorerBase: "https://ipfs.scan.pulsechain.com", currency: "PLS" },
   { key: "ronin", name: "Ronin", chainId: 2020, rpc: "https://api.roninchain.com/rpc", explorerBase: "https://app.roninchain.com", currency: "RON" },
   { key: "scroll", name: "Scroll", chainId: 534352, rpc: "https://rpc.scroll.io", explorerBase: "https://scrollscan.com", currency: "ETH" },
