@@ -121,6 +121,8 @@ After that, `git pull` works exactly as before. The root `.htaccess` stays in th
 
 **Site configuration.** Some pages read their settings from `config.js`, which is not in the repository. Create it once on the server, in the site folder, by copying `config.example.js` and filling in the values; `git pull` leaves it untouched. Its values are not secret (the browser receives them): protect the WalletConnect Project ID with the allowed-domains list in the Reown dashboard, and the Alchemy API key (used by the Identity and UP Wallet pages to list a UP's tokens and NFTs) with the app's domain allowlist in the Alchemy dashboard.
 
+**Security headers.** The web server (nginx) adds four headers to every response, pages and images: no other site may show the pages in a frame (`X-Frame-Options: DENY`, `Content-Security-Policy: frame-ancestors 'none'`; UP Wallet signs transactions, so it must not be framed by a site that could trick clicks), files keep their declared type (`X-Content-Type-Options: nosniff`) and no referrer is sent (`Referrer-Policy: no-referrer`). They are in `/etc/nginx/snippets/security-headers.conf`, included in the site's `server` block and again in every `location` that has its own `add_header` (nginx drops the server-level headers there). Check: `curl -sI https://crosschain-lukso.chainintegrate.it/up-wallet.html`. A full Content-Security-Policy is not set yet (AUDIT R-02).
+
 **Check after every deploy.** Each of these URLs must return *404 Not Found*; `/.git` may return the one-line `gitdir:` file, which contains only a path and no repository data:
 
 - `https://crosschain-lukso.chainintegrate.it/.git/HEAD`
