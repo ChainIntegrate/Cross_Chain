@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex, nofollow">
-<title>Gas sponsorizzato: iscrizione — ChainIntegrate</title>
+<title>Gas sponsorizzato (beta): iscrizione — ChainIntegrate</title>
 <link rel="icon" href="favicon.ico">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="chains.js"></script>
@@ -71,7 +71,7 @@
 
 <div class="top-row">
   <div>
-    <h1 data-i18n="h1">Gas sponsorizzato: iscrizione e ricarica</h1>
+    <h1 data-i18n="h1">Gas sponsorizzato: iscrizione e ricarica (beta)</h1>
     <div class="subtitle" data-i18n="subtitle"></div>
   </div>
   <button class="lang-btn" id="langToggle" data-i18n="langToggleBtn">English</button>
@@ -145,9 +145,9 @@ const ERC20 = new ethers.Interface(["function balanceOf(address) view returns (u
 
 const I18N = {
   it: {
-    pageTitle: "Gas sponsorizzato: iscrizione — ChainIntegrate",
-    h1: "Gas sponsorizzato: iscrizione e ricarica",
-    subtitle: "Paga 5 USDC dalla tua Universal Profile e ottieni un saldo con cui il sito paga il gas delle tue operazioni su Base, Arbitrum, Polygon e Avalanche.",
+    pageTitle: "Gas sponsorizzato (beta): iscrizione — ChainIntegrate",
+    h1: "Gas sponsorizzato: iscrizione e ricarica (beta)",
+    subtitle: "Paga 5 USDC dalla tua Universal Profile e ottieni un saldo con cui il sito paga il gas delle tue operazioni su Base, Arbitrum, Polygon, Avalanche e Arc. Servizio in beta.",
     langToggleBtn: "English",
     panel0Title: "0 · Come funziona",
     panel0Note: "<b>Cosa compri.</b> 5 USDC diventano un <b>saldo unico</b> della tua UP, valido su tutte le reti disponibili (elenco qui sotto). Ogni operazione pagata dal sito scala il prezzo della rete su cui avviene, <b>solo quando viene eseguita</b>.<br><br><b>Per ricaricare il saldo usa questa stessa pagina:</b> ogni pagamento di 5 USDC si aggiunge al saldo che hai già.<br><br><b>Come controllare il saldo:</b> inserisci la tua UP in questa pagina: compare subito sotto l'indirizzo, senza MetaMask, oppure guardalo nell'opzione \"Paga il gas con il relayer del sito\" di UP Wallet, prima di ogni operazione. Ti mandiamo anche un'email quando scende a 2,5, a 1 e a 0,5 USDC.<br><br><b>Prima di pagare, sulla rete scelta:</b><ol style=\"margin:6px 0 0; padding-left:20px;\"><li>la tua UP deve esistere su quella rete (se l'hai creata su LUKSO, replicala con la pagina Deploy);</li><li>la UP deve avere la <b>configurazione 4337</b>. È <b>necessaria per la richiesta di attivazione</b> (il sito paga il gas di questo pagamento) <b>e per ogni uso successivo</b> del gas sponsorizzato. È una transazione una tantum per rete, pagata dal tuo controller (pochi centesimi);</li><li>la UP deve avere almeno 5 USDC <b>nativi di Circle</b> su quella rete (puoi mandarli da un exchange all'indirizzo della tua UP).</li></ol><br><b>Dopo il pagamento</b> verifichiamo la transazione e attiviamo il saldo: ricevi un'email di conferma quando è disponibile.",
@@ -155,7 +155,7 @@ const I18N = {
     priceTitle: "Reti disponibili e prezzo per operazione",
     priceItem: (v) => `${v.name}: ${v.price} USDC per operazione (con 5 USDC, ${v.ops} operazioni)`,
     priceNone: "Il servizio di sponsorizzazione non risponde: riprova più tardi.",
-    disclaimer: "<b>⚠️ Leggi prima di pagare</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Servizio sperimentale.</b> I contratti usati (paymaster e Extension4337 di LUKSO) non hanno un audit professionale. Transazioni reali e irreversibili.</li><li><b>Il saldo si usa solo per il gas</b> delle operazioni della tua UP pagate dal sito, sulle reti del servizio.</li><li><b>Questa pagina non chiede mai chiavi private</b>: il tuo controller firma un messaggio in MetaMask.</li><li>Per problemi o domande: assistenza via Telegram (in fondo alla pagina).</li></ul>",
+    disclaimer: "<b>⚠️ Leggi prima di pagare</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Beta.</b> Il servizio è in prova: funzionamento, reti e prezzi possono cambiare, e può essere sospeso. Le condizioni definitive del servizio non sono ancora pubblicate: paga solo l'importo dell'iscrizione e ricarica solo importi piccoli.</li><li><b>Servizio sperimentale.</b> I contratti usati (paymaster e Extension4337 di LUKSO) non hanno un audit professionale. Transazioni reali e irreversibili.</li><li><b>Il saldo si usa solo per il gas</b> delle operazioni della tua UP pagate dal sito, sulle reti del servizio.</li><li><b>Questa pagina non chiede mai chiavi private</b>: il tuo controller firma un messaggio in MetaMask.</li><li>Per problemi o domande: assistenza via Telegram (in fondo alla pagina).</li></ul>",
     ackLabel: "Ho letto e accetto: uso questo servizio a mio rischio.",
     ackRequired: "Prima accetta le condizioni nel pannello 0.",
     panel1Title: "1 · Rete, UP e controller",
@@ -217,9 +217,9 @@ const I18N = {
     footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Codice sorgente su GitHub</a>`,
   },
   en: {
-    pageTitle: "Sponsored gas: subscription — ChainIntegrate",
-    h1: "Sponsored gas: subscription and top-up",
-    subtitle: "Pay 5 USDC from your Universal Profile and get a balance with which the site pays the gas of your operations on Base, Arbitrum, Polygon and Avalanche.",
+    pageTitle: "Sponsored gas (beta): subscription — ChainIntegrate",
+    h1: "Sponsored gas: subscription and top-up (beta)",
+    subtitle: "Pay 5 USDC from your Universal Profile and get a balance with which the site pays the gas of your operations on Base, Arbitrum, Polygon, Avalanche and Arc. Beta service.",
     langToggleBtn: "Italiano",
     panel0Title: "0 · How it works",
     panel0Note: "<b>What you buy.</b> 5 USDC become <b>one balance</b> of your UP, valid on every available network (list below). Each operation paid by the site takes the price of the network where it runs, <b>only when it is executed</b>.<br><br><b>To top up your balance, use this same page:</b> each 5 USDC payment is added to the balance you already have.<br><br><b>How to check your balance:</b> enter your UP on this page: it shows right under the address, no MetaMask needed, or see it in the \"Pay the gas with the site relayer\" option of UP Wallet, before each operation. We also e-mail you when it goes down to 2.5, 1 and 0.5 USDC.<br><br><b>Before paying, on the chosen network:</b><ol style=\"margin:6px 0 0; padding-left:20px;\"><li>your UP must exist on that network (if you created it on LUKSO, replicate it with the Deploy page);</li><li>the UP must have the <b>4337 setup</b>. It is <b>needed for the activation request</b> (the site pays the gas of this payment) <b>and for every later use</b> of the sponsored gas. It is a one-time transaction per network, paid by your controller (a few cents);</li><li>the UP must hold at least 5 <b>Circle-native</b> USDC on that network (you can send them from an exchange to your UP's address).</li></ol><br><b>After the payment</b> we verify the transaction and activate the balance: you get a confirmation e-mail when it is available.",
@@ -227,7 +227,7 @@ const I18N = {
     priceTitle: "Available networks and price per operation",
     priceItem: (v) => `${v.name}: ${v.price} USDC per operation (with 5 USDC, ${v.ops} operations)`,
     priceNone: "The sponsor service does not answer: try again later.",
-    disclaimer: "<b>⚠️ Read before paying</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Experimental service.</b> The contracts used (the paymaster and LUKSO's Extension4337) have no professional audit. Real, irreversible transactions.</li><li><b>The balance is used only for the gas</b> of your UP's operations paid by the site, on the service's networks.</li><li><b>This page never asks for private keys</b>: your controller signs a message in MetaMask.</li><li>For problems or questions: support via Telegram (bottom of the page).</li></ul>",
+    disclaimer: "<b>⚠️ Read before paying</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Beta.</b> The service is being tested: how it works, its networks and prices may change, and it may be suspended. The final terms of service are not published yet: pay only the subscription amount and top up only small amounts.</li><li><b>Experimental service.</b> The contracts used (the paymaster and LUKSO's Extension4337) have no professional audit. Real, irreversible transactions.</li><li><b>The balance is used only for the gas</b> of your UP's operations paid by the site, on the service's networks.</li><li><b>This page never asks for private keys</b>: your controller signs a message in MetaMask.</li><li>For problems or questions: support via Telegram (bottom of the page).</li></ul>",
     ackLabel: "I have read and accept: I use this service at my own risk.",
     ackRequired: "First accept the conditions in panel 0.",
     panel1Title: "1 · Network, UP and controller",
