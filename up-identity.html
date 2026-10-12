@@ -79,7 +79,7 @@
   .asset .thumb { width: 40px; height: 40px; flex-shrink: 0; border-radius: 8px; background: var(--chip) center / cover no-repeat;
                   display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-dim); font-family: monospace; overflow: hidden; }
   .asset .thumb.has-img { color: transparent; }
-  .asset .thumb.img-ask { cursor: pointer; outline: 1px dashed var(--accent); outline-offset: -1px; color: var(--accent); }
+  .asset .thumb.img-ask, .card .img-ask { cursor: pointer; outline: 1px dashed var(--accent); outline-offset: -1px; color: var(--accent); }
   .asset .info { min-width: 0; flex: 1; }
   button.danger { background: var(--err); }
   button.danger:disabled { background: var(--disabled); }
@@ -613,8 +613,11 @@ function renderCard(box, where, p) {
   if (p.state === "hashBad") { body.append(el("div", "desc line-err", t("hashBad")), el("div", "meta", t("source", { uri: p.uri }))); return; }
   const j = p.json || {};
   const bgUrl = pickImage(j.backgroundImage, 800), avUrl = pickImage(j.profileImage, 256);
-  if (bgUrl) setImage(bg, bgUrl);
-  if (avUrl) setImage(av, avUrl);
+  // AUDIT W-L1: the profile's own images follow the same rule as token images (N-1): a link to this page
+  // must not make the viewer's browser call a server chosen by whoever wrote the profile.
+  const show = (elem, url) => { if (autoLoad(url)) setImage(elem, url); else askImage(elem, () => setImage(elem, url)); };
+  if (bgUrl) show(bg, bgUrl);
+  if (avUrl) show(av, avUrl);
   body.append(el("div", "name", typeof j.name === "string" && j.name ? j.name : t("noName")));
   if (typeof j.description === "string" && j.description) body.append(el("div", "desc", j.description.slice(0, 2000)));
   if (Array.isArray(j.links) && j.links.length) {
@@ -745,14 +748,16 @@ function autoLoad(uri) {
   if (/^data:image\//i.test(uri || "") || /^ipfs:\/\//i.test(uri || "")) return true;
   try { return AUTO_IMAGE_HOSTS.has(new URL(uri).host); } catch (e) { return false; }
 }
+// An element that shows its image only after a click (or Enter / Space), with the reason in its title.
+function askImage(elem, load) {
+  elem.classList.add("img-ask"); elem.title = t("imgAsk"); elem.setAttribute("role", "button"); elem.tabIndex = 0;
+  elem.setAttribute("aria-label", t("imgAsk"));
+  const go = () => { elem.classList.remove("img-ask"); elem.removeAttribute("title"); elem.removeAttribute("role"); elem.removeAttribute("aria-label"); elem.onclick = elem.onkeydown = null; load(); };
+  elem.onclick = go; elem.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } };
+}
 function showThumb(thumb, r) {
   const set = (url) => { if (url) setImage(thumb, url, () => thumb.classList.add("has-img")); };
-  const ask = (load) => {
-    thumb.classList.add("img-ask"); thumb.title = t("imgAsk"); thumb.setAttribute("role", "button"); thumb.tabIndex = 0;
-    thumb.setAttribute("aria-label", t("imgAsk"));
-    const go = () => { thumb.classList.remove("img-ask"); thumb.removeAttribute("title"); thumb.removeAttribute("role"); thumb.onclick = thumb.onkeydown = null; load(); };
-    thumb.onclick = go; thumb.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } };
-  };
+  const ask = (load) => askImage(thumb, load);
   if (r.image) { if (autoLoad(r.image)) set(r.image); else ask(() => set(r.image)); return; }
   if (!r.lsp4Metadata) return;
   const resolve = (clicked) => lsp4Image(r.lsp4Metadata).then(url => { if (!url) return; r.image = url; if (clicked || autoLoad(url)) set(url); else ask(() => set(url)); });

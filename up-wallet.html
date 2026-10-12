@@ -244,7 +244,6 @@ const PERMISSION_BITS = [
 const P = Object.fromEntries(PERMISSION_BITS.map((n, i) => [n, 1n << BigInt(i)]));
 // ERC4337: a 32-byte personal_sign by this controller authorizes an operation of the UP (AUDIT 2026-10-02 H-2).
 const PRIVILEGED = P.CHANGEOWNER | P.ADDCONTROLLER | P.EDITPERMISSIONS | P.SUPER_DELEGATECALL | P.DELEGATECALL | P.ERC4337;
-const VALIDATE_USER_OP = "0x3a871cdd";
 const PERM_PREFIX = "0x4b80742de2bf82acb3630000"; // LSP6 AddressPermissions:Permissions:<address>
 const ERC1271_MAGIC = "0x1626ba7e";
 const PERMIT2 = "0x000000000022d473030f116ddee9f6b43ac78ba3";
@@ -492,6 +491,7 @@ const I18N = {
     reqWrongFrom: (v) => `❌ La transazione non parte dalla UP (from = ${v.from}): rifiutata.`,
     reqCreate: "❌ Creazione di contratti non supportata: rifiutata.",
     reqSelf: "❌ Transazione verso la UP stessa o verso il suo Key Manager: potrebbe cambiarne controller o permessi. Sempre rifiutata.",
+    reqSystem: (v) => `❌ Transazione verso ${v.name}, un contratto del gas relay del sito: nessuna dApp ha motivo di chiamarlo. Sempre rifiutata.`,
     reqNoCall: "❌ Il controller non ha il permesso CALL né SUPER_CALL: non può fare chiamate a contratti. Rifiutata.",
     reqNoValue: "❌ Il controller non ha il permesso TRANSFERVALUE né SUPER_TRANSFERVALUE: non può inviare valore. Rifiutata.",
     kSite: "Sito", kVerify: "Verifica dominio", kNetwork: "Rete", kFrom: "Mittente (UP)", kTo: "Destinatario", kValue: "Valore (dalla UP)",
@@ -565,7 +565,7 @@ const I18N = {
     verifyBad: (v) => `❌ WalletConnect segnala il sito come non affidabile (${v.v}): richiesta rifiutata.`,
     verifyWarn: (v) => `⚠️ Verifica del dominio WalletConnect: ${v.v}. Non è confermato che la richiesta venga dal sito dichiarato.`,
     verifyOk: "✅ Verifica del dominio WalletConnect: VALID.",
-    sign32Refused: "❌ Firma rifiutata: il messaggio è di 32 byte (un hash). Per questa UP, con il gas relay attivo (ERC-4337), la firma di 32 byte del controller vale come autorizzazione a spendere dalla UP: il sito potrebbe usarla per svuotarla. Le firme di hash si fanno solo dalle pagine di questo sito (UP Wallet e Iscrizione, con il relayer del sito), mai per una dApp.",
+    sign32Refused: "❌ Firma rifiutata: il messaggio è di 32 byte (un hash). Su ogni rete dove la UP ha il gas relay (ERC-4337), una firma di 32 byte del controller vale come autorizzazione a spendere dalla UP, e la firma non è legata a una rete: firmata qui, varrebbe anche là, e il sito potrebbe usarla per svuotare la UP. Per questo UP Wallet non firma mai hash per una dApp: le firme di hash si fanno solo dalle pagine di questo sito (UP Wallet e Iscrizione, con il relayer del sito).",
     signOpaque: "⚠️ Il contenuto NON è leggibile: è un hash o dati binari. Non puoi sapere cosa autorizzi. Se non sai esattamente a cosa serve, rifiuta.",
     signPermit: "⚠️⚠️ Questo messaggio sembra un PERMESSO A SPENDERE TOKEN (Permit/Permit2): chi lo riceve può spostare token della UP senza altre conferme. Firma solo se sai esattamente perché.",
     signOrder: "⚠️⚠️ Questo messaggio sembra un ORDINE (per esempio di vendita): chi lo esegue può trasferire beni della UP alle condizioni scritte. Controlla ogni campo.",
@@ -749,6 +749,7 @@ const I18N = {
     reqWrongFrom: (v) => `❌ The transaction does not come from the UP (from = ${v.from}): rejected.`,
     reqCreate: "❌ Contract creation is not supported: rejected.",
     reqSelf: "❌ Transaction to the UP itself or to its Key Manager: it could change its controllers or permissions. Always rejected.",
+    reqSystem: (v) => `❌ Transaction to ${v.name}, a contract of the site's gas relay: no dApp has a reason to call it. Always rejected.`,
     reqNoCall: "❌ The controller has neither CALL nor SUPER_CALL: it cannot call contracts. Rejected.",
     reqNoValue: "❌ The controller has neither TRANSFERVALUE nor SUPER_TRANSFERVALUE: it cannot send value. Rejected.",
     kSite: "Site", kVerify: "Domain verification", kNetwork: "Network", kFrom: "Sender (UP)", kTo: "Recipient", kValue: "Value (from the UP)",
@@ -821,7 +822,7 @@ const I18N = {
     verifyBad: (v) => `❌ WalletConnect flags the site as untrusted (${v.v}): request rejected.`,
     verifyWarn: (v) => `⚠️ WalletConnect domain verification: ${v.v}. It is not confirmed that the request comes from the declared site.`,
     verifyOk: "✅ WalletConnect domain verification: VALID.",
-    sign32Refused: "❌ Signature refused: the message is 32 bytes (a hash). For this UP, with the gas relay enabled (ERC-4337), a 32-byte signature by the controller is an authorization to spend from the UP: the site could use it to drain it. Hash signatures are made only by this site's own pages (UP Wallet and Subscription, with the site relayer), never for a dApp.",
+    sign32Refused: "❌ Signature refused: the message is 32 bytes (a hash). On every network where the UP has the gas relay (ERC-4337), a 32-byte signature by the controller is an authorization to spend from the UP, and the signature is not tied to a network: signed here, it would be valid there too, and the site could use it to drain the UP. So UP Wallet never signs a hash for a dApp: hash signatures are made only by this site's own pages (UP Wallet and Subscription, with the site relayer).",
     signOpaque: "⚠️ The content is NOT readable: it is a hash or binary data. You cannot know what you are authorising. Unless you know exactly what it is for, reject it.",
     signPermit: "⚠️⚠️ This message looks like a PERMISSION TO SPEND TOKENS (Permit/Permit2): whoever receives it can move the UP's tokens without further confirmation. Only sign if you know exactly why.",
     signOrder: "⚠️⚠️ This message looks like an ORDER (for example a sale): whoever executes it can transfer the UP's assets on the stated terms. Check every field.",
@@ -1615,6 +1616,8 @@ async function handleSendTransaction(topic, id, c, tx, validation, reject, after
   if (!ethers.isAddress(tx.to)) return reject(t("genericError", { err: "invalid to" }));
   const to = ethers.getAddress(tx.to);
   if (to === c.up || to === c.km) return reject(t("reqSelf"));
+  // The gas relay's own contracts (EntryPoint, paymasters) are never a dApp's target (AUDIT L-6, W-H1 round).
+  if (SEND_SYSTEM[to.toLowerCase()]) return reject(t("reqSystem", { name: SEND_SYSTEM[to.toLowerCase()] }));
   let value;
   try { value = BigInt(tx.value || 0); } catch (e) { value = -1n; }
   if (value < 0n) return reject(t("invalidValue"));
@@ -1828,12 +1831,11 @@ async function handleSignRequest(topic, id, c, request, validation, reject) {
       account = swapped ? a : b;
       if (typeof message !== "string") throw new Error("missing message");
       const bytes = ethers.isHexString(message) ? ethers.getBytes(message) : ethers.toUtf8Bytes(message);
-      // Extension4337 accepts personal_sign(userOpHash): with 4337 on this UP or this controller, a 32-byte
-      // personal_sign is an authorization to spend from the UP, whatever the dApp says it is for (AUDIT H-2).
-      if (bytes.length === 32) {
-        const ext = await new ethers.Contract(c.up, ["function getData(bytes32) view returns (bytes)"], c.provider).getData(LSP17_KEY(VALIDATE_USER_OP)).catch(() => "0x?");
-        if ((c.perms & P.ERC4337) || (ext && ext !== "0x")) return reject(t("sign32Refused"));
-      }
+      // Extension4337 accepts personal_sign(userOpHash): where the UP has the 4337 setup, a 32-byte
+      // personal_sign by its controller is an authorization to spend from the UP, whatever the dApp says it
+      // is for (AUDIT H-2). The signature carries no chain: signed here, it is valid on every network where
+      // the UP has that setup, not only on the chosen one. So a dApp never gets one (AUDIT W-H1).
+      if (bytes.length === 32) return reject(t("sign32Refused"));
       const text = readableText(bytes);
       hash = ethers.hashMessage(bytes);
       walletParams = ethers.hexlify(bytes);

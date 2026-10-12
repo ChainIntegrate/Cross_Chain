@@ -72,7 +72,7 @@
   // Image URLs taken from indexers: only https://, ipfs:// and small data:image/ URIs; anything else is dropped.
   function imageUrl(u) {
     if (typeof u !== "string" || u.length > 200000) return null;
-    if (/^https:\/\//i.test(u) || /^ipfs:\/\//i.test(u) || /^data:image\/(png|jpe?g|gif|webp|svg\+xml)[;,]/i.test(u)) return u;
+    if (/^https:\/\//i.test(u) || /^ipfs:\/\//i.test(u) || /^data:image\/(png|jpe?g|gif|webp)[;,]/i.test(u)) return u;
     return null;
   }
   const text = (v) => { if (!v || v === "0x") return null; try { return ethers.toUtf8String(v).slice(0, 80); } catch (e) { return null; } };
