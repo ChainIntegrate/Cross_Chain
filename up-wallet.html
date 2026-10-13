@@ -278,7 +278,22 @@ const DAPP_CONTRACTS = {
   "42:0xf6eec4e32a532b23acc56b72865e79c79877cec8": "hup.social", // LUKSO
   // LUKSO's LSP26 Follower System (the standard's own contract; hup.social uses it for follows).
   "42:0xf01103e5a9909fc0dbe8166da7085e0285daddca": "LSP26 Follower System",
+  // Morpho's VaultBundlesV1, which Morpho's app calls to deposit into, withdraw from or migrate between
+  // its vaults (source verified on the explorer). On Arc it is the address the app asks to approve.
+  "8453:0x2b08a911f48de25a7e305d910afb5597abe8ea7b": "Morpho VaultBundlesV1", // Base
+  "5042:0x76c1deefae48523e14903085081bda2999450b68": "Morpho VaultBundlesV1", // Arc
 };
+// Morpho VaultBundlesV1. vaultBundlesV1Deposit's selector (0x6bbba4e0) matches the calls Morpho's app
+// sends, so its types are exact (TokenPermit = (uint8 kind, bytes data)). Permit, used by withdraw and
+// migrate, is not in the verified main file: the usual layouts are listed, and a call is decoded only
+// when its selector matches one of them exactly. The shares or assets always go to the caller, the UP.
+const MORPHO_BUNDLES_IFACE = new ethers.Interface([
+  "function vaultBundlesV1Deposit(address vault, uint256 assets, uint256 maxSharePriceE27, (uint8 kind, bytes data) assetPermit, uint256 referralFeePct, address referralFeeRecipient, uint256 deadline) payable",
+  ...["(uint8 kind, bytes data)", "(uint256 deadline, uint8 v, bytes32 r, bytes32 s)", "(uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)", "(bool submit, uint256 deadline, uint8 v, bytes32 r, bytes32 s)"].flatMap((perm) => [
+    `function vaultBundlesV1Withdraw(address vault, uint256 assets, uint256 shares, ${perm} sharesPermit, uint256 referralFeePct, address referralFeeRecipient, uint256 deadline)`,
+    `function vaultBundlesV1Migrate(address sourceVault, address destVault, uint256 assetsWithdrawn, uint256 sharesRedeemed, uint256 destMaxSharePriceE27, ${perm} sharesPermit, uint256 referralFeePct, address referralFeeRecipient, uint256 deadline)`,
+  ]),
+]);
 // LSP26: the follower is always the caller (msg.sender), here the UP itself.
 const LSP26_IFACE = new ethers.Interface([
   "function follow(address addr)", "function unfollow(address addr)",
@@ -290,8 +305,9 @@ const HUP_IFACE = new ethers.Interface([
   "function batchUnlike(address user, uint256[] contentIds)",
 ]);
 // "0x… (Name)" when the address is a known contract with code on this network, else the bare address.
-async function labelAddress(provider, addr) {
-  const k = KNOWN_CONTRACTS[String(addr).toLowerCase()];
+async function labelAddress(provider, addr, chainId = null) {
+  const d = chainId !== null ? DAPP_CONTRACTS[`${chainId}:${String(addr).toLowerCase()}`] : null;
+  const k = KNOWN_CONTRACTS[String(addr).toLowerCase()] || (d ? { name: d } : null);
   if (!k) return String(addr);
   try { return (await provider.getCode(addr)) !== "0x" ? `${addr} (${k.name})` : String(addr); } catch (e) { return String(addr); }
 }
@@ -528,6 +544,21 @@ const I18N = {
     hupIpfs: "ℹ️ Il testo e gli eventuali allegati sono già stati caricati su IPFS da hup.social prima di questa richiesta (il link ipfs:// qui sopra): anche se rifiuti, quei file restano pubblici su IPFS.",
     lsp26Follow: (v) => `LSP26: la tua UP inizia a seguire ${v.n === 1 ? "" : v.n + " indirizzi: "}${v.who}`,
     lsp26Unfollow: (v) => `LSP26: la tua UP smette di seguire ${v.n === 1 ? "" : v.n + " indirizzi: "}${v.who}`,
+    morphoDeposit: (v) => `Morpho: deposita ${v.amount} nel vault ${v.vault}`,
+    morphoWithdraw: (v) => `Morpho: preleva ${v.amount} dal vault ${v.vault}`,
+    morphoRedeem: (v) => `Morpho: riscatta ${v.amount} dal vault ${v.vault}`,
+    morphoMigrate: (v) => `Morpho: sposta ${v.amount} dal vault ${v.from} al vault ${v.to}`,
+    kVaultFrom: "Dal vault", kVaultTo: "Al vault", kMorphoFee: "Commissione di referral", kDeadline: "Valida fino a",
+    morphoForUp: "✅ Le quote del vault vanno alla tua UP: questo contratto di Morpho deposita sempre a nome di chi chiama.",
+    morphoBackToUp: "✅ Quello che prelevi torna alla tua UP: questo contratto di Morpho lo invia sempre a chi chiama.",
+    morphoSharesAllowance: "ℹ️ Per prelevare o spostare, il contratto di Morpho deve avere un'approvazione sulle quote del vault (data prima, o con una firma inclusa nella chiamata).",
+    morphoPermit: "⚠️ La chiamata include una firma di permesso (ERC-2612 o Permit2) per prelevare l'asset: controlla di averla data tu, per questo deposito.",
+    morphoNative: "⚠️ La chiamata invia valore nativo: il contratto lo converte nell'asset del vault, che deve essere la versione \"wrapped\" della moneta della rete.",
+    morphoFee: (v) => `⛔ Commissione di referral: il ${v.pct}% (${v.amount}) va a ${v.who}, non nel vault né alla tua UP. La sceglie l'app che ti ha mandato la richiesta.`,
+    morphoAssetMismatch: "⛔ I due vault non hanno lo stesso asset: il contratto di Morpho rifiuterà l'operazione.",
+    morphoExpired: "⚠️ La richiesta è scaduta: il contratto di Morpho la rifiuterà.",
+    morphoKnown: "ℹ️ Contratto VaultBundlesV1 di Morpho (sorgente verificato sull'explorer): è quello che l'app di Morpho chiama per depositare nei suoi vault. Un vault presta quello che depositi: controlla chi lo gestisce e i suoi rischi sul sito di Morpho.",
+    morphoUnknownAddr: (v) => `⛔ La chiamata ha la forma di quelle di Morpho (VaultBundlesV1), ma ${v.addr} non è l'indirizzo di Morpho che la pagina conosce su questa rete: potrebbe imitarla. Procedi solo se sai di che contratto si tratta.`,
     vaultDeposit: (v) => `Vault ERC-4626: deposita ${v.amount}`,
     vaultMint: (v) => `Vault ERC-4626: ottiene ${v.amount} depositando l'asset del vault`,
     vaultWithdraw: (v) => `Vault ERC-4626: preleva ${v.amount}`,
@@ -801,6 +832,21 @@ const I18N = {
     hupIpfs: "ℹ️ The text and any attachments were already uploaded to IPFS by hup.social before this request (the ipfs:// link above): even if you reject, those files stay public on IPFS.",
     lsp26Follow: (v) => `LSP26: your UP starts following ${v.n === 1 ? "" : v.n + " addresses: "}${v.who}`,
     lsp26Unfollow: (v) => `LSP26: your UP stops following ${v.n === 1 ? "" : v.n + " addresses: "}${v.who}`,
+    morphoDeposit: (v) => `Morpho: deposit ${v.amount} into vault ${v.vault}`,
+    morphoWithdraw: (v) => `Morpho: withdraw ${v.amount} from vault ${v.vault}`,
+    morphoRedeem: (v) => `Morpho: redeem ${v.amount} from vault ${v.vault}`,
+    morphoMigrate: (v) => `Morpho: move ${v.amount} from vault ${v.from} to vault ${v.to}`,
+    kVaultFrom: "From vault", kVaultTo: "To vault", kMorphoFee: "Referral fee", kDeadline: "Valid until",
+    morphoForUp: "✅ The vault shares go to your UP: this Morpho contract always deposits for the caller.",
+    morphoBackToUp: "✅ What you withdraw comes back to your UP: this Morpho contract always sends it to the caller.",
+    morphoSharesAllowance: "ℹ️ To withdraw or move, Morpho's contract needs an approval over the vault shares (given before, or with a signature included in the call).",
+    morphoPermit: "⚠️ The call includes a permit signature (ERC-2612 or Permit2) to pull the asset: check that you gave it, for this deposit.",
+    morphoNative: "⚠️ The call sends native value: the contract wraps it into the vault's asset, which must be the wrapped version of the network's currency.",
+    morphoFee: (v) => `⛔ Referral fee: ${v.pct}% (${v.amount}) goes to ${v.who}, not into the vault nor to your UP. It is chosen by the app that sent you the request.`,
+    morphoAssetMismatch: "⛔ The two vaults do not have the same asset: Morpho's contract will refuse the operation.",
+    morphoExpired: "⚠️ The request has expired: Morpho's contract will refuse it.",
+    morphoKnown: "ℹ️ Morpho's VaultBundlesV1 contract (source verified on the explorer): the one Morpho's app calls to deposit into its vaults. A vault lends what you deposit: check who curates it and its risks on Morpho's site.",
+    morphoUnknownAddr: (v) => `⛔ The call has the shape of Morpho's (VaultBundlesV1), but ${v.addr} is not the Morpho address the page knows on this network: it could be imitating it. Go ahead only if you know which contract it is.`,
     vaultDeposit: (v) => `ERC-4626 vault: deposit ${v.amount}`,
     vaultMint: (v) => `ERC-4626 vault: get ${v.amount} by depositing the vault's asset`,
     vaultWithdraw: (v) => `ERC-4626 vault: withdraw ${v.amount}`,
@@ -1554,7 +1600,8 @@ async function describeCall(c, to, value, data, rows, warnings) {
     if (op) return op;
   }
   if (toCode !== "0x") {
-    const op = await describeVault(c, to, value, data, rows, warnings);
+    const op = await describeMorphoBundles(c, to, value, data, rows, warnings, dapp === "Morpho VaultBundlesV1")
+      || await describeVault(c, to, value, data, rows, warnings);
     if (op) return op;
   }
   let parsed = null;
@@ -1587,18 +1634,18 @@ async function describeCall(c, to, value, data, rows, warnings) {
   const huge = (x, bits = 256) => x >= (1n << BigInt(bits - 1));
   if (is721 && sig === "approve(address,uint256)") {
     if (a[0] === ethers.ZeroAddress) warnings.push([t("infoRevoke"), "line-dim"]);
-    else warnings.push([t("warnApproval", { who: await labelAddress(c.provider, a[0]), what: `NFT id ${a[1]}` }), "line-danger"]);
+    else warnings.push([t("warnApproval", { who: await labelAddress(c.provider, a[0], c.net.chainId), what: `NFT id ${a[1]}` }), "line-danger"]);
   } else if (sig === "approve(address,uint256)" || sig === "increaseAllowance(address,uint256)") {
     if (a[1] === 0n && sig.startsWith("approve")) warnings.push([t("infoRevoke"), "line-dim"]);
-    else warnings.push([t("warnApproval", { who: await labelAddress(c.provider, a[0]), what: huge(a[1]) ? t("warnUnlimited") : amount(a[1]) }), "line-danger"]);
+    else warnings.push([t("warnApproval", { who: await labelAddress(c.provider, a[0], c.net.chainId), what: huge(a[1]) ? t("warnUnlimited") : amount(a[1]) }), "line-danger"]);
   } else if (sig === "approve(address,address,uint160,uint48)") {
-    warnings.push([t("warnApproval", { who: await labelAddress(c.provider, a[1]), what: huge(a[2], 160) ? t("warnUnlimited") : `${a[2].toString()} (token ${a[0]})` }), "line-danger"]);
+    warnings.push([t("warnApproval", { who: await labelAddress(c.provider, a[1], c.net.chainId), what: huge(a[2], 160) ? t("warnUnlimited") : `${a[2].toString()} (token ${a[0]})` }), "line-danger"]);
   } else if (sig === "setApprovalForAll(address,bool)") {
-    if (a[1]) warnings.push([t("warnApproval", { who: await labelAddress(c.provider, a[0]), what: t("warnApprovalAll") }), "line-danger"]);
+    if (a[1]) warnings.push([t("warnApproval", { who: await labelAddress(c.provider, a[0], c.net.chainId), what: t("warnApprovalAll") }), "line-danger"]);
     else warnings.push([t("infoRevoke"), "line-dim"]);
   } else if (parsed.name === "authorizeOperator") {
     const what = typeof a[1] === "bigint" ? (huge(a[1]) ? t("warnUnlimited") : amount(a[1])) : `NFT ${a[1]}`;
-    warnings.push([t("warnApproval", { who: await labelAddress(c.provider, a[0]), what }), "line-danger"]);
+    warnings.push([t("warnApproval", { who: await labelAddress(c.provider, a[0], c.net.chainId), what }), "line-danger"]);
   } else if (KNOWN_CONTRACTS[to.toLowerCase()]?.role === "roleWrapped" && (sig === "deposit()" || sig === "withdraw(uint256)")) {
     const name = KNOWN_CONTRACTS[to.toLowerCase()].name;
     warnings.push([sig === "deposit()" ? t("infoWrap", { amount: `${ethers.formatEther(value)} ${cur}`.trim(), name }) : t("infoUnwrap", { amount: `${ethers.formatEther(a[0])} ${name}`, cur }), "line-warn"]);
@@ -1691,6 +1738,85 @@ async function describeVault(c, to, value, data, rows, warnings) {
   return op;
 }
 
+// A vault's name and asset, read from the chain, and formatters for its asset and its shares.
+async function vaultInfo(c, vault) {
+  const v = new ethers.Contract(vault, VAULT_READ, c.provider);
+  let asset = null;
+  try { asset = ethers.getAddress(await v.asset()); } catch (e) { asset = null; }
+  const tok = asset ? new ethers.Contract(asset, ["function symbol() view returns (string)", "function decimals() view returns (uint8)"], c.provider) : null;
+  const [name, sym, dec, aSym, aDec] = await Promise.all([
+    v.name().catch(() => ""), v.symbol().catch(() => ""), v.decimals().then(Number).catch(() => null),
+    tok ? tok.symbol().catch(() => "") : "", tok ? tok.decimals().then(Number).catch(() => null) : null,
+  ]);
+  const fmt = (x, d, s) => d !== null ? `${ethers.formatUnits(x, d)} ${s}`.trim() : `${x.toString()} ${s}`.trim();
+  return { v, asset, label: `${name || "?"}${sym ? " (" + sym + ")" : ""} · ${t("vaultAsset")}: ${aSym || "?"} ${asset || "?"}`,
+    name: name || vault, assets: (x) => fmt(x, aDec, aSym), shares: (x) => fmt(x, dec, sym || t("vaultShares")) };
+}
+
+// Morpho VaultBundlesV1: deposit into a vault, withdraw from it, or move a position between two vaults,
+// always for the caller (the UP). A referral fee can be taken from the amount for an address the app
+// chooses: shown with its percentage, amount and recipient. Decoded wherever the selector matches; an
+// address that is not Morpho's known one on this network gets a red warning.
+async function describeMorphoBundles(c, to, value, data, rows, warnings, known) {
+  let p = null;
+  try { p = MORPHO_BUNDLES_IFACE.parseTransaction({ data, value }); } catch (e) { p = null; }
+  if (!p) return null;
+  const a = p.args, WAD = 10n ** 18n;
+  const sig = `${p.name}(${p.fragment.inputs.map((i) => i.format()).join(",")})`;
+  const feePct = a.referralFeePct, feeTo = a.referralFeeRecipient;
+  const pct = (Number(feePct * 10000n / WAD) / 100).toString();
+  let op, feeOn = 0n, unit = null;
+  if (p.name === "vaultBundlesV1Deposit") {
+    const vi = await vaultInfo(c, a.vault);
+    unit = vi.assets;
+    feeOn = a.assets;
+    const toDeposit = a.assets - a.assets * feePct / WAD;
+    op = t("morphoDeposit", { amount: vi.assets(a.assets), vault: vi.name });
+    rows.push([t("kCall"), op, {}]);
+    rows.push([t("kVault"), vi.label, {}]);
+    try { rows.push([t("kVaultShares"), `${vi.shares(await vi.v.previewDeposit(toDeposit))} ${t("vaultPreview")}`, {}]); } catch (e) { /* no preview */ }
+    warnings.push([t("morphoForUp"), "line-ok"]);
+    if (a.assetPermit.kind !== 0n) warnings.push([t("morphoPermit"), "line-warn"]);
+    if (value > 0n) warnings.push([t("morphoNative"), "line-warn"]);
+  } else if (p.name === "vaultBundlesV1Withdraw") {
+    const vi = await vaultInfo(c, a.vault);
+    unit = vi.assets;
+    let out = a.assets;
+    if (a.assets === 0n) { try { out = await vi.v.previewRedeem(a.shares); } catch (e) { out = null; } }
+    feeOn = out ?? 0n;
+    op = a.assets > 0n ? t("morphoWithdraw", { amount: vi.assets(a.assets), vault: vi.name }) : t("morphoRedeem", { amount: vi.shares(a.shares), vault: vi.name });
+    rows.push([t("kCall"), op, {}]);
+    rows.push([t("kVault"), vi.label, {}]);
+    if (a.assets === 0n && out !== null) rows.push([t("kVaultAssets"), `${vi.assets(out)} ${t("vaultPreview")}`, {}]);
+    warnings.push([t("morphoBackToUp"), "line-ok"]);
+    warnings.push([t("morphoSharesAllowance"), "line-dim"]);
+  } else {
+    const [src, dst] = await Promise.all([vaultInfo(c, a.sourceVault), vaultInfo(c, a.destVault)]);
+    unit = src.assets;
+    let out = a.assetsWithdrawn;
+    if (a.assetsWithdrawn === 0n) { try { out = await src.v.previewRedeem(a.sharesRedeemed); } catch (e) { out = null; } }
+    feeOn = out ?? 0n;
+    op = t("morphoMigrate", { amount: a.assetsWithdrawn > 0n ? src.assets(a.assetsWithdrawn) : src.shares(a.sharesRedeemed), from: src.name, to: dst.name });
+    rows.push([t("kCall"), op, {}]);
+    rows.push([t("kVaultFrom"), src.label, {}], [t("kVaultTo"), dst.label, {}]);
+    if (src.asset && dst.asset && src.asset !== dst.asset) warnings.push([t("morphoAssetMismatch"), "line-danger"]);
+    warnings.push([t("morphoForUp"), "line-ok"]);
+    warnings.push([t("morphoSharesAllowance"), "line-dim"]);
+  }
+  if (feePct > 0n) {
+    const fee = feeOn * feePct / WAD;
+    rows.push([t("kMorphoFee"), `${pct}% = ${unit(fee)} → ${feeTo}`, { cls: "warn" }]);
+    warnings.push([t("morphoFee", { pct, amount: unit(fee), who: feeTo }), "line-danger"]);
+  }
+  const dl = Number(a.deadline);
+  rows.push([t("kDeadline"), Number.isFinite(dl) && dl < 1e11 ? new Date(dl * 1000).toLocaleString() : String(a.deadline), {}]);
+  if (Number.isFinite(dl) && dl * 1000 < Date.now()) warnings.push([t("morphoExpired"), "line-warn"]);
+  rows.push([t("kParams"), `${sig}\n${p.fragment.inputs.map((inp, i) => `${inp.name}: ${String(a[i])}`).join("\n")}`, { block: true }]);
+  rows.push([t("kRaw"), data, { raw: true }]);
+  warnings.push(known ? [t("morphoKnown"), "line-dim"] : [t("morphoUnknownAddr", { addr: to }), "line-danger"]);
+  return op;
+}
+
 // LSP26 follow / unfollow: the UP starts or stops following one or more addresses.
 function describeLsp26(data, rows, warnings) {
   let p = null;
@@ -1735,7 +1861,7 @@ async function handleSendTransaction(topic, id, c, tx, validation, reject, after
     const op = await describeCall(c, to, value, data, rows, warnings);
     const valueText = `${ethers.formatEther(value)} ${cur}`.trim();
     // The request box is replaced by the next request: the log keeps what was asked.
-    const toLabel = await labelAddress(c.provider, to);
+    const toLabel = await labelAddress(c.provider, to, c.net.chainId);
     log(t("txSummary", { to: toLabel, value: valueText, op }), "line-compare");
     rows.push([t("kKm"), c.km, {}], [t("kSigner"), c.signer, {}]);
     renderKv("requestBox", rows);
