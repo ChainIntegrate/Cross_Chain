@@ -276,6 +276,7 @@ const DAPP_CONTRACTS = {
   "8453:0xe401af10caa79f9bb6945c87ee196503e5de6bea": "hup.social", // Base
   "5042:0xa5e73b15c1c3ee477aed682741f0324c6787bbb8": "hup.social", // Arc
   "42:0xf6eec4e32a532b23acc56b72865e79c79877cec8": "hup.social", // LUKSO
+  "42:0x7a5134435e029b5bbff0d4eb5aebcf0255d76d88": "hup.social", // LUKSO, polls
   // LUKSO's LSP26 Follower System (the standard's own contract; hup.social uses it for follows).
   "42:0xf01103e5a9909fc0dbe8166da7085e0285daddca": "LSP26 Follower System",
   // Morpho's VaultBundlesV1, which Morpho's app calls to deposit into, withdraw from or migrate between
@@ -299,6 +300,12 @@ const LSP26_IFACE = new ethers.Interface([
   "function follow(address addr)", "function unfollow(address addr)",
   "function followBatch(address[] addresses)", "function unfollowBatch(address[] addresses)",
 ]);
+// hup.social poll vote: the function's name is not known (the contract is not verified), only its selector
+// and its layout, read from a vote sent from hup.social on LUKSO: the voter (the UP), the content holding the
+// poll, the option counted from 0 (the sixth option was 5), then bytes (empty). Recognised by the selector,
+// and only at hup.social's addresses.
+const HUP_VOTE_SELECTOR = "0x57941004";
+const HUP_VOTE_TYPES = ["address", "uint256", "uint256", "bytes"];
 const HUP_IFACE = new ethers.Interface([
   "function create(address creator, uint8 cType, string metadata, uint256 parentId, bool allowedComments)",
   "function batchLike(address user, uint256[] contentIds)",
@@ -541,6 +548,10 @@ const I18N = {
     hupLike: (v) => `hup.social: mette like ${v.n === 1 ? "al contenuto" : "ai contenuti"} ${v.ids}`,
     hupUnlike: (v) => `hup.social: toglie il like ${v.n === 1 ? "al contenuto" : "ai contenuti"} ${v.ids}`,
     hupUserOk: "✅ Il like è a nome della tua UP.",
+    hupVote: (v) => `hup.social: vota l'opzione ${v.option} del sondaggio nel contenuto #${v.id}`,
+    hupVoteOk: "✅ Il voto è a nome della tua UP.",
+    hupVoteOther: (v) => `🛑 Il voto sarebbe a nome di ${v.who}, non della tua UP: se non sai perché, rifiuta.`,
+    hupVoteNote: "ℹ️ Voto in un sondaggio di hup.social: il contratto non è verificato, il nome della funzione non è noto. La pagina riconosce la chiamata dal selettore, solo agli indirizzi di hup.social, e la legge secondo un voto reale (opzioni contate da 1 come nel sondaggio). Non sposta fondi.",
     hupIpfs: "ℹ️ Il testo e gli eventuali allegati sono già stati caricati su IPFS da hup.social prima di questa richiesta (il link ipfs:// qui sopra): anche se rifiuti, quei file restano pubblici su IPFS.",
     lsp26Follow: (v) => `LSP26: la tua UP inizia a seguire ${v.n === 1 ? "" : v.n + " indirizzi: "}${v.who}`,
     lsp26Unfollow: (v) => `LSP26: la tua UP smette di seguire ${v.n === 1 ? "" : v.n + " indirizzi: "}${v.who}`,
@@ -829,6 +840,10 @@ const I18N = {
     hupLike: (v) => `hup.social: like ${v.n === 1 ? "content" : "contents"} ${v.ids}`,
     hupUnlike: (v) => `hup.social: remove the like from ${v.n === 1 ? "content" : "contents"} ${v.ids}`,
     hupUserOk: "✅ The like is in the name of your UP.",
+    hupVote: (v) => `hup.social: vote for option ${v.option} of the poll in content #${v.id}`,
+    hupVoteOk: "✅ The vote is in the name of your UP.",
+    hupVoteOther: (v) => `🛑 The vote would be in the name of ${v.who}, not your UP: unless you know why, reject it.`,
+    hupVoteNote: "ℹ️ Vote in a hup.social poll: the contract is not verified and the function's name is not known. The page recognises the call by its selector, only at hup.social's addresses, and reads it following a real vote (options counted from 1, as in the poll). It moves no funds.",
     hupIpfs: "ℹ️ The text and any attachments were already uploaded to IPFS by hup.social before this request (the ipfs:// link above): even if you reject, those files stay public on IPFS.",
     lsp26Follow: (v) => `LSP26: your UP starts following ${v.n === 1 ? "" : v.n + " addresses: "}${v.who}`,
     lsp26Unfollow: (v) => `LSP26: your UP stops following ${v.n === 1 ? "" : v.n + " addresses: "}${v.who}`,
@@ -1664,6 +1679,19 @@ async function describeCall(c, to, value, data, rows, warnings) {
 // hup.social: create() publishes a post, or a reply when parentId is set, in the name of `creator`;
 // batchLike() / batchUnlike() add or remove likes on contents, in the name of `user`.
 function describeHup(c, data, rows, warnings) {
+  if (data.slice(0, 10).toLowerCase() === HUP_VOTE_SELECTOR) {
+    let v = null;
+    try { v = ethers.AbiCoder.defaultAbiCoder().decode(HUP_VOTE_TYPES, "0x" + data.slice(10)); } catch (e) { v = null; }
+    if (!v) return null;
+    const [voter, contentId, option, extra] = v;
+    const op = t("hupVote", { option: (option + 1n).toString(), id: contentId.toString() });
+    rows.push([t("kCall"), op, {}]);
+    rows.push([t("kParams"), `${HUP_VOTE_SELECTOR} (${HUP_VOTE_TYPES.join(",")})\nvoter: ${voter}\ncontentId: ${contentId}\noption (from 0): ${option}\ndata: ${extra}`, { block: true }]);
+    rows.push([t("kRaw"), data, { raw: true }]);
+    warnings.push(voter.toLowerCase() === c.up.toLowerCase() ? [t("hupVoteOk"), "line-ok"] : [t("hupVoteOther", { who: voter }), "line-danger"]);
+    warnings.push([t("hupVoteNote"), "line-dim"]);
+    return op;
+  }
   let p = null;
   try { p = HUP_IFACE.parseTransaction({ data }); } catch (e) { p = null; }
   if (!p) return null;
