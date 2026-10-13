@@ -280,7 +280,8 @@ const DAPP_CONTRACTS = {
   "42:0xf01103e5a9909fc0dbe8166da7085e0285daddca": "LSP26 Follower System",
   // Morpho's VaultBundlesV1, which Morpho's app calls to deposit into, withdraw from or migrate between
   // its vaults (source verified on the explorer). On Arc it is the address the app asks to approve.
-  "5042:0x76c1deefae48523e14903085081bda2999450b68": "Morpho VaultBundlesV1",
+  "8453:0x2b08a911f48de25a7e305d910afb5597abe8ea7b": "Morpho VaultBundlesV1", // Base
+  "5042:0x76c1deefae48523e14903085081bda2999450b68": "Morpho VaultBundlesV1", // Arc
 };
 // Morpho VaultBundlesV1. vaultBundlesV1Deposit's selector (0x6bbba4e0) matches the calls Morpho's app
 // sends, so its types are exact (TokenPermit = (uint8 kind, bytes data)). Permit, used by withdraw and
