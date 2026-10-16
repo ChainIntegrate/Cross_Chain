@@ -510,6 +510,9 @@ const I18N = {
     pairing: "Collegamento in corso... conferma sulla dApp se richiesto.",
     proposalFrom: (v) => `Richiesta di connessione da: ${v.name} (${v.url}) — verifica del dominio: ${v.verify}`,
     proposalScam: "❌ WalletConnect segnala questo sito come truffa o dominio non valido: connessione rifiutata.",
+    proposalAsks: (v) => `La dApp chiede — reti richieste: ${v.required}; reti facoltative: ${v.optional}; metodi: ${v.methods}; altri tipi di account: ${v.other}.`,
+    proposalNone: "nessuna",
+    proposalApproved: (v) => `Connessione approvata solo per ${v.net}, la rete scelta nel pannello 1.`,
     proposalUnverified: "⚠️ Dominio non verificato da WalletConnect: controlla di essere sul sito giusto prima di approvare qualsiasi cosa.",
     proposalRejectedChains: (v) => `❌ Connessione rifiutata: la dApp richiede reti diverse da quella scelta (${v.err}). Scegli nel pannello 1 la rete che la dApp usa e ricollega.`,
     proposalOtherChains: (v) => `❌ Connessione rifiutata: la dApp chiede ${v.want}, nel pannello 1 è scelta ${v.have}. Scegli la rete della dApp, poi ricollega dalla dApp.`,
@@ -808,6 +811,9 @@ const I18N = {
     attnRequest: (v) => `${v.who} asks for ${v.what}: go back to UP Wallet to see it.`,
     attnTx: "a transaction", attnSign: "a signature",
     proposalScam: "❌ WalletConnect flags this site as a scam or invalid domain: connection rejected.",
+    proposalAsks: (v) => `The dApp asks for — required networks: ${v.required}; optional networks: ${v.optional}; methods: ${v.methods}; other account types: ${v.other}.`,
+    proposalNone: "none",
+    proposalApproved: (v) => `Connection approved for ${v.net} only, the network chosen in panel 1.`,
     proposalUnverified: "⚠️ Domain not verified by WalletConnect: check that you are on the right site before approving anything.",
     proposalRejectedChains: (v) => `❌ Connection rejected: the dApp requires networks other than the chosen one (${v.err}). Choose in panel 1 the network the dApp uses and connect again.`,
     sessionActive: (v) => `✅ Session active with ${v.name} (${v.url}) — account presented: ${v.acc} on chainId ${v.id}.`,
@@ -1423,6 +1429,35 @@ $("disconnectBtn").addEventListener("click", async () => {
   showSessions();
 });
 
+// What the dApp asks for at connection, for the log: networks (required / optional), methods, and any
+// namespace other than EVM (e.g. Solana), which the UP cannot serve. Helps tell why a dApp misbehaves.
+function describeProposal(params) {
+  const netName = (x) => {
+    const [ns, ref] = String(x).split(":");
+    if (ns !== "eip155") return x;
+    const n = NETWORKS.find((k) => k.chainId && String(k.chainId) === ref);
+    return n ? `${n.name} (${ref})` : `chainId ${ref}`;
+  };
+  const read = (nss) => {
+    const chains = [], methods = [], other = [];
+    for (const [key, v] of Object.entries(nss || {})) {
+      const ns = key.split(":")[0];
+      const ch = v.chains || (key.includes(":") ? [key] : []);
+      if (ns !== "eip155") { other.push(ns); continue; }
+      chains.push(...ch); methods.push(...(v.methods || []));
+    }
+    return { chains: [...new Set(chains)].map(netName), methods: [...new Set(methods)], other: [...new Set(other)] };
+  };
+  const req = read(params.requiredNamespaces), opt = read(params.optionalNamespaces);
+  const none = t("proposalNone");
+  return {
+    required: req.chains.join(", ") || none,
+    optional: opt.chains.join(", ") || none,
+    methods: [...new Set([...req.methods, ...opt.methods])].join(", ") || none,
+    other: [...new Set([...req.other, ...opt.other])].join(", ") || none,
+  };
+}
+
 async function onSessionProposal({ id, params, verifyContext }) {
   const { buildApprovedNamespaces, getSdkError } = window.WalletKitBundle;
   const meta = params.proposer.metadata || {};
@@ -1437,6 +1472,7 @@ async function onSessionProposal({ id, params, verifyContext }) {
     return;
   }
   if (validation !== "VALID") log(t("proposalUnverified"), "line-warn");
+  log(t("proposalAsks", describeProposal(params)), "line-dim");
   const c = riskAccepted() ? await freshCompliance() : null;
   if (!c) {
     log(riskAccepted() ? t("complianceFirst") : t("ackRequired"), "line-err");
@@ -1458,6 +1494,7 @@ async function onSessionProposal({ id, params, verifyContext }) {
     });
     await walletKit.approveSession({ id, namespaces });
     sessionChain = c.caip;
+    log(t("proposalApproved", { net: `${c.net.name} (${c.net.chainId})` }), "line-dim");
     showSessions();
   } catch (e) {
     // The networks the dApp requires, other than the chosen one: named, and one click away when the page has it.
