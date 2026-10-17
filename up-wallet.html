@@ -543,6 +543,8 @@ const I18N = {
     kMethod: "Metodo", kAccount: "Account (UP)", kContentType: "Tipo di contenuto", kContent: "Contenuto da firmare (deve coincidere con MetaMask)",
     kHash: "Hash verificato dalla UP", kDomain: "Dominio (EIP-712)", kPrimaryType: "Tipo di messaggio",
     toContract: "contratto", toEoa: "indirizzo senza codice",
+    toDelegated: (v) => `account con delega EIP-7702 a ${v.addr}`,
+    toDelegatedNote: (v) => `ℹ️ Il destinatario è un account normale (con la sua chiave) che ha delegato a ${v.addr} con EIP-7702, come fanno alcuni wallet e app: non è un contratto pubblicato a quell'indirizzo. Quando riceve una chiamata, esegue il codice del delegato.`,
     nativeTransfer: (v) => `Invio di ${v.amount} ${v.cur} a ${v.to}`,
     unknownCall: (v) => `Chiamata non riconosciuta (selettore ${v.sel})`,
     hupCreate: (v) => `hup.social: pubblica un contenuto${v.parent > 0n ? ` in risposta al contenuto #${v.parent}` : ""} (tipo ${v.type}, ${v.meta}, commenti ${v.comments ? "consentiti" : "chiusi"})`,
@@ -838,6 +840,8 @@ const I18N = {
     kMethod: "Method", kAccount: "Account (UP)", kContentType: "Content type", kContent: "Content to sign (must match MetaMask)",
     kHash: "Hash checked by the UP", kDomain: "Domain (EIP-712)", kPrimaryType: "Message type",
     toContract: "contract", toEoa: "address without code",
+    toDelegated: (v) => `account delegated through EIP-7702 to ${v.addr}`,
+    toDelegatedNote: (v) => `ℹ️ The recipient is a normal account (with its own key) that delegated to ${v.addr} through EIP-7702, as some wallets and apps do: not a contract deployed at that address. When it is called, it runs the delegate's code.`,
     nativeTransfer: (v) => `Send ${v.amount} ${v.cur} to ${v.to}`,
     unknownCall: (v) => `Unrecognised call (selector ${v.sel})`,
     hupCreate: (v) => `hup.social: publish content${v.parent > 0n ? ` replying to content #${v.parent}` : ""} (type ${v.type}, ${v.meta}, comments ${v.comments ? "allowed" : "closed"})`,
@@ -1631,10 +1635,16 @@ function simError(e) {
 // Fills rows/warnings for the request box and returns a one-line label of the operation for the log.
 async function describeCall(c, to, value, data, rows, warnings) {
   const cur = c.net.currency || "";
-  const toCode = await c.provider.getCode(to);
-  const known = toCode !== "0x" ? KNOWN_CONTRACTS[to.toLowerCase()] : null;
-  const dapp = toCode !== "0x" ? DAPP_CONTRACTS[`${c.net.chainId}:${to.toLowerCase()}`] : null;
-  rows.push([t("kTo"), `${to} (${toCode === "0x" ? t("toEoa") : t("toContract")}${known ? " · " + known.name : dapp ? " · " + dapp : ""})`, {}]);
+  const toCode = (await c.provider.getCode(to)).toLowerCase();
+  // An account delegated through EIP-7702 has code 0xef0100 + the delegate's address: still a wallet with
+  // its own key, not a contract deployed there. The delegate's code runs when the account is called.
+  const delegate = /^0xef0100[0-9a-f]{40}$/.test(toCode) ? ethers.getAddress("0x" + toCode.slice(8)) : null;
+  const isContract = toCode !== "0x" && !delegate;
+  const known = isContract ? KNOWN_CONTRACTS[to.toLowerCase()] : null;
+  const dapp = isContract ? DAPP_CONTRACTS[`${c.net.chainId}:${to.toLowerCase()}`] : null;
+  const kind = delegate ? t("toDelegated", { addr: delegate }) : isContract ? t("toContract") : t("toEoa");
+  rows.push([t("kTo"), `${to} (${kind}${known ? " · " + known.name : dapp ? " · " + dapp : ""})`, {}]);
+  if (delegate) warnings.push([t("toDelegatedNote", { addr: delegate }), "line-dim"]);
   if (known) warnings.push([t("knownContract", { name: known.name, role: t(known.role) }), "line-dim"]);
   rows.push([t("kValue"), `${ethers.formatEther(value)} ${cur}`, { cls: value > 0n ? "warn" : "" }]);
   if (data === "0x") {
@@ -1651,7 +1661,7 @@ async function describeCall(c, to, value, data, rows, warnings) {
     const op = describeLsp26(data, rows, warnings);
     if (op) return op;
   }
-  if (toCode !== "0x") {
+  if (isContract) {
     const op = await describeMorphoBundles(c, to, value, data, rows, warnings, dapp === "Morpho VaultBundlesV1")
       || await describeVault(c, to, value, data, rows, warnings);
     if (op) return op;
