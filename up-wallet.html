@@ -92,7 +92,13 @@
   .up-card-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
   .up-card-addr { font-family: monospace; font-size: 15px; font-weight: 700; }
   .up-card-sub { font-size: 12.5px; color: var(--text-dim); }
-  .up-card-state { font-size: 12.5px; white-space: nowrap; }
+  .up-card-state { font-size: 12.5px; }
+  /* The explanation under the title only on the menu; in the app the banner is left out (the app has its icon),
+     so the menu starts near the top of the phone screen. */
+  body:not([data-view="home"]) .subtitle { display: none; }
+  html.in-app .brand-row { display: none; }
+  html.in-app h1 { font-size: 18px; }
+  html.in-app .subtitle { margin-bottom: 16px; }
   .setup-banner { display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid var(--warn); border-radius: 10px;
                   padding: 10px 12px; margin-bottom: 14px; font-size: 13.5px; }
   .setup-banner[hidden] { display: none; }
@@ -176,8 +182,7 @@
 <div id="nav">
   <button type="button" class="up-card" id="upCard" data-go="settings">
     <span class="net-logo" id="upCardLogo"></span>
-    <span class="up-card-main"><span class="up-card-addr" id="upCardAddr"></span><span class="up-card-sub" id="upCardSub"></span></span>
-    <span class="up-card-state" id="upCardState"></span>
+    <span class="up-card-main"><span class="up-card-addr" id="upCardAddr"></span><span class="up-card-sub" id="upCardSub"></span><span class="up-card-state" id="upCardState"></span></span>
   </button>
   <div class="setup-banner" id="setupBanner" hidden><span data-i18n="setupBanner"></span><button type="button" class="small" data-go="settings" data-i18n="setupGoBtn">Configura</button></div>
   <div class="tiles">
@@ -403,6 +408,9 @@ const DAPP_CONTRACTS = {
   "5042:0x76c1deefae48523e14903085081bda2999450b68": "Morpho VaultBundlesV1", // Arc
   "43114:0x5c0401e81bc07ca70fad469b451682c0d747ef1c": "BENQI qiAVAX", // Avalanche: lending market (Compound-style)
   "43114:0x2b2c81e08f1af8835a78bb2a90ae924ace0ea4be": "BENQI sAVAX", // Avalanche: liquid staking
+  "43114:0x435272ceff93a1e657e8abfdf0a13e95900a3a56": "Aave Spoke", // Avalanche, pro.aave.com: the market (user positions)
+  "43114:0xe4c7183a5f22c365140f41d733d8a8bad5a1a6ba": "Aave gateway (AVAX)", // Avalanche, pro.aave.com: native AVAX in and out
+  "43114:0x24dbafb8611c6639316b17edd2ecf3f91424b26b": "Yield Yak", // Avalanche, yieldyak.com: a strategy (vault)
 };
 // Morpho VaultBundlesV1. vaultBundlesV1Deposit's selector (0x6bbba4e0) matches the calls Morpho's app
 // sends, so its types are exact (TokenPermit = (uint8 kind, bytes data)). Permit, used by withdraw and
@@ -708,6 +716,32 @@ const I18N = {
     unknownCall: (v) => `Chiamata non riconosciuta (selettore ${v.sel})`,
     hupCreate: (v) => `hup.social: pubblica un contenuto${v.parent > 0n ? ` in risposta al contenuto #${v.parent}` : ""} (tipo ${v.type}, ${v.meta}, commenti ${v.comments ? "consentiti" : "chiusi"})`,
     hupCreatorOk: "✅ Autore del contenuto: la tua UP.",
+    unknownAddress: "indirizzo non noto alla pagina",
+    aaveManagerOn: (v) => `Aave: autorizza ${v.who} a gestire le posizioni della UP su questo mercato`,
+    aaveManagerOff: (v) => `Aave: toglie a ${v.who} l'autorizzazione a gestire le posizioni della UP`,
+    aaveManagerKnown: "⚠️ È il gateway di Aave per AVAX: l'autorizzazione serve per depositare AVAX con la UP. Resta valida finché non la togli (con la stessa funzione e approve = false).",
+    aaveManagerUnknown: (v) => `🛑 ${v.who} non è un contratto Aave noto alla pagina: un gestore delle posizioni può operare sulle posizioni della UP. Se non sai perché, rifiuta.`,
+    aaveManagerOffNote: "✅ Togliere un'autorizzazione non sposta fondi.",
+    aaveSupplyNative: (v) => `Aave: deposita ${v.amount} come garanzia (riserva #${v.id} del mercato ${v.spoke})`,
+    aaveSpokeUnknown: (v) => `🛑 Il mercato indicato (${v.who}) non è quello Aave noto alla pagina: se non sai perché, rifiuta.`,
+    aaveSupplyNote: "ℹ️ Il deposito va alla UP che fa la chiamata e può fare da garanzia per prestiti. Per riprendere gli AVAX serve un prelievo dalla UP.",
+    yakDeposit: (v) => `Yield Yak: deposita ${v.amount} nella strategia (quote minime attese: ${v.min})`,
+    yakNote: "ℹ️ Le quote della strategia vanno alla UP che fa la chiamata. La strategia reinveste da sola; per riprendere gli AVAX serve un prelievo dalla UP. Se le quote fossero meno del minimo, l'operazione verrebbe annullata.",
+    defiValueOk: "✅ L'importo nella chiamata è lo stesso valore che esce dalla UP.",
+    defiValueOff: (v) => `🛑 L'importo nella chiamata (${v.amount}) è diverso dal valore che esce dalla UP (${v.value}): se non sai perché, rifiuta.`,
+    unknownAddress: "an address the page does not know",
+    aaveManagerOn: (v) => `Aave: allow ${v.who} to manage the UP's positions on this market`,
+    aaveManagerOff: (v) => `Aave: remove ${v.who}'s permission to manage the UP's positions`,
+    aaveManagerKnown: "⚠️ It is Aave's gateway for AVAX: the permission is needed to deposit AVAX with the UP. It stays valid until you remove it (same function, approve = false).",
+    aaveManagerUnknown: (v) => `🛑 ${v.who} is not an Aave contract the page knows: a position manager can act on the UP's positions. Unless you know why, reject it.`,
+    aaveManagerOffNote: "✅ Removing a permission moves no funds.",
+    aaveSupplyNative: (v) => `Aave: deposit ${v.amount} as collateral (reserve #${v.id} of the market ${v.spoke})`,
+    aaveSpokeUnknown: (v) => `🛑 The market named (${v.who}) is not the Aave one the page knows: unless you know why, reject it.`,
+    aaveSupplyNote: "ℹ️ The deposit goes to the UP making the call and can back loans. Getting the AVAX back takes a withdrawal from the UP.",
+    yakDeposit: (v) => `Yield Yak: deposit ${v.amount} into the strategy (minimum shares expected: ${v.min})`,
+    yakNote: "ℹ️ The strategy's shares go to the UP making the call. The strategy compounds by itself; getting the AVAX back takes a withdrawal from the UP. With fewer shares than the minimum, the operation would be undone.",
+    defiValueOk: "✅ The amount in the call is the same value leaving the UP.",
+    defiValueOff: (v) => `🛑 The amount in the call (${v.amount}) differs from the value leaving the UP (${v.value}): unless you know why, reject it.`,
     benqiMint: (v) => `BENQI: deposita ${v.amount} nel mercato di prestito (ricevi qiAVAX, che maturano interessi)`,
     benqiStake: (v) => `BENQI: mette in staking ${v.amount} (ricevi sAVAX, staking liquido)`,
     kBenqiGet: "La UP riceve",
@@ -1923,6 +1957,10 @@ async function describeCall(c, to, value, data, rows, warnings) {
     const op = describeHup(c, data, rows, warnings);
     if (op) return op;
   }
+  if (dapp === "Aave Spoke" || dapp === "Aave gateway (AVAX)" || dapp === "Yield Yak") {
+    const op = describeAvaxDefi(c, dapp, to, value, data, rows, warnings);
+    if (op) return op;
+  }
   if (dapp && dapp.startsWith("BENQI ")) {
     const op = await describeBenqi(c, dapp, value, data, rows, warnings, to);
     if (op) return op;
@@ -2073,6 +2111,47 @@ async function describeBenqi(c, dapp, value, data, rows, warnings, to) {
   rows.push([t("kRaw"), data, { raw: true }]);
   warnings.push([t("benqiToUp"), "line-ok"]);
   warnings.push([t(note), "line-dim"]);
+  return op;
+}
+
+// Aave (pro.aave.com) and Yield Yak on Avalanche, at their known addresses only. The functions were read
+// from real calls; names and types match the selectors exactly.
+const AVAX_DEFI_IFACE = new ethers.Interface([
+  "function setUserPositionManager(address positionManager, bool approve)",                    // Aave Spoke
+  "function supplyAsCollateralNative(address spoke, uint256 reserveId, uint256 amount) payable",  // Aave gateway
+  "function deposit(address token, uint256 amount, uint256 minShares) payable",                 // Yield Yak
+]);
+const NATIVE_PLACEHOLDER = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+function describeAvaxDefi(c, dapp, to, value, data, rows, warnings) {
+  let p = null;
+  try { p = AVAX_DEFI_IFACE.parseTransaction({ data, value }); } catch (e) { p = null; }
+  if (!p) return null;
+  const label = (a) => { const d = DAPP_CONTRACTS[`${c.net.chainId}:${String(a).toLowerCase()}`]; return d ? `${a} (${d})` : `${a} (${t("unknownAddress")})`; };
+  const known = (a, name) => DAPP_CONTRACTS[`${c.net.chainId}:${String(a).toLowerCase()}`] === name;
+  let op;
+  if (dapp === "Aave Spoke" && p.name === "setUserPositionManager") {
+    const [mgr, approve] = p.args;
+    op = t(approve ? "aaveManagerOn" : "aaveManagerOff", { who: label(mgr) });
+    if (!approve) warnings.push([t("aaveManagerOffNote"), "line-ok"]);
+    else if (known(mgr, "Aave gateway (AVAX)")) warnings.push([t("aaveManagerKnown"), "line-warn"]);
+    else warnings.push([t("aaveManagerUnknown", { who: mgr }), "line-danger"]);
+  } else if (dapp === "Aave gateway (AVAX)" && p.name === "supplyAsCollateralNative") {
+    const [spoke, reserveId, amount] = p.args;
+    op = t("aaveSupplyNative", { amount: `${ethers.formatEther(amount)} ${c.net.currency || ""}`.trim(), id: reserveId.toString(), spoke: label(spoke) });
+    warnings.push(amount === value ? [t("defiValueOk"), "line-ok"] : [t("defiValueOff", { amount: ethers.formatEther(amount), value: ethers.formatEther(value) }), "line-danger"]);
+    if (!known(spoke, "Aave Spoke")) warnings.push([t("aaveSpokeUnknown", { who: spoke }), "line-danger"]);
+    warnings.push([t("aaveSupplyNote"), "line-dim"]);
+  } else if (dapp === "Yield Yak" && p.name === "deposit") {
+    const [token, amount, minShares] = p.args;
+    const native = token.toLowerCase() === NATIVE_PLACEHOLDER;
+    op = t("yakDeposit", { amount: native ? `${ethers.formatEther(amount)} ${c.net.currency || ""}`.trim() : `${amount} (${token})`, min: ethers.formatEther(minShares) });
+    if (native) warnings.push(amount === value ? [t("defiValueOk"), "line-ok"] : [t("defiValueOff", { amount: ethers.formatEther(amount), value: ethers.formatEther(value) }), "line-danger"]);
+    warnings.push([t("yakNote"), "line-dim"]);
+  } else return null;
+  const sig = `${p.name}(${p.fragment.inputs.map((i) => i.type).join(",")})`;
+  rows.push([t("kCall"), op, {}]);
+  rows.push([t("kParams"), `${sig}\n${p.fragment.inputs.map((inp, i) => `${inp.name}: ${String(p.args[i])}`).join("\n")}`, { block: true }]);
+  rows.push([t("kRaw"), data, { raw: true }]);
   return op;
 }
 
