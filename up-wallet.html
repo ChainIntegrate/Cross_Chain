@@ -531,6 +531,7 @@ const I18N = {
     // requests
     reqMethod: (v) => `Richiesta dalla dApp: ${v.method}`,
     reqBusy: "C'è già una richiesta in attesa: la nuova viene rifiutata.",
+    reqCapabilities: "La dApp chiede le capacità del wallet (EIP-5792): risposta \"nessuna capacità speciale\" sulla rete della sessione. Le transazioni arrivano una alla volta, ognuna con i soliti controlli.",
     reqUnsupported: (v) => `Metodo non supportato, rifiutato: ${v.method}`,
     reqWrongChain: (v) => `❌ Richiesta sulla rete ${v.chain}, diversa da quella scelta (${v.exp}): rifiutata.`,
     reqSwitchChain: (v) => `La dApp chiede di passare alla rete con chainId ${v.id}. Qui si usa una rete alla volta: se serve, scegli quella rete nel pannello 1 e ricollega. Rifiutata.`,
@@ -833,6 +834,7 @@ const I18N = {
 
     reqMethod: (v) => `Request from the dApp: ${v.method}`,
     reqBusy: "A request is already pending: the new one is rejected.",
+    reqCapabilities: "The dApp asks for the wallet's capabilities (EIP-5792): answered \"no special capabilities\" on the session's network. Transactions come one at a time, each with the usual checks.",
     reqUnsupported: (v) => `Unsupported method, rejected: ${v.method}`,
     reqWrongChain: (v) => `❌ Request on network ${v.chain}, not the chosen one (${v.exp}): rejected.`,
     reqSwitchChain: (v) => `The dApp asks to switch to chainId ${v.id}. This page uses one network at a time: if needed, choose that network in panel 1 and connect again. Rejected.`,
@@ -1502,7 +1504,7 @@ async function onSessionProposal({ id, params, verifyContext }) {
       supportedNamespaces: {
         eip155: {
           chains: [c.caip],
-          methods: ["eth_sendTransaction", "personal_sign", "eth_signTypedData_v4", "eth_signTypedData", "eth_signTypedData_v3", "eth_sign", "wallet_switchEthereumChain"],
+          methods: ["eth_sendTransaction", "personal_sign", "eth_signTypedData_v4", "eth_signTypedData", "eth_signTypedData_v3", "eth_sign", "wallet_switchEthereumChain", "wallet_getCapabilities"],
           events: ["accountsChanged", "chainChanged"],
           accounts: [`${c.caip}:${c.up}`],
         },
@@ -1613,6 +1615,14 @@ async function onSessionRequest(event) {
     if (sessionChain === `eip155:${wanted}`) return respondResult(topic, id, null);
     log(t("reqSwitchChain", { id: wanted }), "line-warn");
     return respondError(topic, id, "Only the chosen network is supported", 4902);
+  }
+  // EIP-5792: some dApps (Reown AppKit) ask the wallet's capabilities right after connecting and may stall
+  // when the method is missing. The answer: nothing special on the session's network (no batched calls,
+  // no paymaster service), so the dApp sends its transactions one at a time, each checked here as usual.
+  if (request.method === "wallet_getCapabilities") {
+    const hex = sessionChain ? "0x" + Number(sessionChain.split(":")[1]).toString(16) : null;
+    log(t("reqCapabilities"), "line-dim");
+    return respondResult(topic, id, hex ? { [hex]: { atomic: { status: "unsupported" } } } : {});
   }
   if (!["eth_sendTransaction", "personal_sign", "eth_signTypedData_v4"].includes(request.method)) {
     log(t("reqUnsupported", { method: request.method }), "line-warn");
