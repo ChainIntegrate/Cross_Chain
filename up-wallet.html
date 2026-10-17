@@ -518,6 +518,7 @@ const I18N = {
     proposalUnverified: "⚠️ Dominio non verificato da WalletConnect: controlla di essere sul sito giusto prima di approvare qualsiasi cosa.",
     proposalRejectedChains: (v) => `❌ Connessione rifiutata: la dApp richiede reti diverse da quella scelta (${v.err}). Scegli nel pannello 1 la rete che la dApp usa e ricollega.`,
     proposalOtherChains: (v) => `❌ Connessione rifiutata: la dApp chiede ${v.want}, nel pannello 1 è scelta ${v.have}. Scegli la rete della dApp, poi ricollega dalla dApp.`,
+    proposalAcceptsChains: (v) => `❌ Connessione rifiutata: la dApp accetta solo ${v.want}; nel pannello 1 è scelta ${v.have}. Scegli una di queste reti (dove la UP è pubblicata), poi ricollega dalla dApp.`,
     switchNetworkBtn: (v) => `Scegli ${v.name}`,
     attnProposal: (v) => `${v.name} chiede di collegarsi alla UP.`,
     attnRequest: (v) => `${v.who} chiede ${v.what}: torna su UP Wallet per vederla.`,
@@ -530,6 +531,7 @@ const I18N = {
     // requests
     reqMethod: (v) => `Richiesta dalla dApp: ${v.method}`,
     reqBusy: "C'è già una richiesta in attesa: la nuova viene rifiutata.",
+    reqCapabilities: "La dApp chiede le capacità del wallet (EIP-5792): risposta \"nessuna capacità speciale\" sulla rete della sessione. Le transazioni arrivano una alla volta, ognuna con i soliti controlli.",
     reqUnsupported: (v) => `Metodo non supportato, rifiutato: ${v.method}`,
     reqWrongChain: (v) => `❌ Richiesta sulla rete ${v.chain}, diversa da quella scelta (${v.exp}): rifiutata.`,
     reqSwitchChain: (v) => `La dApp chiede di passare alla rete con chainId ${v.id}. Qui si usa una rete alla volta: se serve, scegli quella rete nel pannello 1 e ricollega. Rifiutata.`,
@@ -814,6 +816,7 @@ const I18N = {
     pairing: "Connecting... confirm on the dApp if asked.",
     proposalFrom: (v) => `Connection request from: ${v.name} (${v.url}) — domain verification: ${v.verify}`,
     proposalOtherChains: (v) => `❌ Connection rejected: the dApp asks for ${v.want}, panel 1 has ${v.have}. Choose the dApp's network, then reconnect from the dApp.`,
+    proposalAcceptsChains: (v) => `❌ Connection rejected: the dApp accepts only ${v.want}; panel 1 has ${v.have}. Choose one of these networks (where the UP is deployed), then reconnect from the dApp.`,
     switchNetworkBtn: (v) => `Choose ${v.name}`,
     attnProposal: (v) => `${v.name} asks to connect to the UP.`,
     attnRequest: (v) => `${v.who} asks for ${v.what}: go back to UP Wallet to see it.`,
@@ -831,6 +834,7 @@ const I18N = {
 
     reqMethod: (v) => `Request from the dApp: ${v.method}`,
     reqBusy: "A request is already pending: the new one is rejected.",
+    reqCapabilities: "The dApp asks for the wallet's capabilities (EIP-5792): answered \"no special capabilities\" on the session's network. Transactions come one at a time, each with the usual checks.",
     reqUnsupported: (v) => `Unsupported method, rejected: ${v.method}`,
     reqWrongChain: (v) => `❌ Request on network ${v.chain}, not the chosen one (${v.exp}): rejected.`,
     reqSwitchChain: (v) => `The dApp asks to switch to chainId ${v.id}. This page uses one network at a time: if needed, choose that network in panel 1 and connect again. Rejected.`,
@@ -1500,7 +1504,7 @@ async function onSessionProposal({ id, params, verifyContext }) {
       supportedNamespaces: {
         eip155: {
           chains: [c.caip],
-          methods: ["eth_sendTransaction", "personal_sign", "eth_signTypedData_v4", "eth_signTypedData", "eth_signTypedData_v3", "eth_sign", "wallet_switchEthereumChain"],
+          methods: ["eth_sendTransaction", "personal_sign", "eth_signTypedData_v4", "eth_signTypedData", "eth_signTypedData_v3", "eth_sign", "wallet_switchEthereumChain", "wallet_getCapabilities"],
           events: ["accountsChanged", "chainChanged"],
           accounts: [`${c.caip}:${c.up}`],
         },
@@ -1511,23 +1515,29 @@ async function onSessionProposal({ id, params, verifyContext }) {
     log(t("proposalApproved", { net: `${c.net.name} (${c.net.chainId})` }), "line-dim");
     showSessions();
   } catch (e) {
-    // The networks the dApp requires, other than the chosen one: named, and one click away when the page has it.
-    const wanted = [...new Set(params.requiredNamespaces?.eip155?.chains || [])].filter((x) => x !== c.caip);
+    // The networks the dApp requires, other than the chosen one: named, and one click away when the page has
+    // it. A dApp that requires none but accepts only some (all optional, as with Reown AppKit) gets the same,
+    // with the networks it accepts.
+    const required = [...new Set(params.requiredNamespaces?.eip155?.chains || [])];
+    const optional = [...new Set(Object.entries(params.optionalNamespaces || {})
+      .filter(([k]) => k.split(":")[0] === "eip155").flatMap(([k, v]) => v.chains || (k.includes(":") ? [k] : [])))];
+    const wanted = (required.length ? required : optional).filter((x) => x !== c.caip);
     const known = wanted.map((x) => NETWORKS.find((n) => n.chainId && `eip155:${n.chainId}` === x));
-    if (!wanted.length) log(t("proposalRejectedChains", { err: e.message }), "line-err");
+    if (!wanted.length || (!required.length && optional.includes(c.caip))) log(t("proposalRejectedChains", { err: e.message }), "line-err");
     else {
       const name = (x, i) => known[i] ? `${known[i].name} (chainId ${known[i].chainId})` : `chainId ${x.split(":")[1]}`;
-      const line = log(t("proposalOtherChains", { want: wanted.map(name).join(", "), have: `${c.net.name} (chainId ${c.net.chainId})` }), "line-err");
-      if (wanted.length === 1 && known[0]) {
+      const have = `${c.net.name} (chainId ${c.net.chainId})`;
+      const line = log(t(required.length ? "proposalOtherChains" : "proposalAcceptsChains", { want: wanted.map(name).join(", "), have }), "line-err");
+      for (const k of known.filter(Boolean).slice(0, 8)) {
         const b = document.createElement("button");
-        b.type = "button"; b.className = "secondary"; b.style.marginLeft = "8px";
-        b.textContent = t("switchNetworkBtn", { name: known[0].name });
+        b.type = "button"; b.className = "secondary"; b.style.margin = "4px 0 0 8px";
+        b.textContent = t("switchNetworkBtn", { name: k.name });
         b.addEventListener("click", () => {
           $("networkFilter").value = "";
           renderNetworkOptions("");
-          networkSelectEl.value = known[0].key;
+          networkSelectEl.value = k.key;
           networkSelectEl.dispatchEvent(new Event("change"));
-          b.disabled = true;
+          line.querySelectorAll("button").forEach((x) => { x.disabled = true; });
         });
         line.appendChild(b);
       }
@@ -1605,6 +1615,14 @@ async function onSessionRequest(event) {
     if (sessionChain === `eip155:${wanted}`) return respondResult(topic, id, null);
     log(t("reqSwitchChain", { id: wanted }), "line-warn");
     return respondError(topic, id, "Only the chosen network is supported", 4902);
+  }
+  // EIP-5792: some dApps (Reown AppKit) ask the wallet's capabilities right after connecting and may stall
+  // when the method is missing. The answer: nothing special on the session's network (no batched calls,
+  // no paymaster service), so the dApp sends its transactions one at a time, each checked here as usual.
+  if (request.method === "wallet_getCapabilities") {
+    const hex = sessionChain ? "0x" + Number(sessionChain.split(":")[1]).toString(16) : null;
+    log(t("reqCapabilities"), "line-dim");
+    return respondResult(topic, id, hex ? { [hex]: { atomic: { status: "unsupported" } } } : {});
   }
   if (!["eth_sendTransaction", "personal_sign", "eth_signTypedData_v4"].includes(request.method)) {
     log(t("reqUnsupported", { method: request.method }), "line-warn");
