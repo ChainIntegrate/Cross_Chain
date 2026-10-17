@@ -142,6 +142,7 @@
   .risk-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 12px; font-size: 13.5px; }
   button.small { width: auto; margin-top: 0; padding: 7px 12px; font-size: 12.5px; }
   .risk-modal { border-color: var(--err); }
+  .risk-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .risk-modal .modal-title { color: var(--err); }
   .risk-text { font-size: 13.5px; line-height: 1.55; }
   .risk-foot { flex-direction: column; align-items: stretch; gap: 8px; }
@@ -310,7 +311,7 @@
 
 <div class="modal-backdrop" id="riskModal" hidden>
   <div class="modal risk-modal" role="dialog" aria-modal="true" aria-labelledby="riskTitle">
-    <div class="modal-head"><div class="modal-title" id="riskTitle" data-i18n="riskTitle">Avvertenze</div></div>
+    <div class="modal-head risk-head"><div class="modal-title" id="riskTitle" data-i18n="riskTitle">Avvertenze</div><button type="button" class="lang-btn" id="riskLang" data-i18n="langToggleBtn">English</button></div>
     <div class="modal-body"><div class="risk-text" data-i18n-html="disclaimer"></div></div>
     <div class="modal-foot risk-foot">
       <div class="check-row"><input type="checkbox" id="ackRisk"><label for="ackRisk" style="margin:0; color: var(--text);" data-i18n="ackLabel">Ho letto e accetto</label></div>
@@ -498,7 +499,13 @@ const UP_IFACE = new ethers.Interface(["function execute(uint256 operationType, 
 const KM_IFACE = new ethers.Interface(["function execute(bytes payload) payable returns (bytes)"]);
 
 // ==================== I18N ====================
-let LANG = "it";
+// Language: the one chosen before on this browser or app, else the browser's or phone's own (Italian for
+// Italian, English for anything else).
+const LANG_KEY = "upwallet.lang";
+let LANG = (() => {
+  try { const v = localStorage.getItem(LANG_KEY); if (v === "it" || v === "en") return v; } catch (e) { /* none stored */ }
+  return /^it\b/i.test(navigator.language || "") ? "it" : "en";
+})();
 const I18N = {
   it: {
     pageTitle: "UP Wallet — ChainIntegrate",
@@ -1232,7 +1239,13 @@ function applyI18n() {
   if ($("riskState").textContent) { showRiskState(); logToggleText(); }
   if ($("upCardAddr").textContent) { updateNav(); $("viewTitle").textContent = t("viewTitle_" + document.body.dataset.view); if (document.body.dataset.view === "receive") renderReceive(); if (presenceFor) $("netPresenceNote").textContent = t("netPresenceNote"); }
 }
-$("langToggle").addEventListener("click", () => { LANG = LANG === "it" ? "en" : "it"; applyI18n(); });
+function switchLang() {
+  LANG = LANG === "it" ? "en" : "it";
+  try { localStorage.setItem(LANG_KEY, LANG); } catch (e) { /* not remembered */ }
+  applyI18n();
+}
+$("langToggle").addEventListener("click", switchLang);
+$("riskLang").addEventListener("click", switchLang);
 
 // ==================== HELPERS ====================
 // All data coming from the dApp, wallets or RPCs is written with textContent, never innerHTML.
