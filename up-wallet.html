@@ -1168,9 +1168,9 @@ $("riskReopen").addEventListener("click", () => openRisk(true));
 try { $("ackRisk").checked = localStorage.getItem(RISK_KEY) === RISK_VERSION; } catch (e) { $("ackRisk").checked = false; }
 showRiskState();
 if (!riskAccepted()) openRisk(true);
-// Messages: in the app only the last one is shown (the screen is small); every message stays in the list.
+// Messages: only the last one is shown, the button shows them all; every message stays in the list.
 function logToggleText() { $("logToggle").textContent = $("log").classList.contains("last-only") ? t("logAll", { n: $("log").children.length }) : t("logLast"); }
-$("log").classList.toggle("last-only", inApp());
+$("log").classList.add("last-only");
 $("logToggle").addEventListener("click", () => { $("log").classList.toggle("last-only"); logToggleText(); });
 new MutationObserver(logToggleText).observe($("log"), { childList: true });
 logToggleText();
