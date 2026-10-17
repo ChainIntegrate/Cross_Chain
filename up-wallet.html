@@ -85,6 +85,20 @@
   .modal-foot button { margin-top: 0; }
   .modal-foot button[hidden] { display: none; }
   body.modal-open { overflow: hidden; }
+  /* Warnings: a window at start, until accepted (remembered in this browser); panel 0 can open it again. */
+  .risk-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 12px; font-size: 13.5px; }
+  button.small { width: auto; margin-top: 0; padding: 7px 12px; font-size: 12.5px; }
+  .risk-modal { border-color: var(--err); }
+  .risk-modal .modal-title { color: var(--err); }
+  .risk-text { font-size: 13.5px; line-height: 1.55; }
+  .risk-foot { flex-direction: column; align-items: stretch; gap: 8px; }
+  .risk-foot .check-row { margin-top: 0; }
+  .risk-btns { display: flex; gap: 10px; }
+  /* Messages: the whole list, or only the last one (the default in the app). */
+  .log-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
+  .log-title { font-size: 13px; color: var(--text-dim); font-weight: 600; }
+  #log { margin-top: 6px; }
+  #log.last-only > :not(:last-child) { display: none; }
   .warn-box { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--err); border-radius: 8px; background: rgba(224,90,90,0.08); font-size: 13px; line-height: 1.5; }
   @media (max-width: 560px) { .kv { grid-template-columns: 1fr; } }
   /* While the page works (a dApp request, a connection, a send): a fixed box with the current step. */
@@ -115,8 +129,7 @@
 <div class="panel">
   <h2 data-i18n="panel0Title">0 · Cos'è e come funziona</h2>
   <div class="note" data-i18n-html="panel0Note"></div>
-  <div class="warn-box" data-i18n-html="disclaimer"></div>
-  <div class="check-row"><input type="checkbox" id="ackRisk"><label for="ackRisk" style="margin:0; color: var(--text);" data-i18n="ackLabel">Ho letto e accetto</label></div>
+  <div class="risk-row"><span id="riskState" class="line-warn"></span><button id="riskReopen" type="button" class="secondary small" data-i18n="riskReopenBtn">Leggi le avvertenze</button></div>
 </div>
 
 <div class="panel">
@@ -164,7 +177,8 @@
   <div class="check-row"><input type="checkbox" id="simulateOnly" checked><label for="simulateOnly" style="margin:0;" data-i18n="simulateOnlyLabel">Solo simulazione (non inviare nulla)</label></div>
   <div class="note" style="margin-top:6px;" data-i18n="simulateOnlyNote"></div>
   <div id="requestBox" class="status-box"><span class="empty" data-i18n="noRequest">Nessuna richiesta in attesa.</span></div>
-  <div id="log" class="line-dim" style="margin-top:10px;"></div>
+  <div class="log-bar"><span class="log-title" data-i18n="logTitle">Messaggi</span><button id="logToggle" type="button" class="secondary small"></button></div>
+  <div id="log" class="line-dim"></div>
 </div>
 
 <div class="panel">
@@ -197,6 +211,20 @@
     <button id="sendMaxBtn" type="button" class="secondary" data-i18n="sendMaxBtn">Tutto</button>
   </div>
   <button id="sendPrepareBtn" disabled data-i18n="sendPrepareBtn">Prepara l'invio</button>
+</div>
+
+<div class="modal-backdrop" id="riskModal" hidden>
+  <div class="modal risk-modal" role="dialog" aria-modal="true" aria-labelledby="riskTitle">
+    <div class="modal-head"><div class="modal-title" id="riskTitle" data-i18n="riskTitle">Avvertenze</div></div>
+    <div class="modal-body"><div class="risk-text" data-i18n-html="disclaimer"></div></div>
+    <div class="modal-foot risk-foot">
+      <div class="check-row"><input type="checkbox" id="ackRisk"><label for="ackRisk" style="margin:0; color: var(--text);" data-i18n="ackLabel">Ho letto e accetto</label></div>
+      <div class="risk-btns">
+        <button id="riskOk" type="button" disabled data-i18n="riskOkBtn">Continua</button>
+        <button id="riskLater" type="button" class="secondary" data-i18n="riskLaterBtn">Non ora</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="modal-backdrop" id="requestModal" hidden>
@@ -381,7 +409,16 @@ const I18N = {
     panel0Note: "<b>Cos'è.</b> UP Wallet è il portafoglio della tua Universal Profile su <b>tutte le reti dove la UP esiste</b>: LUKSO e le reti dove l'hai rideployata con questo sito (Base, Polygon, Arbitrum, Avalanche, Arc…), con lo <b>stesso indirizzo</b> ovunque. Fa quello che su LUKSO fanno l'estensione e l'app UP, anche sulle altre reti, dove quelle non arrivano.<ul style=\"margin:8px 0; padding-left:20px;\"><li><b>Vedi cosa possiede la UP</b> e <b>invii</b> valuta, token e NFT (pannello 6), anche a una UP cercata per nome.</li><li><b>Usi le dApp</b> che si collegano con WalletConnect (OpenSea, Uniswap, hup.social…): la dApp vede la tua UP come account, e quello che compri o ricevi arriva alla UP. Quasi tutte funzionano; qualcuna non accetta un account smart contract come la UP.</li><li><b>Il gas</b> lo paga il tuo controller, oppure il sito, sulle reti e per i profili dove il gas pagato dal sito è attivo.</li></ul><b>Cosa ti serve.</b> L'indirizzo della UP, <b>MetaMask con il controller della UP</b> (la chiave che firma per la UP: la guida spiega come importarla) e la UP già presente sulla rete scelta. Si lavora su una rete alla volta. Sul telefono c'è l'app Android, con MetaMask mobile.<br><b>Rispetto all'estensione UP.</b> Firmi in MetaMask invece che nell'estensione. Prima di ogni firma la pagina ti mostra in chiaro cosa stai facendo, controlla e simula. È sperimentale: parti con la modalità simulazione e con importi piccoli.<details style=\"margin-top:8px;\"><summary>Come funziona sotto</summary>Questa pagina fa da <b>ponte WalletConnect</b> tra una dApp e la tua UP. La dApp vede come account l'indirizzo della UP. Ogni <b>transazione</b> viene incapsulata in <code>KeyManager.execute(UP.execute(...))</code> e firmata dal tuo controller in MetaMask: la chiamata parte dalla UP e il valore esce dal saldo della UP, il gas lo paga il controller. Ogni <b>firma di messaggio</b> la fa il controller e la UP la riconosce come propria (ERC-1271). Prima di tutto la pagina verifica che UP e controller siano compatibili sulla rete scelta. Ogni richiesta viene mostrata per intero, controllata e (per le transazioni) simulata; niente parte senza il tuo clic e la tua conferma in MetaMask.</details>",
     disclaimer: "<b>⚠️ Leggi prima di usare questa pagina</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Strumento sperimentale, non sottoposto ad audit.</b> Può contenere errori.</li><li><b>Transazioni reali e irreversibili.</b> Nessuno può annullare una transazione confermata. Usa importi minimi e parti sempre in modalità simulazione.</li><li><b>La pagina non conosce le dApp.</b> Decodifica solo una parte delle chiamate (token standard e casi comuni); per il resto ti mostra i dati grezzi. Se non capisci cosa fa una richiesta, <b>rifiutala</b>.</li><li><b>Firme di messaggi.</b> Una firma può autorizzare azioni anche senza transazione: accessi, ordini, permessi a spendere token. La pagina mostra il contenuto e l'esito dei controlli, ma non può sapere a cosa servirà la firma.</li><li><b>Le approvazioni di token restano valide</b> anche dopo aver chiuso la pagina: chi le riceve può spostare i token della UP finché non le revochi.</li><li><b>Responsabilità.</b> ChainIntegrate non si assume alcuna responsabilità per firme o transazioni approvate su contenuto poco chiaro, né per l'uso che le dApp ne fanno. Il software è fornito \"così com'è\" (licenza MIT), senza garanzie: lo usi a tuo rischio.</li><li><b>Da cosa dipende la sicurezza:</b> dall'architettura (firmi sempre tu nel tuo wallet, i permessi li applica il Key Manager della UP) e dai servizi usati (la verifica del dominio di WalletConnect/Reown, gli RPC della rete). La pagina mostra l'esito di queste verifiche ma non può garantirle.</li><li><b>Un controller per ogni UP.</b> Se lo stesso controller governa più UP, una firma valida per questa UP vale anche per le altre.</li><li><b>Questa pagina non chiede mai chiavi private</b> né seed phrase.</li><li><b>Privacy:</b> la connessione WalletConnect passa dai server di Reown, che vedono i metadati della sessione (indirizzi, rete). Le verifiche usano l'RPC pubblico della rete scelta.</li><li><b>Nessuna affiliazione</b> con LUKSO, WalletConnect/Reown, MetaMask o le dApp che colleghi. Non è una consulenza finanziaria.</li></ul><div style=\"margin-top:8px;\">Sempre rifiutati: <code>eth_sign</code> e i formati di firma vecchi, la creazione di contratti, le transazioni della UP verso se stessa o verso il proprio Key Manager (potrebbero cambiarne controller e permessi), le richieste su una rete diversa da quella scelta.</div>",
     ackLabel: "Ho letto e accetto: uso questo strumento a mio rischio.",
-    ackRequired: "Prima accetta le condizioni nel pannello 0.",
+    riskTitle: "⚠️ Prima di iniziare",
+    riskOkBtn: "Continua",
+    riskLaterBtn: "Non ora",
+    riskReopenBtn: "Leggi le avvertenze",
+    riskAccepted: "✅ Avvertenze accettate.",
+    riskPending: "⚠️ Avvertenze non ancora accettate: finché non le accetti la pagina non collega dApp e non invia nulla.",
+    logTitle: "Messaggi",
+    logAll: (v) => `Mostra tutti (${v.n})`,
+    logLast: "Solo l'ultimo",
+    ackRequired: "Prima accetta le avvertenze (pannello 0, \"Leggi le avvertenze\").",
     panel1Title: "1 · Rete",
     panel1Note: "La rete su cui la UP è deployata e su cui vuoi usare la dApp. Una rete alla volta: cambiarla chiude le sessioni WalletConnect attive.",
     networkFilterPlaceholder: "Filtra per nome... (es. base, polygon, arbitrum)",
@@ -687,7 +724,16 @@ const I18N = {
     panel0Note: "<b>What it is.</b> UP Wallet is your Universal Profile's wallet on <b>every network where the UP exists</b>: LUKSO and the networks where you redeployed it with this site (Base, Polygon, Arbitrum, Avalanche, Arc…), with the <b>same address</b> everywhere. It does what the UP extension and app do on LUKSO, on the other networks too, where they do not reach.<ul style=\"margin:8px 0; padding-left:20px;\"><li><b>See what the UP holds</b> and <b>send</b> currency, tokens and NFTs (panel 6), also to a UP found by name.</li><li><b>Use dApps</b> that connect with WalletConnect (OpenSea, Uniswap, hup.social…): the dApp sees your UP as the account, and what you buy or receive goes to the UP. Almost all work; a few do not accept a smart contract account such as the UP.</li><li><b>Gas</b> is paid by your controller, or by the site, on the networks and for the profiles where gas paid by the site is active.</li></ul><b>What you need.</b> The UP's address, <b>MetaMask with the UP's controller</b> (the key that signs for the UP: the guide explains how to import it) and the UP already on the chosen network. You work on one network at a time. On the phone there is the Android app, with MetaMask mobile.<br><b>Compared with the UP extension.</b> You sign in MetaMask instead of the extension. Before every signature the page shows you in plain words what you are doing, checks and simulates it. It is experimental: start in simulation mode and with small amounts.<details style=\"margin-top:8px;\"><summary>How it works underneath</summary>This page is a <b>WalletConnect bridge</b> between a dApp and your UP. The dApp sees the UP address as the account. Every <b>transaction</b> is wrapped into <code>KeyManager.execute(UP.execute(...))</code> and signed by your controller in MetaMask: the call comes from the UP and any value is paid from the UP's balance, while the controller pays the gas. Every <b>message signature</b> is made by the controller and the UP recognises it as its own (ERC-1271). First of all, the page checks that the UP and the controller are compatible on the chosen network. Every request is shown in full, checked and (for transactions) simulated; nothing happens without your click and your confirmation in MetaMask.</details>",
     disclaimer: "<b>⚠️ Read before using this page</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Experimental tool, not audited.</b> It may contain bugs.</li><li><b>Real, irreversible transactions.</b> Nobody can undo a confirmed transaction. Use minimal amounts and always start in simulation mode.</li><li><b>The page does not know the dApps.</b> It decodes only part of the calls (standard tokens and common cases); for the rest it shows you the raw data. If you do not understand what a request does, <b>reject it</b>.</li><li><b>Message signatures.</b> A signature can authorise actions even without a transaction: logins, orders, permissions to spend tokens. The page shows the content and the result of the checks, but cannot know what the signature will be used for.</li><li><b>Token approvals stay valid</b> after you close the page: whoever receives them can move the UP's tokens until you revoke them.</li><li><b>Responsibility.</b> ChainIntegrate takes no responsibility for signatures or transactions approved on unclear content, nor for what dApps do with them. The software is provided \"as is\" (MIT license), without warranty: you use it at your own risk.</li><li><b>What security relies on:</b> the architecture (you always sign in your own wallet, permissions are enforced by the UP's Key Manager) and the services used (WalletConnect/Reown domain verification, the network's RPCs). The page shows the result of these checks but cannot guarantee them.</li><li><b>One controller per UP.</b> If the same controller governs several UPs, a signature valid for this UP is valid for the others too.</li><li><b>This page never asks for private keys</b> or seed phrases.</li><li><b>Privacy:</b> the WalletConnect connection goes through Reown's servers, which see the session metadata (addresses, network). Checks use the chosen network's public RPC.</li><li><b>No affiliation</b> with LUKSO, WalletConnect/Reown, MetaMask or the dApps you connect. This is not financial advice.</li></ul><div style=\"margin-top:8px;\">Always rejected: <code>eth_sign</code> and legacy signature formats, contract creation, transactions from the UP to itself or to its own Key Manager (they could change its controllers and permissions), requests on a network other than the chosen one.</div>",
     ackLabel: "I have read and accept: I use this tool at my own risk.",
-    ackRequired: "Accept the conditions in panel 0 first.",
+    riskTitle: "⚠️ Before you start",
+    riskOkBtn: "Continue",
+    riskLaterBtn: "Not now",
+    riskReopenBtn: "Read the warnings",
+    riskAccepted: "✅ Warnings accepted.",
+    riskPending: "⚠️ Warnings not accepted yet: until you accept them the page connects no dApp and sends nothing.",
+    logTitle: "Messages",
+    logAll: (v) => `Show all (${v.n})`,
+    logLast: "Only the last",
+    ackRequired: "Accept the warnings first (panel 0, \"Read the warnings\").",
     panel1Title: "1 · Network",
     panel1Note: "The network where the UP is deployed and where you want to use the dApp. One network at a time: changing it closes the active WalletConnect sessions.",
     networkFilterPlaceholder: "Filter by name... (e.g. base, polygon, arbitrum)",
@@ -993,6 +1039,7 @@ function applyI18n() {
   document.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.getAttribute("data-i18n-html")); });
   document.querySelectorAll("[data-i18n-placeholder]").forEach(el => { el.placeholder = t(el.getAttribute("data-i18n-placeholder")); });
   if (lastCompliance) renderCompliance(lastCompliance);
+  if ($("riskState").textContent) { showRiskState(); logToggleText(); }
 }
 $("langToggle").addEventListener("click", () => { LANG = LANG === "it" ? "en" : "it"; applyI18n(); });
 
@@ -1094,6 +1141,39 @@ function renderKv(boxId, rows, verdict) {
   }
 }
 const riskAccepted = () => $("ackRisk").checked;
+// The warnings window: shown at start until accepted. Acceptance is remembered in this browser (or app)
+// for this version of the text; a new version (RISK_VERSION) asks again. "Not now" closes it unaccepted:
+// the page can be read, but it connects no dApp and sends nothing until accepted.
+const RISK_KEY = "upwallet.riskAccepted", RISK_VERSION = "1";
+function showRiskState() {
+  $("riskState").textContent = t(riskAccepted() ? "riskAccepted" : "riskPending");
+  $("riskState").className = riskAccepted() ? "line-ok" : "line-warn";
+}
+function openRisk(open) {
+  $("riskModal").hidden = !open;
+  document.body.classList.toggle("modal-open", open || !$("requestModal").hidden);
+  $("riskOk").disabled = !riskAccepted();
+  if (open) $("riskModal").querySelector(".modal-body").scrollTop = 0;
+}
+$("ackRisk").addEventListener("change", () => { $("riskOk").disabled = !riskAccepted(); showRiskState(); });
+$("riskOk").addEventListener("click", () => {
+  try { localStorage.setItem(RISK_KEY, RISK_VERSION); } catch (e) { /* not remembered: asked again next time */ }
+  openRisk(false); showRiskState();
+});
+$("riskLater").addEventListener("click", () => {
+  if (!riskAccepted()) { try { localStorage.removeItem(RISK_KEY); } catch (e) { /* nothing stored */ } }
+  openRisk(false); showRiskState();
+});
+$("riskReopen").addEventListener("click", () => openRisk(true));
+try { $("ackRisk").checked = localStorage.getItem(RISK_KEY) === RISK_VERSION; } catch (e) { $("ackRisk").checked = false; }
+showRiskState();
+if (!riskAccepted()) openRisk(true);
+// Messages: in the app only the last one is shown (the screen is small); every message stays in the list.
+function logToggleText() { $("logToggle").textContent = $("log").classList.contains("last-only") ? t("logAll", { n: $("log").children.length }) : t("logLast"); }
+$("log").classList.toggle("last-only", inApp());
+$("logToggle").addEventListener("click", () => { $("log").classList.toggle("last-only"); logToggleText(); });
+new MutationObserver(logToggleText).observe($("log"), { childList: true });
+logToggleText();
 const permNames = (perms) => PERMISSION_BITS.filter((n) => perms & P[n]).join(", ") || "—";
 
 // Upper bound of the gas price, read straight from the RPC (2 * baseFee + priority fee).
