@@ -92,7 +92,21 @@
   .up-card-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
   .up-card-addr { font-family: monospace; font-size: 15px; font-weight: 700; }
   .up-card-sub { font-size: 12.5px; color: var(--text-dim); }
-  .up-card-state { font-size: 12.5px; }
+  .up-card { cursor: pointer; }
+  .up-card-state { font-size: 12.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  /* Simulation on/off, in the UP card: a tap opens a small window to change it. */
+  .sim-chip { width: auto; margin: 0; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; background: transparent; }
+  .sim-chip.on { border: 1px solid var(--warn); color: var(--warn); }
+  .sim-chip.off { border: 1px solid var(--err); color: var(--err); }
+  .sim-modal { border-color: var(--warn); width: min(520px, 100%); }
+  .send-btns { display: flex; gap: 10px; }
+  .send-btns #sendClearBtn { flex: 0 0 30%; }
+  /* Back to the menu from the bottom of a long section (or to the top, in the full view). */
+  .fab { position: fixed; right: 16px; bottom: 16px; z-index: 15; width: 52px; height: 52px; margin: 0; padding: 0; border-radius: 50%;
+         font-size: 22px; box-shadow: 0 4px 16px rgba(0,0,0,0.45); display: none; }
+  .fab.on { display: block; }
+  body.modal-open .fab { display: none; }
+  body:has(#busyToast.on) .fab { bottom: 96px; }
   /* The explanation under the title only on the menu; in the app the banner is left out (the app has its icon),
      so the menu starts near the top of the phone screen. */
   body:not([data-view="home"]) .subtitle { display: none; }
@@ -181,10 +195,10 @@
 </div>
 
 <div id="nav">
-  <button type="button" class="up-card" id="upCard" data-go="settings">
+  <div class="up-card" id="upCard" role="button" tabindex="0">
     <span class="net-logo" id="upCardLogo"></span>
-    <span class="up-card-main"><span class="up-card-addr" id="upCardAddr"></span><span class="up-card-sub" id="upCardSub"></span><span class="up-card-state" id="upCardState"></span></span>
-  </button>
+    <span class="up-card-main"><span class="up-card-addr" id="upCardAddr"></span><span class="up-card-sub" id="upCardSub"></span><span class="up-card-state" id="upCardState"><span id="upCardStateText"></span><button type="button" class="sim-chip" id="simChip"></button></span></span>
+  </div>
   <div class="setup-banner" id="setupBanner" hidden><span data-i18n="setupBanner"></span><button type="button" class="small" data-go="settings" data-i18n="setupGoBtn">Configura</button></div>
   <div class="tiles">
     <button type="button" class="tile" data-go="send"><span class="tile-ico">↗</span><span class="tile-t" data-i18n="tileSend">Invia</span><span class="tile-s" data-i18n="tileSendSub"></span></button>
@@ -306,7 +320,10 @@
     <input type="text" id="sendAmount" inputmode="decimal" placeholder="0.0">
     <button id="sendMaxBtn" type="button" class="secondary" data-i18n="sendMaxBtn">Tutto</button>
   </div>
-  <button id="sendPrepareBtn" disabled data-i18n="sendPrepareBtn">Prepara l'invio</button>
+  <div class="send-btns">
+    <button id="sendPrepareBtn" disabled data-i18n="sendPrepareBtn">Prepara l'invio</button>
+    <button id="sendClearBtn" type="button" class="secondary" data-i18n="sendClearBtn">Pulisci</button>
+  </div>
 </div>
 
 <div class="modal-backdrop" id="riskModal" hidden>
@@ -322,6 +339,20 @@
     </div>
   </div>
 </div>
+
+<div class="modal-backdrop" id="simModal" hidden>
+  <div class="modal sim-modal" role="dialog" aria-modal="true" aria-labelledby="simTitle">
+    <div class="modal-head"><div class="modal-title" id="simTitle" data-i18n="simTitle">Modalità simulazione</div></div>
+    <div class="modal-body">
+      <div class="check-row" style="margin-top:0;"><input type="checkbox" id="simToggle"><label for="simToggle" style="margin:0; color: var(--text);" data-i18n="simulateOnlyLabel">Solo simulazione (non inviare nulla)</label></div>
+      <div class="note" style="margin-top:8px;" data-i18n="simulateOnlyNote"></div>
+      <div id="simWarn"></div>
+    </div>
+    <div class="modal-foot"><button id="simClose" type="button" data-i18n="simCloseBtn">Fatto</button></div>
+  </div>
+</div>
+
+<button type="button" id="fabMenu" class="fab" aria-label="Menu"></button>
 
 <div class="modal-backdrop" id="requestModal" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
@@ -542,6 +573,11 @@ const I18N = {
     receiveAbsent: (v) => `⚠️ Su ${v.net} questa UP non esiste: non farti mandare fondi su questa rete.`,
     receiveShareText: "Il mio Universal Profile",
     cardNoUp: "UP non impostata", cardReady: "pronta", cardNotReady: "da configurare", cardSim: "🧪 simulazione", cardNotHere: "la UP qui non esiste",
+    cardReal: "⚡ invio reale", simChipTitle: "Tocca per cambiare la modalità simulazione",
+    simTitle: "🧪 Modalità simulazione", simCloseBtn: "Fatto",
+    simOffWarn: "Spunta tolta: dopo la tua conferma in MetaMask le transazioni partono davvero e sono irreversibili. Usa importi piccoli.",
+    sendClearBtn: "Pulisci",
+    fabMenu: "Torna al menù", fabTop: "Torna in cima",
     riskTitle: "⚠️ Prima di iniziare",
     riskOkBtn: "Continua",
     riskLaterBtn: "Non ora",
@@ -915,6 +951,11 @@ const I18N = {
     receiveAbsent: (v) => `⚠️ This UP does not exist on ${v.net}: do not have funds sent to you on this network.`,
     receiveShareText: "My Universal Profile",
     cardNoUp: "No UP set", cardReady: "ready", cardNotReady: "to set up", cardSim: "🧪 simulation", cardNotHere: "the UP does not exist here",
+    cardReal: "⚡ real sending", simChipTitle: "Tap to change the simulation mode",
+    simTitle: "🧪 Simulation mode", simCloseBtn: "Done",
+    simOffWarn: "Unticked: after your confirmation in MetaMask, transactions are really sent and cannot be undone. Use small amounts.",
+    sendClearBtn: "Clear",
+    fabMenu: "Back to the menu", fabTop: "Back to the top",
     riskTitle: "⚠️ Before you start",
     riskOkBtn: "Continue",
     riskLaterBtn: "Not now",
@@ -3036,7 +3077,7 @@ $("rejectBtn").addEventListener("click", async () => {
 // back. "Full view" (Settings) shows every panel at once, as the classic page; it is remembered here.
 const VIEW_KEY = "upwallet.view";
 const MAIN_NETS = ["lukso", "base", "arbitrum-one", "polygon", "avalanche-c-chain", "arc", "ethereum", "optimism", "bnb-smart-chain"];
-const LOGO_FILES = new Set(["arbitrum-one", "avalanche-c-chain", "base", "blast", "bnb-smart-chain", "celo", "ethereum", "gnosis", "linea", "mantle", "optimism", "polygon", "scroll", "sonic", "zksync"]);
+const LOGO_FILES = new Set(["lukso", "arc", "arbitrum-one", "avalanche-c-chain", "base", "blast", "bnb-smart-chain", "celo", "ethereum", "gnosis", "linea", "mantle", "optimism", "polygon", "scroll", "sonic", "zksync"]);
 const LOGO_COLORS = { lukso: "#fe005b", arc: "#1f2a44", custom: "#3a3f4b" };
 function netLogo(key, name) {
   const el = document.createElement("span");
@@ -3061,6 +3102,7 @@ function showView(v, remember = true) {
   if (v === "all") $("netMore").open = true;
   if (v === "receive") renderReceive();
   if (v !== "home" && v !== "all") window.scrollTo(0, 0);
+  fabState();
 }
 document.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => showView(b.dataset.go, false)));
 $("backHome").addEventListener("click", () => showView("home", false));
@@ -3117,8 +3159,11 @@ function updateNav() {
   logo.replaceWith(Object.assign(netLogo(net ? net.key : "custom", net ? net.name : "?"), { id: "upCardLogo" }));
   $("upCardAddr").textContent = up ? shortAddr(up) : t("cardNoUp");
   $("upCardSub").textContent = (net ? net.name : "—") + (up && presence[net && net.key] === false ? " · " + t("cardNotHere") : "");
-  const sim = $("simulateOnly").checked ? " · " + t("cardSim") : "";
-  $("upCardState").textContent = (ok ? "✅ " + t("cardReady") : complianceTimer && !lastCompliance ? "⏳" : "⚠️ " + t("cardNotReady")) + sim;
+  $("upCardStateText").textContent = ok ? "✅ " + t("cardReady") : complianceTimer && !lastCompliance ? "⏳" : "⚠️ " + t("cardNotReady");
+  const sim = $("simulateOnly").checked;
+  $("simChip").textContent = t(sim ? "cardSim" : "cardReal");
+  $("simChip").className = "sim-chip " + (sim ? "on" : "off");
+  $("simChip").title = t("simChipTitle");
   $("setupBanner").hidden = ok;
   renderNetPicker();
   if (document.body.dataset.view === "receive") renderReceive();
@@ -3163,6 +3208,44 @@ $("receiveShare").addEventListener("click", async () => {
 $("upAddress").addEventListener("input", () => { updateNav(); clearTimeout(presenceTimer); presenceTimer = setTimeout(checkPresence, 800); });
 networkSelectEl.addEventListener("change", updateNav);
 $("simulateOnly").addEventListener("change", updateNav);
+// The UP card opens Settings; its simulation chip opens the small simulation window instead.
+$("upCard").addEventListener("click", (e) => { if (!e.target.closest("#simChip")) showView("settings", false); });
+$("upCard").addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target === $("upCard")) { e.preventDefault(); showView("settings", false); } });
+function showSimWarn() {
+  const w = $("simWarn"); w.textContent = "";
+  if (!$("simToggle").checked) { const d = document.createElement("div"); d.className = "line-danger"; d.textContent = t("simOffWarn"); w.appendChild(d); }
+}
+function openSim(open) {
+  $("simModal").hidden = !open;
+  document.body.classList.toggle("modal-open", open || !$("requestModal").hidden || !$("riskModal").hidden);
+  if (open) { $("simToggle").checked = $("simulateOnly").checked; showSimWarn(); }
+}
+$("simChip").addEventListener("click", (e) => { e.stopPropagation(); openSim(true); });
+$("simToggle").addEventListener("change", () => {
+  $("simulateOnly").checked = $("simToggle").checked;
+  $("simulateOnly").dispatchEvent(new Event("change", { bubbles: true }));
+  showSimWarn();
+});
+$("simClose").addEventListener("click", () => openSim(false));
+$("simModal").addEventListener("click", (e) => { if (e.target === $("simModal")) openSim(false); });
+// Send: "Clear" empties the form (what to send, token, ID, recipient, amount); the balances stay.
+$("sendClearBtn").addEventListener("click", () => {
+  $("sendAsset").value = "native";
+  $("sendAsset").dispatchEvent(new Event("change"));
+  for (const id of ["sendToken", "sendId", "sendTo", "sendAmount"]) $(id).value = "";
+  for (const id of ["sendTokenInfo", "sendIdPick", "sendToResults", "sendToInfo"]) { $(id).textContent = ""; }
+  $("sendTokenInfo").className = "note"; $("sendToInfo").className = "note";
+  $("sendTo").dispatchEvent(new Event("input"));
+});
+// The round button at the bottom: back to the menu (or to the top, in the full view), once the page is scrolled.
+function fabState() {
+  const v = document.body.dataset.view;
+  $("fabMenu").classList.toggle("on", v !== "home" && window.scrollY > 240);
+  $("fabMenu").textContent = v === "all" ? "↑" : "☰";
+  $("fabMenu").title = t(v === "all" ? "fabTop" : "fabMenu");
+}
+window.addEventListener("scroll", fabState, { passive: true });
+$("fabMenu").addEventListener("click", () => { if (document.body.dataset.view !== "all") showView("home", false); window.scrollTo(0, 0); fabState(); });
 let startView = "home";
 try { if (localStorage.getItem(VIEW_KEY) === "all") startView = "all"; } catch (e) { /* default */ }
 
