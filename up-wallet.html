@@ -311,6 +311,8 @@ const DAPP_CONTRACTS = {
   // its vaults (source verified on the explorer). On Arc it is the address the app asks to approve.
   "8453:0x2b08a911f48de25a7e305d910afb5597abe8ea7b": "Morpho VaultBundlesV1", // Base
   "5042:0x76c1deefae48523e14903085081bda2999450b68": "Morpho VaultBundlesV1", // Arc
+  "43114:0x5c0401e81bc07ca70fad469b451682c0d747ef1c": "BENQI qiAVAX", // Avalanche: lending market (Compound-style)
+  "43114:0x2b2c81e08f1af8835a78bb2a90ae924ace0ea4be": "BENQI sAVAX", // Avalanche: liquid staking
 };
 // Morpho VaultBundlesV1. vaultBundlesV1Deposit's selector (0x6bbba4e0) matches the calls Morpho's app
 // sends, so its types are exact (TokenPermit = (uint8 kind, bytes data)). Permit, used by withdraw and
@@ -590,6 +592,12 @@ const I18N = {
     unknownCall: (v) => `Chiamata non riconosciuta (selettore ${v.sel})`,
     hupCreate: (v) => `hup.social: pubblica un contenuto${v.parent > 0n ? ` in risposta al contenuto #${v.parent}` : ""} (tipo ${v.type}, ${v.meta}, commenti ${v.comments ? "consentiti" : "chiusi"})`,
     hupCreatorOk: "✅ Autore del contenuto: la tua UP.",
+    benqiMint: (v) => `BENQI: deposita ${v.amount} nel mercato di prestito (ricevi qiAVAX, che maturano interessi)`,
+    benqiStake: (v) => `BENQI: mette in staking ${v.amount} (ricevi sAVAX, staking liquido)`,
+    kBenqiGet: "La UP riceve",
+    benqiToUp: "✅ I token ricevuti vanno alla UP che fa la chiamata (queste funzioni non hanno un destinatario da indicare).",
+    benqiMintNote: "ℹ️ Per riprendere gli AVAX serve un'altra operazione della UP (redeem). Un deposito può fare da garanzia per prestiti: attento ai prestiti aperti con questa UP.",
+    benqiStakeNote: "ℹ️ sAVAX cresce di valore rispetto ad AVAX. Per riavere AVAX: richiesta di sblocco a BENQI con un periodo di attesa (circa 15 giorni), oppure scambio su un DEX al prezzo del momento.",
     hupUpdate: (v) => `hup.social: modifica il contenuto #${v.id} (nuova versione: ${v.meta}, commenti ${v.comments ? "consentiti" : "chiusi"})`,
     hupEditorOk: "✅ La modifica è a nome della tua UP.",
     hupEditorOther: (v) => `🛑 La modifica sarebbe a nome di ${v.who}, non della tua UP: se non sai perché, rifiuta.`,
@@ -902,6 +910,12 @@ const I18N = {
     unknownCall: (v) => `Unrecognised call (selector ${v.sel})`,
     hupCreate: (v) => `hup.social: publish content${v.parent > 0n ? ` replying to content #${v.parent}` : ""} (type ${v.type}, ${v.meta}, comments ${v.comments ? "allowed" : "closed"})`,
     hupCreatorOk: "✅ Author of the content: your UP.",
+    benqiMint: (v) => `BENQI: deposit ${v.amount} into the lending market (you receive qiAVAX, which earn interest)`,
+    benqiStake: (v) => `BENQI: stake ${v.amount} (you receive sAVAX, liquid staking)`,
+    kBenqiGet: "The UP receives",
+    benqiToUp: "✅ The tokens received go to the UP making the call (these functions take no recipient).",
+    benqiMintNote: "ℹ️ Getting the AVAX back takes another operation of the UP (redeem). A deposit can back loans: mind any open loan with this UP.",
+    benqiStakeNote: "ℹ️ sAVAX grows in value against AVAX. To get AVAX back: an unlock request to BENQI with a waiting period (about 15 days), or a swap on a DEX at the current price.",
     hupUpdate: (v) => `hup.social: edit content #${v.id} (new version: ${v.meta}, comments ${v.comments ? "allowed" : "closed"})`,
     hupEditorOk: "✅ The edit is in the name of your UP.",
     hupEditorOther: (v) => `🛑 The edit would be in the name of ${v.who}, not your UP: unless you know why, reject it.`,
@@ -1765,6 +1779,10 @@ async function describeCall(c, to, value, data, rows, warnings) {
     const op = describeHup(c, data, rows, warnings);
     if (op) return op;
   }
+  if (dapp && dapp.startsWith("BENQI ")) {
+    const op = await describeBenqi(c, dapp, value, data, rows, warnings, to);
+    if (op) return op;
+  }
   if (dapp === "LSP26 Follower System") {
     const op = describeLsp26(data, rows, warnings);
     if (op) return op;
@@ -1886,6 +1904,34 @@ function describeHup(c, data, rows, warnings) {
 // ERC-4626 vault: deposit / mint put the asset in and give shares to `receiver`; withdraw / redeem take
 // shares of `owner` out and send the asset to `receiver`. The amounts are shown in both units, with the
 // vault's own preview of the other side. Shares or assets going to an address other than the UP are flagged.
+// BENQI on Avalanche, at its two known addresses only: deposit of AVAX into the lending market (qiAVAX,
+// `mint()` payable, Compound-style) and liquid staking (sAVAX, `submit()` payable). The amount is the value
+// sent; what the UP receives is estimated from the contract's own rate.
+async function describeBenqi(c, dapp, value, data, rows, warnings, to) {
+  const sel = data.slice(0, 10).toLowerCase();
+  const avax = `${ethers.formatEther(value)} AVAX`;
+  const call = (sig, args = []) => c.provider.call({ to, data: new ethers.Interface([`function ${sig} view returns (uint256)`]).encodeFunctionData(sig.split("(")[0], args) }).then((r) => BigInt(r)).catch(() => null);
+  let op, est = null, note;
+  if (dapp === "BENQI qiAVAX" && sel === "0x1249c58b" && data.length === 10) {
+    op = t("benqiMint", { amount: avax });
+    const rate = await call("exchangeRateStored()");
+    if (rate && rate > 0n) est = `${ethers.formatUnits(value * 10n ** 18n / rate, 8)} qiAVAX`;
+    note = "benqiMintNote";
+  } else if (dapp === "BENQI sAVAX" && sel === "0x5bcb2fc6" && data.length === 10) {
+    op = t("benqiStake", { amount: avax });
+    const sh = await call("getSharesByPooledAvax(uint256)", [value]);
+    if (sh !== null) est = `${ethers.formatEther(sh)} sAVAX`;
+    note = "benqiStakeNote";
+  } else return null;
+  rows.push([t("kCall"), op, {}]);
+  if (est) rows.push([t("kBenqiGet"), `${est} ${t("vaultPreview")}`, {}]);
+  rows.push([t("kParams"), `${sel === "0x1249c58b" ? "mint()" : "submit()"} payable · value ${avax}`, { block: true }]);
+  rows.push([t("kRaw"), data, { raw: true }]);
+  warnings.push([t("benqiToUp"), "line-ok"]);
+  warnings.push([t(note), "line-dim"]);
+  return op;
+}
+
 async function describeVault(c, to, value, data, rows, warnings) {
   let p = null;
   try { p = VAULT_IFACE.parseTransaction({ data }); } catch (e) { p = null; }
