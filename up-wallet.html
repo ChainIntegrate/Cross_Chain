@@ -276,6 +276,7 @@ const DAPP_CONTRACTS = {
   "8453:0xe401af10caa79f9bb6945c87ee196503e5de6bea": "hup.social", // Base
   "5042:0xa5e73b15c1c3ee477aed682741f0324c6787bbb8": "hup.social", // Arc
   "42:0xf6eec4e32a532b23acc56b72865e79c79877cec8": "hup.social", // LUKSO
+  "42:0x7a5134435e029b5bbff0d4eb5aebcf0255d76d88": "hup.social", // LUKSO, polls
   // LUKSO's LSP26 Follower System (the standard's own contract; hup.social uses it for follows).
   "42:0xf01103e5a9909fc0dbe8166da7085e0285daddca": "LSP26 Follower System",
   // Morpho's VaultBundlesV1, which Morpho's app calls to deposit into, withdraw from or migrate between
@@ -299,8 +300,16 @@ const LSP26_IFACE = new ethers.Interface([
   "function follow(address addr)", "function unfollow(address addr)",
   "function followBatch(address[] addresses)", "function unfollowBatch(address[] addresses)",
 ]);
+// hup.social poll vote: the function's name is not known (the contract is not verified), only its selector
+// and its layout, read from a vote sent from hup.social on LUKSO: the voter (the UP), the content holding the
+// poll, the option counted from 0 (the sixth option was 5), then bytes (empty). Recognised by the selector,
+// and only at hup.social's addresses.
+const HUP_VOTE_SELECTOR = "0x57941004";
+const HUP_VOTE_TYPES = ["address", "uint256", "uint256", "bytes"];
 const HUP_IFACE = new ethers.Interface([
   "function create(address creator, uint8 cType, string metadata, uint256 parentId, bool allowedComments)",
+  // Editing a post: selector 0x34c31991, seen on hup.social on LUKSO (the UP, the post, its new metadata, comments).
+  "function update(address creator, uint256 contentId, string metadata, bool allowedComments)",
   "function batchLike(address user, uint256[] contentIds)",
   "function batchUnlike(address user, uint256[] contentIds)",
 ]);
@@ -503,6 +512,9 @@ const I18N = {
     pairing: "Collegamento in corso... conferma sulla dApp se richiesto.",
     proposalFrom: (v) => `Richiesta di connessione da: ${v.name} (${v.url}) — verifica del dominio: ${v.verify}`,
     proposalScam: "❌ WalletConnect segnala questo sito come truffa o dominio non valido: connessione rifiutata.",
+    proposalAsks: (v) => `La dApp chiede — reti richieste: ${v.required}; reti facoltative: ${v.optional}; metodi: ${v.methods}; altri tipi di account: ${v.other}.`,
+    proposalNone: "nessuna",
+    proposalApproved: (v) => `Connessione approvata solo per ${v.net}, la rete scelta nel pannello 1.`,
     proposalUnverified: "⚠️ Dominio non verificato da WalletConnect: controlla di essere sul sito giusto prima di approvare qualsiasi cosa.",
     proposalRejectedChains: (v) => `❌ Connessione rifiutata: la dApp richiede reti diverse da quella scelta (${v.err}). Scegli nel pannello 1 la rete che la dApp usa e ricollega.`,
     proposalOtherChains: (v) => `❌ Connessione rifiutata: la dApp chiede ${v.want}, nel pannello 1 è scelta ${v.have}. Scegli la rete della dApp, poi ricollega dalla dApp.`,
@@ -533,14 +545,24 @@ const I18N = {
     kMethod: "Metodo", kAccount: "Account (UP)", kContentType: "Tipo di contenuto", kContent: "Contenuto da firmare (deve coincidere con MetaMask)",
     kHash: "Hash verificato dalla UP", kDomain: "Dominio (EIP-712)", kPrimaryType: "Tipo di messaggio",
     toContract: "contratto", toEoa: "indirizzo senza codice",
+    toDelegated: (v) => `account con delega EIP-7702 a ${v.addr}`,
+    toDelegatedNote: (v) => `ℹ️ Il destinatario è un account normale (con la sua chiave) che ha delegato a ${v.addr} con EIP-7702, come fanno alcuni wallet e app: non è un contratto pubblicato a quell'indirizzo. Quando riceve una chiamata, esegue il codice del delegato.`,
     nativeTransfer: (v) => `Invio di ${v.amount} ${v.cur} a ${v.to}`,
     unknownCall: (v) => `Chiamata non riconosciuta (selettore ${v.sel})`,
     hupCreate: (v) => `hup.social: pubblica un contenuto${v.parent > 0n ? ` in risposta al contenuto #${v.parent}` : ""} (tipo ${v.type}, ${v.meta}, commenti ${v.comments ? "consentiti" : "chiusi"})`,
     hupCreatorOk: "✅ Autore del contenuto: la tua UP.",
+    hupUpdate: (v) => `hup.social: modifica il contenuto #${v.id} (nuova versione: ${v.meta}, commenti ${v.comments ? "consentiti" : "chiusi"})`,
+    hupEditorOk: "✅ La modifica è a nome della tua UP.",
+    hupEditorOther: (v) => `🛑 La modifica sarebbe a nome di ${v.who}, non della tua UP: se non sai perché, rifiuta.`,
+    hupUpdateNote: "ℹ️ La nuova versione è già stata caricata su IPFS da hup.social prima di questa richiesta. La versione precedente non sparisce: resta su IPFS e nella storia della rete, chi conosce il suo link può ancora leggerla.",
     hupCreatorOther: (v) => `🛑 Autore del contenuto: ${v.who}, non la tua UP. Il contenuto verrebbe pubblicato a nome di un altro indirizzo: se non sai perché, rifiuta.`,
     hupLike: (v) => `hup.social: mette like ${v.n === 1 ? "al contenuto" : "ai contenuti"} ${v.ids}`,
     hupUnlike: (v) => `hup.social: toglie il like ${v.n === 1 ? "al contenuto" : "ai contenuti"} ${v.ids}`,
     hupUserOk: "✅ Il like è a nome della tua UP.",
+    hupVote: (v) => `hup.social: vota l'opzione ${v.option} del sondaggio nel contenuto #${v.id}`,
+    hupVoteOk: "✅ Il voto è a nome della tua UP.",
+    hupVoteOther: (v) => `🛑 Il voto sarebbe a nome di ${v.who}, non della tua UP: se non sai perché, rifiuta.`,
+    hupVoteNote: "ℹ️ Voto in un sondaggio di hup.social: il contratto non è verificato, il nome della funzione non è noto. La pagina riconosce la chiamata dal selettore, solo agli indirizzi di hup.social, e la legge secondo un voto reale (opzioni contate da 1 come nel sondaggio). Non sposta fondi.",
     hupIpfs: "ℹ️ Il testo e gli eventuali allegati sono già stati caricati su IPFS da hup.social prima di questa richiesta (il link ipfs:// qui sopra): anche se rifiuti, quei file restano pubblici su IPFS.",
     lsp26Follow: (v) => `LSP26: la tua UP inizia a seguire ${v.n === 1 ? "" : v.n + " indirizzi: "}${v.who}`,
     lsp26Unfollow: (v) => `LSP26: la tua UP smette di seguire ${v.n === 1 ? "" : v.n + " indirizzi: "}${v.who}`,
@@ -797,6 +819,9 @@ const I18N = {
     attnRequest: (v) => `${v.who} asks for ${v.what}: go back to UP Wallet to see it.`,
     attnTx: "a transaction", attnSign: "a signature",
     proposalScam: "❌ WalletConnect flags this site as a scam or invalid domain: connection rejected.",
+    proposalAsks: (v) => `The dApp asks for — required networks: ${v.required}; optional networks: ${v.optional}; methods: ${v.methods}; other account types: ${v.other}.`,
+    proposalNone: "none",
+    proposalApproved: (v) => `Connection approved for ${v.net} only, the network chosen in panel 1.`,
     proposalUnverified: "⚠️ Domain not verified by WalletConnect: check that you are on the right site before approving anything.",
     proposalRejectedChains: (v) => `❌ Connection rejected: the dApp requires networks other than the chosen one (${v.err}). Choose in panel 1 the network the dApp uses and connect again.`,
     sessionActive: (v) => `✅ Session active with ${v.name} (${v.url}) — account presented: ${v.acc} on chainId ${v.id}.`,
@@ -821,14 +846,24 @@ const I18N = {
     kMethod: "Method", kAccount: "Account (UP)", kContentType: "Content type", kContent: "Content to sign (must match MetaMask)",
     kHash: "Hash checked by the UP", kDomain: "Domain (EIP-712)", kPrimaryType: "Message type",
     toContract: "contract", toEoa: "address without code",
+    toDelegated: (v) => `account delegated through EIP-7702 to ${v.addr}`,
+    toDelegatedNote: (v) => `ℹ️ The recipient is a normal account (with its own key) that delegated to ${v.addr} through EIP-7702, as some wallets and apps do: not a contract deployed at that address. When it is called, it runs the delegate's code.`,
     nativeTransfer: (v) => `Send ${v.amount} ${v.cur} to ${v.to}`,
     unknownCall: (v) => `Unrecognised call (selector ${v.sel})`,
     hupCreate: (v) => `hup.social: publish content${v.parent > 0n ? ` replying to content #${v.parent}` : ""} (type ${v.type}, ${v.meta}, comments ${v.comments ? "allowed" : "closed"})`,
     hupCreatorOk: "✅ Author of the content: your UP.",
+    hupUpdate: (v) => `hup.social: edit content #${v.id} (new version: ${v.meta}, comments ${v.comments ? "allowed" : "closed"})`,
+    hupEditorOk: "✅ The edit is in the name of your UP.",
+    hupEditorOther: (v) => `🛑 The edit would be in the name of ${v.who}, not your UP: unless you know why, reject it.`,
+    hupUpdateNote: "ℹ️ The new version was already uploaded to IPFS by hup.social before this request. The previous version does not disappear: it stays on IPFS and in the network's history, and anyone with its link can still read it.",
     hupCreatorOther: (v) => `🛑 Author of the content: ${v.who}, not your UP. The content would be published in the name of another address: unless you know why, reject it.`,
     hupLike: (v) => `hup.social: like ${v.n === 1 ? "content" : "contents"} ${v.ids}`,
     hupUnlike: (v) => `hup.social: remove the like from ${v.n === 1 ? "content" : "contents"} ${v.ids}`,
     hupUserOk: "✅ The like is in the name of your UP.",
+    hupVote: (v) => `hup.social: vote for option ${v.option} of the poll in content #${v.id}`,
+    hupVoteOk: "✅ The vote is in the name of your UP.",
+    hupVoteOther: (v) => `🛑 The vote would be in the name of ${v.who}, not your UP: unless you know why, reject it.`,
+    hupVoteNote: "ℹ️ Vote in a hup.social poll: the contract is not verified and the function's name is not known. The page recognises the call by its selector, only at hup.social's addresses, and reads it following a real vote (options counted from 1, as in the poll). It moves no funds.",
     hupIpfs: "ℹ️ The text and any attachments were already uploaded to IPFS by hup.social before this request (the ipfs:// link above): even if you reject, those files stay public on IPFS.",
     lsp26Follow: (v) => `LSP26: your UP starts following ${v.n === 1 ? "" : v.n + " addresses: "}${v.who}`,
     lsp26Unfollow: (v) => `LSP26: your UP stops following ${v.n === 1 ? "" : v.n + " addresses: "}${v.who}`,
@@ -1408,6 +1443,35 @@ $("disconnectBtn").addEventListener("click", async () => {
   showSessions();
 });
 
+// What the dApp asks for at connection, for the log: networks (required / optional), methods, and any
+// namespace other than EVM (e.g. Solana), which the UP cannot serve. Helps tell why a dApp misbehaves.
+function describeProposal(params) {
+  const netName = (x) => {
+    const [ns, ref] = String(x).split(":");
+    if (ns !== "eip155") return x;
+    const n = NETWORKS.find((k) => k.chainId && String(k.chainId) === ref);
+    return n ? `${n.name} (${ref})` : `chainId ${ref}`;
+  };
+  const read = (nss) => {
+    const chains = [], methods = [], other = [];
+    for (const [key, v] of Object.entries(nss || {})) {
+      const ns = key.split(":")[0];
+      const ch = v.chains || (key.includes(":") ? [key] : []);
+      if (ns !== "eip155") { other.push(ns); continue; }
+      chains.push(...ch); methods.push(...(v.methods || []));
+    }
+    return { chains: [...new Set(chains)].map(netName), methods: [...new Set(methods)], other: [...new Set(other)] };
+  };
+  const req = read(params.requiredNamespaces), opt = read(params.optionalNamespaces);
+  const none = t("proposalNone");
+  return {
+    required: req.chains.join(", ") || none,
+    optional: opt.chains.join(", ") || none,
+    methods: [...new Set([...req.methods, ...opt.methods])].join(", ") || none,
+    other: [...new Set([...req.other, ...opt.other])].join(", ") || none,
+  };
+}
+
 async function onSessionProposal({ id, params, verifyContext }) {
   const { buildApprovedNamespaces, getSdkError } = window.WalletKitBundle;
   const meta = params.proposer.metadata || {};
@@ -1422,6 +1486,7 @@ async function onSessionProposal({ id, params, verifyContext }) {
     return;
   }
   if (validation !== "VALID") log(t("proposalUnverified"), "line-warn");
+  log(t("proposalAsks", describeProposal(params)), "line-dim");
   const c = riskAccepted() ? await freshCompliance() : null;
   if (!c) {
     log(riskAccepted() ? t("complianceFirst") : t("ackRequired"), "line-err");
@@ -1443,6 +1508,7 @@ async function onSessionProposal({ id, params, verifyContext }) {
     });
     await walletKit.approveSession({ id, namespaces });
     sessionChain = c.caip;
+    log(t("proposalApproved", { net: `${c.net.name} (${c.net.chainId})` }), "line-dim");
     showSessions();
   } catch (e) {
     // The networks the dApp requires, other than the chosen one: named, and one click away when the page has it.
@@ -1579,10 +1645,16 @@ function simError(e) {
 // Fills rows/warnings for the request box and returns a one-line label of the operation for the log.
 async function describeCall(c, to, value, data, rows, warnings) {
   const cur = c.net.currency || "";
-  const toCode = await c.provider.getCode(to);
-  const known = toCode !== "0x" ? KNOWN_CONTRACTS[to.toLowerCase()] : null;
-  const dapp = toCode !== "0x" ? DAPP_CONTRACTS[`${c.net.chainId}:${to.toLowerCase()}`] : null;
-  rows.push([t("kTo"), `${to} (${toCode === "0x" ? t("toEoa") : t("toContract")}${known ? " · " + known.name : dapp ? " · " + dapp : ""})`, {}]);
+  const toCode = (await c.provider.getCode(to)).toLowerCase();
+  // An account delegated through EIP-7702 has code 0xef0100 + the delegate's address: still a wallet with
+  // its own key, not a contract deployed there. The delegate's code runs when the account is called.
+  const delegate = /^0xef0100[0-9a-f]{40}$/.test(toCode) ? ethers.getAddress("0x" + toCode.slice(8)) : null;
+  const isContract = toCode !== "0x" && !delegate;
+  const known = isContract ? KNOWN_CONTRACTS[to.toLowerCase()] : null;
+  const dapp = isContract ? DAPP_CONTRACTS[`${c.net.chainId}:${to.toLowerCase()}`] : null;
+  const kind = delegate ? t("toDelegated", { addr: delegate }) : isContract ? t("toContract") : t("toEoa");
+  rows.push([t("kTo"), `${to} (${kind}${known ? " · " + known.name : dapp ? " · " + dapp : ""})`, {}]);
+  if (delegate) warnings.push([t("toDelegatedNote", { addr: delegate }), "line-dim"]);
   if (known) warnings.push([t("knownContract", { name: known.name, role: t(known.role) }), "line-dim"]);
   rows.push([t("kValue"), `${ethers.formatEther(value)} ${cur}`, { cls: value > 0n ? "warn" : "" }]);
   if (data === "0x") {
@@ -1599,7 +1671,7 @@ async function describeCall(c, to, value, data, rows, warnings) {
     const op = describeLsp26(data, rows, warnings);
     if (op) return op;
   }
-  if (toCode !== "0x") {
+  if (isContract) {
     const op = await describeMorphoBundles(c, to, value, data, rows, warnings, dapp === "Morpho VaultBundlesV1")
       || await describeVault(c, to, value, data, rows, warnings);
     if (op) return op;
@@ -1664,6 +1736,19 @@ async function describeCall(c, to, value, data, rows, warnings) {
 // hup.social: create() publishes a post, or a reply when parentId is set, in the name of `creator`;
 // batchLike() / batchUnlike() add or remove likes on contents, in the name of `user`.
 function describeHup(c, data, rows, warnings) {
+  if (data.slice(0, 10).toLowerCase() === HUP_VOTE_SELECTOR) {
+    let v = null;
+    try { v = ethers.AbiCoder.defaultAbiCoder().decode(HUP_VOTE_TYPES, "0x" + data.slice(10)); } catch (e) { v = null; }
+    if (!v) return null;
+    const [voter, contentId, option, extra] = v;
+    const op = t("hupVote", { option: (option + 1n).toString(), id: contentId.toString() });
+    rows.push([t("kCall"), op, {}]);
+    rows.push([t("kParams"), `${HUP_VOTE_SELECTOR} (${HUP_VOTE_TYPES.join(",")})\nvoter: ${voter}\ncontentId: ${contentId}\noption (from 0): ${option}\ndata: ${extra}`, { block: true }]);
+    rows.push([t("kRaw"), data, { raw: true }]);
+    warnings.push(voter.toLowerCase() === c.up.toLowerCase() ? [t("hupVoteOk"), "line-ok"] : [t("hupVoteOther", { who: voter }), "line-danger"]);
+    warnings.push([t("hupVoteNote"), "line-dim"]);
+    return op;
+  }
   let p = null;
   try { p = HUP_IFACE.parseTransaction({ data }); } catch (e) { p = null; }
   if (!p) return null;
@@ -1674,6 +1759,11 @@ function describeHup(c, data, rows, warnings) {
     op = t("hupCreate", { parent: parentId, type: cType, meta: metadata, comments: allowedComments });
     who = creator;
     params = `creator: ${creator}\ncType: ${cType}\nmetadata: ${metadata}\nparentId: ${parentId}\nallowedComments: ${allowedComments}`;
+  } else if (p.name === "update") {
+    const [creator, contentId, metadata, allowedComments] = p.args;
+    op = t("hupUpdate", { id: contentId, meta: metadata, comments: allowedComments });
+    who = creator;
+    params = `creator: ${creator}\ncontentId: ${contentId}\nmetadata: ${metadata}\nallowedComments: ${allowedComments}`;
   } else {
     const [user, ids] = p.args;
     const list = ids.slice(0, 20).map((i) => "#" + i).join(", ") + (ids.length > 20 ? ` … (${ids.length})` : "");
@@ -1686,9 +1776,11 @@ function describeHup(c, data, rows, warnings) {
   rows.push([t("kRaw"), data, { raw: true }]);
   const mine = who.toLowerCase() === c.up.toLowerCase();
   if (p.name === "create") warnings.push(mine ? [t("hupCreatorOk"), "line-ok"] : [t("hupCreatorOther", { who }), "line-danger"]);
+  else if (p.name === "update") warnings.push(mine ? [t("hupEditorOk"), "line-ok"] : [t("hupEditorOther", { who }), "line-danger"]);
   else warnings.push(mine ? [t("hupUserOk"), "line-ok"] : [t("hupUserOther", { who }), "line-danger"]);
   // The post's text and attachments are already on IPFS (uploaded by the dApp before asking to sign).
   if (p.name === "create" && /^ipfs:\/\//i.test(p.args[2])) warnings.push([t("hupIpfs"), "line-dim"]);
+  if (p.name === "update") warnings.push([t("hupUpdateNote"), "line-dim"]);
   warnings.push([t("hupNote"), "line-dim"]);
   return op;
 }
