@@ -19,6 +19,14 @@ Used by `up-wallet.html` (and by the deprecated `up-walletconnect-basenames.html
   The same notice is shown in the footer of the pages that load the bundle. The agreement also requires the bundle to use Reown's network (the WalletConnect relay, through the project ID in `config.js`), and sets thresholds (currently 500 monthly active users or 2,500,000 monthly RPC calls) above which a paid commercial license is needed.
 - **Other packages in the bundle** — 35 packages under MIT, ISC, 0BSD, Apache-2.0, or Apache-2.0 AND MIT (`@noble/*`, `@scure/base`, `@walletconnect/*` helpers, `@msgpack/msgpack`, `idb-keyval`, `multiformats`, `unstorage`, `tslib`, and others). The list with versions and each package's license file: [vendor/walletkit-1.6.0.THIRD-PARTY.txt](vendor/walletkit-1.6.0.THIRD-PARTY.txt). Apache-2.0 text: [licenses/Apache-2.0.txt](licenses/Apache-2.0.txt).
 
+## QR codes: `vendor/qrcode-generator-1.4.4.js`
+
+Used by `up-wallet.html` (Receive). `qrcode-generator` 1.4.4 by Kazuhiko Arase, from the npm package, unchanged: **MIT** (the notice is in the file's header). "QR Code" is a registered trademark of DENSO WAVE INCORPORATED.
+
+## Network logos: `chain-logos/*.png`
+
+Used by `up-wallet.html` to show the networks. Taken from the [Trust Wallet assets](https://github.com/trustwallet/assets) repository (**MIT**, © Trust Wallet), resized to 64×64. The logos are trademarks of their networks' projects and are used only to name those networks; no affiliation is implied. Networks without a file (LUKSO, Arc and others) are shown with their initial.
+
 ## Contract sources for explorer verification: `contracts/*.input.json`
 
 These standard-JSON compiler inputs embed third-party Solidity files so that anyone can rebuild and verify the published contracts. Each embedded file keeps its own `SPDX-License-Identifier` header.

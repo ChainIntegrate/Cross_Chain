@@ -19,6 +19,7 @@
 <script src="backup-check.js"></script>
 <script src="gas-relay-client.js"></script>
 <script src="vendor/walletkit-1.6.0.min.js"></script>
+<script src="vendor/qrcode-generator-1.4.4.js"></script>
 <!-- Site configuration, created on the server from config.example.js (not in the repository). -->
 <script src="config.js"></script>
 <style>
@@ -85,6 +86,72 @@
   .modal-foot button { margin-top: 0; }
   .modal-foot button[hidden] { display: none; }
   body.modal-open { overflow: hidden; }
+  /* Menu: the UP card, then big buttons; each opens its section. "All" shows every panel (classic page). */
+  .up-card { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: var(--raised); color: var(--text);
+             border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin: 0 0 14px; font-weight: 400; }
+  .up-card-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+  .up-card-addr { font-family: monospace; font-size: 15px; font-weight: 700; }
+  .up-card-sub { font-size: 12.5px; color: var(--text-dim); }
+  .up-card-state { font-size: 12.5px; }
+  /* The explanation under the title only on the menu; in the app the banner is left out (the app has its icon),
+     so the menu starts near the top of the phone screen. */
+  body:not([data-view="home"]) .subtitle { display: none; }
+  html.in-app .brand-row { display: none; }
+  html.in-app h1 { font-size: 18px; }
+  html.in-app .subtitle { margin-bottom: 16px; }
+  .setup-banner { display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid var(--warn); border-radius: 10px;
+                  padding: 10px 12px; margin-bottom: 14px; font-size: 13.5px; }
+  .setup-banner[hidden] { display: none; }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+  @media (max-width: 560px) { .tiles { grid-template-columns: repeat(2, 1fr); } }
+  .tile { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin: 0; padding: 14px 12px; min-height: 104px; text-align: left;
+          background: var(--panel); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-weight: 400; }
+  .tile:hover { border-color: var(--accent); }
+  .tile-ico { font-size: 20px; line-height: 1; width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: #fff;
+              display: inline-flex; align-items: center; justify-content: center; margin-bottom: 4px; }
+  .tile-t { font-size: 14px; font-weight: 700; }
+  .tile-s { font-size: 11.5px; color: var(--text-dim); line-height: 1.35; }
+  .view-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .view-title { font-size: 16px; font-weight: 700; }
+  body[data-view="home"] .panel { display: none; }
+  body:not([data-view="home"]) .tiles, body:not([data-view="home"]) .setup-banner { display: none; }
+  body[data-view="home"] .view-bar, body[data-view="all"] .view-bar { display: none; }
+  body[data-view="send"] .panel:not([data-view="send"]), body[data-view="receive"] .panel:not([data-view="receive"]),
+  body[data-view="dapp"] .panel:not([data-view="dapp"]), body[data-view="activity"] .panel:not([data-view="activity"]),
+  body[data-view="settings"] .panel:not([data-view="settings"]), body[data-view="help"] .panel:not([data-view="help"]) { display: none; }
+  /* Networks: the main ones as buttons with their logo; a green dot where the UP exists. */
+  .net-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  @media (max-width: 560px) { .net-picker { grid-template-columns: repeat(2, 1fr); } }
+  .net-btn { display: flex; align-items: center; gap: 8px; margin: 0; padding: 9px 10px; background: var(--field); color: var(--text);
+             border: 1px solid var(--border); border-radius: 10px; font-size: 13px; font-weight: 600; text-align: left; position: relative; }
+  .net-btn.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .net-logo { width: 28px; height: 28px; flex: 0 0 28px; border-radius: 50%; overflow: hidden; display: inline-flex; align-items: center; justify-content: center;
+              font-size: 13px; font-weight: 800; color: #fff; }
+  .net-logo img { width: 100%; height: 100%; display: block; }
+  .net-dot { position: absolute; top: 6px; right: 7px; width: 9px; height: 9px; border-radius: 50%; background: var(--disabled); }
+  .net-dot.yes { background: var(--ok); }
+  #netMore { margin-top: 10px; }
+  #netMore summary { cursor: pointer; font-size: 13px; color: var(--accent); margin-bottom: 8px; }
+  /* Receive: the QR on white (scanners need contrast), the address, the network. */
+  .receive-box { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 6px; }
+  #receiveQr { background: #fff; padding: 10px; border-radius: 10px; line-height: 0; }
+  #receiveQr svg { width: 220px; height: 220px; }
+  .receive-addr { font-family: monospace; font-size: 13px; text-align: center; overflow-wrap: anywhere; }
+  .receive-net { font-size: 12.5px; color: var(--text-dim); text-align: center; }
+  /* Warnings: a window at start, until accepted (remembered in this browser); panel 0 can open it again. */
+  .risk-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 12px; font-size: 13.5px; }
+  button.small { width: auto; margin-top: 0; padding: 7px 12px; font-size: 12.5px; }
+  .risk-modal { border-color: var(--err); }
+  .risk-modal .modal-title { color: var(--err); }
+  .risk-text { font-size: 13.5px; line-height: 1.55; }
+  .risk-foot { flex-direction: column; align-items: stretch; gap: 8px; }
+  .risk-foot .check-row { margin-top: 0; }
+  .risk-btns { display: flex; gap: 10px; }
+  /* Messages: the whole list, or only the last one (the default in the app). */
+  .log-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
+  .log-title { font-size: 13px; color: var(--text-dim); font-weight: 600; }
+  #log { margin-top: 6px; }
+  #log.last-only > :not(:last-child) { display: none; }
   .warn-box { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--err); border-radius: 8px; background: rgba(224,90,90,0.08); font-size: 13px; line-height: 1.5; }
   @media (max-width: 560px) { .kv { grid-template-columns: 1fr; } }
   /* While the page works (a dApp request, a connection, a send): a fixed box with the current step. */
@@ -112,27 +179,48 @@
   <button class="lang-btn" id="langToggle" data-i18n="langToggleBtn">English</button>
 </div>
 
-<div class="panel">
-  <h2 data-i18n="panel0Title">0 · Cos'è e come funziona</h2>
-  <div class="note" data-i18n-html="panel0Note"></div>
-  <div class="warn-box" data-i18n-html="disclaimer"></div>
-  <div class="check-row"><input type="checkbox" id="ackRisk"><label for="ackRisk" style="margin:0; color: var(--text);" data-i18n="ackLabel">Ho letto e accetto</label></div>
-</div>
-
-<div class="panel">
-  <h2 data-i18n="panel1Title">1 · Rete</h2>
-  <div class="note" data-i18n="panel1Note"></div>
-  <input type="text" id="networkFilter" data-i18n-placeholder="networkFilterPlaceholder" placeholder="Filtra per nome...">
-  <select id="network" style="margin-top:8px;"></select>
-  <div id="customRpcWrap" style="display:none;">
-    <label data-i18n="customRpcLabel">RPC URL custom</label>
-    <input type="text" id="customRpc" placeholder="https://...">
-    <label data-i18n="customExplorerLabel">Explorer URL custom (opzionale)</label>
-    <input type="text" id="customExplorer" placeholder="https://.../tx/">
+<div id="nav">
+  <button type="button" class="up-card" id="upCard" data-go="settings">
+    <span class="net-logo" id="upCardLogo"></span>
+    <span class="up-card-main"><span class="up-card-addr" id="upCardAddr"></span><span class="up-card-sub" id="upCardSub"></span><span class="up-card-state" id="upCardState"></span></span>
+  </button>
+  <div class="setup-banner" id="setupBanner" hidden><span data-i18n="setupBanner"></span><button type="button" class="small" data-go="settings" data-i18n="setupGoBtn">Configura</button></div>
+  <div class="tiles">
+    <button type="button" class="tile" data-go="send"><span class="tile-ico">↗</span><span class="tile-t" data-i18n="tileSend">Invia</span><span class="tile-s" data-i18n="tileSendSub"></span></button>
+    <button type="button" class="tile" data-go="receive"><span class="tile-ico">↙</span><span class="tile-t" data-i18n="tileReceive">Ricevi</span><span class="tile-s" data-i18n="tileReceiveSub"></span></button>
+    <button type="button" class="tile" data-go="dapp"><span class="tile-ico">⇄</span><span class="tile-t" data-i18n="tileDapp">Collega una dApp</span><span class="tile-s" data-i18n="tileDappSub"></span></button>
+    <button type="button" class="tile" data-go="activity"><span class="tile-ico">☰</span><span class="tile-t" data-i18n="tileActivity">Attività</span><span class="tile-s" data-i18n="tileActivitySub"></span></button>
+    <button type="button" class="tile" data-go="settings"><span class="tile-ico">⚙</span><span class="tile-t" data-i18n="tileSettings">Impostazioni</span><span class="tile-s" data-i18n="tileSettingsSub"></span></button>
+    <button type="button" class="tile" data-go="help"><span class="tile-ico">?</span><span class="tile-t" data-i18n="tileHelp">Cos'è e come funziona</span><span class="tile-s" data-i18n="tileHelpSub"></span></button>
   </div>
 </div>
+<div class="view-bar" id="viewBar"><button type="button" id="backHome" class="secondary small" data-i18n="backBtn">← Menu</button><span class="view-title" id="viewTitle"></span></div>
 
-<div class="panel">
+<div class="panel" data-view="help">
+  <h2 data-i18n="panel0Title">0 · Cos'è e come funziona</h2>
+  <div class="note" data-i18n-html="panel0Note"></div>
+  <div class="risk-row"><span id="riskState" class="line-warn"></span><button id="riskReopen" type="button" class="secondary small" data-i18n="riskReopenBtn">Leggi le avvertenze</button></div>
+</div>
+
+<div class="panel" data-view="settings">
+  <h2 data-i18n="panel1Title">1 · Rete</h2>
+  <div class="note" data-i18n="panel1Note"></div>
+  <div class="net-picker" id="netPicker"></div>
+  <div class="note" id="netPresenceNote" style="margin-top:6px;"></div>
+  <details id="netMore">
+    <summary data-i18n="netMoreSummary">Altre reti e RPC personalizzato</summary>
+    <input type="text" id="networkFilter" data-i18n-placeholder="networkFilterPlaceholder" placeholder="Filtra per nome...">
+    <select id="network" style="margin-top:8px;"></select>
+    <div id="customRpcWrap" style="display:none;">
+      <label data-i18n="customRpcLabel">RPC URL custom</label>
+      <input type="text" id="customRpc" placeholder="https://...">
+      <label data-i18n="customExplorerLabel">Explorer URL custom (opzionale)</label>
+      <input type="text" id="customExplorer" placeholder="https://.../tx/">
+    </div>
+  </details>
+</div>
+
+<div class="panel" data-view="settings">
   <h2 data-i18n="panel2Title">2 · La tua UP</h2>
   <button id="connectUp" class="secondary" data-i18n="connectUpBtn">Leggi l'indirizzo dall'estensione UP</button>
   <label for="upAddress" data-i18n="upAddressLabel">Indirizzo della UP</label>
@@ -140,7 +228,7 @@
   <div id="backupAlert"></div>
 </div>
 
-<div class="panel">
+<div class="panel" data-view="settings">
   <h2 data-i18n="panel3Title">3 · Controller (MetaMask) e verifica</h2>
   <div class="note" data-i18n="panel3Note"></div>
   <button id="connectSigner" data-i18n="connectSignerBtn">Connetti MetaMask (controller)</button>
@@ -149,7 +237,27 @@
   <div id="relayBox"></div>
 </div>
 
-<div class="panel">
+<div class="panel" data-view="settings">
+  <h2 data-i18n="panelViewTitle">Vista</h2>
+  <div class="check-row"><input type="checkbox" id="viewAll"><label for="viewAll" style="margin:0;" data-i18n="viewAllLabel">Vista completa: tutti i pannelli in una pagina</label></div>
+  <div class="note" style="margin-top:6px;" data-i18n="viewAllNote"></div>
+</div>
+
+<div class="panel" data-view="receive">
+  <h2 data-i18n="panelReceiveTitle">Ricevi</h2>
+  <div class="note" data-i18n="receiveNote"></div>
+  <div class="receive-box">
+    <div id="receiveQr"></div>
+    <div id="receiveAddr" class="receive-addr"></div>
+    <div id="receiveNet" class="receive-net"></div>
+    <div id="receiveWarn"></div>
+  </div>
+  <button type="button" id="receiveCopy" class="secondary" data-i18n="receiveCopyBtn">Copia l'indirizzo</button>
+  <button type="button" id="receiveShare" class="secondary" data-i18n="receiveShareBtn">Condividi il link</button>
+  <div class="note" id="receiveLink" style="margin-top:8px; overflow-wrap:anywhere;"></div>
+</div>
+
+<div class="panel" data-view="dapp">
   <h2 data-i18n="panel4Title">4 · Collega una dApp con WalletConnect</h2>
   <div class="note" data-i18n-html="panel4Note"></div>
   <label for="wcUri" data-i18n="wcUriLabel">Link WalletConnect (wc:...)</label>
@@ -159,15 +267,16 @@
   <button id="disconnectBtn" class="secondary" disabled data-i18n="disconnectBtn">Disconnetti tutte le sessioni</button>
 </div>
 
-<div class="panel">
+<div class="panel" data-view="activity">
   <h2 data-i18n="panel5Title">5 · Richieste (dApp e invii)</h2>
   <div class="check-row"><input type="checkbox" id="simulateOnly" checked><label for="simulateOnly" style="margin:0;" data-i18n="simulateOnlyLabel">Solo simulazione (non inviare nulla)</label></div>
   <div class="note" style="margin-top:6px;" data-i18n="simulateOnlyNote"></div>
   <div id="requestBox" class="status-box"><span class="empty" data-i18n="noRequest">Nessuna richiesta in attesa.</span></div>
-  <div id="log" class="line-dim" style="margin-top:10px;"></div>
+  <div class="log-bar"><span class="log-title" data-i18n="logTitle">Messaggi</span><button id="logToggle" type="button" class="secondary small"></button></div>
+  <div id="log" class="line-dim"></div>
 </div>
 
-<div class="panel">
+<div class="panel" data-view="send">
   <h2 data-i18n="panelSendTitle">6 · Invia dalla UP</h2>
   <div class="note" data-i18n-html="panelSendNote"></div>
   <div class="status-box" id="holdBox"><span class="empty" data-i18n="holdIdle">Il saldo della UP compare quando la verifica del pannello 3 è verde.</span></div>
@@ -197,6 +306,20 @@
     <button id="sendMaxBtn" type="button" class="secondary" data-i18n="sendMaxBtn">Tutto</button>
   </div>
   <button id="sendPrepareBtn" disabled data-i18n="sendPrepareBtn">Prepara l'invio</button>
+</div>
+
+<div class="modal-backdrop" id="riskModal" hidden>
+  <div class="modal risk-modal" role="dialog" aria-modal="true" aria-labelledby="riskTitle">
+    <div class="modal-head"><div class="modal-title" id="riskTitle" data-i18n="riskTitle">Avvertenze</div></div>
+    <div class="modal-body"><div class="risk-text" data-i18n-html="disclaimer"></div></div>
+    <div class="modal-foot risk-foot">
+      <div class="check-row"><input type="checkbox" id="ackRisk"><label for="ackRisk" style="margin:0; color: var(--text);" data-i18n="ackLabel">Ho letto e accetto</label></div>
+      <div class="risk-btns">
+        <button id="riskOk" type="button" disabled data-i18n="riskOkBtn">Continua</button>
+        <button id="riskLater" type="button" class="secondary" data-i18n="riskLaterBtn">Non ora</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="modal-backdrop" id="requestModal" hidden>
@@ -283,6 +406,11 @@ const DAPP_CONTRACTS = {
   // its vaults (source verified on the explorer). On Arc it is the address the app asks to approve.
   "8453:0x2b08a911f48de25a7e305d910afb5597abe8ea7b": "Morpho VaultBundlesV1", // Base
   "5042:0x76c1deefae48523e14903085081bda2999450b68": "Morpho VaultBundlesV1", // Arc
+  "43114:0x5c0401e81bc07ca70fad469b451682c0d747ef1c": "BENQI qiAVAX", // Avalanche: lending market (Compound-style)
+  "43114:0x2b2c81e08f1af8835a78bb2a90ae924ace0ea4be": "BENQI sAVAX", // Avalanche: liquid staking
+  "43114:0x435272ceff93a1e657e8abfdf0a13e95900a3a56": "Aave Spoke", // Avalanche, pro.aave.com: the market (user positions)
+  "43114:0xe4c7183a5f22c365140f41d733d8a8bad5a1a6ba": "Aave gateway (AVAX)", // Avalanche, pro.aave.com: native AVAX in and out
+  "43114:0x24dbafb8611c6639316b17edd2ecf3f91424b26b": "Yield Yak", // Avalanche, yieldyak.com: a strategy (vault)
 };
 // Morpho VaultBundlesV1. vaultBundlesV1Deposit's selector (0x6bbba4e0) matches the calls Morpho's app
 // sends, so its types are exact (TokenPermit = (uint8 kind, bytes data)). Permit, used by withdraw and
@@ -381,7 +509,42 @@ const I18N = {
     panel0Note: "<b>Cos'è.</b> UP Wallet è il portafoglio della tua Universal Profile su <b>tutte le reti dove la UP esiste</b>: LUKSO e le reti dove l'hai rideployata con questo sito (Base, Polygon, Arbitrum, Avalanche, Arc…), con lo <b>stesso indirizzo</b> ovunque. Fa quello che su LUKSO fanno l'estensione e l'app UP, anche sulle altre reti, dove quelle non arrivano.<ul style=\"margin:8px 0; padding-left:20px;\"><li><b>Vedi cosa possiede la UP</b> e <b>invii</b> valuta, token e NFT (pannello 6), anche a una UP cercata per nome.</li><li><b>Usi le dApp</b> che si collegano con WalletConnect (OpenSea, Uniswap, hup.social…): la dApp vede la tua UP come account, e quello che compri o ricevi arriva alla UP. Quasi tutte funzionano; qualcuna non accetta un account smart contract come la UP.</li><li><b>Il gas</b> lo paga il tuo controller, oppure il sito, sulle reti e per i profili dove il gas pagato dal sito è attivo.</li></ul><b>Cosa ti serve.</b> L'indirizzo della UP, <b>MetaMask con il controller della UP</b> (la chiave che firma per la UP: la guida spiega come importarla) e la UP già presente sulla rete scelta. Si lavora su una rete alla volta. Sul telefono c'è l'app Android, con MetaMask mobile.<br><b>Rispetto all'estensione UP.</b> Firmi in MetaMask invece che nell'estensione. Prima di ogni firma la pagina ti mostra in chiaro cosa stai facendo, controlla e simula. È sperimentale: parti con la modalità simulazione e con importi piccoli.<details style=\"margin-top:8px;\"><summary>Come funziona sotto</summary>Questa pagina fa da <b>ponte WalletConnect</b> tra una dApp e la tua UP. La dApp vede come account l'indirizzo della UP. Ogni <b>transazione</b> viene incapsulata in <code>KeyManager.execute(UP.execute(...))</code> e firmata dal tuo controller in MetaMask: la chiamata parte dalla UP e il valore esce dal saldo della UP, il gas lo paga il controller. Ogni <b>firma di messaggio</b> la fa il controller e la UP la riconosce come propria (ERC-1271). Prima di tutto la pagina verifica che UP e controller siano compatibili sulla rete scelta. Ogni richiesta viene mostrata per intero, controllata e (per le transazioni) simulata; niente parte senza il tuo clic e la tua conferma in MetaMask.</details>",
     disclaimer: "<b>⚠️ Leggi prima di usare questa pagina</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Strumento sperimentale, non sottoposto ad audit.</b> Può contenere errori.</li><li><b>Transazioni reali e irreversibili.</b> Nessuno può annullare una transazione confermata. Usa importi minimi e parti sempre in modalità simulazione.</li><li><b>La pagina non conosce le dApp.</b> Decodifica solo una parte delle chiamate (token standard e casi comuni); per il resto ti mostra i dati grezzi. Se non capisci cosa fa una richiesta, <b>rifiutala</b>.</li><li><b>Firme di messaggi.</b> Una firma può autorizzare azioni anche senza transazione: accessi, ordini, permessi a spendere token. La pagina mostra il contenuto e l'esito dei controlli, ma non può sapere a cosa servirà la firma.</li><li><b>Le approvazioni di token restano valide</b> anche dopo aver chiuso la pagina: chi le riceve può spostare i token della UP finché non le revochi.</li><li><b>Responsabilità.</b> ChainIntegrate non si assume alcuna responsabilità per firme o transazioni approvate su contenuto poco chiaro, né per l'uso che le dApp ne fanno. Il software è fornito \"così com'è\" (licenza MIT), senza garanzie: lo usi a tuo rischio.</li><li><b>Da cosa dipende la sicurezza:</b> dall'architettura (firmi sempre tu nel tuo wallet, i permessi li applica il Key Manager della UP) e dai servizi usati (la verifica del dominio di WalletConnect/Reown, gli RPC della rete). La pagina mostra l'esito di queste verifiche ma non può garantirle.</li><li><b>Un controller per ogni UP.</b> Se lo stesso controller governa più UP, una firma valida per questa UP vale anche per le altre.</li><li><b>Questa pagina non chiede mai chiavi private</b> né seed phrase.</li><li><b>Privacy:</b> la connessione WalletConnect passa dai server di Reown, che vedono i metadati della sessione (indirizzi, rete). Le verifiche usano l'RPC pubblico della rete scelta.</li><li><b>Nessuna affiliazione</b> con LUKSO, WalletConnect/Reown, MetaMask o le dApp che colleghi. Non è una consulenza finanziaria.</li></ul><div style=\"margin-top:8px;\">Sempre rifiutati: <code>eth_sign</code> e i formati di firma vecchi, la creazione di contratti, le transazioni della UP verso se stessa o verso il proprio Key Manager (potrebbero cambiarne controller e permessi), le richieste su una rete diversa da quella scelta.</div>",
     ackLabel: "Ho letto e accetto: uso questo strumento a mio rischio.",
-    ackRequired: "Prima accetta le condizioni nel pannello 0.",
+    setupBanner: "Per iniziare imposta rete, UP e MetaMask: tre passi.",
+    setupGoBtn: "Configura",
+    tileSend: "Invia", tileSendSub: "Valuta, token e NFT dalla UP",
+    tileReceive: "Ricevi", tileReceiveSub: "Indirizzo e QR della UP",
+    tileDapp: "Collega una dApp", tileDappSub: "Usa una dApp con la UP (WalletConnect)",
+    tileActivity: "Attività", tileActivitySub: "Richieste, simulazione e messaggi",
+    tileSettings: "Impostazioni", tileSettingsSub: "Rete, UP, MetaMask, gas",
+    tileHelp: "Cos'è e come funziona", tileHelpSub: "Cosa fa il wallet, avvertenze",
+    backBtn: "← Menu",
+    viewTitle_home: "", viewTitle_all: "", viewTitle_send: "Invia", viewTitle_receive: "Ricevi", viewTitle_dapp: "Collega una dApp",
+    viewTitle_activity: "Attività", viewTitle_settings: "Impostazioni", viewTitle_help: "Cos'è e come funziona",
+    netMoreSummary: "Altre reti e RPC personalizzato",
+    netPresenceChecking: "Controllo su quali reti esiste la UP…",
+    netPresenceNote: "Bollino verde: la UP esiste su quella rete. Grigio: non c'è, o la rete non ha risposto.",
+    netUpHere: "La UP esiste su questa rete", netUpNotHere: "La UP non esiste su questa rete", netUpUnknown: "La rete non ha risposto",
+    panelViewTitle: "Vista",
+    viewAllLabel: "Vista completa: tutti i pannelli in una pagina",
+    viewAllNote: "Per chi preferisce la pagina classica, con tutti i pannelli uno sotto l'altro. Togli la spunta per tornare al menù.",
+    panelReceiveTitle: "Ricevi",
+    receiveNote: "Mostra il QR o manda il link a chi deve inviarti qualcosa. L'indirizzo della UP è lo stesso su ogni rete, ma chi invia deve usare una rete dove la UP esiste: altrimenti i fondi arrivano a un indirizzo che lì non controlli.",
+    receiveCopyBtn: "Copia l'indirizzo", receiveShareBtn: "Condividi il link", receiveCopied: "Copiato",
+    receiveNoUp: "Imposta prima la UP (Impostazioni).",
+    receiveNetLine: (v) => `Rete: ${v.net}. Il QR indica anche la rete (chainId ${v.id}) al wallet che lo legge.`,
+    receiveAbsent: (v) => `⚠️ Su ${v.net} questa UP non esiste: non farti mandare fondi su questa rete.`,
+    receiveShareText: "Il mio Universal Profile",
+    cardNoUp: "UP non impostata", cardReady: "pronta", cardNotReady: "da configurare", cardSim: "🧪 simulazione", cardNotHere: "la UP qui non esiste",
+    riskTitle: "⚠️ Prima di iniziare",
+    riskOkBtn: "Continua",
+    riskLaterBtn: "Non ora",
+    riskReopenBtn: "Leggi le avvertenze",
+    riskAccepted: "✅ Avvertenze accettate.",
+    riskPending: "⚠️ Avvertenze non ancora accettate: finché non le accetti la pagina non collega dApp e non invia nulla.",
+    logTitle: "Messaggi",
+    logAll: (v) => `Mostra tutti (${v.n})`,
+    logLast: "Solo l'ultimo",
+    ackRequired: "Prima accetta le avvertenze (pannello 0, \"Leggi le avvertenze\").",
     panel1Title: "1 · Rete",
     panel1Note: "La rete su cui la UP è deployata e su cui vuoi usare la dApp. Una rete alla volta: cambiarla chiude le sessioni WalletConnect attive.",
     networkFilterPlaceholder: "Filtra per nome... (es. base, polygon, arbitrum)",
@@ -553,6 +716,38 @@ const I18N = {
     unknownCall: (v) => `Chiamata non riconosciuta (selettore ${v.sel})`,
     hupCreate: (v) => `hup.social: pubblica un contenuto${v.parent > 0n ? ` in risposta al contenuto #${v.parent}` : ""} (tipo ${v.type}, ${v.meta}, commenti ${v.comments ? "consentiti" : "chiusi"})`,
     hupCreatorOk: "✅ Autore del contenuto: la tua UP.",
+    unknownAddress: "indirizzo non noto alla pagina",
+    aaveManagerOn: (v) => `Aave: autorizza ${v.who} a gestire le posizioni della UP su questo mercato`,
+    aaveManagerOff: (v) => `Aave: toglie a ${v.who} l'autorizzazione a gestire le posizioni della UP`,
+    aaveManagerKnown: "⚠️ È il gateway di Aave per AVAX: l'autorizzazione serve per depositare AVAX con la UP. Resta valida finché non la togli (con la stessa funzione e approve = false).",
+    aaveManagerUnknown: (v) => `🛑 ${v.who} non è un contratto Aave noto alla pagina: un gestore delle posizioni può operare sulle posizioni della UP. Se non sai perché, rifiuta.`,
+    aaveManagerOffNote: "✅ Togliere un'autorizzazione non sposta fondi.",
+    aaveSupplyNative: (v) => `Aave: deposita ${v.amount} come garanzia (riserva #${v.id} del mercato ${v.spoke})`,
+    aaveSpokeUnknown: (v) => `🛑 Il mercato indicato (${v.who}) non è quello Aave noto alla pagina: se non sai perché, rifiuta.`,
+    aaveSupplyNote: "ℹ️ Il deposito va alla UP che fa la chiamata e può fare da garanzia per prestiti. Per riprendere gli AVAX serve un prelievo dalla UP.",
+    yakDeposit: (v) => `Yield Yak: deposita ${v.amount} nella strategia (quote minime attese: ${v.min})`,
+    yakNote: "ℹ️ Le quote della strategia vanno alla UP che fa la chiamata. La strategia reinveste da sola; per riprendere gli AVAX serve un prelievo dalla UP. Se le quote fossero meno del minimo, l'operazione verrebbe annullata.",
+    defiValueOk: "✅ L'importo nella chiamata è lo stesso valore che esce dalla UP.",
+    defiValueOff: (v) => `🛑 L'importo nella chiamata (${v.amount}) è diverso dal valore che esce dalla UP (${v.value}): se non sai perché, rifiuta.`,
+    unknownAddress: "an address the page does not know",
+    aaveManagerOn: (v) => `Aave: allow ${v.who} to manage the UP's positions on this market`,
+    aaveManagerOff: (v) => `Aave: remove ${v.who}'s permission to manage the UP's positions`,
+    aaveManagerKnown: "⚠️ It is Aave's gateway for AVAX: the permission is needed to deposit AVAX with the UP. It stays valid until you remove it (same function, approve = false).",
+    aaveManagerUnknown: (v) => `🛑 ${v.who} is not an Aave contract the page knows: a position manager can act on the UP's positions. Unless you know why, reject it.`,
+    aaveManagerOffNote: "✅ Removing a permission moves no funds.",
+    aaveSupplyNative: (v) => `Aave: deposit ${v.amount} as collateral (reserve #${v.id} of the market ${v.spoke})`,
+    aaveSpokeUnknown: (v) => `🛑 The market named (${v.who}) is not the Aave one the page knows: unless you know why, reject it.`,
+    aaveSupplyNote: "ℹ️ The deposit goes to the UP making the call and can back loans. Getting the AVAX back takes a withdrawal from the UP.",
+    yakDeposit: (v) => `Yield Yak: deposit ${v.amount} into the strategy (minimum shares expected: ${v.min})`,
+    yakNote: "ℹ️ The strategy's shares go to the UP making the call. The strategy compounds by itself; getting the AVAX back takes a withdrawal from the UP. With fewer shares than the minimum, the operation would be undone.",
+    defiValueOk: "✅ The amount in the call is the same value leaving the UP.",
+    defiValueOff: (v) => `🛑 The amount in the call (${v.amount}) differs from the value leaving the UP (${v.value}): unless you know why, reject it.`,
+    benqiMint: (v) => `BENQI: deposita ${v.amount} nel mercato di prestito (ricevi qiAVAX, che maturano interessi)`,
+    benqiStake: (v) => `BENQI: mette in staking ${v.amount} (ricevi sAVAX, staking liquido)`,
+    kBenqiGet: "La UP riceve",
+    benqiToUp: "✅ I token ricevuti vanno alla UP che fa la chiamata (queste funzioni non hanno un destinatario da indicare).",
+    benqiMintNote: "ℹ️ Per riprendere gli AVAX serve un'altra operazione della UP (redeem). Un deposito può fare da garanzia per prestiti: attento ai prestiti aperti con questa UP.",
+    benqiStakeNote: "ℹ️ sAVAX cresce di valore rispetto ad AVAX. Per riavere AVAX: richiesta di sblocco a BENQI con un periodo di attesa (circa 15 giorni), oppure scambio su un DEX al prezzo del momento.",
     hupUpdate: (v) => `hup.social: modifica il contenuto #${v.id} (nuova versione: ${v.meta}, commenti ${v.comments ? "consentiti" : "chiusi"})`,
     hupEditorOk: "✅ La modifica è a nome della tua UP.",
     hupEditorOther: (v) => `🛑 La modifica sarebbe a nome di ${v.who}, non della tua UP: se non sai perché, rifiuta.`,
@@ -687,7 +882,42 @@ const I18N = {
     panel0Note: "<b>What it is.</b> UP Wallet is your Universal Profile's wallet on <b>every network where the UP exists</b>: LUKSO and the networks where you redeployed it with this site (Base, Polygon, Arbitrum, Avalanche, Arc…), with the <b>same address</b> everywhere. It does what the UP extension and app do on LUKSO, on the other networks too, where they do not reach.<ul style=\"margin:8px 0; padding-left:20px;\"><li><b>See what the UP holds</b> and <b>send</b> currency, tokens and NFTs (panel 6), also to a UP found by name.</li><li><b>Use dApps</b> that connect with WalletConnect (OpenSea, Uniswap, hup.social…): the dApp sees your UP as the account, and what you buy or receive goes to the UP. Almost all work; a few do not accept a smart contract account such as the UP.</li><li><b>Gas</b> is paid by your controller, or by the site, on the networks and for the profiles where gas paid by the site is active.</li></ul><b>What you need.</b> The UP's address, <b>MetaMask with the UP's controller</b> (the key that signs for the UP: the guide explains how to import it) and the UP already on the chosen network. You work on one network at a time. On the phone there is the Android app, with MetaMask mobile.<br><b>Compared with the UP extension.</b> You sign in MetaMask instead of the extension. Before every signature the page shows you in plain words what you are doing, checks and simulates it. It is experimental: start in simulation mode and with small amounts.<details style=\"margin-top:8px;\"><summary>How it works underneath</summary>This page is a <b>WalletConnect bridge</b> between a dApp and your UP. The dApp sees the UP address as the account. Every <b>transaction</b> is wrapped into <code>KeyManager.execute(UP.execute(...))</code> and signed by your controller in MetaMask: the call comes from the UP and any value is paid from the UP's balance, while the controller pays the gas. Every <b>message signature</b> is made by the controller and the UP recognises it as its own (ERC-1271). First of all, the page checks that the UP and the controller are compatible on the chosen network. Every request is shown in full, checked and (for transactions) simulated; nothing happens without your click and your confirmation in MetaMask.</details>",
     disclaimer: "<b>⚠️ Read before using this page</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Experimental tool, not audited.</b> It may contain bugs.</li><li><b>Real, irreversible transactions.</b> Nobody can undo a confirmed transaction. Use minimal amounts and always start in simulation mode.</li><li><b>The page does not know the dApps.</b> It decodes only part of the calls (standard tokens and common cases); for the rest it shows you the raw data. If you do not understand what a request does, <b>reject it</b>.</li><li><b>Message signatures.</b> A signature can authorise actions even without a transaction: logins, orders, permissions to spend tokens. The page shows the content and the result of the checks, but cannot know what the signature will be used for.</li><li><b>Token approvals stay valid</b> after you close the page: whoever receives them can move the UP's tokens until you revoke them.</li><li><b>Responsibility.</b> ChainIntegrate takes no responsibility for signatures or transactions approved on unclear content, nor for what dApps do with them. The software is provided \"as is\" (MIT license), without warranty: you use it at your own risk.</li><li><b>What security relies on:</b> the architecture (you always sign in your own wallet, permissions are enforced by the UP's Key Manager) and the services used (WalletConnect/Reown domain verification, the network's RPCs). The page shows the result of these checks but cannot guarantee them.</li><li><b>One controller per UP.</b> If the same controller governs several UPs, a signature valid for this UP is valid for the others too.</li><li><b>This page never asks for private keys</b> or seed phrases.</li><li><b>Privacy:</b> the WalletConnect connection goes through Reown's servers, which see the session metadata (addresses, network). Checks use the chosen network's public RPC.</li><li><b>No affiliation</b> with LUKSO, WalletConnect/Reown, MetaMask or the dApps you connect. This is not financial advice.</li></ul><div style=\"margin-top:8px;\">Always rejected: <code>eth_sign</code> and legacy signature formats, contract creation, transactions from the UP to itself or to its own Key Manager (they could change its controllers and permissions), requests on a network other than the chosen one.</div>",
     ackLabel: "I have read and accept: I use this tool at my own risk.",
-    ackRequired: "Accept the conditions in panel 0 first.",
+    setupBanner: "To start, set the network, the UP and MetaMask: three steps.",
+    setupGoBtn: "Set up",
+    tileSend: "Send", tileSendSub: "Currency, tokens and NFTs from the UP",
+    tileReceive: "Receive", tileReceiveSub: "The UP's address and QR",
+    tileDapp: "Connect a dApp", tileDappSub: "Use a dApp with the UP (WalletConnect)",
+    tileActivity: "Activity", tileActivitySub: "Requests, simulation and messages",
+    tileSettings: "Settings", tileSettingsSub: "Network, UP, MetaMask, gas",
+    tileHelp: "What it is and how it works", tileHelpSub: "What the wallet does, warnings",
+    backBtn: "← Menu",
+    viewTitle_home: "", viewTitle_all: "", viewTitle_send: "Send", viewTitle_receive: "Receive", viewTitle_dapp: "Connect a dApp",
+    viewTitle_activity: "Activity", viewTitle_settings: "Settings", viewTitle_help: "What it is and how it works",
+    netMoreSummary: "Other networks and custom RPC",
+    netPresenceChecking: "Checking on which networks the UP exists…",
+    netPresenceNote: "Green dot: the UP exists on that network. Grey: it is not there, or the network did not answer.",
+    netUpHere: "The UP exists on this network", netUpNotHere: "The UP does not exist on this network", netUpUnknown: "The network did not answer",
+    panelViewTitle: "View",
+    viewAllLabel: "Full view: every panel on one page",
+    viewAllNote: "For those who prefer the classic page, with every panel one below the other. Untick it to go back to the menu.",
+    panelReceiveTitle: "Receive",
+    receiveNote: "Show the QR or send the link to whoever has to send you something. The UP's address is the same on every network, but the sender must use a network where the UP exists: otherwise the funds reach an address you do not control there.",
+    receiveCopyBtn: "Copy the address", receiveShareBtn: "Share the link", receiveCopied: "Copied",
+    receiveNoUp: "Set the UP first (Settings).",
+    receiveNetLine: (v) => `Network: ${v.net}. The QR also tells the network (chainId ${v.id}) to the wallet that reads it.`,
+    receiveAbsent: (v) => `⚠️ This UP does not exist on ${v.net}: do not have funds sent to you on this network.`,
+    receiveShareText: "My Universal Profile",
+    cardNoUp: "No UP set", cardReady: "ready", cardNotReady: "to set up", cardSim: "🧪 simulation", cardNotHere: "the UP does not exist here",
+    riskTitle: "⚠️ Before you start",
+    riskOkBtn: "Continue",
+    riskLaterBtn: "Not now",
+    riskReopenBtn: "Read the warnings",
+    riskAccepted: "✅ Warnings accepted.",
+    riskPending: "⚠️ Warnings not accepted yet: until you accept them the page connects no dApp and sends nothing.",
+    logTitle: "Messages",
+    logAll: (v) => `Show all (${v.n})`,
+    logLast: "Only the last",
+    ackRequired: "Accept the warnings first (panel 0, \"Read the warnings\").",
     panel1Title: "1 · Network",
     panel1Note: "The network where the UP is deployed and where you want to use the dApp. One network at a time: changing it closes the active WalletConnect sessions.",
     networkFilterPlaceholder: "Filter by name... (e.g. base, polygon, arbitrum)",
@@ -856,6 +1086,12 @@ const I18N = {
     unknownCall: (v) => `Unrecognised call (selector ${v.sel})`,
     hupCreate: (v) => `hup.social: publish content${v.parent > 0n ? ` replying to content #${v.parent}` : ""} (type ${v.type}, ${v.meta}, comments ${v.comments ? "allowed" : "closed"})`,
     hupCreatorOk: "✅ Author of the content: your UP.",
+    benqiMint: (v) => `BENQI: deposit ${v.amount} into the lending market (you receive qiAVAX, which earn interest)`,
+    benqiStake: (v) => `BENQI: stake ${v.amount} (you receive sAVAX, liquid staking)`,
+    kBenqiGet: "The UP receives",
+    benqiToUp: "✅ The tokens received go to the UP making the call (these functions take no recipient).",
+    benqiMintNote: "ℹ️ Getting the AVAX back takes another operation of the UP (redeem). A deposit can back loans: mind any open loan with this UP.",
+    benqiStakeNote: "ℹ️ sAVAX grows in value against AVAX. To get AVAX back: an unlock request to BENQI with a waiting period (about 15 days), or a swap on a DEX at the current price.",
     hupUpdate: (v) => `hup.social: edit content #${v.id} (new version: ${v.meta}, comments ${v.comments ? "allowed" : "closed"})`,
     hupEditorOk: "✅ The edit is in the name of your UP.",
     hupEditorOther: (v) => `🛑 The edit would be in the name of ${v.who}, not your UP: unless you know why, reject it.`,
@@ -993,6 +1229,8 @@ function applyI18n() {
   document.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.getAttribute("data-i18n-html")); });
   document.querySelectorAll("[data-i18n-placeholder]").forEach(el => { el.placeholder = t(el.getAttribute("data-i18n-placeholder")); });
   if (lastCompliance) renderCompliance(lastCompliance);
+  if ($("riskState").textContent) { showRiskState(); logToggleText(); }
+  if ($("upCardAddr").textContent) { updateNav(); $("viewTitle").textContent = t("viewTitle_" + document.body.dataset.view); if (document.body.dataset.view === "receive") renderReceive(); if (presenceFor) $("netPresenceNote").textContent = t("netPresenceNote"); }
 }
 $("langToggle").addEventListener("click", () => { LANG = LANG === "it" ? "en" : "it"; applyI18n(); });
 
@@ -1094,6 +1332,39 @@ function renderKv(boxId, rows, verdict) {
   }
 }
 const riskAccepted = () => $("ackRisk").checked;
+// The warnings window: shown at start until accepted. Acceptance is remembered in this browser (or app)
+// for this version of the text; a new version (RISK_VERSION) asks again. "Not now" closes it unaccepted:
+// the page can be read, but it connects no dApp and sends nothing until accepted.
+const RISK_KEY = "upwallet.riskAccepted", RISK_VERSION = "1";
+function showRiskState() {
+  $("riskState").textContent = t(riskAccepted() ? "riskAccepted" : "riskPending");
+  $("riskState").className = riskAccepted() ? "line-ok" : "line-warn";
+}
+function openRisk(open) {
+  $("riskModal").hidden = !open;
+  document.body.classList.toggle("modal-open", open || !$("requestModal").hidden);
+  $("riskOk").disabled = !riskAccepted();
+  if (open) $("riskModal").querySelector(".modal-body").scrollTop = 0;
+}
+$("ackRisk").addEventListener("change", () => { $("riskOk").disabled = !riskAccepted(); showRiskState(); });
+$("riskOk").addEventListener("click", () => {
+  try { localStorage.setItem(RISK_KEY, RISK_VERSION); } catch (e) { /* not remembered: asked again next time */ }
+  openRisk(false); showRiskState();
+});
+$("riskLater").addEventListener("click", () => {
+  if (!riskAccepted()) { try { localStorage.removeItem(RISK_KEY); } catch (e) { /* nothing stored */ } }
+  openRisk(false); showRiskState();
+});
+$("riskReopen").addEventListener("click", () => openRisk(true));
+try { $("ackRisk").checked = localStorage.getItem(RISK_KEY) === RISK_VERSION; } catch (e) { $("ackRisk").checked = false; }
+showRiskState();
+if (!riskAccepted()) openRisk(true);
+// Messages: only the last one is shown, the button shows them all; every message stays in the list.
+function logToggleText() { $("logToggle").textContent = $("log").classList.contains("last-only") ? t("logAll", { n: $("log").children.length }) : t("logLast"); }
+$("log").classList.add("last-only");
+$("logToggle").addEventListener("click", () => { $("log").classList.toggle("last-only"); logToggleText(); });
+new MutationObserver(logToggleText).observe($("log"), { childList: true });
+logToggleText();
 const permNames = (perms) => PERMISSION_BITS.filter((n) => perms & P[n]).join(", ") || "—";
 
 // Upper bound of the gas price, read straight from the RPC (2 * baseFee + priority fee).
@@ -1209,6 +1480,7 @@ async function runCompliance() {
   compliance = res.ok ? res : null;
   renderCompliance(res);
   updatePairButton();
+  updateNav();
   return res;
 }
 
@@ -1685,6 +1957,14 @@ async function describeCall(c, to, value, data, rows, warnings) {
     const op = describeHup(c, data, rows, warnings);
     if (op) return op;
   }
+  if (dapp === "Aave Spoke" || dapp === "Aave gateway (AVAX)" || dapp === "Yield Yak") {
+    const op = describeAvaxDefi(c, dapp, to, value, data, rows, warnings);
+    if (op) return op;
+  }
+  if (dapp && dapp.startsWith("BENQI ")) {
+    const op = await describeBenqi(c, dapp, value, data, rows, warnings, to);
+    if (op) return op;
+  }
   if (dapp === "LSP26 Follower System") {
     const op = describeLsp26(data, rows, warnings);
     if (op) return op;
@@ -1806,6 +2086,75 @@ function describeHup(c, data, rows, warnings) {
 // ERC-4626 vault: deposit / mint put the asset in and give shares to `receiver`; withdraw / redeem take
 // shares of `owner` out and send the asset to `receiver`. The amounts are shown in both units, with the
 // vault's own preview of the other side. Shares or assets going to an address other than the UP are flagged.
+// BENQI on Avalanche, at its two known addresses only: deposit of AVAX into the lending market (qiAVAX,
+// `mint()` payable, Compound-style) and liquid staking (sAVAX, `submit()` payable). The amount is the value
+// sent; what the UP receives is estimated from the contract's own rate.
+async function describeBenqi(c, dapp, value, data, rows, warnings, to) {
+  const sel = data.slice(0, 10).toLowerCase();
+  const avax = `${ethers.formatEther(value)} AVAX`;
+  const call = (sig, args = []) => c.provider.call({ to, data: new ethers.Interface([`function ${sig} view returns (uint256)`]).encodeFunctionData(sig.split("(")[0], args) }).then((r) => BigInt(r)).catch(() => null);
+  let op, est = null, note;
+  if (dapp === "BENQI qiAVAX" && sel === "0x1249c58b" && data.length === 10) {
+    op = t("benqiMint", { amount: avax });
+    const rate = await call("exchangeRateStored()");
+    if (rate && rate > 0n) est = `${ethers.formatUnits(value * 10n ** 18n / rate, 8)} qiAVAX`;
+    note = "benqiMintNote";
+  } else if (dapp === "BENQI sAVAX" && sel === "0x5bcb2fc6" && data.length === 10) {
+    op = t("benqiStake", { amount: avax });
+    const sh = await call("getSharesByPooledAvax(uint256)", [value]);
+    if (sh !== null) est = `${ethers.formatEther(sh)} sAVAX`;
+    note = "benqiStakeNote";
+  } else return null;
+  rows.push([t("kCall"), op, {}]);
+  if (est) rows.push([t("kBenqiGet"), `${est} ${t("vaultPreview")}`, {}]);
+  rows.push([t("kParams"), `${sel === "0x1249c58b" ? "mint()" : "submit()"} payable · value ${avax}`, { block: true }]);
+  rows.push([t("kRaw"), data, { raw: true }]);
+  warnings.push([t("benqiToUp"), "line-ok"]);
+  warnings.push([t(note), "line-dim"]);
+  return op;
+}
+
+// Aave (pro.aave.com) and Yield Yak on Avalanche, at their known addresses only. The functions were read
+// from real calls; names and types match the selectors exactly.
+const AVAX_DEFI_IFACE = new ethers.Interface([
+  "function setUserPositionManager(address positionManager, bool approve)",                    // Aave Spoke
+  "function supplyAsCollateralNative(address spoke, uint256 reserveId, uint256 amount) payable",  // Aave gateway
+  "function deposit(address token, uint256 amount, uint256 minShares) payable",                 // Yield Yak
+]);
+const NATIVE_PLACEHOLDER = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+function describeAvaxDefi(c, dapp, to, value, data, rows, warnings) {
+  let p = null;
+  try { p = AVAX_DEFI_IFACE.parseTransaction({ data, value }); } catch (e) { p = null; }
+  if (!p) return null;
+  const label = (a) => { const d = DAPP_CONTRACTS[`${c.net.chainId}:${String(a).toLowerCase()}`]; return d ? `${a} (${d})` : `${a} (${t("unknownAddress")})`; };
+  const known = (a, name) => DAPP_CONTRACTS[`${c.net.chainId}:${String(a).toLowerCase()}`] === name;
+  let op;
+  if (dapp === "Aave Spoke" && p.name === "setUserPositionManager") {
+    const [mgr, approve] = p.args;
+    op = t(approve ? "aaveManagerOn" : "aaveManagerOff", { who: label(mgr) });
+    if (!approve) warnings.push([t("aaveManagerOffNote"), "line-ok"]);
+    else if (known(mgr, "Aave gateway (AVAX)")) warnings.push([t("aaveManagerKnown"), "line-warn"]);
+    else warnings.push([t("aaveManagerUnknown", { who: mgr }), "line-danger"]);
+  } else if (dapp === "Aave gateway (AVAX)" && p.name === "supplyAsCollateralNative") {
+    const [spoke, reserveId, amount] = p.args;
+    op = t("aaveSupplyNative", { amount: `${ethers.formatEther(amount)} ${c.net.currency || ""}`.trim(), id: reserveId.toString(), spoke: label(spoke) });
+    warnings.push(amount === value ? [t("defiValueOk"), "line-ok"] : [t("defiValueOff", { amount: ethers.formatEther(amount), value: ethers.formatEther(value) }), "line-danger"]);
+    if (!known(spoke, "Aave Spoke")) warnings.push([t("aaveSpokeUnknown", { who: spoke }), "line-danger"]);
+    warnings.push([t("aaveSupplyNote"), "line-dim"]);
+  } else if (dapp === "Yield Yak" && p.name === "deposit") {
+    const [token, amount, minShares] = p.args;
+    const native = token.toLowerCase() === NATIVE_PLACEHOLDER;
+    op = t("yakDeposit", { amount: native ? `${ethers.formatEther(amount)} ${c.net.currency || ""}`.trim() : `${amount} (${token})`, min: ethers.formatEther(minShares) });
+    if (native) warnings.push(amount === value ? [t("defiValueOk"), "line-ok"] : [t("defiValueOff", { amount: ethers.formatEther(amount), value: ethers.formatEther(value) }), "line-danger"]);
+    warnings.push([t("yakNote"), "line-dim"]);
+  } else return null;
+  const sig = `${p.name}(${p.fragment.inputs.map((i) => i.type).join(",")})`;
+  rows.push([t("kCall"), op, {}]);
+  rows.push([t("kParams"), `${sig}\n${p.fragment.inputs.map((inp, i) => `${inp.name}: ${String(p.args[i])}`).join("\n")}`, { block: true }]);
+  rows.push([t("kRaw"), data, { raw: true }]);
+  return op;
+}
+
 async function describeVault(c, to, value, data, rows, warnings) {
   let p = null;
   try { p = VAULT_IFACE.parseTransaction({ data }); } catch (e) { p = null; }
@@ -2669,8 +3018,146 @@ $("rejectBtn").addEventListener("click", async () => {
   await respondError(topic, id, "User rejected", 5000);
 });
 
+// ==================== Menu, networks with logos, Receive ====================
+// The page is shown as a menu (the UP card and big buttons): each button opens its section, "← Menu" goes
+// back. "Full view" (Settings) shows every panel at once, as the classic page; it is remembered here.
+const VIEW_KEY = "upwallet.view";
+const MAIN_NETS = ["lukso", "base", "arbitrum-one", "polygon", "avalanche-c-chain", "arc", "ethereum", "optimism", "bnb-smart-chain"];
+const LOGO_FILES = new Set(["arbitrum-one", "avalanche-c-chain", "base", "blast", "bnb-smart-chain", "celo", "ethereum", "gnosis", "linea", "mantle", "optimism", "polygon", "scroll", "sonic", "zksync"]);
+const LOGO_COLORS = { lukso: "#fe005b", arc: "#1f2a44", custom: "#3a3f4b" };
+function netLogo(key, name) {
+  const el = document.createElement("span");
+  el.className = "net-logo";
+  if (LOGO_FILES.has(key)) {
+    const img = document.createElement("img");
+    img.src = `chain-logos/${key}.png`; img.alt = ""; img.loading = "lazy";
+    el.appendChild(img);
+  } else {
+    let h = 0; for (const ch of key || "?") h = (h * 31 + ch.charCodeAt(0)) % 360;
+    el.style.background = LOGO_COLORS[key] || `hsl(${h}, 45%, 38%)`;
+    el.textContent = (name || key || "?").trim().charAt(0).toUpperCase();
+  }
+  return el;
+}
+const shortAddr = (a) => `${a.slice(0, 6)}…${a.slice(-4)}`;
+function showView(v, remember = true) {
+  document.body.dataset.view = v;
+  if (remember) { try { if (v === "all") localStorage.setItem(VIEW_KEY, "all"); else localStorage.removeItem(VIEW_KEY); } catch (e) { /* not kept */ } }
+  $("viewAll").checked = v === "all";
+  $("viewTitle").textContent = t("viewTitle_" + v);
+  if (v === "all") $("netMore").open = true;
+  if (v === "receive") renderReceive();
+  if (v !== "home" && v !== "all") window.scrollTo(0, 0);
+}
+document.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => showView(b.dataset.go, false)));
+$("backHome").addEventListener("click", () => showView("home", false));
+$("viewAll").addEventListener("change", () => showView($("viewAll").checked ? "all" : "home"));
+
+// Where the UP exists: its code read on each main network (one request each, one after the other).
+let presence = {}, presenceFor = null, presenceTimer = null, presenceRun = 0;
+async function checkPresence() {
+  const raw = $("upAddress").value.trim();
+  if (!ethers.isAddress(raw)) { presence = {}; presenceFor = null; renderNetPicker(); return; }
+  const up = ethers.getAddress(raw);
+  if (presenceFor === up) return;
+  const run = ++presenceRun;
+  presence = {}; presenceFor = up;
+  $("netPresenceNote").textContent = t("netPresenceChecking");
+  for (const key of MAIN_NETS) {
+    const n = NETWORKS.find((x) => x.key === key);
+    if (!n || !n.rpc) continue;
+    const pv = new ethers.JsonRpcProvider(n.rpc, n.chainId, { staticNetwork: true, batchMaxCount: 1 });
+    try { presence[key] = (await Promise.race([pv.getCode(up), new Promise((_, no) => setTimeout(() => no(new Error("timeout")), 8000))])) !== "0x"; }
+    catch (e) { presence[key] = null; }
+    finally { pv.destroy(); }
+    if (run !== presenceRun) return;
+    renderNetPicker();
+  }
+  $("netPresenceNote").textContent = t("netPresenceNote");
+  updateNav();
+}
+function renderNetPicker() {
+  const box = $("netPicker"), cur = networkSelectEl.value;
+  box.textContent = "";
+  const keys = MAIN_NETS.includes(cur) || !cur ? MAIN_NETS : [...MAIN_NETS, cur];
+  for (const key of keys) {
+    const n = NETWORKS.find((x) => x.key === key);
+    if (!n) continue;
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "net-btn" + (key === cur ? " on" : ""); b.dataset.net = key;
+    b.appendChild(netLogo(key, n.name));
+    const name = document.createElement("span"); name.textContent = n.name; b.appendChild(name);
+    if (presenceFor) { const d = document.createElement("span"); d.className = "net-dot" + (presence[key] ? " yes" : ""); d.title = t(presence[key] ? "netUpHere" : presence[key] === false ? "netUpNotHere" : "netUpUnknown"); b.appendChild(d); }
+    b.addEventListener("click", () => {
+      $("networkFilter").value = "";
+      renderNetworkOptions("");
+      networkSelectEl.value = key;
+      networkSelectEl.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    box.appendChild(b);
+  }
+}
+function updateNav() {
+  const raw = $("upAddress").value.trim(), net = getNetwork();
+  const ok = !!compliance, up = ethers.isAddress(raw) ? ethers.getAddress(raw) : null;
+  const logo = $("upCardLogo");
+  logo.replaceWith(Object.assign(netLogo(net ? net.key : "custom", net ? net.name : "?"), { id: "upCardLogo" }));
+  $("upCardAddr").textContent = up ? shortAddr(up) : t("cardNoUp");
+  $("upCardSub").textContent = (net ? net.name : "—") + (up && presence[net && net.key] === false ? " · " + t("cardNotHere") : "");
+  const sim = $("simulateOnly").checked ? " · " + t("cardSim") : "";
+  $("upCardState").textContent = (ok ? "✅ " + t("cardReady") : complianceTimer && !lastCompliance ? "⏳" : "⚠️ " + t("cardNotReady")) + sim;
+  $("setupBanner").hidden = ok;
+  renderNetPicker();
+  if (document.body.dataset.view === "receive") renderReceive();
+}
+// Receive: the UP's address as a QR (EIP-681, with the network's chain id, so wallets pick the network)
+// and a link to the UP's identity page on the site, to share.
+function siteBase() { return window.__upwalletSite || location.href.replace(/[?#].*$/, "").replace(/[^/]*$/, ""); }
+function renderReceive() {
+  const raw = $("upAddress").value.trim(), net = getNetwork();
+  const qrBox = $("receiveQr"), warn = $("receiveWarn");
+  qrBox.textContent = ""; warn.textContent = "";
+  if (!ethers.isAddress(raw)) { $("receiveAddr").textContent = t("receiveNoUp"); $("receiveNet").textContent = ""; $("receiveLink").textContent = ""; ["receiveCopy", "receiveShare"].forEach((id) => { $(id).disabled = true; }); qrBox.hidden = true; return; }
+  const up = ethers.getAddress(raw);
+  ["receiveCopy", "receiveShare"].forEach((id) => { $(id).disabled = false; });
+  qrBox.hidden = false;
+  const payload = net && net.chainId ? `ethereum:${up}@${net.chainId}` : up;
+  if (typeof qrcode === "function") {
+    const q = qrcode(0, "M"); q.addData(payload); q.make();
+    qrBox.innerHTML = q.createSvgTag({ cellSize: 4, margin: 2, scalable: true });   // generated by the library from a checked address
+  }
+  $("receiveAddr").textContent = up;
+  $("receiveNet").textContent = net && net.chainId ? t("receiveNetLine", { net: net.name, id: net.chainId }) : "";
+  if (net && presence[net.key] === false) { const d = document.createElement("div"); d.className = "line-warn"; d.textContent = t("receiveAbsent", { net: net.name }); warn.appendChild(d); }
+  $("receiveLink").textContent = receiveLink();
+}
+function receiveLink() {
+  const raw = $("upAddress").value.trim(), net = getNetwork();
+  if (!ethers.isAddress(raw)) return "";
+  return `${siteBase()}up-identity.html?up=${ethers.getAddress(raw)}${net && net.chainId ? "&network=" + encodeURIComponent(net.key) : ""}`;
+}
+async function copyText(text, btn) {
+  try { await navigator.clipboard.writeText(text); }
+  catch (e) { const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); }
+  const old = btn.textContent; btn.textContent = t("receiveCopied"); setTimeout(() => { btn.textContent = old; }, 1500);
+}
+$("receiveCopy").addEventListener("click", () => { const raw = $("upAddress").value.trim(); if (ethers.isAddress(raw)) copyText(ethers.getAddress(raw), $("receiveCopy")); });
+$("receiveShare").addEventListener("click", async () => {
+  const url = receiveLink(); if (!url) return;
+  if (navigator.share) { try { await navigator.share({ title: "Universal Profile", text: t("receiveShareText"), url }); return; } catch (e) { if (e && e.name === "AbortError") return; } }
+  copyText(url, $("receiveShare"));
+});
+$("upAddress").addEventListener("input", () => { updateNav(); clearTimeout(presenceTimer); presenceTimer = setTimeout(checkPresence, 800); });
+networkSelectEl.addEventListener("change", updateNav);
+$("simulateOnly").addEventListener("change", updateNav);
+let startView = "home";
+try { if (localStorage.getItem(VIEW_KEY) === "all") startView = "all"; } catch (e) { /* default */ }
+
 applyI18n();
 onNetworkChanged();
+showView(startView, false);
+updateNav();
+setTimeout(checkPresence, 300);
 </script>
 
 </body>
