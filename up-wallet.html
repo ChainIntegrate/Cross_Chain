@@ -308,6 +308,8 @@ const HUP_VOTE_SELECTOR = "0x57941004";
 const HUP_VOTE_TYPES = ["address", "uint256", "uint256", "bytes"];
 const HUP_IFACE = new ethers.Interface([
   "function create(address creator, uint8 cType, string metadata, uint256 parentId, bool allowedComments)",
+  // Editing a post: selector 0x34c31991, seen on hup.social on LUKSO (the UP, the post, its new metadata, comments).
+  "function update(address creator, uint256 contentId, string metadata, bool allowedComments)",
   "function batchLike(address user, uint256[] contentIds)",
   "function batchUnlike(address user, uint256[] contentIds)",
 ]);
@@ -549,6 +551,10 @@ const I18N = {
     unknownCall: (v) => `Chiamata non riconosciuta (selettore ${v.sel})`,
     hupCreate: (v) => `hup.social: pubblica un contenuto${v.parent > 0n ? ` in risposta al contenuto #${v.parent}` : ""} (tipo ${v.type}, ${v.meta}, commenti ${v.comments ? "consentiti" : "chiusi"})`,
     hupCreatorOk: "✅ Autore del contenuto: la tua UP.",
+    hupUpdate: (v) => `hup.social: modifica il contenuto #${v.id} (nuova versione: ${v.meta}, commenti ${v.comments ? "consentiti" : "chiusi"})`,
+    hupEditorOk: "✅ La modifica è a nome della tua UP.",
+    hupEditorOther: (v) => `🛑 La modifica sarebbe a nome di ${v.who}, non della tua UP: se non sai perché, rifiuta.`,
+    hupUpdateNote: "ℹ️ La nuova versione è già stata caricata su IPFS da hup.social prima di questa richiesta. La versione precedente non sparisce: resta su IPFS e nella storia della rete, chi conosce il suo link può ancora leggerla.",
     hupCreatorOther: (v) => `🛑 Autore del contenuto: ${v.who}, non la tua UP. Il contenuto verrebbe pubblicato a nome di un altro indirizzo: se non sai perché, rifiuta.`,
     hupLike: (v) => `hup.social: mette like ${v.n === 1 ? "al contenuto" : "ai contenuti"} ${v.ids}`,
     hupUnlike: (v) => `hup.social: toglie il like ${v.n === 1 ? "al contenuto" : "ai contenuti"} ${v.ids}`,
@@ -846,6 +852,10 @@ const I18N = {
     unknownCall: (v) => `Unrecognised call (selector ${v.sel})`,
     hupCreate: (v) => `hup.social: publish content${v.parent > 0n ? ` replying to content #${v.parent}` : ""} (type ${v.type}, ${v.meta}, comments ${v.comments ? "allowed" : "closed"})`,
     hupCreatorOk: "✅ Author of the content: your UP.",
+    hupUpdate: (v) => `hup.social: edit content #${v.id} (new version: ${v.meta}, comments ${v.comments ? "allowed" : "closed"})`,
+    hupEditorOk: "✅ The edit is in the name of your UP.",
+    hupEditorOther: (v) => `🛑 The edit would be in the name of ${v.who}, not your UP: unless you know why, reject it.`,
+    hupUpdateNote: "ℹ️ The new version was already uploaded to IPFS by hup.social before this request. The previous version does not disappear: it stays on IPFS and in the network's history, and anyone with its link can still read it.",
     hupCreatorOther: (v) => `🛑 Author of the content: ${v.who}, not your UP. The content would be published in the name of another address: unless you know why, reject it.`,
     hupLike: (v) => `hup.social: like ${v.n === 1 ? "content" : "contents"} ${v.ids}`,
     hupUnlike: (v) => `hup.social: remove the like from ${v.n === 1 ? "content" : "contents"} ${v.ids}`,
@@ -1749,6 +1759,11 @@ function describeHup(c, data, rows, warnings) {
     op = t("hupCreate", { parent: parentId, type: cType, meta: metadata, comments: allowedComments });
     who = creator;
     params = `creator: ${creator}\ncType: ${cType}\nmetadata: ${metadata}\nparentId: ${parentId}\nallowedComments: ${allowedComments}`;
+  } else if (p.name === "update") {
+    const [creator, contentId, metadata, allowedComments] = p.args;
+    op = t("hupUpdate", { id: contentId, meta: metadata, comments: allowedComments });
+    who = creator;
+    params = `creator: ${creator}\ncontentId: ${contentId}\nmetadata: ${metadata}\nallowedComments: ${allowedComments}`;
   } else {
     const [user, ids] = p.args;
     const list = ids.slice(0, 20).map((i) => "#" + i).join(", ") + (ids.length > 20 ? ` … (${ids.length})` : "");
@@ -1761,9 +1776,11 @@ function describeHup(c, data, rows, warnings) {
   rows.push([t("kRaw"), data, { raw: true }]);
   const mine = who.toLowerCase() === c.up.toLowerCase();
   if (p.name === "create") warnings.push(mine ? [t("hupCreatorOk"), "line-ok"] : [t("hupCreatorOther", { who }), "line-danger"]);
+  else if (p.name === "update") warnings.push(mine ? [t("hupEditorOk"), "line-ok"] : [t("hupEditorOther", { who }), "line-danger"]);
   else warnings.push(mine ? [t("hupUserOk"), "line-ok"] : [t("hupUserOther", { who }), "line-danger"]);
   // The post's text and attachments are already on IPFS (uploaded by the dApp before asking to sign).
   if (p.name === "create" && /^ipfs:\/\//i.test(p.args[2])) warnings.push([t("hupIpfs"), "line-dim"]);
+  if (p.name === "update") warnings.push([t("hupUpdateNote"), "line-dim"]);
   warnings.push([t("hupNote"), "line-dim"]);
   return op;
 }
