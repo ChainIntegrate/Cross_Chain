@@ -518,6 +518,7 @@ const I18N = {
     proposalUnverified: "⚠️ Dominio non verificato da WalletConnect: controlla di essere sul sito giusto prima di approvare qualsiasi cosa.",
     proposalRejectedChains: (v) => `❌ Connessione rifiutata: la dApp richiede reti diverse da quella scelta (${v.err}). Scegli nel pannello 1 la rete che la dApp usa e ricollega.`,
     proposalOtherChains: (v) => `❌ Connessione rifiutata: la dApp chiede ${v.want}, nel pannello 1 è scelta ${v.have}. Scegli la rete della dApp, poi ricollega dalla dApp.`,
+    proposalAcceptsChains: (v) => `❌ Connessione rifiutata: la dApp accetta solo ${v.want}; nel pannello 1 è scelta ${v.have}. Scegli una di queste reti (dove la UP è pubblicata), poi ricollega dalla dApp.`,
     switchNetworkBtn: (v) => `Scegli ${v.name}`,
     attnProposal: (v) => `${v.name} chiede di collegarsi alla UP.`,
     attnRequest: (v) => `${v.who} chiede ${v.what}: torna su UP Wallet per vederla.`,
@@ -814,6 +815,7 @@ const I18N = {
     pairing: "Connecting... confirm on the dApp if asked.",
     proposalFrom: (v) => `Connection request from: ${v.name} (${v.url}) — domain verification: ${v.verify}`,
     proposalOtherChains: (v) => `❌ Connection rejected: the dApp asks for ${v.want}, panel 1 has ${v.have}. Choose the dApp's network, then reconnect from the dApp.`,
+    proposalAcceptsChains: (v) => `❌ Connection rejected: the dApp accepts only ${v.want}; panel 1 has ${v.have}. Choose one of these networks (where the UP is deployed), then reconnect from the dApp.`,
     switchNetworkBtn: (v) => `Choose ${v.name}`,
     attnProposal: (v) => `${v.name} asks to connect to the UP.`,
     attnRequest: (v) => `${v.who} asks for ${v.what}: go back to UP Wallet to see it.`,
@@ -1511,23 +1513,29 @@ async function onSessionProposal({ id, params, verifyContext }) {
     log(t("proposalApproved", { net: `${c.net.name} (${c.net.chainId})` }), "line-dim");
     showSessions();
   } catch (e) {
-    // The networks the dApp requires, other than the chosen one: named, and one click away when the page has it.
-    const wanted = [...new Set(params.requiredNamespaces?.eip155?.chains || [])].filter((x) => x !== c.caip);
+    // The networks the dApp requires, other than the chosen one: named, and one click away when the page has
+    // it. A dApp that requires none but accepts only some (all optional, as with Reown AppKit) gets the same,
+    // with the networks it accepts.
+    const required = [...new Set(params.requiredNamespaces?.eip155?.chains || [])];
+    const optional = [...new Set(Object.entries(params.optionalNamespaces || {})
+      .filter(([k]) => k.split(":")[0] === "eip155").flatMap(([k, v]) => v.chains || (k.includes(":") ? [k] : [])))];
+    const wanted = (required.length ? required : optional).filter((x) => x !== c.caip);
     const known = wanted.map((x) => NETWORKS.find((n) => n.chainId && `eip155:${n.chainId}` === x));
-    if (!wanted.length) log(t("proposalRejectedChains", { err: e.message }), "line-err");
+    if (!wanted.length || (!required.length && optional.includes(c.caip))) log(t("proposalRejectedChains", { err: e.message }), "line-err");
     else {
       const name = (x, i) => known[i] ? `${known[i].name} (chainId ${known[i].chainId})` : `chainId ${x.split(":")[1]}`;
-      const line = log(t("proposalOtherChains", { want: wanted.map(name).join(", "), have: `${c.net.name} (chainId ${c.net.chainId})` }), "line-err");
-      if (wanted.length === 1 && known[0]) {
+      const have = `${c.net.name} (chainId ${c.net.chainId})`;
+      const line = log(t(required.length ? "proposalOtherChains" : "proposalAcceptsChains", { want: wanted.map(name).join(", "), have }), "line-err");
+      for (const k of known.filter(Boolean).slice(0, 8)) {
         const b = document.createElement("button");
-        b.type = "button"; b.className = "secondary"; b.style.marginLeft = "8px";
-        b.textContent = t("switchNetworkBtn", { name: known[0].name });
+        b.type = "button"; b.className = "secondary"; b.style.margin = "4px 0 0 8px";
+        b.textContent = t("switchNetworkBtn", { name: k.name });
         b.addEventListener("click", () => {
           $("networkFilter").value = "";
           renderNetworkOptions("");
-          networkSelectEl.value = known[0].key;
+          networkSelectEl.value = k.key;
           networkSelectEl.dispatchEvent(new Event("change"));
-          b.disabled = true;
+          line.querySelectorAll("button").forEach((x) => { x.disabled = true; });
         });
         line.appendChild(b);
       }
