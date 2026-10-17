@@ -90,7 +90,7 @@
   .up-card { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: var(--raised); color: var(--text);
              border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin: 0 0 14px; font-weight: 400; }
   .up-card-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-  .up-card-addr { font-family: monospace; font-size: 15px; font-weight: 700; }
+  .up-card-addr { font-family: monospace; font-size: 15px; font-weight: 700; overflow-wrap: anywhere; }
   .up-card-sub { font-size: 12.5px; color: var(--text-dim); }
   .up-card { cursor: pointer; }
   .up-card-state { font-size: 12.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -3152,13 +3152,32 @@ function renderNetPicker() {
     box.appendChild(b);
   }
 }
+// The UP's name for the card, from LUKSO's public profile index (the same one used to find a recipient by
+// name): the LSP3 name the profile has on LUKSO. Shown as name#abcd, since names are not unique; the address
+// stays under it. Without an answer the card shows the address.
+const profileNames = {};
+async function profileName(up) {
+  if (up in profileNames) return profileNames[up];
+  profileNames[up] = null;
+  try {
+    const r = await fetch(PROFILE_INDEX, { method: "POST", headers: { "content-type": "application/json", accept: "application/json" }, credentials: "omit", referrerPolicy: "no-referrer",
+      body: JSON.stringify({ query: "query($ids: [String!]) { Profile(where: { id: { _in: $ids } }, limit: 1) { id name } }", variables: { ids: [up.toLowerCase(), up] } }) });
+    const j = r.ok ? await r.json() : null;
+    const p = j && j.data && Array.isArray(j.data.Profile) ? j.data.Profile[0] : null;
+    const name = p && typeof p.name === "string" ? p.name.replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, 40) : "";
+    profileNames[up] = name || null;
+  } catch (e) { profileNames[up] = null; }
+  return profileNames[up];
+}
 function updateNav() {
   const raw = $("upAddress").value.trim(), net = getNetwork();
   const ok = !!compliance, up = ethers.isAddress(raw) ? ethers.getAddress(raw) : null;
   const logo = $("upCardLogo");
   logo.replaceWith(Object.assign(netLogo(net ? net.key : "custom", net ? net.name : "?"), { id: "upCardLogo" }));
-  $("upCardAddr").textContent = up ? shortAddr(up) : t("cardNoUp");
-  $("upCardSub").textContent = (net ? net.name : "—") + (up && presence[net && net.key] === false ? " · " + t("cardNotHere") : "");
+  const name = up ? profileNames[up] : null;
+  if (up && !(up in profileNames)) profileName(up).then((n) => { if (n) updateNav(); });
+  $("upCardAddr").textContent = up ? (name ? `${name}#${tag(up)}` : shortAddr(up)) : t("cardNoUp");
+  $("upCardSub").textContent = (name ? shortAddr(up) + " · " : "") + (net ? net.name : "—") + (up && presence[net && net.key] === false ? " · " + t("cardNotHere") : "");
   $("upCardStateText").textContent = ok ? "✅ " + t("cardReady") : complianceTimer && !lastCompliance ? "⏳" : "⚠️ " + t("cardNotReady");
   const sim = $("simulateOnly").checked;
   $("simChip").textContent = t(sim ? "cardSim" : "cardReal");
