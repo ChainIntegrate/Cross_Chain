@@ -188,6 +188,7 @@ const I18N = {
     signerNone: "collega MetaMask con un controller della UP",
     svcDown: "il servizio di sponsorizzazione non risponde su questa rete",
     subsClosed: "Iscrizioni non ancora aperte: il servizio funziona, ma non accetta ancora pagamenti. Riprova nei prossimi giorni.",
+    svcListed: "Questa UP è nella lista del sito: il sito le paga già il gas, senza abbonamento. Non serve iscriverla.",
     svcBadData: "il servizio indica un USDC o un destinatario diversi da quelli attesi: niente verrà firmato",
     svcOk: (v) => `pagamento di ${v.amount} USDC alla UP di ChainIntegrate ${v.receiver}`,
     setupOk: "pronta (estensione, EntryPoint e permesso 4337 del controller)",
@@ -261,6 +262,7 @@ const I18N = {
     signerNone: "connect MetaMask with a controller of the UP",
     svcDown: "the sponsor service does not answer on this network",
     subsClosed: "Subscriptions are not open yet: the service is running but does not accept payments yet. Try again in the next few days.",
+    svcListed: "This UP is on the site's list: the site already pays its gas, with no subscription. There is no need to subscribe it.",
     svcBadData: "the service gives a USDC or a receiver different from the expected ones: nothing will be signed",
     svcOk: (v) => `payment of ${v.amount} USDC to ChainIntegrate's UP ${v.receiver}`,
     setupOk: "ready (extension, EntryPoint and the controller's 4337 permission)",
@@ -317,6 +319,7 @@ const validEmail = (e) => e.length <= 254 && /^[^\s@<>()",;:\\[\]]+@[^\s@<>()",;
 
 // ==================== networks and price list ====================
 let nets = [], prices = null, priceState = "loading", busy = false;
+let netPick = null;   // the network buttons (site-ui.js), set at the end of the page
 async function loadNetworks() {
   const info = await GasRelayClient.loadInfo(true);
   nets = CHAINS.filter(c => NATIVE_USDC[c.chainId] && info && info.chains[String(c.chainId)] && info.chains[String(c.chainId)].sponsorPaymaster);
@@ -324,6 +327,7 @@ async function loadNetworks() {
   nets.forEach(c => { const o = document.createElement("option"); o.value = c.key; o.textContent = `${c.name} (chainId ${c.chainId})`; sel.appendChild(o); });
   const want = new URLSearchParams(location.search).get("network");
   if (want && nets.some(c => c.key === want)) sel.value = want;
+  if (netPick) netPick.reload();   // the network buttons, now that the list is known
   // Any address that is not a customer gets the subscription data, price list included.
   if (nets.length) { const st = await GasRelayClient.sponsorStatus(nets[0].chainId, ethers.ZeroAddress); prices = st && st.subscription ? st.subscription.prices : null; priceState = prices ? "ok" : st ? "closed" : "down"; }
   renderPrices();
@@ -396,6 +400,7 @@ function refreshBalance(delay) {
     const st = await GasRelayClient.sponsorStatus(net.chainId, ethers.getAddress(raw));
     if (my !== balGen) return;
     const sub = st && st.subscription;
+    if (!sub && st && priceState === "ok") { setStatus("balanceBox", t("svcListed"), "line-ok"); box.hidden = false; return; }
     if (!sub) { box.hidden = true; return; }
     let msg, cls;
     if (sub.status === "active") {
@@ -453,6 +458,9 @@ async function computeCheck() {
   // The service: what to pay and to whom. Never trusted alone: checked against the page's own values.
   const st = await GasRelayClient.sponsorStatus(chainId, up);
   const sub = st && st.subscription;
+  // A UP on the service's own list (the site's, e.g. ChainIntegrate's) is sponsored without a subscription: the
+  // service answers it without the subscription data, while subscriptions are open for everyone else.
+  if (!sub && st && priceState === "ok") { rows.push(["kSvc", t("svcListed"), "ok"]); out.listed = true; return out; }
   if (!sub) { rows.push(["kSvc", t(st ? "subsClosed" : "svcDown"), "err"]); return out; }
   if (!sub.usdc || ethers.getAddress(sub.usdc) !== NATIVE_USDC[chainId] || ethers.getAddress(sub.receiver) !== RECEIVER || ethers.parseUnits(String(sub.amount), 6) !== AMOUNT) { rows.push(["kSvc", t("svcBadData"), "err"]); return out; }
   rows.push(["kSvc", t("svcOk", { amount: "5", receiver: RECEIVER }), "ok"]);
@@ -494,6 +502,7 @@ function updateButtons() {
   let hint = "";
   if (!$("ackRisk").checked) hint = t("hintAck");
   else if (lastCheck && lastCheck.status === "paid") hint = t("hintPaid");
+  else if (lastCheck && lastCheck.listed) hint = t("svcListed");
   else if (!check) hint = t("hintCheck");
   else if (!validEmail(email) || !$("ackPrivacy").checked) hint = t("hintEmail");
   else hint = t("hintReady");
@@ -547,7 +556,7 @@ loadNetworks().then(() => scheduleCheck(0));
 // Shared look of the site (site-ui.js), as UP Wallet: the warnings in a window at the first opening,
 // the main networks as buttons with their logo (a green dot where the UP exists).
 SiteUI.riskWindow({ content: document.querySelector(".warn-box"), ack: document.getElementById("ackRisk") });
-SiteUI.netPicker({ select: document.getElementById("network"), filter: document.getElementById("networkFilter"), upInput: document.getElementById("upAddress") });
+netPick = SiteUI.netPicker({ select: document.getElementById("network"), filter: document.getElementById("networkFilter"), upInput: document.getElementById("upAddress") });
 SiteUI.clampNotes();   // long explanations: three lines and "Read more"
 </script>
 </body>
