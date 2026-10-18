@@ -87,6 +87,9 @@ body.sui-open { overflow: hidden; }
 .sui-other { font-size: 12.5px; color: var(--text-dim); margin: 4px 0 6px; }
 .sui-note { font-size: 12px; color: var(--text-dim); margin: -4px 0 10px; }
 .sui-clamp:not(.sui-open) { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 4px; }
+/* Addresses, hashes and links have no spaces: let them wrap inside their box instead of running out of it. */
+.panel, .panel *, .sui-modal, .sui-modal * { overflow-wrap: anywhere; }
+.panel { min-width: 0; }
 .sui-modal.sui-info { border-color: var(--accent); }
 .sui-modal.sui-info .sui-title { color: var(--text); }
 .sui-qr { display: flex; justify-content: center; margin: 10px 0; }
