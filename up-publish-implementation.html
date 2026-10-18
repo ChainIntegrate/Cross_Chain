@@ -17,6 +17,7 @@
 <meta name="twitter:image" content="https://crosschain-lukso.chainintegrate.it/og-image.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="chains.js"></script>
+<script src="site-ui.js"></script>
 <script src="sign-check.js"></script>
 <style>
   :root {
@@ -138,7 +139,7 @@ const $ = (id) => document.getElementById(id);
 const escapeHtml = (v) => String(v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 // ==================== I18N ====================
-let LANG = "it";
+let LANG = SiteUI.initialLang();
 
 const I18N = {
   it: {
@@ -317,7 +318,7 @@ function applyI18n() {
   document.querySelectorAll("[data-i18n-chip]").forEach(el => { el.textContent = `${t(el.dataset.i18nChip)} · ${el.dataset.addr.slice(0, 10)}…`; });
 }
 $("langToggle").addEventListener("click", () => {
-  LANG = LANG === "it" ? "en" : "it";
+  LANG = LANG === "it" ? "en" : "it"; SiteUI.saveLang(LANG);
   applyI18n();
 });
 
@@ -692,6 +693,9 @@ $("publishBtn").addEventListener("click", async () => {
 });
 
 applyI18n();
+// Shared look of the site (site-ui.js), as UP Wallet: the warnings in a window at the first opening,
+// the main networks as buttons with their logo (a green dot where the UP exists).
+SiteUI.netPicker({ select: document.getElementById("network"), filter: document.getElementById("networkFilter"), upInput: null });
 </script>
 
 </body>
