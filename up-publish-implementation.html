@@ -157,7 +157,7 @@ const I18N = {
     loadBtn: "Leggi il deploy originale da LUKSO",
     notLoaded: "Non ancora letto.",
     panel2Title: "2 · Wallet che paga la pubblicazione",
-    panel2Note: "Un account qualsiasi con un po' di gas sulla rete di destinazione: paga solo la transazione, non ottiene alcun permesso su niente.",
+    panel2Note: "Un account qualsiasi con un po' di gas sulla rete di destinazione: paga solo la transazione, non ottiene alcun permesso su niente. Dal telefono, dove il browser non ha MetaMask, il pulsante collega l'app MetaMask con WalletConnect: la transazione arriva nell'app da approvare.",
     connectSignerBtn: "Connetti wallet firmatario (es. MetaMask)",
     notConnected: "Non connesso.",
     panel3Title: "3 · Rete di destinazione",
@@ -171,7 +171,7 @@ const I18N = {
 
     connectedBadge: "Connesso",
     connectionRejected: "Connessione rifiutata o fallita",
-    noSignerFound: "Nessun wallet firmatario trovato",
+    wcDisconnectBtn: "Scollega",
     invalidImpl: "Indirizzo del contratto non valido.",
     loading: "Lettura da LUKSO in corso...",
     implNotOnLukso: "Su LUKSO non c'è codice a questo indirizzo: non è un contratto pubblicato.",
@@ -236,7 +236,7 @@ const I18N = {
     loadBtn: "Read the original deploy from LUKSO",
     notLoaded: "Not read yet.",
     panel2Title: "2 · Wallet paying for the publication",
-    panel2Note: "Any account with a little gas on the target network: it only pays for the transaction and gets no permission on anything.",
+    panel2Note: "Any account with a little gas on the target network: it only pays for the transaction and gets no permission on anything. On a phone, where the browser has no MetaMask, the button connects the MetaMask app with WalletConnect: the transaction reaches the app to approve.",
     connectSignerBtn: "Connect signing wallet (e.g. MetaMask)",
     notConnected: "Not connected.",
     panel3Title: "3 · Target network",
@@ -250,7 +250,7 @@ const I18N = {
 
     connectedBadge: "Connected",
     connectionRejected: "Connection rejected or failed",
-    noSignerFound: "No signing wallet found",
+    wcDisconnectBtn: "Disconnect",
     invalidImpl: "Invalid contract address.",
     loading: "Reading from LUKSO...",
     implNotOnLukso: "There is no code at this address on LUKSO: it is not a published contract.",
@@ -534,6 +534,19 @@ const discoveredProviders = [];
 window.addEventListener("eip6963:announceProvider", (e) => discoveredProviders.push(e.detail));
 window.dispatchEvent(new Event("eip6963:requestProvider"));
 
+// The connected signer; through WalletConnect also the wallet's name and a button to disconnect (the way to
+// pick another account there).
+function showSigner(netLabel) {
+  const wc = signerProvider && signerProvider.isWalletConnect;
+  $("signerStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${escapeHtml(signerAddress + netLabel)}` +
+    (wc ? `<div class="line-dim" style="margin-top:6px;">WalletConnect · ${escapeHtml(signerProvider.walletName)} <button type="button" id="signerDisconnect" class="secondary" style="width:auto; margin:0 0 0 8px; padding:4px 10px; font-size:12px;">${t("wcDisconnectBtn")}</button></div>` : "");
+  if (wc) $("signerDisconnect").addEventListener("click", async () => {
+    await signerProvider.disconnect();
+    signerProvider = null; signerAddress = null; watchedSigner = null;
+    $("signerStatus").innerHTML = `<span class="empty">${t("notConnected")}</span>`;
+    invalidateCheck();
+  });
+}
 let watchedSigner = null;
 function watchSigner(p) {
   if (watchedSigner === p || typeof p.on !== "function") return;
@@ -545,9 +558,10 @@ function watchSigner(p) {
 $("connectSigner").addEventListener("click", async () => {
   let candidate = discoveredProviders.find(p => !/lukso|universal profile/i.test(p.info.name))?.provider;
   if (!candidate && window.ethereum && window.ethereum !== window.lukso) candidate = window.ethereum;
+  // No wallet in this browser (a phone): MetaMask on the phone through WalletConnect (site-ui.js).
   if (!candidate) {
-    $("signerStatus").innerHTML = `<span class="badge err">${t("noSignerFound")}</span>`;
-    return;
+    try { candidate = await SiteUI.walletConnectSigner({ chain: getNetwork }); } catch (e) { candidate = null; }
+    if (!candidate) return;
   }
   try {
     const accounts = await candidate.request({ method: "eth_requestAccounts" });
@@ -559,7 +573,7 @@ $("connectSigner").addEventListener("click", async () => {
     try {
       netLabel = ` · chainId ${parseInt(await candidate.request({ method: "eth_chainId" }), 16)}`;
     } catch (e) { /* the address is shown anyway */ }
-    $("signerStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${escapeHtml(signerAddress + netLabel)}`;
+    showSigner(netLabel);
   } catch (e) {
     $("signerStatus").innerHTML = `<span class="badge err">${t("connectionRejected")}</span>`;
   }
@@ -582,7 +596,7 @@ async function checkChains(net, provider) {
     return { ok: false, msg: t("walletNetworkCheckFailed") };
   }
   if (walletChainId !== expectedChainId) {
-    return { ok: false, msg: t("walletWrongNetwork", { walletChainId, netName: net.name, chainId: expectedChainId }) };
+    return { ok: false, msg: t("walletWrongNetwork", { walletChainId, netName: net.name, chainId: expectedChainId }) + (signerProvider.isWalletConnect ? " " + signerProvider.wrongChainText() : "") };
   }
   return { ok: true, chainId: expectedChainId };
 }
@@ -649,7 +663,7 @@ $("publishBtn").addEventListener("click", async () => {
     if (!net || net.rpc !== ctx.rpc) { log(t("staleCheckLog"), "line-err"); return; }
     const walletChainId = parseInt(await signerProvider.request({ method: "eth_chainId" }), 16);
     if (walletChainId !== ctx.chainId) {
-      log(t("walletWrongNetwork", { walletChainId, netName: net.name, chainId: ctx.chainId }), "line-err");
+      log(t("walletWrongNetwork", { walletChainId, netName: net.name, chainId: ctx.chainId }) + (signerProvider.isWalletConnect ? " " + signerProvider.wrongChainText() : ""), "line-err");
       return;
     }
     const signerObj = await new ethers.BrowserProvider(signerProvider).getSigner();
