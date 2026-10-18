@@ -95,6 +95,7 @@
   <label for="network" data-i18n="networkLabel">Rete su cui paghi</label>
   <select id="network"></select>
   <div class="note" id="networkNote" style="margin-top:8px;" data-i18n-html="networkNote"></div>
+  <button id="connectUp" class="secondary" data-i18n="connectUpBtn">Leggi l'indirizzo dalla tua UP (estensione o app)</button>
   <label for="upAddress" data-i18n="upAddressLabel">Indirizzo della tua UP</label>
   <input type="text" id="upAddress" placeholder="0x...">
   <div class="status-box" id="balanceBox" hidden></div>
@@ -167,6 +168,7 @@ const I18N = {
     panel1Title: "1 · Rete, UP e controller",
     networkLabel: "Rete su cui paghi",
     networkNote: "<b>La rete serve solo per questo pagamento.</b> Il saldo vale poi su tutte le reti disponibili, qualunque sia quella che scegli qui. Scegli la rete dove la tua UP ha gli USDC e la configurazione 4337.",
+    connectUpBtn: "Leggi l'indirizzo dalla tua UP (estensione o app)",
     upAddressLabel: "Indirizzo della tua UP",
     upNote: "Lo stesso indirizzo della tua UP su LUKSO. Il pagamento parte dalla UP: è così che il servizio sa quale UP attivare. Dal telefono, dove il browser non ha MetaMask, il pulsante collega l'app MetaMask con WalletConnect: la firma del pagamento arriva nell'app da approvare.",
     connectSignerBtn: "Connetti MetaMask (controller della UP)",
@@ -239,6 +241,7 @@ const I18N = {
     panel1Title: "1 · Network, UP and controller",
     networkLabel: "Network you pay on",
     networkNote: "<b>The network is only for this payment.</b> The balance then works on every available network, whichever you choose here. Choose the network where your UP holds the USDC and has the 4337 setup.",
+    connectUpBtn: "Read the address from your UP (extension or app)",
     upAddressLabel: "Your UP's address",
     upNote: "The same address as your UP on LUKSO. The payment comes from the UP: this is how the service knows which UP to activate. On a phone, where the browser has no MetaMask, the button connects the MetaMask app with WalletConnect: the payment's signature reaches the app to approve.",
     connectSignerBtn: "Connect MetaMask (the UP's controller)",
@@ -407,6 +410,15 @@ function refreshBalance(delay) {
 let gen = 0, check = null, lastCheck = null, checkRun = 0, checkTimer = null;
 function scheduleCheck(delay = 500) { refreshBalance(delay); gen++; check = null; updateButtons(); clearTimeout(checkTimer); checkTimer = setTimeout(runCheck, delay); }
 ["upAddress"].forEach(id => $(id).addEventListener("input", () => scheduleCheck()));
+// The extension, else the Universal Profiles app via WalletConnect (site-ui.js); null when cancelled.
+$("connectUp").addEventListener("click", async () => {
+  try {
+    const a = await SiteUI.upAddress();
+    if (!a) return;
+    $("upAddress").value = ethers.getAddress(a);
+    ["input", "change"].forEach(ev => $("upAddress").dispatchEvent(new Event(ev)));
+  } catch (e) { /* rejected */ }
+});
 $("network").addEventListener("change", () => scheduleCheck(0));
 ["email"].forEach(id => $(id).addEventListener("input", updateButtons));
 ["ackRisk", "ackPrivacy"].forEach(id => $(id).addEventListener("change", updateButtons));
