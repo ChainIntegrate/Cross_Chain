@@ -100,6 +100,7 @@
   <div class="status-box" id="balanceBox" hidden></div>
   <div class="note" style="margin-top:8px;" data-i18n="upNote"></div>
   <button id="connectSigner" data-i18n="connectSignerBtn">Connetti MetaMask (controller della UP)</button>
+  <div id="signerWc" class="line-dim" style="margin-top:6px; font-size:12.5px;" hidden></div>
 </div>
 
 <div class="panel">
@@ -167,9 +168,9 @@ const I18N = {
     networkLabel: "Rete su cui paghi",
     networkNote: "<b>La rete serve solo per questo pagamento.</b> Il saldo vale poi su tutte le reti disponibili, qualunque sia quella che scegli qui. Scegli la rete dove la tua UP ha gli USDC e la configurazione 4337.",
     upAddressLabel: "Indirizzo della tua UP",
-    upNote: "Lo stesso indirizzo della tua UP su LUKSO. Il pagamento parte dalla UP: è così che il servizio sa quale UP attivare.",
+    upNote: "Lo stesso indirizzo della tua UP su LUKSO. Il pagamento parte dalla UP: è così che il servizio sa quale UP attivare. Dal telefono, dove il browser non ha MetaMask, il pulsante collega l'app MetaMask con WalletConnect: la firma del pagamento arriva nell'app da approvare.",
     connectSignerBtn: "Connetti MetaMask (controller della UP)",
-    noSignerFound: "Nessun wallet trovato: installa MetaMask.",
+    wcDisconnectBtn: "Scollega",
     connectionRejected: "Connessione rifiutata in MetaMask.",
     panel2Title: "2 · Verifica",
     panel2Note: "Sola lettura: niente viene firmato. Se manca qualcosa, il pulsante qui sotto ti porta alla pagina giusta.",
@@ -239,9 +240,9 @@ const I18N = {
     networkLabel: "Network you pay on",
     networkNote: "<b>The network is only for this payment.</b> The balance then works on every available network, whichever you choose here. Choose the network where your UP holds the USDC and has the 4337 setup.",
     upAddressLabel: "Your UP's address",
-    upNote: "The same address as your UP on LUKSO. The payment comes from the UP: this is how the service knows which UP to activate.",
+    upNote: "The same address as your UP on LUKSO. The payment comes from the UP: this is how the service knows which UP to activate. On a phone, where the browser has no MetaMask, the button connects the MetaMask app with WalletConnect: the payment's signature reaches the app to approve.",
     connectSignerBtn: "Connect MetaMask (the UP's controller)",
-    noSignerFound: "No wallet found: install MetaMask.",
+    wcDisconnectBtn: "Disconnect",
     connectionRejected: "Connection rejected in MetaMask.",
     panel2Title: "2 · Check",
     panel2Note: "Read-only: nothing is signed. If something is missing, the button below takes you to the right page.",
@@ -345,7 +346,11 @@ window.dispatchEvent(new Event("eip6963:requestProvider"));
 $("connectSigner").addEventListener("click", async () => {
   let candidate = discovered.find(p => !/lukso|universal profile/i.test(p.info.name))?.provider;
   if (!candidate && window.ethereum && window.ethereum !== window.lukso) candidate = window.ethereum;
-  if (!candidate) { setStatus("checkBox", t("noSignerFound"), "line-err"); return; }
+  // No wallet in this browser (a phone): MetaMask on the phone through WalletConnect (site-ui.js).
+  if (!candidate) {
+    try { candidate = await SiteUI.walletConnectSigner({ chain: getNet }); } catch (e) { candidate = null; }
+    if (!candidate) return;
+  }
   try {
     const acc = await candidate.request({ method: "eth_requestAccounts" });
     signerAddress = acc[0] ? ethers.getAddress(acc[0]) : null;
@@ -354,9 +359,27 @@ $("connectSigner").addEventListener("click", async () => {
       candidate.on("chainChanged", () => scheduleCheck(0));
     }
     signerProvider = candidate;
+    showWc();
     scheduleCheck(0);
   } catch (e) { setStatus("checkBox", t("connectionRejected"), "line-err"); }
 });
+// Through WalletConnect: the wallet's name and a button to disconnect (the way to pick another account there).
+function showWc() {
+  const el = $("signerWc");
+  el.hidden = !(signerProvider && signerProvider.isWalletConnect);
+  if (el.hidden) return;
+  el.textContent = `WalletConnect · ${signerProvider.walletName} `;
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "secondary"; b.style.cssText = "width:auto; margin:0 0 0 8px; padding:4px 10px; font-size:12px;";
+  b.textContent = t("wcDisconnectBtn");
+  b.addEventListener("click", async () => {
+    await signerProvider.disconnect();
+    signerProvider = null; signerAddress = null;
+    showWc();
+    scheduleCheck(0);
+  });
+  el.appendChild(b);
+}
 
 // ==================== check ====================
 // Bumped by every change: a payment prepared while it changed is not sent (AUDIT M-2).
@@ -413,7 +436,7 @@ async function computeCheck() {
   rows.push(["kUp", `${up} — ${t("upOk")}`, "ok"]);
   if (!signerAddress || !signerProvider) { rows.push(["kSigner", t("signerNone"), "warn"]); return out; }
   const walletChain = parseInt(await signerProvider.request({ method: "eth_chainId" }), 16);
-  if (walletChain !== chainId) { rows.push(["kSigner", t("walletWrong", { got: walletChain, name: net.name, exp: chainId }), "err"]); return out; }
+  if (walletChain !== chainId) { rows.push(["kSigner", t("walletWrong", { got: walletChain, name: net.name, exp: chainId }) + (signerProvider.isWalletConnect ? " " + signerProvider.wrongChainText() : ""), "err"]); return out; }
   rows.push(["kSigner", signerAddress, "ok"]);
   // The service: what to pay and to whom. Never trusted alone: checked against the page's own values.
   const st = await GasRelayClient.sponsorStatus(chainId, up);
