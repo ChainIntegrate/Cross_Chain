@@ -112,6 +112,7 @@
   <h2 data-i18n="panel3Title">3 · Controller (MetaMask) e verifica</h2>
   <div class="note" data-i18n="panel3Note"></div>
   <button id="connectSigner" data-i18n="connectSignerBtn">Connetti MetaMask (controller)</button>
+  <div id="signerWc" class="line-dim" style="margin-top:6px; font-size:12.5px;" hidden></div>
   <div class="status-box" id="checkBox"><span class="empty" data-i18n="checkIdle">La verifica parte da sola quando rete, UP e MetaMask sono impostati.</span></div>
   <button id="recheckBtn" class="secondary" data-i18n="recheckBtn">Ricontrolla</button>
 </div>
@@ -217,7 +218,7 @@ const I18N = {
     connectUpBtn: "Leggi l'indirizzo dalla tua UP (estensione o app)",
     upAddressLabel: "Indirizzo della UP",
     panel3Title: "3 · Controller (MetaMask) e verifica",
-    panel3Note: "MetaMask con la chiave del controller della UP, sulla rete scelta. Paga il gas. La verifica parte da sola e si ripete se cambi rete, UP, account o rete in MetaMask.",
+    panel3Note: "MetaMask con la chiave del controller della UP, sulla rete scelta. Paga il gas. La verifica parte da sola e si ripete se cambi rete, UP, account o rete in MetaMask. Dal telefono, dove il browser non ha MetaMask, il pulsante collega l'app MetaMask con WalletConnect: le transazioni arrivano nell'app da approvare.",
     connectSignerBtn: "Connetti MetaMask (controller)",
     checkIdle: "La verifica parte da sola quando rete, UP e MetaMask sono impostati.",
     recheckBtn: "Ricontrolla",
@@ -237,7 +238,7 @@ const I18N = {
     rpcFail: (v) => `❌ RPC non raggiungibile: ${v.err}`,
     walletMissing: "❌ non connesso",
     walletOk: (v) => `✅ ${v.addr} · chainId ${v.id}`,
-    walletWrong: (v) => `❌ ${v.addr} è sulla rete con chainId ${v.id}: passa a chainId ${v.exp} in MetaMask`,
+    walletWrong: (v) => `❌ ${v.addr} è sulla rete con chainId ${v.id}: passa a chainId ${v.exp} in MetaMask${v.extra || ""}`,
     walletUnknown: "❌ impossibile leggere la rete di MetaMask",
     upMissing: "❌ indirizzo mancante o non valido",
     upNotDeployed: "❌ non deployata su questa rete",
@@ -268,7 +269,7 @@ const I18N = {
     checkRunning: "Verifica in corso...",
 
     connectionRejected: "Connessione rifiutata o fallita.",
-    noSignerFound: "Nessun wallet firmatario trovato (es. MetaMask).",
+    wcDisconnectBtn: "Scollega",
     genericError: (v) => `Errore: ${v.err}`,
     checkFirst: "La verifica del pannello 3 non è verde: aggiornala prima di continuare.",
     txSent: (v) => `Tx inviata: ${v.hash}`,
@@ -318,7 +319,7 @@ const I18N = {
     connectUpBtn: "Read the address from your UP (extension or app)",
     upAddressLabel: "UP address",
     panel3Title: "3 · Controller (MetaMask) and check",
-    panel3Note: "MetaMask with the UP controller's key, on the chosen network. It pays the gas. The check starts by itself and runs again if you change network, UP, account or MetaMask's network.",
+    panel3Note: "MetaMask with the UP controller's key, on the chosen network. It pays the gas. The check starts by itself and runs again if you change network, UP, account or MetaMask's network. On a phone, where the browser has no MetaMask, the button connects the MetaMask app with WalletConnect: the transactions reach the app to approve.",
     connectSignerBtn: "Connect MetaMask (controller)",
     checkIdle: "The check starts by itself once network, UP and MetaMask are set.",
     recheckBtn: "Check again",
@@ -338,7 +339,7 @@ const I18N = {
     rpcFail: (v) => `❌ RPC unreachable: ${v.err}`,
     walletMissing: "❌ not connected",
     walletOk: (v) => `✅ ${v.addr} · chainId ${v.id}`,
-    walletWrong: (v) => `❌ ${v.addr} is on chainId ${v.id}: switch MetaMask to chainId ${v.exp}`,
+    walletWrong: (v) => `❌ ${v.addr} is on chainId ${v.id}: switch MetaMask to chainId ${v.exp}${v.extra || ""}`,
     walletUnknown: "❌ could not read MetaMask's network",
     upMissing: "❌ missing or invalid address",
     upNotDeployed: "❌ not deployed on this network",
@@ -369,7 +370,7 @@ const I18N = {
     checkRunning: "Checking...",
 
     connectionRejected: "Connection rejected or failed.",
-    noSignerFound: "No signing wallet found (e.g. MetaMask).",
+    wcDisconnectBtn: "Disconnect",
     genericError: (v) => `Error: ${v.err}`,
     checkFirst: "The check in panel 3 is not green: update it before continuing.",
     txSent: (v) => `Tx sent: ${v.hash}`,
@@ -515,7 +516,11 @@ window.dispatchEvent(new Event("eip6963:requestProvider"));
 $("connectSigner").addEventListener("click", async () => {
   let candidate = discoveredProviders.find(p => !/lukso|universal profile/i.test(p.info.name))?.provider;
   if (!candidate && window.ethereum && window.ethereum !== window.lukso) candidate = window.ethereum;
-  if (!candidate) { setStatus("checkBox", t("noSignerFound"), "line-err"); return; }
+  // No wallet in this browser (a phone): MetaMask on the phone through WalletConnect (site-ui.js).
+  if (!candidate) {
+    try { candidate = await SiteUI.walletConnectSigner({ chain: getNetwork }); } catch (e) { candidate = null; }
+    if (!candidate) return;
+  }
   try {
     const accounts = await candidate.request({ method: "eth_requestAccounts" });
     signerAddress = accounts[0];
@@ -524,11 +529,29 @@ $("connectSigner").addEventListener("click", async () => {
       candidate.on("chainChanged", () => scheduleCheck(0));
     }
     signerProvider = candidate;
+    showWc();
     scheduleCheck(0);
   } catch (e) {
     setStatus("checkBox", t("connectionRejected"), "line-err");
   }
 });
+// Through WalletConnect: the wallet's name and a button to disconnect (the way to pick another account there).
+function showWc() {
+  const el = $("signerWc");
+  el.hidden = !(signerProvider && signerProvider.isWalletConnect);
+  if (el.hidden) return;
+  el.textContent = `WalletConnect · ${signerProvider.walletName} `;
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "secondary"; b.style.cssText = "width:auto; margin:0 0 0 8px; padding:4px 10px; font-size:12px;";
+  b.textContent = t("wcDisconnectBtn");
+  b.addEventListener("click", async () => {
+    await signerProvider.disconnect();
+    signerProvider = null; signerAddress = null;
+    showWc();
+    scheduleCheck(0);
+  });
+  el.appendChild(b);
+}
 $("recheckBtn").addEventListener("click", () => scheduleCheck(0));
 $("ackRisk").addEventListener("change", updateButtons);
 
@@ -585,7 +608,7 @@ async function computeCheck() {
   let walletId;
   try { walletId = parseInt(await signerProvider.request({ method: "eth_chainId" }), 16); }
   catch (e) { step("cWallet", ["walletUnknown"], "err"); return res; }
-  if (walletId !== chainId) { step("cWallet", ["walletWrong", { addr: signerAddress, id: walletId, exp: chainId }], "err"); return res; }
+  if (walletId !== chainId) { step("cWallet", ["walletWrong", { addr: signerAddress, id: walletId, exp: chainId, extra: signerProvider.isWalletConnect ? " " + signerProvider.wrongChainText() : "" }], "err"); return res; }
   step("cWallet", ["walletOk", { addr: signerAddress, id: walletId }], "ok");
 
   // The extensions: the code at each deterministic address must be exactly the expected runtime.
