@@ -90,9 +90,27 @@
   .up-card { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: var(--raised); color: var(--text);
              border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin: 0 0 14px; font-weight: 400; }
   .up-card-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-  .up-card-addr { font-family: monospace; font-size: 15px; font-weight: 700; }
+  .up-card-addr { font-family: monospace; font-size: 15px; font-weight: 700; overflow-wrap: anywhere; }
   .up-card-sub { font-size: 12.5px; color: var(--text-dim); }
-  .up-card-state { font-size: 12.5px; }
+  .up-card { cursor: pointer; }
+  .up-card-state { font-size: 12.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  /* Simulation on/off, in the UP card: a tap opens a small window to change it. */
+  .sim-chip { width: auto; margin: 0; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; background: transparent; }
+  .sim-chip.on { border: 1px solid var(--warn); color: var(--warn); }
+  .sim-chip.off { border: 1px solid var(--err); color: var(--err); }
+  .sim-modal { border-color: var(--warn); width: min(520px, 100%); }
+  .send-btns { display: flex; gap: 10px; }
+  /* An unrecognised call: its data ready to copy, or to e-mail, to have it decoded in a next version. */
+  .decode-help { margin-top: 12px; padding: 10px 12px; border: 1px dashed var(--accent); border-radius: 8px; font-size: 13px; line-height: 1.5; }
+  .decode-help .send-btns button { margin-top: 8px; }
+  .decode-mail { display: none; }
+  .send-btns #sendClearBtn { flex: 0 0 30%; }
+  /* Back to the menu from the bottom of a long section (or to the top, in the full view). */
+  .fab { position: fixed; right: 16px; bottom: 16px; z-index: 15; width: 52px; height: 52px; margin: 0; padding: 0; border-radius: 50%;
+         font-size: 22px; box-shadow: 0 4px 16px rgba(0,0,0,0.45); display: none; }
+  .fab.on { display: block; }
+  body.modal-open .fab { display: none; }
+  body:has(#busyToast.on) .fab { bottom: 96px; }
   /* The explanation under the title only on the menu; in the app the banner is left out (the app has its icon),
      so the menu starts near the top of the phone screen. */
   body:not([data-view="home"]) .subtitle { display: none; }
@@ -181,10 +199,10 @@
 </div>
 
 <div id="nav">
-  <button type="button" class="up-card" id="upCard" data-go="settings">
+  <div class="up-card" id="upCard" role="button" tabindex="0">
     <span class="net-logo" id="upCardLogo"></span>
-    <span class="up-card-main"><span class="up-card-addr" id="upCardAddr"></span><span class="up-card-sub" id="upCardSub"></span><span class="up-card-state" id="upCardState"></span></span>
-  </button>
+    <span class="up-card-main"><span class="up-card-addr" id="upCardAddr"></span><span class="up-card-sub" id="upCardSub"></span><span class="up-card-state" id="upCardState"><span id="upCardStateText"></span><button type="button" class="sim-chip" id="simChip"></button></span></span>
+  </div>
   <div class="setup-banner" id="setupBanner" hidden><span data-i18n="setupBanner"></span><button type="button" class="small" data-go="settings" data-i18n="setupGoBtn">Configura</button></div>
   <div class="tiles">
     <button type="button" class="tile" data-go="send"><span class="tile-ico">↗</span><span class="tile-t" data-i18n="tileSend">Invia</span><span class="tile-s" data-i18n="tileSendSub"></span></button>
@@ -273,6 +291,7 @@
   <div class="check-row"><input type="checkbox" id="simulateOnly" checked><label for="simulateOnly" style="margin:0;" data-i18n="simulateOnlyLabel">Solo simulazione (non inviare nulla)</label></div>
   <div class="note" style="margin-top:6px;" data-i18n="simulateOnlyNote"></div>
   <div id="requestBox" class="status-box"><span class="empty" data-i18n="noRequest">Nessuna richiesta in attesa.</span></div>
+  <div id="decodeHelp" class="decode-help" hidden></div>
   <div class="log-bar"><span class="log-title" data-i18n="logTitle">Messaggi</span><button id="logToggle" type="button" class="secondary small"></button></div>
   <div id="log" class="line-dim"></div>
 </div>
@@ -306,7 +325,10 @@
     <input type="text" id="sendAmount" inputmode="decimal" placeholder="0.0">
     <button id="sendMaxBtn" type="button" class="secondary" data-i18n="sendMaxBtn">Tutto</button>
   </div>
-  <button id="sendPrepareBtn" disabled data-i18n="sendPrepareBtn">Prepara l'invio</button>
+  <div class="send-btns">
+    <button id="sendPrepareBtn" disabled data-i18n="sendPrepareBtn">Prepara l'invio</button>
+    <button id="sendClearBtn" type="button" class="secondary" data-i18n="sendClearBtn">Pulisci</button>
+  </div>
 </div>
 
 <div class="modal-backdrop" id="riskModal" hidden>
@@ -323,6 +345,20 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="simModal" hidden>
+  <div class="modal sim-modal" role="dialog" aria-modal="true" aria-labelledby="simTitle">
+    <div class="modal-head"><div class="modal-title" id="simTitle" data-i18n="simTitle">Modalità simulazione</div></div>
+    <div class="modal-body">
+      <div class="check-row" style="margin-top:0;"><input type="checkbox" id="simToggle"><label for="simToggle" style="margin:0; color: var(--text);" data-i18n="simulateOnlyLabel">Solo simulazione (non inviare nulla)</label></div>
+      <div class="note" style="margin-top:8px;" data-i18n="simulateOnlyNote"></div>
+      <div id="simWarn"></div>
+    </div>
+    <div class="modal-foot"><button id="simClose" type="button" data-i18n="simCloseBtn">Fatto</button></div>
+  </div>
+</div>
+
+<button type="button" id="fabMenu" class="fab" aria-label="Menu"></button>
+
 <div class="modal-backdrop" id="requestModal" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="modal-head">
@@ -332,6 +368,7 @@
     <div class="modal-body">
       <div class="modal-notes" id="modalNotes"></div>
       <div id="modalDetails"></div>
+      <div id="modalDecodeHelp" class="decode-help" hidden></div>
     </div>
     <div class="modal-foot">
       <button id="sendBtn" class="danger" disabled hidden data-i18n="sendBtn">Firma e invia la transazione (irreversibile)</button>
@@ -542,6 +579,18 @@ const I18N = {
     receiveAbsent: (v) => `⚠️ Su ${v.net} questa UP non esiste: non farti mandare fondi su questa rete.`,
     receiveShareText: "Il mio Universal Profile",
     cardNoUp: "UP non impostata", cardReady: "pronta", cardNotReady: "da configurare", cardSim: "🧪 simulazione", cardNotHere: "la UP qui non esiste",
+    decodeIntro: "La pagina non conosce questa chiamata. Per farla riconoscere in una prossima versione: copia i dati, oppure mandali per e-mail a ChainIntegrate (si apre la tua app di posta, decidi tu se inviare). Aggiungi cosa stavi facendo sul sito.",
+    decodeCopyBtn: "Copia i dati", decodeMailBtn: "Invia per e-mail",
+    decodeHead: "UP Wallet: chiamata non riconosciuta", decodeContract: "Contratto", decodeSelector: "Selettore", decodeData: "Dati",
+    decodeDoing: "Cosa stavo facendo sul sito: ",
+    decodeCut: "(tagliati: usa \"Copia i dati\" per averli interi)",
+    decodeSubject: (v) => `UP Wallet: chiamata da decodificare ${v.sel} su ${v.net}`,
+    decodePrivacy: "Nota: i dati della chiamata possono contenere l'indirizzo della tua UP o altri indirizzi. Se la transazione viene inviata diventano comunque pubblici sulla rete.",
+    cardReal: "⚡ invio reale", simChipTitle: "Tocca per cambiare la modalità simulazione",
+    simTitle: "🧪 Modalità simulazione", simCloseBtn: "Fatto",
+    simOffWarn: "Spunta tolta: dopo la tua conferma in MetaMask le transazioni partono davvero e sono irreversibili. Usa importi piccoli.",
+    sendClearBtn: "Pulisci",
+    fabMenu: "Torna al menù", fabTop: "Torna in cima",
     riskTitle: "⚠️ Prima di iniziare",
     riskOkBtn: "Continua",
     riskLaterBtn: "Non ora",
@@ -915,6 +964,18 @@ const I18N = {
     receiveAbsent: (v) => `⚠️ This UP does not exist on ${v.net}: do not have funds sent to you on this network.`,
     receiveShareText: "My Universal Profile",
     cardNoUp: "No UP set", cardReady: "ready", cardNotReady: "to set up", cardSim: "🧪 simulation", cardNotHere: "the UP does not exist here",
+    decodeIntro: "The page does not know this call. To have it recognised in a next version: copy its data, or e-mail it to ChainIntegrate (your mail app opens, you decide whether to send). Add what you were doing on the site.",
+    decodeCopyBtn: "Copy the data", decodeMailBtn: "Send by e-mail",
+    decodeHead: "UP Wallet: unrecognised call", decodeContract: "Contract", decodeSelector: "Selector", decodeData: "Data",
+    decodeDoing: "What I was doing on the site: ",
+    decodeCut: "(cut: use \"Copy the data\" for all of it)",
+    decodeSubject: (v) => `UP Wallet: call to decode ${v.sel} on ${v.net}`,
+    decodePrivacy: "Note: the call's data may contain your UP's address or other addresses. If the transaction is sent, they become public on the network anyway.",
+    cardReal: "⚡ real sending", simChipTitle: "Tap to change the simulation mode",
+    simTitle: "🧪 Simulation mode", simCloseBtn: "Done",
+    simOffWarn: "Unticked: after your confirmation in MetaMask, transactions are really sent and cannot be undone. Use small amounts.",
+    sendClearBtn: "Clear",
+    fabMenu: "Back to the menu", fabTop: "Back to the top",
     riskTitle: "⚠️ Before you start",
     riskOkBtn: "Continue",
     riskLaterBtn: "Not now",
@@ -1852,6 +1913,34 @@ function clearPending(msg) {
   document.body.classList.remove("modal-open");
   if (msg) setStatus("requestBox", msg, "empty");
 }
+// An unrecognised call: what is needed to decode it in a next version (site, network, contract, value,
+// data), to copy, or to e-mail to the maintainer. Nothing is sent by the page: the e-mail opens in the
+// user's own mail app, and they choose whether to send it.
+const DECODE_MAIL = "info@chainintegrate.it";
+let decodeReport = null;
+function decodeText(r, maxData = Infinity) {
+  const data = r.data.length > maxData ? r.data.slice(0, maxData) + " " + t("decodeCut") : r.data;
+  return [t("decodeHead"), `${t("kSite")}: ${r.site}`, `${t("kNetwork")}: ${r.net}`, `${t("decodeContract")}: ${r.to}`,
+    `${t("kValue")}: ${r.value}`, `${t("decodeSelector")}: ${r.data.slice(0, 10)}`, `${t("decodeData")}: ${data}`, "", t("decodeDoing")].join("\n");
+}
+function fillDecodeHelp(box) {
+  box.textContent = "";
+  box.hidden = !decodeReport;
+  if (!decodeReport) return;
+  const r = decodeReport;
+  const p = document.createElement("div"); p.textContent = t("decodeIntro"); box.appendChild(p);
+  const row = document.createElement("div"); row.className = "send-btns";
+  const copy = document.createElement("button"); copy.type = "button"; copy.className = "secondary"; copy.textContent = t("decodeCopyBtn");
+  copy.addEventListener("click", () => copyText(decodeText(r), copy));
+  const mail = document.createElement("a"); mail.className = "decode-mail";
+  mail.href = `mailto:${DECODE_MAIL}?subject=${encodeURIComponent(t("decodeSubject", { sel: r.data.slice(0, 10), net: r.net }))}&body=${encodeURIComponent(decodeText(r, 1500) + "\n\n" + t("decodePrivacy"))}`;
+  const mailBtn = document.createElement("button"); mailBtn.type = "button"; mailBtn.className = "secondary"; mailBtn.textContent = t("decodeMailBtn");
+  mailBtn.addEventListener("click", () => mail.click());
+  row.append(copy, mailBtn); box.appendChild(row); box.appendChild(mail);
+  const n = document.createElement("div"); n.className = "note"; n.style.margin = "8px 0 0"; n.textContent = t("decodePrivacy"); box.appendChild(n);
+}
+function setDecodeHelp(r) { decodeReport = r; fillDecodeHelp($("decodeHelp")); }
+
 // Opens the modal with the checks of this request, its details and the buttons.
 function showRequestModal(kind, title, rows) {
   $("modalTitle").textContent = title;
@@ -1864,6 +1953,7 @@ function showRequestModal(kind, title, rows) {
     notes.appendChild(d);
   }
   renderKv("modalDetails", rows);
+  fillDecodeHelp($("modalDecodeHelp"));
   $("sendBtn").hidden = kind !== "tx";
   $("signBtn").hidden = kind !== "sign";
   $("sendBtn").disabled = kind !== "tx";
@@ -2306,6 +2396,7 @@ function describeLsp26(data, rows, warnings) {
 
 // after (sends from panel 6 only): runs once the operation has succeeded, to check the result on the chain.
 async function handleSendTransaction(topic, id, c, tx, validation, reject, after = null) {
+  setDecodeHelp(null);
   if (!tx.from || tx.from.toLowerCase() !== c.up.toLowerCase()) return reject(t("reqWrongFrom", { from: tx.from }));
   if (!tx.to) return reject(t("reqCreate"));
   if (!ethers.isAddress(tx.to)) return reject(t("genericError", { err: "invalid to" }));
@@ -2332,6 +2423,7 @@ async function handleSendTransaction(topic, id, c, tx, validation, reject, after
     const warnings = [];
     const op = await describeCall(c, to, value, data, rows, warnings);
     const valueText = `${ethers.formatEther(value)} ${cur}`.trim();
+    setDecodeHelp(op === t("unknownCall", { sel: data.slice(0, 10) }) ? { site: sessionPeer(topic), net: `${c.net.name} (chainId ${c.net.chainId})`, to, value: valueText, data } : null);
     // The request box is replaced by the next request: the log keeps what was asked.
     const toLabel = await labelAddress(c.provider, to, c.net.chainId);
     log(t("txSummary", { to: toLabel, value: valueText, op }), "line-compare");
@@ -2512,6 +2604,7 @@ function checkHupChat(text, topic, c, warnings) {
 }
 
 async function handleSignRequest(topic, id, c, request, validation, reject) {
+  setDecodeHelp(null);
   if (!(c.perms & P.SIGN)) return reject(t("signNoPermission"));
   const p = request.params || [];
   const up = c.up.toLowerCase();
@@ -3036,7 +3129,7 @@ $("rejectBtn").addEventListener("click", async () => {
 // back. "Full view" (Settings) shows every panel at once, as the classic page; it is remembered here.
 const VIEW_KEY = "upwallet.view";
 const MAIN_NETS = ["lukso", "base", "arbitrum-one", "polygon", "avalanche-c-chain", "arc", "ethereum", "optimism", "bnb-smart-chain"];
-const LOGO_FILES = new Set(["arbitrum-one", "avalanche-c-chain", "base", "blast", "bnb-smart-chain", "celo", "ethereum", "gnosis", "linea", "mantle", "optimism", "polygon", "scroll", "sonic", "zksync"]);
+const LOGO_FILES = new Set(["lukso", "arc", "arbitrum-one", "avalanche-c-chain", "base", "blast", "bnb-smart-chain", "celo", "ethereum", "gnosis", "linea", "mantle", "optimism", "polygon", "scroll", "sonic", "zksync"]);
 const LOGO_COLORS = { lukso: "#fe005b", arc: "#1f2a44", custom: "#3a3f4b" };
 function netLogo(key, name) {
   const el = document.createElement("span");
@@ -3061,6 +3154,7 @@ function showView(v, remember = true) {
   if (v === "all") $("netMore").open = true;
   if (v === "receive") renderReceive();
   if (v !== "home" && v !== "all") window.scrollTo(0, 0);
+  fabState();
 }
 document.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => showView(b.dataset.go, false)));
 $("backHome").addEventListener("click", () => showView("home", false));
@@ -3110,15 +3204,37 @@ function renderNetPicker() {
     box.appendChild(b);
   }
 }
+// The UP's name for the card, from LUKSO's public profile index (the same one used to find a recipient by
+// name): the LSP3 name the profile has on LUKSO. Shown as name#abcd, since names are not unique; the address
+// stays under it. Without an answer the card shows the address.
+const profileNames = {};
+async function profileName(up) {
+  if (up in profileNames) return profileNames[up];
+  profileNames[up] = null;
+  try {
+    const r = await fetch(PROFILE_INDEX, { method: "POST", headers: { "content-type": "application/json", accept: "application/json" }, credentials: "omit", referrerPolicy: "no-referrer",
+      body: JSON.stringify({ query: "query($ids: [String!]) { Profile(where: { id: { _in: $ids } }, limit: 1) { id name } }", variables: { ids: [up.toLowerCase(), up] } }) });
+    const j = r.ok ? await r.json() : null;
+    const p = j && j.data && Array.isArray(j.data.Profile) ? j.data.Profile[0] : null;
+    const name = p && typeof p.name === "string" ? p.name.replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, 40) : "";
+    profileNames[up] = name || null;
+  } catch (e) { profileNames[up] = null; }
+  return profileNames[up];
+}
 function updateNav() {
   const raw = $("upAddress").value.trim(), net = getNetwork();
   const ok = !!compliance, up = ethers.isAddress(raw) ? ethers.getAddress(raw) : null;
   const logo = $("upCardLogo");
   logo.replaceWith(Object.assign(netLogo(net ? net.key : "custom", net ? net.name : "?"), { id: "upCardLogo" }));
-  $("upCardAddr").textContent = up ? shortAddr(up) : t("cardNoUp");
-  $("upCardSub").textContent = (net ? net.name : "—") + (up && presence[net && net.key] === false ? " · " + t("cardNotHere") : "");
-  const sim = $("simulateOnly").checked ? " · " + t("cardSim") : "";
-  $("upCardState").textContent = (ok ? "✅ " + t("cardReady") : complianceTimer && !lastCompliance ? "⏳" : "⚠️ " + t("cardNotReady")) + sim;
+  const name = up ? profileNames[up] : null;
+  if (up && !(up in profileNames)) profileName(up).then((n) => { if (n) updateNav(); });
+  $("upCardAddr").textContent = up ? (name ? `${name}#${tag(up)}` : shortAddr(up)) : t("cardNoUp");
+  $("upCardSub").textContent = (name ? shortAddr(up) + " · " : "") + (net ? net.name : "—") + (up && presence[net && net.key] === false ? " · " + t("cardNotHere") : "");
+  $("upCardStateText").textContent = ok ? "✅ " + t("cardReady") : complianceTimer && !lastCompliance ? "⏳" : "⚠️ " + t("cardNotReady");
+  const sim = $("simulateOnly").checked;
+  $("simChip").textContent = t(sim ? "cardSim" : "cardReal");
+  $("simChip").className = "sim-chip " + (sim ? "on" : "off");
+  $("simChip").title = t("simChipTitle");
   $("setupBanner").hidden = ok;
   renderNetPicker();
   if (document.body.dataset.view === "receive") renderReceive();
@@ -3163,6 +3279,44 @@ $("receiveShare").addEventListener("click", async () => {
 $("upAddress").addEventListener("input", () => { updateNav(); clearTimeout(presenceTimer); presenceTimer = setTimeout(checkPresence, 800); });
 networkSelectEl.addEventListener("change", updateNav);
 $("simulateOnly").addEventListener("change", updateNav);
+// The UP card opens Settings; its simulation chip opens the small simulation window instead.
+$("upCard").addEventListener("click", (e) => { if (!e.target.closest("#simChip")) showView("settings", false); });
+$("upCard").addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target === $("upCard")) { e.preventDefault(); showView("settings", false); } });
+function showSimWarn() {
+  const w = $("simWarn"); w.textContent = "";
+  if (!$("simToggle").checked) { const d = document.createElement("div"); d.className = "line-danger"; d.textContent = t("simOffWarn"); w.appendChild(d); }
+}
+function openSim(open) {
+  $("simModal").hidden = !open;
+  document.body.classList.toggle("modal-open", open || !$("requestModal").hidden || !$("riskModal").hidden);
+  if (open) { $("simToggle").checked = $("simulateOnly").checked; showSimWarn(); }
+}
+$("simChip").addEventListener("click", (e) => { e.stopPropagation(); openSim(true); });
+$("simToggle").addEventListener("change", () => {
+  $("simulateOnly").checked = $("simToggle").checked;
+  $("simulateOnly").dispatchEvent(new Event("change", { bubbles: true }));
+  showSimWarn();
+});
+$("simClose").addEventListener("click", () => openSim(false));
+$("simModal").addEventListener("click", (e) => { if (e.target === $("simModal")) openSim(false); });
+// Send: "Clear" empties the form (what to send, token, ID, recipient, amount); the balances stay.
+$("sendClearBtn").addEventListener("click", () => {
+  $("sendAsset").value = "native";
+  $("sendAsset").dispatchEvent(new Event("change"));
+  for (const id of ["sendToken", "sendId", "sendTo", "sendAmount"]) $(id).value = "";
+  for (const id of ["sendTokenInfo", "sendIdPick", "sendToResults", "sendToInfo"]) { $(id).textContent = ""; }
+  $("sendTokenInfo").className = "note"; $("sendToInfo").className = "note";
+  $("sendTo").dispatchEvent(new Event("input"));
+});
+// The round button at the bottom: back to the menu (or to the top, in the full view), once the page is scrolled.
+function fabState() {
+  const v = document.body.dataset.view;
+  $("fabMenu").classList.toggle("on", v !== "home" && window.scrollY > 240);
+  $("fabMenu").textContent = v === "all" ? "↑" : "☰";
+  $("fabMenu").title = t(v === "all" ? "fabTop" : "fabMenu");
+}
+window.addEventListener("scroll", fabState, { passive: true });
+$("fabMenu").addEventListener("click", () => { if (document.body.dataset.view !== "all") showView("home", false); window.scrollTo(0, 0); fabState(); });
 let startView = "home";
 try { if (localStorage.getItem(VIEW_KEY) === "all") startView = "all"; } catch (e) { /* default */ }
 

@@ -25,7 +25,7 @@ Used by `up-wallet.html` (Receive). `qrcode-generator` 1.4.4 by Kazuhiko Arase, 
 
 ## Network logos: `chain-logos/*.png`
 
-Used by `up-wallet.html` to show the networks. Taken from the [Trust Wallet assets](https://github.com/trustwallet/assets) repository (**MIT**, © Trust Wallet), resized to 64×64. The logos are trademarks of their networks' projects and are used only to name those networks; no affiliation is implied. Networks without a file (LUKSO, Arc and others) are shown with their initial.
+Used by `up-wallet.html` to show the networks. `lukso.png` and `arc.png` are LUKSO's and Arc's own logos; the others are taken from the [Trust Wallet assets](https://github.com/trustwallet/assets) repository (**MIT**, © Trust Wallet). All are resized to 64×64. The logos are trademarks of their networks' projects and are used only to name those networks; no affiliation is implied. Networks without a file are shown with their initial.
 
 ## Contract sources for explorer verification: `contracts/*.input.json`
 

@@ -130,6 +130,18 @@ After that, `git pull` works exactly as before. The root `.htaccess` stays in th
 - `https://crosschain-lukso.chainintegrate.it/tools/decrypt.js`
 - `https://crosschain-lukso.chainintegrate.it/decrypt.js` (old location, removed by the pull)
 
+## Roadmap
+
+A direction, not a schedule. UP Wallet is growing towards a complete wallet for a Universal Profile on every network where it exists: open source, explaining every request in plain words, cross-chain first.
+
+1. **Clearer requests.** Decode any call to a contract verified on the network's explorer, from its published ABI, besides the cases decoded today. Name smart-account recipients from what they declare (ERC-7579 `accountId()`), as a hint.
+2. **dApps without WalletConnect, in the app.** A dApp browser inside the Android app that offers the UP to web dApps as an injected wallet (EIP-1193, announced through EIP-6963), with bookmarks. Every request goes through the same checks, simulation and confirmation window. Native apps keep using WalletConnect.
+3. **No MetaMask in the app.** A key created on the phone, protected by the phone's secure hardware and unlocked with fingerprint or PIN, added to the UP as a controller with limited permissions: calls, transfers and signatures, not controller management. A lost phone is handled by revoking that key from another controller of the UP. The website keeps using an external wallet.
+4. **Recovery from the identity itself.** A guided flow to add, rotate and revoke the UP's keys on every network where it exists.
+5. **Later.** Passkeys as UP signers (this needs a contract extension, since the Key Manager verifies Ethereum signatures only), and a browser extension for desktop.
+
+**Before steps 2 and 3 are offered to others**, and before the paid gas service holds significant funds, a professional audit of the paymasters, the ERC-4337 flow and the app's key handling.
+
 ## Requirements
 
 - A browser with the **Universal Profile extension**, used to read your UP address.
