@@ -175,7 +175,6 @@ const I18N = {
     testBtn: "Scrivi dato di prova",
     logInitial: "In attesa dei collegamenti sopra.",
 
-    extNotFound: "Estensione Universal Profile non trovata in questo browser",
     connectedBadge: "Connesso",
     connectionRejected: "Connessione rifiutata o fallita",
     noSignerFound: "Nessun wallet firmatario trovato",
@@ -240,7 +239,6 @@ const I18N = {
     testBtn: "Write test value",
     logInitial: "Waiting for the connections above.",
 
-    extNotFound: "Universal Profile extension not found in this browser",
     connectedBadge: "Connected",
     connectionRejected: "Connection rejected or failed",
     noSignerFound: "No signing wallet found",
@@ -320,13 +318,10 @@ function log(msg, cls) {
 // indirizzo, letto direttamente dalla connessione. Il campo indirizzo resta editabile per
 // chi vuole testare una UP diversa da quella connessa nell'estensione.
 $("connectUp").addEventListener("click", async () => {
-  if (!window.lukso) {
-    $("profileStatus").innerHTML = `<span class="badge err">${t("extNotFound")}</span>`;
-    return;
-  }
   try {
-    const accounts = await window.lukso.request({ method: "eth_requestAccounts" });
-    const upAddress = accounts[0];
+    // The extension, else the Universal Profiles app via WalletConnect (site-ui.js); null when cancelled.
+    const upAddress = await SiteUI.upAddress();
+    if (!upAddress) return;
     $("profileAddress").value = upAddress;
     $("profileStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${escapeHtml(upAddress)}`;
   } catch (e) {
@@ -542,6 +537,7 @@ $("testBtn").addEventListener("click", async () => {
 // Shared look of the site (site-ui.js), as UP Wallet: the warnings in a window at the first opening,
 // the main networks as buttons with their logo (a green dot where the UP exists).
 SiteUI.netPicker({ select: document.getElementById("network"), filter: document.getElementById("networkFilter"), upInput: null });
+SiteUI.clampNotes();   // long explanations: three lines and "Read more"
 </script>
 
 </body>

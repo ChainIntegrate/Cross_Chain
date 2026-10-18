@@ -19,9 +19,16 @@ Used by `up-wallet.html` (and by the deprecated `up-walletconnect-basenames.html
   The same notice is shown in the footer of the pages that load the bundle. The agreement also requires the bundle to use Reown's network (the WalletConnect relay, through the project ID in `config.js`), and sets thresholds (currently 500 monthly active users or 2,500,000 monthly RPC calls) above which a paid commercial license is needed.
 - **Other packages in the bundle** — 35 packages under MIT, ISC, 0BSD, Apache-2.0, or Apache-2.0 AND MIT (`@noble/*`, `@scure/base`, `@walletconnect/*` helpers, `@msgpack/msgpack`, `idb-keyval`, `multiformats`, `unstorage`, `tslib`, and others). The list with versions and each package's license file: [vendor/walletkit-1.6.0.THIRD-PARTY.txt](vendor/walletkit-1.6.0.THIRD-PARTY.txt). Apache-2.0 text: [licenses/Apache-2.0.txt](licenses/Apache-2.0.txt).
 
+## WalletConnect client for dApps: `vendor/signclient-2.25.0.min.js`
+
+Loaded by `site-ui.js` only when a tool page asks for the UP's address and there is no Universal Profile extension: it connects LUKSO's Universal Profiles app, reads the address and closes the session. Built as described in [vendor/README.md](vendor/README.md).
+
+- **Reown / WalletConnect packages** — `@walletconnect/sign-client`, `@walletconnect/core`, `@walletconnect/types`, `@walletconnect/utils`, all 2.25.0: the same **WalletConnect Community License Agreement** as above (the license files in these packages are identical to [vendor/walletkit-1.6.0.LICENSE.md](vendor/walletkit-1.6.0.LICENSE.md)). The notice "Portions © 2025 Reown, Inc. All Rights Reserved" is shown in the connection window, the only place the bundle is used. Same relay and thresholds as above.
+- **Other packages in the bundle** — 38 packages under MIT, ISC, 0BSD, Apache-2.0, or Apache-2.0 AND MIT. The list with versions and each package's license file: [vendor/signclient-2.25.0.THIRD-PARTY.txt](vendor/signclient-2.25.0.THIRD-PARTY.txt).
+
 ## QR codes: `vendor/qrcode-generator-1.4.4.js`
 
-Used by `up-wallet.html` (Receive). `qrcode-generator` 1.4.4 by Kazuhiko Arase, from the npm package, unchanged: **MIT** (the notice is in the file's header). "QR Code" is a registered trademark of DENSO WAVE INCORPORATED.
+Used by `up-wallet.html` (Receive) and by the connection window of `site-ui.js`. `qrcode-generator` 1.4.4 by Kazuhiko Arase, from the npm package, unchanged: **MIT** (the notice is in the file's header). "QR Code" is a registered trademark of DENSO WAVE INCORPORATED.
 
 ## Network logos: `chain-logos/*.png`
 

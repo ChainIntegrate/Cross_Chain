@@ -128,7 +128,7 @@
 
 <div class="panel">
   <h2 data-i18n="panel2Title">2 · Universal Profile</h2>
-  <button id="connectUp" class="secondary" data-i18n="connectUpBtn">Leggi l'indirizzo dall'estensione UP</button>
+  <button id="connectUp" class="secondary" data-i18n="connectUpBtn">Leggi l'indirizzo dalla tua UP (estensione o app)</button>
   <label for="upAddress" data-i18n="upAddressLabel">Indirizzo della UP</label>
   <input type="text" id="upAddress" placeholder="0x...">
   <button id="readBtn" data-i18n="readBtn">Leggi il profilo</button>
@@ -199,13 +199,12 @@ const I18N = {
     customRpcLabel: "RPC URL custom",
     customNetName: "Rete custom",
     panel2Title: "2 · Universal Profile",
-    connectUpBtn: "Leggi l'indirizzo dall'estensione UP",
+    connectUpBtn: "Leggi l'indirizzo dalla tua UP (estensione o app)",
     upAddressLabel: "Indirizzo della UP",
     readBtn: "Leggi il profilo",
     panel3Title: "3 · Profilo",
     panel4Title: "4 · Chi controlla la UP su questa rete",
     panel4Note: "I controller della UP sulla rete scelta, con a cosa servono, e se c'è un controller di backup.",
-    extNotFound: "Estensione Universal Profile non trovata in questo browser.",
     needAddr: "Inserisci un indirizzo valido.",
     needNet: "Scegli la rete.",
     reading: "Lettura in corso...",
@@ -334,13 +333,12 @@ const I18N = {
     customRpcLabel: "Custom RPC URL",
     customNetName: "Custom network",
     panel2Title: "2 · Universal Profile",
-    connectUpBtn: "Read the address from the UP extension",
+    connectUpBtn: "Read the address from your UP (extension or app)",
     upAddressLabel: "UP address",
     readBtn: "Read the profile",
     panel3Title: "3 · Profile",
     panel4Title: "4 · Who controls the UP on this network",
     panel4Note: "The UP's controllers on the chosen network, what each is for, and whether there is a backup controller.",
-    extNotFound: "Universal Profile extension not found in this browser.",
     needAddr: "Enter a valid address.",
     needNet: "Choose the network.",
     reading: "Reading...",
@@ -508,8 +506,8 @@ function getNetwork() {
 onNetwork();
 
 $("connectUp").addEventListener("click", async () => {
-  if (!window.lukso) { setStatus("status", t("extNotFound"), "line-err"); return; }
-  try { const a = await window.lukso.request({ method: "eth_requestAccounts" }); $("upAddress").value = a[0]; } catch (e) { /* rejected */ }
+  // The extension, else the Universal Profiles app via WalletConnect (site-ui.js); null when cancelled.
+  try { const a = await SiteUI.upAddress(); if (a) { $("upAddress").value = a; $("upAddress").dispatchEvent(new Event("change")); } } catch (e) { /* rejected */ }
 });
 
 // ==================== LSP2 VerifiableURI ====================

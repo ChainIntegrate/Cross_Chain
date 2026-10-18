@@ -122,7 +122,7 @@
   </div>
   <label for="upAddress" data-i18n="upAddressLabel">Indirizzo della UP</label>
   <input type="text" id="upAddress" placeholder="0x...">
-  <button id="connectUp" class="secondary" data-i18n="connectUpBtn">Leggi l'indirizzo dall'estensione UP</button>
+  <button id="connectUp" class="secondary" data-i18n="connectUpBtn">Leggi l'indirizzo dalla tua UP (estensione o app)</button>
   <div class="note" style="margin-top:12px;" data-i18n="panel1Note"></div>
   <button id="connectSigner" data-i18n="connectSignerBtn">Connetti MetaMask</button>
   <div class="status-box" id="netBox"><span class="empty" data-i18n="notChecked">Non ancora verificato.</span></div>
@@ -251,6 +251,7 @@ window.GAS_PAGE = {
 // the main networks as buttons with their logo (a green dot where the UP exists).
 SiteUI.riskWindow({ content: document.querySelector(".warn-box"), ack: document.getElementById("ackRisk") });
 SiteUI.netPicker({ select: document.getElementById("network"), filter: document.getElementById("networkFilter"), upInput: document.getElementById("upAddress") });
+SiteUI.clampNotes();   // long explanations: three lines and "Read more"
 </script>
 
 </body>

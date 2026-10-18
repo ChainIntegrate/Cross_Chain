@@ -13,13 +13,29 @@
       read: "✅ Avvertenze lette.", other: "Altre reti e RPC personalizzato:", here: "La UP esiste su questa rete",
       notHere: "La UP non esiste su questa rete", unknown: "La rete non ha risposto", checking: "Controllo su quali reti esiste la UP…",
       dots: "Bollino verde: la UP esiste su quella rete. Grigio: non c'è, o la rete non ha risposto.", lang: "English",
-      more: "Leggi tutto", less: "Riduci" },
+      more: "Leggi tutto", less: "Riduci",
+      wcTitle: "📱 Collega l'app Universal Profiles", wcOpen: "Apri l'app Universal Profiles", wcCopy: "Copia il link", wcCopied: "✅ Link copiato.",
+      wcCancel: "Annulla", wcLoading: "Preparo il collegamento…", wcWaiting: "In attesa dell'app: approva la connessione e torna qui.",
+      wcNoId: "WalletConnect non è configurato su questo sito: incolla l'indirizzo della UP a mano.", wcFail: "Collegamento non riuscito:",
+      wcRejected: "Connessione rifiutata nell'app.", wcNoAccount: "L'app non ha dato nessun indirizzo.",
+      wcIntro: "In questo browser non c'è l'estensione Universal Profile. Puoi prendere l'indirizzo della tua UP dall'app <b>Universal Profiles</b> di LUKSO, con WalletConnect. La pagina chiede solo l'indirizzo e poi chiude la sessione: non chiede firme né transazioni.",
+      wcPhone: "Dal telefono: tocca il pulsante qui sotto e approva nell'app. Da computer: inquadra il QR con l'app.",
+      wcSame: "L'app dà l'indirizzo della UP su LUKSO. Sulle altre reti l'indirizzo è lo stesso solo se la UP è stata replicata con questi strumenti: controllalo con i bollini delle reti.",
+      wcPrivacy: "La connessione passa dai server di WalletConnect (Reown), che vedono i metadati della sessione. Portions © 2025 Reown, Inc. All Rights Reserved." },
     en: { riskTitle: "⚠️ Before you start", ok: "Continue", later: "Not now", reopen: "Read the warnings", gotIt: "Got it",
       accepted: "✅ Warnings accepted.", pending: "⚠️ Warnings not accepted yet: until you accept them the page does nothing.",
       read: "✅ Warnings read.", other: "Other networks and custom RPC:", here: "The UP exists on this network",
       notHere: "The UP does not exist on this network", unknown: "The network did not answer", checking: "Checking on which networks the UP exists…",
       dots: "Green dot: the UP exists on that network. Grey: it is not there, or the network did not answer.", lang: "Italiano",
-      more: "Read more", less: "Show less" },
+      more: "Read more", less: "Show less",
+      wcTitle: "📱 Connect the Universal Profiles app", wcOpen: "Open the Universal Profiles app", wcCopy: "Copy the link", wcCopied: "✅ Link copied.",
+      wcCancel: "Cancel", wcLoading: "Preparing the connection…", wcWaiting: "Waiting for the app: approve the connection and come back here.",
+      wcNoId: "WalletConnect is not configured on this site: paste the UP address by hand.", wcFail: "Connection failed:",
+      wcRejected: "Connection rejected in the app.", wcNoAccount: "The app gave no address.",
+      wcIntro: "There is no Universal Profile extension in this browser. You can take your UP's address from LUKSO's <b>Universal Profiles</b> app, with WalletConnect. The page only asks for the address and then closes the session: it asks for no signatures or transactions.",
+      wcPhone: "On the phone: tap the button below and approve in the app. On a computer: scan the QR code with the app.",
+      wcSame: "The app gives the UP's address on LUKSO. On other networks the address is the same only if the UP was replicated with these tools: check it with the network dots.",
+      wcPrivacy: "The connection goes through WalletConnect's (Reown) servers, which see the session metadata. Portions © 2025 Reown, Inc. All Rights Reserved." },
   };
   const lang = () => (document.documentElement.lang === "en" ? "en" : "it");
   const tt = (k) => T[lang()][k];
@@ -71,6 +87,13 @@ body.sui-open { overflow: hidden; }
 .sui-other { font-size: 12.5px; color: var(--text-dim); margin: 4px 0 6px; }
 .sui-note { font-size: 12px; color: var(--text-dim); margin: -4px 0 10px; }
 .sui-clamp:not(.sui-open) { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 4px; }
+.sui-modal.sui-info { border-color: var(--accent); }
+.sui-modal.sui-info .sui-title { color: var(--text); }
+.sui-qr { display: flex; justify-content: center; margin: 10px 0; }
+.sui-qr svg { width: min(240px, 70vw); height: auto; background: #fff; border-radius: 8px; padding: 8px; }
+a.sui-open-app { display: block; text-align: center; text-decoration: none; padding: 12px; border-radius: 10px; background: var(--accent); color: #fff; font-weight: 700; margin: 10px 0; }
+a.sui-open-app[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+.sui-dim { font-size: 12px; color: var(--text-dim); margin-top: 8px; }
 .sui-more { width: auto !important; margin: 0 0 12px !important; padding: 0 !important; background: none !important; color: var(--accent) !important; font-size: 12.5px !important; font-weight: 600; }
 `;
     document.head.appendChild(s);
@@ -239,5 +262,145 @@ body.sui-open { overflow: hidden; }
     refresh();
   }
 
-  window.SiteUI = { initialLang, saveLang, riskWindow, netPicker, clampNotes };
+
+  // ---- the UP's address: the extension, else LUKSO's Universal Profiles app (WalletConnect) ----
+  // With the Universal Profile extension (window.lukso), its eth_requestAccounts, as before. Without it (a phone,
+  // another browser), a window that connects the Universal Profiles app through WalletConnect: the page proposes
+  // a session on LUKSO, reads the UP's address from it and closes it at once, with no request in between.
+  // Resolves to the address, or null when the person cancels. The WalletConnect code (vendor/signclient-*.js)
+  // and config.js (the project ID, only on the server) load only here, when needed.
+  const WC_SRC = "vendor/signclient-2.25.0.min.js";
+  const WC_SRI = "sha384-83XlR+kz9Za2Tp/8lIv5dzxNN87hWTxQ2CbKvAFB0cv+tg8Pb8pkpphePji8H5AZ";
+  const QR_SRC = "vendor/qrcode-generator-1.4.4.js";
+  // The app's own link for a WalletConnect pairing, as LUKSO's up-modal builds it (@lukso/up-modal 0.21.11).
+  const APP_LINK = "io.universaleverything.universalprofiles://wallet-connect/";
+  const appLink = (uri) => { const u = new URL(uri); return APP_LINK + u.pathname + u.search; };
+  const loaded = {};
+  function loadScript(src, integrity) {
+    if (!loaded[src]) loaded[src] = new Promise((ok, no) => {
+      const el = document.createElement("script");
+      el.src = src;
+      if (integrity) el.integrity = integrity;
+      el.onload = ok; el.onerror = () => { delete loaded[src]; no(new Error("cannot load " + src)); };
+      document.head.appendChild(el);
+    });
+    return loaded[src];
+  }
+  let wcClient = null;
+  async function signClient() {
+    if (wcClient) return wcClient;
+    if (!window.CROSSCHAIN_CONFIG) await loadScript("config.js").catch(() => { /* not on this server */ });
+    const projectId = (window.CROSSCHAIN_CONFIG && window.CROSSCHAIN_CONFIG.walletConnectProjectId) || "";
+    if (!projectId) throw Object.assign(new Error(tt("wcNoId")), { noId: true });
+    if (!window.SignClientBundle) await loadScript(WC_SRC, WC_SRI);
+    wcClient = await window.SignClientBundle.SignClient.init({
+      projectId,
+      customStoragePrefix: "site-connect",   // kept apart from UP Wallet's own WalletConnect data on this site
+      metadata: { name: "ChainIntegrate Cross-Chain tools", description: "Universal Profile tools across EVM networks", url: location.origin, icons: [location.origin + "/favicon.ico"] },
+    });
+    return wcClient;
+  }
+  function addressFrom(session) {
+    const accs = (session && session.namespaces && session.namespaces.eip155 && session.namespaces.eip155.accounts) || [];
+    const pick = accs.find((a) => a.startsWith("eip155:42:")) || accs[0];
+    const a = pick ? pick.split(":")[2] : "";
+    return typeof ethers !== "undefined" && ethers.isAddress(a) ? ethers.getAddress(a) : null;
+  }
+  let wcOpen = null;
+  async function upAddress() {
+    if (window.lukso) {
+      const accs = await window.lukso.request({ method: "eth_requestAccounts" });
+      return accs[0];
+    }
+    if (wcOpen) return wcOpen;
+    addCss();
+    const back = document.createElement("div");
+    back.className = "sui-backdrop"; back.id = "suiConnect";
+    back.innerHTML = '<div class="sui-modal sui-info" role="dialog" aria-modal="true"><div class="sui-head"><div class="sui-title"></div></div><div class="sui-body"><div class="sui-intro"></div><div class="sui-dim sui-phone"></div><a class="sui-open-app" aria-disabled="true" rel="noopener"></a><div class="sui-qr"></div><div class="sui-wcstate"></div><div class="sui-dim sui-same"></div><div class="sui-dim sui-privacy"></div></div><div class="sui-foot"><div class="sui-btns"><button type="button" class="secondary sui-copy" disabled></button><button type="button" class="secondary sui-cancel"></button></div></div></div>';
+    const $q = (s) => back.querySelector(s);
+    let stateKey = "wcLoading", stateExtra = "", stateCls = "line-dim", link = "";
+    const texts = () => {
+      $q(".sui-title").textContent = tt("wcTitle");
+      $q(".sui-intro").innerHTML = tt("wcIntro");
+      $q(".sui-phone").textContent = tt("wcPhone");
+      $q(".sui-open-app").textContent = tt("wcOpen");
+      $q(".sui-same").textContent = tt("wcSame");
+      $q(".sui-privacy").textContent = tt("wcPrivacy");
+      $q(".sui-copy").textContent = tt("wcCopy");
+      $q(".sui-cancel").textContent = tt("wcCancel");
+      $q(".sui-wcstate").textContent = tt(stateKey) + (stateExtra ? " " + stateExtra : "");
+      $q(".sui-wcstate").className = "sui-wcstate " + stateCls;
+    };
+    const state = (k, cls = "line-dim", extra = "") => { stateKey = k; stateCls = cls; stateExtra = extra; texts(); };
+    document.body.appendChild(back);
+    document.body.classList.add("sui-open");
+    const lang = new MutationObserver(texts);
+    lang.observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
+    texts();
+    let done = false, pairingTopic = null, onVisible = null;
+    wcOpen = new Promise((resolve) => {
+      const finish = (addr) => {
+        if (done) return;
+        done = true;
+        lang.disconnect();
+        if (onVisible) document.removeEventListener("visibilitychange", onVisible);
+        back.remove();
+        document.body.classList.remove("sui-open");
+        wcOpen = null;
+        resolve(addr);
+      };
+      const gotSession = (session) => {
+        const addr = addressFrom(session);
+        // Only the address was needed: the session is closed at once.
+        if (wcClient && session) wcClient.disconnect({ topic: session.topic, reason: window.SignClientBundle.getSdkError("USER_DISCONNECTED") }).catch(() => { /* already gone */ });
+        if (addr) finish(addr); else state("wcNoAccount", "line-err");
+      };
+      $q(".sui-cancel").addEventListener("click", () => {
+        if (wcClient && pairingTopic) wcClient.core.pairing.disconnect({ topic: pairingTopic }).catch(() => { /* not paired */ });
+        finish(null);
+      });
+      $q(".sui-copy").addEventListener("click", async () => {
+        try { await navigator.clipboard.writeText(link); state("wcCopied", "line-ok"); } catch (e) { /* no clipboard */ }
+      });
+      (async () => {
+        try {
+          const client = await signClient();
+          if (done) return;
+          const { uri, approval } = await client.connect({
+            optionalNamespaces: { eip155: { chains: ["eip155:42", "eip155:4201"], methods: ["personal_sign"], events: ["accountsChanged", "chainChanged"] } },
+          });
+          if (done) return;
+          pairingTopic = uri.slice(3).split("@")[0];
+          link = appLink(uri);
+          const a = $q(".sui-open-app");
+          a.href = link; a.removeAttribute("aria-disabled");
+          $q(".sui-copy").disabled = false;
+          try {
+            if (!window.qrcode) await loadScript(QR_SRC);
+            const q = window.qrcode(0, "M"); q.addData(link); q.make();
+            $q(".sui-qr").innerHTML = q.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+          } catch (e) { /* the link still works */ }
+          state("wcWaiting");
+          // Back from the app: the relay socket may have been closed while the page was in the background.
+          onVisible = () => {
+            if (document.visibilityState !== "visible" || done) return;
+            if (!client.core.relayer.connected) client.core.relayer.restartTransport().catch(() => { /* retried by the client */ });
+            const s = client.session.getAll().find((x) => x.pairingTopic === pairingTopic);
+            if (s) gotSession(s);
+          };
+          document.addEventListener("visibilitychange", onVisible);
+          const session = await approval();
+          if (!done) gotSession(session);
+        } catch (e) {
+          if (done) return;
+          if (e && e.noId) state("wcNoId", "line-err");
+          else if (/reject/i.test((e && e.message) || "")) state("wcRejected", "line-err");
+          else state("wcFail", "line-err", (e && e.message) || String(e));
+        }
+      })();
+    });
+    return wcOpen;
+  }
+
+  window.SiteUI = { initialLang, saveLang, riskWindow, netPicker, clampNotes, upAddress };
 })();
