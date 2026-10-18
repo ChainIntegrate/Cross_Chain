@@ -188,6 +188,7 @@ const I18N = {
     signerNone: "collega MetaMask con un controller della UP",
     svcDown: "il servizio di sponsorizzazione non risponde su questa rete",
     subsClosed: "Iscrizioni non ancora aperte: il servizio funziona, ma non accetta ancora pagamenti. Riprova nei prossimi giorni.",
+    svcListed: "Questa UP è nella lista del sito: il sito le paga già il gas, senza abbonamento. Non serve iscriverla.",
     svcBadData: "il servizio indica un USDC o un destinatario diversi da quelli attesi: niente verrà firmato",
     svcOk: (v) => `pagamento di ${v.amount} USDC alla UP di ChainIntegrate ${v.receiver}`,
     setupOk: "pronta (estensione, EntryPoint e permesso 4337 del controller)",
@@ -261,6 +262,7 @@ const I18N = {
     signerNone: "connect MetaMask with a controller of the UP",
     svcDown: "the sponsor service does not answer on this network",
     subsClosed: "Subscriptions are not open yet: the service is running but does not accept payments yet. Try again in the next few days.",
+    svcListed: "This UP is on the site's list: the site already pays its gas, with no subscription. There is no need to subscribe it.",
     svcBadData: "the service gives a USDC or a receiver different from the expected ones: nothing will be signed",
     svcOk: (v) => `payment of ${v.amount} USDC to ChainIntegrate's UP ${v.receiver}`,
     setupOk: "ready (extension, EntryPoint and the controller's 4337 permission)",
@@ -396,6 +398,7 @@ function refreshBalance(delay) {
     const st = await GasRelayClient.sponsorStatus(net.chainId, ethers.getAddress(raw));
     if (my !== balGen) return;
     const sub = st && st.subscription;
+    if (!sub && st && priceState === "ok") { setStatus("balanceBox", t("svcListed"), "line-ok"); box.hidden = false; return; }
     if (!sub) { box.hidden = true; return; }
     let msg, cls;
     if (sub.status === "active") {
@@ -453,6 +456,9 @@ async function computeCheck() {
   // The service: what to pay and to whom. Never trusted alone: checked against the page's own values.
   const st = await GasRelayClient.sponsorStatus(chainId, up);
   const sub = st && st.subscription;
+  // A UP on the service's own list (the site's, e.g. ChainIntegrate's) is sponsored without a subscription: the
+  // service answers it without the subscription data, while subscriptions are open for everyone else.
+  if (!sub && st && priceState === "ok") { rows.push(["kSvc", t("svcListed"), "ok"]); out.listed = true; return out; }
   if (!sub) { rows.push(["kSvc", t(st ? "subsClosed" : "svcDown"), "err"]); return out; }
   if (!sub.usdc || ethers.getAddress(sub.usdc) !== NATIVE_USDC[chainId] || ethers.getAddress(sub.receiver) !== RECEIVER || ethers.parseUnits(String(sub.amount), 6) !== AMOUNT) { rows.push(["kSvc", t("svcBadData"), "err"]); return out; }
   rows.push(["kSvc", t("svcOk", { amount: "5", receiver: RECEIVER }), "ok"]);
@@ -494,6 +500,7 @@ function updateButtons() {
   let hint = "";
   if (!$("ackRisk").checked) hint = t("hintAck");
   else if (lastCheck && lastCheck.status === "paid") hint = t("hintPaid");
+  else if (lastCheck && lastCheck.listed) hint = t("svcListed");
   else if (!check) hint = t("hintCheck");
   else if (!validEmail(email) || !$("ackPrivacy").checked) hint = t("hintEmail");
   else hint = t("hintReady");
