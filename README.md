@@ -132,15 +132,15 @@ After that, `git pull` works exactly as before. The root `.htaccess` stays in th
 
 ## Roadmap
 
-A direction, not a schedule. UP Wallet is growing towards a complete wallet for a Universal Profile on every network where it exists: open source, explaining every request in plain words, cross-chain first.
+A direction, not a schedule. UP Wallet is growing towards a complete wallet for a Universal Profile on every network where it exists: open source, explaining every request in plain words, cross-chain first. The steps are ordered so that the app keeps no keys until the last ones: it stays a simple, non-custodial app that signs through an external wallet, which suits a store listing under a personal developer account.
 
-1. **Clearer requests.** Decode any call to a contract verified on the network's explorer, from its published ABI, besides the cases decoded today. Name smart-account recipients from what they declare (ERC-7579 `accountId()`), as a hint.
-2. **dApps without WalletConnect, in the app.** A dApp browser inside the Android app that offers the UP to web dApps as an injected wallet (EIP-1193, announced through EIP-6963), with bookmarks. Every request goes through the same checks, simulation and confirmation window. Native apps keep using WalletConnect.
-3. **No MetaMask in the app.** A key created on the phone, protected by the phone's secure hardware and unlocked with fingerprint or PIN, added to the UP as a controller with limited permissions: calls, transfers and signatures, not controller management. A lost phone is handled by revoking that key from another controller of the UP. The website keeps using an external wallet.
-4. **Recovery from the identity itself.** A guided flow to add, rotate and revoke the UP's keys on every network where it exists.
-5. **Later.** Passkeys as UP signers (this needs a contract extension, since the Key Manager verifies Ethereum signatures only), and a browser extension for desktop.
-
-**Before steps 2 and 3 are offered to others**, and before the paid gas service holds significant funds, a professional audit of the paymasters, the ERC-4337 flow and the app's key handling.
+1. **The Android app on Google Play, as it is.** Signing stays in MetaMask and the app holds no keys. Before the listing: a closed test with testers, and the store's forms (financial features, data safety, with the existing privacy policy). Google Play's licensing rules for crypto apps cover custodial wallets and exchanges; non-custodial wallets are excluded.
+2. **Clearer requests.** Decode any call to a contract verified on the network's explorer, from its published ABI, besides the cases decoded today. Name smart-account recipients from what they declare (ERC-7579 `accountId()`), as a hint.
+3. **dApps without WalletConnect, in the app.** A dApp browser inside the Android app that offers the UP to web dApps as an injected wallet (EIP-1193, announced through EIP-6963), with bookmarks. Every request goes through the same checks, simulation and confirmation window, and is still signed in MetaMask. Native apps keep using WalletConnect.
+4. **Recovery from the identity itself.** A guided flow to add, rotate and revoke the UP's keys on every network where it exists, signed by an existing controller.
+5. **A professional audit** of the paymasters, the ERC-4337 flow and the app, before the next step and before the paid gas service holds significant funds.
+6. **A phone key, as an option next to MetaMask.** A key created on the phone, which never leaves it (still non-custodial), protected by the phone's secure hardware and unlocked with fingerprint or PIN. It is added to the UP as a controller with limited permissions: calls, transfers and signatures, not controller management. A lost phone is handled by revoking that key from another controller of the UP. The website keeps using an external wallet.
+7. **Later.** Passkeys as UP signers (this needs a contract extension, since the Key Manager verifies Ethereum signatures only), and a browser extension for desktop.
 
 ## Requirements
 
