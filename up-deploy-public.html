@@ -21,7 +21,6 @@
 <script src="chains.js"></script>
 <script src="site-ui.js"></script>
 <script src="sign-check.js"></script>
-<script src="backup-check.js"></script>
 <script src="deploy-check.js"></script>
 <style>
   :root {
@@ -73,23 +72,10 @@
   .ctrl-card { background: var(--field); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin-top: 8px; }
   .ctrl-card .addr { font-family: monospace; font-size: 12.5px; }
   .ctrl-card .flags { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
-  .divider { color: var(--text-dim); font-size: 12px; text-align: center; margin: 16px 0 6px; }
   .note { font-size: 12px; color: var(--text-dim); margin-bottom: 10px; line-height: 1.5; }
   .note b { color: var(--text); }
-  .check-row { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: var(--text); margin-top: 12px; }
-  .check-row input { width: auto; margin-top: 2px; }
-  #backupLog { font-family: monospace; font-size: 12.5px; white-space: pre-wrap; word-break: break-all; line-height: 1.6; margin-top: 10px; }
   .next-box { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--warn); border-radius: 8px; background: rgba(224,168,60,0.1); font-size: 13px; }
   .next-box a { color: var(--warn); font-weight: 700; text-decoration: none; }
-  /* While a backup action runs: a fixed box that says what is happening, so the wait before the wallet opens is never silent. */
-  #busyToast { display: none; position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 50;
-               width: calc(100% - 32px); max-width: 720px; background: var(--raised); border: 2px solid var(--warn); border-radius: 10px;
-               padding: 12px 16px; font-size: 14px; line-height: 1.5; color: var(--text); box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
-  #busyToast.on { display: flex; gap: 12px; align-items: center; }
-  #busyToast .spin { width: 18px; height: 18px; flex: 0 0 18px; border: 3px solid var(--warn); border-top-color: transparent; border-radius: 50%; animation: spin 0.9s linear infinite; }
-  #busyToast .msg { word-break: break-word; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  @media (prefers-reduced-motion: reduce) { #busyToast .spin { animation: none; } }
 </style>
 </head>
 <body>
@@ -143,8 +129,8 @@
 </div>
 
 <div class="panel">
-  <h2 data-i18n="panel2Title">3 · Wallet firmatario (deploy e backup)</h2>
-  <div class="note" data-i18n="panel2Note"></div>
+  <h2 data-i18n="panel2Title">3 · Wallet firmatario</h2>
+  <div class="note" data-i18n-html="panel2Note"></div>
   <button id="connectSigner" data-i18n="connectSignerBtn">Connetti wallet firmatario (es. MetaMask)</button>
   <div class="status-box" id="signerStatus"><span class="empty" data-i18n="notConnected">Non connesso.</span></div>
 </div>
@@ -160,37 +146,12 @@
   </div>
   <div id="backupNextBox" class="next-box" style="display:none;">
     <span data-i18n="backupNextText">Prossimo passo: aggiungi un controller di backup su questa rete. Se perdi la chiave di genesi senza un backup, resti fuori da questa UP per sempre.</span>
-    <br><a href="#backup" data-i18n="backupNextLink">→ Sezione 5 · Controller di backup</a>
+    <br><a id="backupNextLink" href="up-backup.html" target="_blank" rel="noopener" data-i18n="backupNextLink">→ Pagina del controller di backup</a>
   </div>
 </div>
 
-<div class="panel" id="backup">
-  <h2 data-i18n="panelBackupTitle">5 · Controller di backup</h2>
-  <div class="note" data-i18n-html="backupNote"></div>
-  <div class="note" data-i18n-html="backupHowNote"></div>
-  <button id="connectSigner5" data-i18n="connectSigner5Btn">Connetti il controller della UP (MetaMask)</button>
-  <div class="note" data-i18n="signerPickHint"></div>
-  <div class="status-box" id="signerStatus5"><span class="empty" data-i18n="notConnected">Non connesso.</span></div>
-  <button id="readCtrlBtn" data-i18n="readCtrlBtn">Leggi i controller della UP su questa rete</button>
-  <div class="status-box" id="backupStatus"><span class="empty" data-i18n="backupNotRead">Controller non ancora letti.</span></div>
-  <div id="backupList"></div>
-
-  <label data-i18n="backupAddrLabel">Indirizzo del controller di backup (un account MetaMask diverso, custodito a parte)</label>
-  <input type="text" id="backupAddress" placeholder="0x...">
-  <button id="addBackupBtn" disabled data-i18n="addBackupBtn">Aggiungi il controller di backup</button>
-
-  <div class="divider" data-i18n="removeDivider">— oppure, dopo aver perso una chiave —</div>
-  <label data-i18n="removeLabel">Controller da rimuovere</label>
-  <select id="removeSelect"></select>
-  <div class="note" data-i18n="removeHint"></div>
-  <label class="check-row"><input type="checkbox" id="removeAck"> <span data-i18n="removeAck">Confermo: questa chiave è persa o non mi serve più. Il controller connesso nel wallet resta e continua a gestire la UP.</span></label>
-  <button id="removeBtn" class="danger" disabled data-i18n="removeBtn">Rimuovi il controller selezionato</button>
-  <div id="backupLog"></div>
-  <button id="copyBackupLog" class="secondary" data-i18n="copyLogBtn">Copia il log</button>
-</div>
-
 <div class="panel">
-  <h2 data-i18n="panel5Title">6 · Supporta ChainIntegrate</h2>
+  <h2 data-i18n="panel5Title">5 · Supporta ChainIntegrate</h2>
   <div class="note" data-i18n-html="donateNote"></div>
   <div class="status-box" id="donateAddressBox" style="margin-bottom:12px;"></div>
   <label data-i18n="donateAmountLabel">Importo in LYX</label>
@@ -198,8 +159,6 @@
   <button id="donateBtn" class="secondary" data-i18n="donateBtn">Dona in LYX con la tua UP</button>
   <div id="donateLog" class="line-dim" style="margin-top:10px;"></div>
 </div>
-
-<div id="busyToast" role="status" aria-live="polite"><div class="spin"></div><div class="msg" id="busyMsg"></div></div>
 
 <div class="site-footer">
   <div class="footer-row">
@@ -244,8 +203,8 @@ const I18N = {
     placeholderCalldata: "0x6a66a753...",
     decodeBtn: "Decodifica calldata",
     notDecodedYet: "Non ancora decodificato.",
-    panel2Title: "3 · Wallet firmatario (deploy e backup)",
-    panel2Note: "Per il deploy può essere un account qualsiasi: paga solo il gas della transazione, non diventa controller della UP. Chi controllerà la UP è deciso esclusivamente dalla calldata originale — verificato al punto 2. Per la sezione 5 (controller di backup) invece serve un controller amministratore della UP.",
+    panel2Title: "3 · Wallet firmatario",
+    panel2Note: "Per il deploy può essere un account qualsiasi: paga solo il gas della transazione, non diventa controller della UP. Chi controllerà la UP è deciso esclusivamente dalla calldata originale — verificato al punto 2. Consiglio: usa la <b>chiave di genesi</b> importata in MetaMask. Paga il gas e poi è già il controller giusto per aggiungere il backup nella pagina del backup, senza cambiare account.",
     connectSignerBtn: "Connetti wallet firmatario (es. MetaMask)",
     panel3Title: "1 · Rete di destinazione",
     networkFilterPlaceholder: "Filtra per nome... (es. base, polygon, arbitrum)",
@@ -350,7 +309,7 @@ const I18N = {
 
     footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Codice sorgente su GitHub</a>`,
 
-    panel5Title: "6 · Supporta ChainIntegrate",
+    panel5Title: "5 · Supporta ChainIntegrate",
     donateAddressPrefix: "Indirizzo di donazione:",
     donateNote: "Se questo strumento ti è stato utile, puoi lasciare una donazione libera a ChainIntegrate. Accettiamo <b>solo LYX su rete LUKSO Mainnet</b>, tramite la tua Universal Profile — per questo qui si usa esclusivamente l'estensione UP, non MetaMask o altri wallet. Funziona come una normale transazione: apre la tua UP con destinatario e importo già compilati, tu confermi (o annulli) da lì. Nessun collegamento con i pannelli sopra — puoi usarlo anche senza aver fatto nessun deploy.",
     donateAmountLabel: "Importo in LYX",
@@ -367,84 +326,9 @@ const I18N = {
     testLinkText: "→ Testa la UP appena deployata su questa rete",
     publishLinkText: "→ Pubblica i contratti mancanti su questa rete",
 
-    panelBackupTitle: "5 · Controller di backup",
-    backupNote: "<b>Il problema non è il furto, è la perdita.</b> Su ogni rete dove rifai il deploy, la UP nasce controllata solo dalla <b>chiave di genesi</b>: la stringa che hai estratto dall'estensione Universal Profile. Se la perdi (computer rotto, stringa mai salvata, password dimenticata) e non c'è un altro controller con gli stessi permessi, resti fuori da questa UP su questa rete per sempre, con tutto quello che contiene. Nessuno può rimediare. Un <b>controller di backup</b> è un secondo account (per esempio un altro account MetaMask, con la sua seed custodita a parte) con <b>esattamente gli stessi permessi</b> del controller che firma qui. Se perdi una delle due chiavi, con l'altra continui a firmare, aggiungi un nuovo backup e rimuovi quella persa. Se perdi proprio la chiave di genesi, l'unica cosa che non potrai più fare è il deploy su reti nuove, perché lì la UP nasce solo con lei.",
-    backupHowNote: "Usa l'indirizzo della UP (sezione 2), la rete (sezione 1) e il wallet connesso qui sotto (è lo stesso della sezione 3), che qui <b>deve essere un controller amministratore della UP</b> (con ADDCONTROLLER ed EDITPERMISSIONS): su una UP appena deployata è la chiave di genesi importata in MetaMask. Funziona anche per una UP deployata in passato. Va fatto <b>su ogni rete</b>, perché ogni rete ha la sua lista di controller, <b>LUKSO compresa</b> (sceglila nell'elenco della sezione 1): lì il controller che firma è quello che la UP ha oggi su LUKSO, per esempio la chiave dell'estensione Universal Profile importata in MetaMask, che può essere diversa dalla chiave di genesi.",
-    readCtrlBtn: "Leggi i controller della UP su questa rete",
-    connectSigner5Btn: "Connetti il controller della UP (MetaMask)",
-    signerPickHint: "Il wallet ti fa scegliere l'account a ogni connessione: puoi firmare con la chiave di genesi o con un backup. Per cambiare account ripremi il pulsante e scegline un altro.",
-    copyLogBtn: "Copia il log",
-    copiedLog: "Log copiato.",
-    busyStart: "In corso: lettura dei dati e simulazione. Se serve una firma, MetaMask si apre tra qualche secondo.",
-    backupNotRead: "Controller non ancora letti.",
-    backupAddrLabel: "Indirizzo del controller di backup (un account MetaMask diverso, custodito a parte)",
-    addBackupBtn: "Aggiungi il controller di backup",
-    removeDivider: "— oppure, dopo aver perso una chiave —",
-    removeLabel: "Controller da rimuovere",
-    removeHint: "L'elenco mostra tutti i controller tranne quello connesso nel wallet: chi firma non può rimuovere se stesso. Per rimuovere la chiave connessa, connetti un altro amministratore (per esempio il backup).",
-    removeAck: "Confermo: questa chiave è persa o non mi serve più. Il controller connesso nel wallet resta e continua a gestire la UP.",
-    removeBtn: "Rimuovi il controller selezionato",
-    removeNone: "(nessun controller rimovibile)",
     backupNextText: "Prossimo passo: aggiungi un controller di backup su questa rete. Se perdi la chiave di genesi senza un backup, resti fuori da questa UP per sempre.",
-    backupNextLink: "→ Sezione 5 · Controller di backup",
-    bkReading: "Lettura dei controller...",
-    bkNeedUp: "Inserisci prima l'indirizzo della UP (sezione 2).",
-    bkNeedNet: "Scegli prima la rete (sezione 1).",
-    luksoOptionSuffix: " — solo sezione 5, controller di backup",
-    deployOnLuksoErr: "❌ LUKSO è la rete dove la UP è nata: qui c'è già, non c'è niente da deployare. Su LUKSO questa pagina serve solo per la sezione 5 (controller di backup).",
-    bkNotDeployed: (v) => `La UP ${v.up} non è deployata su questa rete.`,
-    bkReadFail: (v) => `Lettura non riuscita: ${v.err}`,
-    bkRpcBehind: (v) => `L'RPC è ancora al blocco ${v.head}, prima della tua ultima modifica (blocco ${v.block}): mostrerebbe la lista com'era prima. Riprova tra qualche secondo.`,
-    bkSummaryOk: (v) => `✅ Backup presente su ${v.net}: ${v.n} controller con gli stessi permessi di amministrazione.`,
-    bkSummaryMissing: (v) => `⚠️ Nessun backup su ${v.net}: c'è un solo controller amministratore. Se perdi la sua chiave resti fuori da questa UP su questa rete.`,
-    bkSummaryNoAdmin: (v) => `❌ Su ${v.net} nessun controller ha ADDCONTROLLER ed EDITPERMISSIONS: da qui non si può aggiungere un backup.`,
-    bkRoleEp: "EntryPoint 4337 (gas relay): non è un controller per firmare",
-    bkRoleUrd: "Universal Receiver Delegate: infrastruttura, non è un controller per firmare",
-    bkRoleYou: "il wallet connesso (sezione 3)",
-    bkRoleCtrl: "controller",
-    bkRoleBad: "voce non valida nella lista",
-    bkAdmin: "amministratore",
-    bkWhyAdmin: "Controller amministratore: può firmare qualsiasi operazione della UP e aggiungere o togliere altri controller.",
-    bkWhyLimited: "Controller con permessi limitati: può fare solo quello che dicono i permessi qui sotto; non può gestire gli altri controller, quindi non fa da backup.",
-    bkWhyPair: "Ha gli stessi permessi di un altro amministratore: se perdi una delle due chiavi, l'altra fa da backup.",
-    bkWhyGenesis: "È la chiave di genesi: su ogni nuova rete la UP nasce controllata solo da lei.",
-    bkWhyYou: "È il wallet connesso adesso: firmerà le operazioni di questa sezione.",
-    bkWhyUrd: "Serve a tenere aggiornata, nei dati della UP, la lista dei token e degli NFT LUKSO (LSP7/LSP8) che la UP riceve. Non firma operazioni e non può spostare fondi né cambiare i controller.",
-    bkWhyEp: "Serve al gas relay: esegue le operazioni che il tuo controller ha firmato, così il controller non deve avere gas. Può solo chiamare contratti e inviare fondi per conto di una firma valida di un tuo controller; non può cambiare i dati, i permessi o i controller della UP.",
-    bkWhyBad: "Questa voce della lista non contiene un indirizzo valido: non è un controller funzionante.",
-    bkGenesis: "chiave di genesi (dalla calldata originale)",
-    bkSignerNone: "Collega il wallet della sezione 3: deve essere un controller amministratore di questa UP.",
-    bkSignerNotCtrl: (v) => `Il wallet connesso (${v.addr}) non è un controller di questa UP su questa rete: collega in MetaMask un controller amministratore (per una UP appena deployata, la chiave di genesi importata).`,
-    bkSignerNotAdmin: (v) => `Il wallet connesso (${v.addr}) è un controller, ma non ha ADDCONTROLLER ed EDITPERMISSIONS: non può aggiungere né rimuovere controller.`,
-    bkSignerOk: (v) => `Firmerà il wallet connesso: ${v.addr} (amministratore).`,
-    bkBadAddr: "Indirizzo del backup non valido.",
-    bkSameAsSigner: "Il backup deve essere un account diverso da quello che firma.",
-    bkAlready: "Questo indirizzo è già un controller della UP su questa rete.",
-    bkSystem: "Questo indirizzo è la UP, il suo Key Manager, l'EntryPoint o il Universal Receiver Delegate: non può fare da backup.",
-    bkContract: "A questo indirizzo c'è un contratto: come backup serve un account normale (per esempio un account MetaMask).",
-    bkPlanAdd: (v) => `Piano (una transazione, firmata da ${v.signer} tramite il Key Manager ${v.km}):\n- AddressPermissions[] da ${v.len} a ${v.len1} voci, posizione ${v.len} → ${v.backup}\n- permessi del backup → ${v.perms} (identici a quelli di chi firma: ${v.names})${v.extra}`,
-    bkPlanExtra: "\n- copiate anche le restrizioni AllowedCalls / AllowedERC725YDataKeys di chi firma",
-    bkPlanRemove: (v) => `Piano (una transazione, firmata da ${v.signer} tramite il Key Manager ${v.km}):\n- permessi di ${v.target} → cancellati\n- AddressPermissions[]: tolta la posizione ${v.index}${v.moved}, da ${v.len} a ${v.len1} voci${v.extra}`,
-    bkPlanMoved: (v) => ` (l'ultima voce, ${v.addr}, prende il suo posto)`,
-    bkPlanClear: "\n- cancellate anche le sue restrizioni AllowedCalls / AllowedERC725YDataKeys",
-    bkGenesisWarn: "Stai rimuovendo la chiave di genesi da questa rete. Qui la UP resta gestita dal wallet connesso; sulle reti nuove però la UP nascerà comunque controllata solo dalla chiave di genesi: senza di lei non potrai più fare deploy su reti nuove.",
-    bkNoBackupAfter: "Dopo la rimozione su questa rete resterà un solo controller amministratore: aggiungi subito un nuovo backup.",
-    bkSimulating: "Simulazione...",
-    bkSimFail: (v) => `❌ La simulazione fallisce: ${v.err}. Niente è stato inviato.`,
-    bkSimOk: "✅ Simulazione riuscita. Conferma la transazione in MetaMask.",
-    bkTx: (v) => `Tx: ${v.hash}`,
-    bkWaiting: "In attesa di conferma...",
-    bkTxFailed: "❌ La transazione è stata inclusa ma è fallita: niente è cambiato.",
-    bkAddOk: (v) => `✅ Backup registrato: ${v.addr} ha gli stessi permessi del controller che ha firmato. Custodisci la sua seed a parte, mai insieme alla chiave di genesi.`,
-    bkRemoveOk: (v) => `✅ Controller ${v.addr} rimosso da questa rete.`,
-    bkVerifyBad: (v) => `⚠️ Transazione confermata, ma la rilettura non torna (${v.what}): ricontrolla con «Leggi i controller».`,
-    bkAckRequired: "Spunta la conferma prima di rimuovere.",
-    bkPickRemove: "Scegli il controller da rimuovere.",
-    bkError: (v) => `Errore: ${v.err}`,
-    bkCancelled: "Annullato in MetaMask: nessuna transazione inviata.",
-    bkNoGas: (v) => `❌ ${v.addr} ha ${v.bal} ${v.cur} su questa rete, ne servono circa ${v.cost} per il gas. Niente inviato: aggiungi un po' di ${v.cur || "valuta della rete"} a questo account, oppure connetti un altro controller amministratore che ne abbia.`,
-    bkGasOk: (v) => `Gas stimato: circa ${v.cost} ${v.cur}, pagato da ${v.addr} (saldo ${v.bal} ${v.cur}).`,
-    bkChangedRead: "La UP, la rete o il wallet sono cambiati: premi di nuovo «Leggi i controller».",
+    backupNextLink: "→ Apri la pagina del controller di backup (stessa rete e stessa UP)",
+    deployOnLuksoErr: "❌ LUKSO è la rete dove la UP è nata: qui c'è già, non c'è niente da deployare. Per il controller di backup su LUKSO usa la pagina del backup.",
   },
   en: {
     pageTitle: "UP Cross-Chain Deploy",
@@ -472,8 +356,8 @@ const I18N = {
     placeholderCalldata: "0x6a66a753...",
     decodeBtn: "Decode calldata",
     notDecodedYet: "Not decoded yet.",
-    panel2Title: "3 · Signing wallet (deploy and backup)",
-    panel2Note: "For the deploy this can be any account: it only pays the transaction gas and does not become a controller of the UP. Who controls the UP is decided exclusively by the original calldata — verified in step 2. Section 5 (backup controller) instead needs an admin controller of the UP.",
+    panel2Title: "3 · Signing wallet",
+    panel2Note: "For the deploy this can be any account: it only pays the transaction gas and does not become a controller of the UP. Who controls the UP is decided exclusively by the original calldata — verified in step 2. Tip: use the <b>genesis key</b> imported into MetaMask. It pays the gas and is then already the right controller to add the backup on the backup page, with no account switch.",
     connectSignerBtn: "Connect signing wallet (e.g. MetaMask)",
     panel3Title: "1 · Target network",
     networkFilterPlaceholder: "Filter by name... (e.g. base, polygon, arbitrum)",
@@ -578,7 +462,7 @@ const I18N = {
 
     footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Source code on GitHub</a>`,
 
-    panel5Title: "6 · Support ChainIntegrate",
+    panel5Title: "5 · Support ChainIntegrate",
     donateAddressPrefix: "Donation address:",
     donateNote: "If this tool was useful to you, you can leave a free-amount donation to ChainIntegrate. We only accept <b>LYX on LUKSO Mainnet</b>, via your Universal Profile — that's why this panel only uses the UP extension, not MetaMask or other wallets. It works like any normal transaction: it opens your UP with recipient and amount already filled in, and you confirm (or cancel) from there. Not connected to the panels above — you can use it even without doing any deploy.",
     donateAmountLabel: "Amount in LYX",
@@ -595,84 +479,9 @@ const I18N = {
     testLinkText: "→ Test the UP you just deployed on this network",
     publishLinkText: "→ Publish the missing contracts on this network",
 
-    panelBackupTitle: "5 · Backup controller",
-    backupNote: "<b>The risk here is loss, not theft.</b> On every network where you redeploy, the UP is born controlled only by the <b>genesis key</b>: the key string you extracted from the Universal Profile extension. If you lose it (a broken computer, a key never saved, a forgotten password) and no other controller has the same permissions, you are locked out of this UP on this network for good, with everything it holds. No one can fix it. A <b>backup controller</b> is a second account (for example another MetaMask account, with its own seed phrase kept separately) with <b>exactly the same permissions</b> as the controller signing here. If you lose one of the two keys, the other one still signs: it adds a new backup and removes the lost key. If the one you lose is the genesis key, the only thing you can no longer do is deploy on new networks, because there the UP is born with that key only.",
-    backupHowNote: "It uses the UP address (section 2), the network (section 1) and the wallet connected below (the same as in section 3), which here <b>must be an admin controller of the UP</b> (with ADDCONTROLLER and EDITPERMISSIONS): on a UP you just deployed, that is the genesis key imported into MetaMask. It also works for a UP deployed earlier. Do it <b>on every network</b>: each network has its own controller list, <b>LUKSO included</b> (choose it in the list of section 1). There, the signing controller is the one the UP has on LUKSO today, for example the Universal Profile extension's key imported into MetaMask, which may differ from the genesis key.",
-    readCtrlBtn: "Read the UP's controllers on this network",
-    connectSigner5Btn: "Connect the UP's controller (MetaMask)",
-    signerPickHint: "The wallet lets you choose the account on every connection: you can sign with the genesis key or with a backup. To switch account, press the button again and pick another one.",
-    copyLogBtn: "Copy the log",
-    copiedLog: "Log copied.",
-    busyStart: "Working: reading the data and simulating. If a signature is needed, MetaMask opens in a few seconds.",
-    backupNotRead: "Controllers not read yet.",
-    backupAddrLabel: "Backup controller address (a different MetaMask account, kept separately)",
-    addBackupBtn: "Add the backup controller",
-    removeDivider: "— or, after losing a key —",
-    removeLabel: "Controller to remove",
-    removeHint: "The list shows every controller except the one connected in the wallet: the signer cannot remove itself. To remove the connected key, connect another admin (for example the backup).",
-    removeAck: "I confirm: this key is lost or no longer needed. The controller connected in the wallet stays and keeps managing the UP.",
-    removeBtn: "Remove the selected controller",
-    removeNone: "(no removable controller)",
     backupNextText: "Next step: add a backup controller on this network. If you lose the genesis key with no backup, you are locked out of this UP for good.",
-    backupNextLink: "→ Section 5 · Backup controller",
-    bkReading: "Reading the controllers...",
-    bkNeedUp: "Enter the UP address first (section 2).",
-    bkNeedNet: "Choose the network first (section 1).",
-    luksoOptionSuffix: " — section 5 only, backup controller",
-    deployOnLuksoErr: "❌ LUKSO is the network where the UP was born: it is already there, there is nothing to deploy. On LUKSO this page is only for section 5 (backup controller).",
-    bkNotDeployed: (v) => `The UP ${v.up} is not deployed on this network.`,
-    bkReadFail: (v) => `Reading failed: ${v.err}`,
-    bkRpcBehind: (v) => `The RPC is still at block ${v.head}, before your last change (block ${v.block}): it would show the list as it was before. Try again in a few seconds.`,
-    bkSummaryOk: (v) => `✅ Backup in place on ${v.net}: ${v.n} controllers with the same admin permissions.`,
-    bkSummaryMissing: (v) => `⚠️ No backup on ${v.net}: there is only one admin controller. If you lose its key you are locked out of this UP on this network.`,
-    bkSummaryNoAdmin: (v) => `❌ On ${v.net} no controller has ADDCONTROLLER and EDITPERMISSIONS: a backup cannot be added from here.`,
-    bkRoleEp: "4337 EntryPoint (gas relay): not a controller that signs",
-    bkRoleUrd: "Universal Receiver Delegate: infrastructure, not a controller that signs",
-    bkRoleYou: "the connected wallet (section 3)",
-    bkRoleCtrl: "controller",
-    bkRoleBad: "invalid entry in the list",
-    bkAdmin: "admin",
-    bkWhyAdmin: "Admin controller: it can sign any operation of the UP and add or remove other controllers.",
-    bkWhyLimited: "Controller with limited permissions: it can only do what the permissions below say; it cannot manage the other controllers, so it is not a backup.",
-    bkWhyPair: "It has the same permissions as another admin: if you lose one of the two keys, the other one is the backup.",
-    bkWhyGenesis: "It is the genesis key: on every new network the UP is born controlled by this key only.",
-    bkWhyYou: "It is the wallet connected now: it will sign the operations of this section.",
-    bkWhyUrd: "It keeps the list of LUKSO tokens and NFTs (LSP7/LSP8) the UP receives up to date, in the UP's data. It does not sign operations and cannot move funds or change the controllers.",
-    bkWhyEp: "It is used by the gas relay: it runs the operations your controller signed, so the controller needs no gas. It can only call contracts and send funds on behalf of a valid signature by one of your controllers; it cannot change the UP's data, permissions or controllers.",
-    bkWhyBad: "This entry of the list holds no valid address: it is not a working controller.",
-    bkGenesis: "genesis key (from the original calldata)",
-    bkSignerNone: "Connect the wallet of section 3: it must be an admin controller of this UP.",
-    bkSignerNotCtrl: (v) => `The connected wallet (${v.addr}) is not a controller of this UP on this network: connect an admin controller in MetaMask (for a UP you just deployed, the imported genesis key).`,
-    bkSignerNotAdmin: (v) => `The connected wallet (${v.addr}) is a controller, but it lacks ADDCONTROLLER and EDITPERMISSIONS: it cannot add or remove controllers.`,
-    bkSignerOk: (v) => `The connected wallet will sign: ${v.addr} (admin).`,
-    bkBadAddr: "Invalid backup address.",
-    bkSameAsSigner: "The backup must be a different account from the one signing.",
-    bkAlready: "This address is already a controller of the UP on this network.",
-    bkSystem: "This address is the UP, its Key Manager, the EntryPoint or the Universal Receiver Delegate: it cannot be a backup.",
-    bkContract: "There is a contract at this address: a backup must be a plain account (for example a MetaMask account).",
-    bkPlanAdd: (v) => `Plan (one transaction, signed by ${v.signer} through the Key Manager ${v.km}):\n- AddressPermissions[] from ${v.len} to ${v.len1} entries, position ${v.len} → ${v.backup}\n- backup permissions → ${v.perms} (identical to the signer's: ${v.names})${v.extra}`,
-    bkPlanExtra: "\n- the signer's AllowedCalls / AllowedERC725YDataKeys restrictions are copied too",
-    bkPlanRemove: (v) => `Plan (one transaction, signed by ${v.signer} through the Key Manager ${v.km}):\n- permissions of ${v.target} → cleared\n- AddressPermissions[]: position ${v.index} removed${v.moved}, from ${v.len} to ${v.len1} entries${v.extra}`,
-    bkPlanMoved: (v) => ` (the last entry, ${v.addr}, takes its place)`,
-    bkPlanClear: "\n- its AllowedCalls / AllowedERC725YDataKeys restrictions are cleared too",
-    bkGenesisWarn: "You are removing the genesis key from this network. Here the UP stays managed by the connected wallet; on new networks, though, the UP will still be born controlled only by the genesis key: without it you can no longer deploy on new networks.",
-    bkNoBackupAfter: "After the removal only one admin controller will remain on this network: add a new backup right away.",
-    bkSimulating: "Simulating...",
-    bkSimFail: (v) => `❌ The simulation fails: ${v.err}. Nothing was sent.`,
-    bkSimOk: "✅ Simulation passed. Confirm the transaction in MetaMask.",
-    bkTx: (v) => `Tx: ${v.hash}`,
-    bkWaiting: "Waiting for confirmation...",
-    bkTxFailed: "❌ The transaction was included but failed: nothing changed.",
-    bkAddOk: (v) => `✅ Backup registered: ${v.addr} has the same permissions as the controller that signed. Keep its seed phrase separately, never together with the genesis key.`,
-    bkRemoveOk: (v) => `✅ Controller ${v.addr} removed from this network.`,
-    bkVerifyBad: (v) => `⚠️ Transaction confirmed, but the re-read does not match (${v.what}): check again with "Read the controllers".`,
-    bkAckRequired: "Tick the confirmation before removing.",
-    bkPickRemove: "Choose the controller to remove.",
-    bkError: (v) => `Error: ${v.err}`,
-    bkCancelled: "Cancelled in MetaMask: no transaction sent.",
-    bkNoGas: (v) => `❌ ${v.addr} holds ${v.bal} ${v.cur} on this network; about ${v.cost} is needed for gas. Nothing sent: add a little ${v.cur || "of the network's currency"} to this account, or connect another admin controller that has some.`,
-    bkGasOk: (v) => `Estimated gas: about ${v.cost} ${v.cur}, paid by ${v.addr} (balance ${v.bal} ${v.cur}).`,
-    bkChangedRead: "The UP, the network or the wallet changed: press \"Read the controllers\" again.",
+    backupNextLink: "→ Open the backup controller page (same network and UP)",
+    deployOnLuksoErr: "❌ LUKSO is the network where the UP was born: it is already there, there is nothing to deploy. For a backup controller on LUKSO use the backup page.",
   },
 };
 
@@ -692,7 +501,6 @@ function applyI18n() {
   if (!upAddressConnected) $("upStatus").innerHTML = `<span class="empty">${t("notConnected")}</span>`;
   if (!signerAddress) setSignerStatus(`<span class="empty">${t("notConnected")}</span>`);
   $("donateAddressBox").textContent = `${t("donateAddressPrefix")} ${DONATE_ADDRESS}`;
-  if (bk) renderBackup(); else if (!$("backupStatus").textContent.trim() || $("backupStatus").querySelector("[data-i18n]")) $("backupStatus").innerHTML = `<span class="empty">${t("backupNotRead")}</span>`;
   if (decoded) {
     renderDecodeResult(decoded, $("expectedAddress").value.trim());
   } else {
@@ -792,16 +600,15 @@ function log(msg, cls) {
 
 // --- Rete: filtro + lista ---
 const networkSelectEl = $("network");
-// The redeploy networks, then LUKSO for section 5 only (backup controller): the UP already lives there,
-// so Verify and Deploy refuse it (checkChains).
-const NETWORKS = [...CHAINS.filter(c => c.key !== "custom"), LUKSO_CHAIN, ...CHAINS.filter(c => c.key === "custom")];
+// The redeploy networks (LUKSO is where the UP already lives: the backup page covers it).
+const NETWORKS = CHAINS;
 function renderNetworkOptions(filter) {
   const f = (filter || "").toLowerCase();
   networkSelectEl.innerHTML = "";
   NETWORKS.filter(c => c.name.toLowerCase().includes(f)).forEach(c => {
     const opt = document.createElement("option");
     opt.value = c.key;
-    opt.textContent = c.chainId ? `${c.name} (chainId ${c.chainId})` + (c.key === "lukso" ? t("luksoOptionSuffix") : "") : c.name;
+    opt.textContent = c.chainId ? `${c.name} (chainId ${c.chainId})` : c.name;
     networkSelectEl.appendChild(opt);
   });
 }
@@ -1057,8 +864,7 @@ const discoveredProviders = [];
 window.addEventListener("eip6963:announceProvider", (e) => discoveredProviders.push(e.detail));
 window.dispatchEvent(new Event("eip6963:requestProvider"));
 
-// Sections 2 and 5 connect the same wallet: both status boxes show it.
-function setSignerStatus(html) { $("signerStatus").innerHTML = html; $("signerStatus5").innerHTML = html; }
+function setSignerStatus(html) { $("signerStatus").innerHTML = html; }
 async function connectSignerWallet() {
   let candidate = discoveredProviders.find(p => !/lukso|universal profile/i.test(p.info.name))?.provider;
   if (!candidate && window.ethereum && window.ethereum !== window.lukso) candidate = window.ethereum;
@@ -1160,7 +966,6 @@ function invalidateCheck() {
   lastCheckOk = false;
   checkedContext = null;
   $("deployBtn").disabled = true;
-  resetBackupView();
 }
 ["calldataInput", "expectedAddress", "customRpc", "customExplorer"].forEach(id => $(id).addEventListener("input", invalidateCheck));
 networkSelectEl.addEventListener("change", invalidateCheck);
@@ -1187,8 +992,8 @@ async function checkChains(net, provider) {
   if (rpcChainId !== expectedChainId) {
     return { ok: false, msg: t("rpcChainMismatchErr", { rpcChainId, netName: net.name, chainId: expectedChainId }) };
   }
-  // LUKSO is where the UP was created: nothing to deploy there (the list offers it for section 5 only).
-  if (LUKSO_CHAIN_IDS.includes(expectedChainId)) return { ok: false, msg: t("deployOnLuksoErr") };
+  // LUKSO is where the UP was created: nothing to deploy there (a custom RPC could still point to it).
+  if ([42, 4201].includes(expectedChainId)) return { ok: false, msg: t("deployOnLuksoErr") };
   let walletChainId;
   try {
     walletChainId = parseInt(await signerProvider.request({ method: "eth_chainId" }), 16);
@@ -1415,8 +1220,11 @@ $("deployBtn").addEventListener("click", async () => {
         $("testLinkAnchor").href = `up-test-operazione.html?network=${encodeURIComponent(net.key)}`;
       }
       $("testLinkBox").style.display = "block";
+      // The backup has its own page: same network and UP, ready to read.
+      const bq = new URLSearchParams({ up: decoded.predictedPrimary });
+      if (net.key && net.key !== "custom") bq.set("network", net.key);
+      $("backupNextLink").href = "up-backup.html?" + bq.toString();
       $("backupNextBox").style.display = "block";
-      readBackup();
     } else {
       log(t("mismatchErr"), "line-err");
       if (!primaryOk) log(t("mismatchDetailUp", { impl: decoded.primary.impl, expLen: expectedPrimaryCode.length, actLen: actualPrimaryCode.length, actual: actualPrimaryCode === "0x" ? t("noCodeFound") : actualPrimaryCode }), "line-err");
@@ -1431,379 +1239,10 @@ $("deployBtn").addEventListener("click", async () => {
   }
 });
 
-// ==================== 5. Backup controller ====================
-// Adds a second controller with exactly the signer's permissions (and its AllowedCalls /
-// AllowedERC725YDataKeys, if any), or removes a lost controller. One Key Manager transaction,
-// simulated before MetaMask opens and re-read after confirmation. Detection and the list are
-// read by backup-check.js, the same code that drives the alert on the other pages.
-const BK = window.BackupCheck;
-const KM_EXEC_IFACE = new ethers.Interface(["function execute(bytes) payable returns (bytes)"]);
-const UP_DATA_IFACE = new ethers.Interface(["function setDataBatch(bytes32[] dataKeys, bytes[] dataValues)", "function getDataBatch(bytes32[]) view returns (bytes[])"]);
-const LUKSO_CHAIN_IDS = [42, 4201];
-let bk = null;      // last read: { up, rpc, chainId, netName, provider, r, signer, signerCtrl, genesis }
-let bkBusy = false;
+// Old links to the backup section (…#backup) open the backup page, with the same network and UP.
+if (location.hash === "#backup") location.replace("up-backup.html" + location.search);
 
-const permNames = (p) => { const f = []; for (let i = 0; i < 24; i++) if ((p >> BigInt(i)) & 1n) f.push(i === 23 ? "ERC4337" : PERMISSION_BITS[i]); return f.join(", ") || "—"; };
-const permHex = (p) => "0x" + p.toString(16);
-function bkLog(msg, cls) {
-  const l = document.createElement("div");
-  if (cls) l.className = cls;
-  l.textContent = msg;
-  $("backupLog").appendChild(l);
-  // While an action runs, the fixed box shows its latest step (first line only).
-  if (bkBusy && !/^—— /.test(msg)) { const first = String(msg).split("\n")[0]; $("busyMsg").textContent = first.length > 200 ? first.slice(0, 200) + "…" : first; }
-}
-// The log keeps every action of the session: each one starts with time, UP and network.
-function bkSeparator() {
-  const net = getNetwork();
-  const up = $("expectedAddress").value.trim();
-  bkLog(`—— ${new Date().toLocaleTimeString()} · UP ${up || "?"} · ${net ? net.name : "?"} ——`, "line-dim");
-}
-function setBusy(on) {
-  bkBusy = on;
-  if (on) $("busyMsg").textContent = t("busyStart");
-  $("busyToast").classList.toggle("on", on);
-  updateBackupButtons();
-}
-function setBackupStatus(text, cls) {
-  const el = $("backupStatus");
-  el.innerHTML = "";
-  const sp = document.createElement("div");
-  sp.className = cls || "";
-  sp.style.whiteSpace = "pre-wrap";
-  sp.textContent = text;
-  el.appendChild(sp);
-}
-// Same rule as backup-check.js: two admin controllers with the same permissions, ERC4337 ignored.
-function backupAmong(list) {
-  const groups = {}, seen = new Set();
-  list.filter(c => c.role === "controller" && (c.perms & BK.ADMIN) === BK.ADMIN && !seen.has(c.address) && seen.add(c.address))
-    .forEach(c => { const g = (c.perms & ~BK.ERC4337).toString(16); groups[g] = (groups[g] || 0) + 1; });
-  return Object.values(groups).some(n => n >= 2);
-}
-function resetBackupView() {
-  if (!bk) return;
-  bk = null;
-  setBackupStatus(t("bkChangedRead"), "line-warn");
-  $("backupList").innerHTML = "";
-  updateBackupButtons();
-}
-function signerState(b) {
-  if (!b || !b.signer) return "none";
-  if (!b.signerCtrl) return "notCtrl";
-  return (b.signerCtrl.perms & BK.ADMIN) === BK.ADMIN ? "ok" : "notAdmin";
-}
-function updateBackupButtons() {
-  const ok = !bkBusy && bk && signerState(bk) === "ok";
-  $("addBackupBtn").disabled = !ok;
-  $("removeBtn").disabled = !ok || !$("removeSelect").value;
-  $("readCtrlBtn").disabled = bkBusy;
-  $("connectSigner5").disabled = bkBusy;
-}
-function renderBackup() {
-  if (!bk) return;
-  const { r, netName } = bk;
-  const summary = r.hasBackup ? t("bkSummaryOk", { net: netName, n: Math.max(2, r.admins.length) })
-    : r.admins.length ? t("bkSummaryMissing", { net: netName }) : t("bkSummaryNoAdmin", { net: netName });
-  const st = signerState(bk);
-  const signerLine = st === "none" ? t("bkSignerNone") : st === "notCtrl" ? t("bkSignerNotCtrl", { addr: bk.signer })
-    : st === "notAdmin" ? t("bkSignerNotAdmin", { addr: bk.signer }) : t("bkSignerOk", { addr: bk.signer });
-  setBackupStatus(summary + "\n" + signerLine, r.hasBackup ? (st === "ok" ? "line-ok" : "line-warn") : r.admins.length ? "line-warn" : "line-err");
-  const box = $("backupList");
-  box.innerHTML = "";
-  r.controllers.forEach(c => {
-    const card = document.createElement("div");
-    card.className = "ctrl-card";
-    const a = document.createElement("div");
-    a.className = "addr";
-    a.textContent = `[${c.index}] ${c.address || "?"}`;
-    const role = document.createElement("div");
-    role.style.marginTop = "4px";
-    const badges = [];
-    if (c.role === "entrypoint") badges.push(["ok", t("bkRoleEp")]);
-    else if (c.role === "urd") badges.push(["ok", t("bkRoleUrd")]);
-    else if (c.role === "malformed") badges.push(["err", t("bkRoleBad")]);
-    else {
-      if (bk.signer && c.address.toLowerCase() === bk.signer.toLowerCase()) badges.push(["ok", t("bkRoleYou")]);
-      else badges.push(["warn", t("bkRoleCtrl")]);
-      if ((c.perms & BK.ADMIN) === BK.ADMIN) badges.push(["err", t("bkAdmin")]);
-      if (bk.genesis.includes(c.address.toLowerCase())) badges.push(["warn", t("bkGenesis")]);
-    }
-    // A space between badges too, so a copied list stays readable.
-    badges.forEach(([cls, text], i) => { const s = document.createElement("span"); s.className = "badge " + cls; s.style.marginRight = "6px"; s.textContent = text; if (i) role.append(" "); role.appendChild(s); });
-    // What it is for, in plain words.
-    const why = [];
-    if (c.role === "entrypoint") why.push(t("bkWhyEp"));
-    else if (c.role === "urd") why.push(t("bkWhyUrd"));
-    else if (c.role === "malformed") why.push(t("bkWhyBad"));
-    else {
-      const admin = (c.perms & BK.ADMIN) === BK.ADMIN;
-      why.push(t(admin ? "bkWhyAdmin" : "bkWhyLimited"));
-      if (admin && r.admins.some(o => o !== c && (o.perms & ~BK.ERC4337) === (c.perms & ~BK.ERC4337))) why.push(t("bkWhyPair"));
-      if (bk.genesis.includes(c.address.toLowerCase())) why.push(t("bkWhyGenesis"));
-      if (bk.signer && c.address.toLowerCase() === bk.signer.toLowerCase()) why.push(t("bkWhyYou"));
-    }
-    const whyEl = document.createElement("div");
-    whyEl.style.cssText = "font-size:12.5px; color:var(--text); margin-top:6px; line-height:1.5;";
-    whyEl.textContent = why.join(" ");
-    const flags = document.createElement("div");
-    flags.className = "flags";
-    flags.textContent = `${permHex(c.perms)} — ${permNames(c.perms)}`;
-    card.append(a, role, whyEl, flags);
-    box.appendChild(card);
-  });
-  const sel = $("removeSelect");
-  const prev = sel.value;
-  sel.innerHTML = "";
-  const removable = r.controllers.filter(c => c.role === "controller" && !(bk.signer && c.address.toLowerCase() === bk.signer.toLowerCase()));
-  if (!removable.length) {
-    const o = document.createElement("option"); o.value = ""; o.textContent = t("removeNone"); sel.appendChild(o);
-  } else {
-    removable.forEach(c => {
-      const o = document.createElement("option");
-      o.value = c.address;
-      const tags = [(c.perms & BK.ADMIN) === BK.ADMIN ? t("bkAdmin") : t("bkRoleCtrl")];
-      if (bk.genesis.includes(c.address.toLowerCase())) tags.push(t("bkGenesis"));
-      o.textContent = `${c.address} — ${permHex(c.perms)} · ${tags.join(", ")}`;
-      sel.appendChild(o);
-    });
-    if (removable.some(c => c.address === prev)) sel.value = prev;
-  }
-  updateBackupButtons();
-}
-
-// Reads the UP's controllers on the selected network. Returns the state or null (and says why).
-// The block of this page's last backup write, per UP and chain. Later reads are pinned at or after it:
-// a load-balanced RPC answering from an older node would otherwise show the list as it was before the
-// write, and the next write would overwrite an entry (AUDIT 2026-10-02 L-4).
-let bkSeen = { key: "", block: 0 };
-async function readBackup() {
-  bk = null;
-  $("backupList").innerHTML = "";
-  updateBackupButtons();
-  const raw = $("expectedAddress").value.trim();
-  if (!ethers.isAddress(raw)) { setBackupStatus(t("bkNeedUp"), "line-err"); return null; }
-  const net = getNetwork();
-  if (!net || !net.rpc) { setBackupStatus(t("bkNeedNet"), "line-err"); return null; }
-  setBackupStatus(t("bkReading"), "line-dim");
-  try {
-    const up = ethers.getAddress(raw);
-    const probe = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
-    const chainId = Number(await probe.send("eth_chainId", []));
-    if (net.chainId && chainId !== net.chainId) { setBackupStatus(t("rpcChainMismatchErr", { rpcChainId: chainId, netName: net.name, chainId: net.chainId }), "line-err"); return null; }
-    const provider = new ethers.JsonRpcProvider(net.rpc, chainId, { staticNetwork: true, batchMaxCount: 1 });
-    if ((await provider.getCode(up)) === "0x") { setBackupStatus(t("bkNotDeployed", { up }), "line-err"); return null; }
-    let at;
-    if (bkSeen.key === `${chainId}:${up}`) {
-      let head = 0;
-      for (let i = 0; i < 6; i++) { if (i) await new Promise(res => setTimeout(res, 1500)); head = await provider.getBlockNumber(); if (head >= bkSeen.block) break; }
-      if (head < bkSeen.block) { setBackupStatus(t("bkRpcBehind", { block: bkSeen.block, head }), "line-err"); return null; }
-      at = { blockTag: head };
-    }
-    const r = await BK.read(provider, up, at);
-    const signer = signerAddress ? ethers.getAddress(signerAddress) : null;
-    const signerCtrl = signer ? r.controllers.find(c => c.role === "controller" && c.address === signer) || null : null;
-    // The genesis controllers are known only when the decoded calldata is for this same UP.
-    const genesis = decoded && decoded.predictedPrimary.toLowerCase() === up.toLowerCase()
-      ? decoded.controllers.filter(c => !KNOWN_ADDRESSES[c.address.toLowerCase()]).map(c => ethers.getAddress(c.address).toLowerCase()) : [];
-    const netName = net.chainId ? net.name : `${t("customNetName")} (chainId ${chainId})`;
-    bk = { up, rpc: net.rpc, chainId, netName, provider, r, signer, signerCtrl, genesis };
-    renderBackup();
-    return bk;
-  } catch (e) {
-    setBackupStatus(t("bkReadFail", { err: e.shortMessage || e.message }), "line-err");
-    return null;
-  }
-}
-$("readCtrlBtn").addEventListener("click", async () => {
-  if (bkBusy) return;
-  bkSeparator();
-  setBusy(true); $("busyMsg").textContent = t("bkReading");
-  try { await readBackup(); } finally { setBusy(false); }
-});
-// Connecting from section 5 reads the controllers right away when UP and network are set.
-$("connectSigner5").addEventListener("click", async () => {
-  if (bkBusy) return;
-  if (!(await connectSignerWallet())) return;
-  if (!ethers.isAddress($("expectedAddress").value.trim())) return;
-  setBusy(true); $("busyMsg").textContent = t("bkReading");
-  try { await readBackup(); } finally { setBusy(false); }
-});
-$("removeSelect").addEventListener("change", updateBackupButtons);
-$("copyBackupLog").addEventListener("click", async () => {
-  try { await navigator.clipboard.writeText($("backupLog").innerText); $("copyBackupLog").textContent = t("copiedLog"); }
-  catch (e) { /* clipboard not allowed: the log can still be selected by hand */ }
-  setTimeout(() => { $("copyBackupLog").textContent = t("copyLogBtn"); }, 1500);
-});
-
-// A fresh read, then the checks every write needs: admin signer, wallet on the same chain.
-async function freshAdminState() {
-  const b = await readBackup();
-  if (!b) return null;
-  const st = signerState(b);
-  if (st !== "ok") { bkLog(st === "none" ? t("bkSignerNone") : t(st === "notCtrl" ? "bkSignerNotCtrl" : "bkSignerNotAdmin", { addr: b.signer }), "line-err"); return null; }
-  let walletChainId;
-  try { walletChainId = parseInt(await signerProvider.request({ method: "eth_chainId" }), 16); }
-  catch (e) { bkLog(t("walletNetworkCheckFailed", { netName: b.netName }), "line-err"); return null; }
-  if (walletChainId !== b.chainId) { bkLog(t("walletWrongNetwork", { walletChainId, netName: b.netName, chainId: b.chainId }), "line-err"); return null; }
-  b.km = b.r.km ? ethers.getAddress(b.r.km) : null;
-  if (!b.km || (await b.provider.getCode(b.km)) === "0x") { bkLog(t("bkReadFail", { err: "Key Manager" }), "line-err"); return null; }
-  return b;
-}
-
-// After a write: every controller listed just before its block (except the one removed) must still be
-// listed. The "before" list is read at the previous block, not taken from the page's own read: a stale
-// read is exactly what could have made the write overwrite an entry (AUDIT 2026-10-02 L-4).
-async function stillListed(b, at, removed) {
-  const [before, after] = await Promise.all([BK.read(b.provider, b.up, { blockTag: at.blockTag - 1 }), BK.read(b.provider, b.up, at)]);
-  const now = new Set(after.controllers.map(c => (c.address || "").toLowerCase()));
-  return before.controllers.filter(c => c.address && c.address.toLowerCase() !== String(removed || "").toLowerCase() && !now.has(c.address.toLowerCase()))
-    .map(c => `${c.address} no longer listed`);
-}
-
-// Simulates, sends through MetaMask, waits, then re-reads with `verify(at)` (a list of problems).
-async function sendBackupTx(b, data, verify, what) {
-  bkLog(t("bkSimulating"), "line-dim");
-  try { await b.provider.call({ from: b.signer, to: b.km, data }); }
-  catch (e) { bkLog(t("bkSimFail", { err: e.shortMessage || e.reason || e.message }), "line-err"); return false; }
-  // The signer pays the gas: check its balance before MetaMask opens (a fresh backup key often holds
-  // nothing on this network, and the wallet then shows only a generic fee alert).
-  try {
-    const [gas, fee, bal] = await Promise.all([b.provider.estimateGas({ from: b.signer, to: b.km, data }), b.provider.getFeeData(), b.provider.getBalance(b.signer)]);
-    const price = fee.maxFeePerGas || fee.gasPrice;
-    if (price) {
-      const net = getNetwork();
-      const cur = net && net.currency && net.currency !== "?" ? net.currency : "";
-      const v = { addr: b.signer, bal: ethers.formatEther(bal), cost: ethers.formatEther(gas * price), cur };
-      if (bal < gas * price) { bkLog(t("bkNoGas", v), "line-err"); return false; }
-      bkLog(t("bkGasOk", v), "line-dim");
-    }
-  } catch (e) { /* no estimate: MetaMask still shows its own fee */ }
-  bkLog(t("bkSimOk"), "line-ok");
-  const browserProvider = new ethers.BrowserProvider(signerProvider);
-  browserProvider.pollingInterval = 1000; // confirm as soon as the block is there (default 4 s)
-  const signerObj = await browserProvider.getSigner();
-  if (signerObj.address.toLowerCase() !== b.signer.toLowerCase()) { bkLog(t("signerChangedErr", { now: signerObj.address, checked: b.signer }), "line-err"); return false; }
-  const tx = await SignCheck.sendTransaction(signerObj, { to: b.km, data, chainId: b.chainId }, { what, toLabel: { it: "Key Manager della UP", en: "the UP's Key Manager" } });
-  bkLog(t("bkTx", { hash: tx.hash }), "line-dim");
-  bkLog(t("bkWaiting"), "line-dim");
-  const receipt = await tx.wait();
-  if (!receipt || receipt.status !== 1) { bkLog(t("bkTxFailed"), "line-err"); return false; }
-  bkSeen = { key: `${b.chainId}:${b.up}`, block: receipt.blockNumber };
-  const net = getNetwork();
-  const url = net && getExplorerUrl(net, "/tx/", tx.hash);
-  if (url) bkLog(url, "line-dim");
-  // Public RPCs are load-balanced: read at the receipt's block, retrying while a node lags behind.
-  let problems = ["not read"];
-  for (let i = 0; i < 6 && problems.length; i++) {
-    if (i) await new Promise(res => setTimeout(res, 1500));
-    try { problems = await verify({ blockTag: receipt.blockNumber }); } catch (e) { problems = [e.shortMessage || e.message]; }
-  }
-  return problems;
-}
-
-$("addBackupBtn").addEventListener("click", async () => {
-  if (bkBusy) return;
-  bkSeparator();
-  setBusy(true);
-  try {
-    const b = await freshAdminState();
-    if (!b) return;
-    const rawAddr = $("backupAddress").value.trim();
-    if (!ethers.isAddress(rawAddr) || BigInt(rawAddr) === 0n) { bkLog(t("bkBadAddr"), "line-err"); return; }
-    const backup = ethers.getAddress(rawAddr);
-    if (backup === b.signer) { bkLog(t("bkSameAsSigner"), "line-err"); return; }
-    if ([b.up, b.km, BK.ENTRY_POINT].map(x => x.toLowerCase()).includes(backup.toLowerCase()) || backup.toLowerCase() === b.r.urd || KNOWN_ADDRESSES[backup.toLowerCase()]) { bkLog(t("bkSystem"), "line-err"); return; }
-    const upData = new ethers.Contract(b.up, UP_DATA_IFACE, b.provider);
-    const [existing, calls, dataKeys] = await upData.getDataBatch([BK.permKey(backup), BK.callsKey(b.signer), BK.dataKeysKey(b.signer)]);
-    if ((existing && existing !== "0x" && BigInt(existing) !== 0n) || b.r.controllers.some(c => c.address === backup)) { bkLog(t("bkAlready"), "line-err"); return; }
-    // A plain account, or one delegated through EIP-7702 (code 0xef0100 + address): never a contract.
-    const code = (await b.provider.getCode(backup)).toLowerCase();
-    if (code !== "0x" && !code.startsWith("0xef0100")) { bkLog(t("bkContract"), "line-err"); return; }
-    const raw = b.signerCtrl.raw;
-    const keys = [BK.ARRAY_KEY, BK.indexKey(b.r.len), BK.permKey(backup)];
-    const vals = [ethers.toBeHex(b.r.len + 1, 16), backup, raw];
-    const copy = [];
-    if (calls && calls !== "0x") { keys.push(BK.callsKey(backup)); vals.push(calls); copy.push("calls"); }
-    if (dataKeys && dataKeys !== "0x") { keys.push(BK.dataKeysKey(backup)); vals.push(dataKeys); copy.push("keys"); }
-    bkLog(t("bkPlanAdd", { signer: b.signer, km: b.km, len: b.r.len, len1: b.r.len + 1, backup, perms: permHex(b.signerCtrl.perms), names: permNames(b.signerCtrl.perms), extra: copy.length ? t("bkPlanExtra") : "" }), "line-dim");
-    const data = KM_EXEC_IFACE.encodeFunctionData("execute", [UP_DATA_IFACE.encodeFunctionData("setDataBatch", [keys, vals])]);
-    const what = { it: `Aggiunge il backup ${backup} alla UP ${b.up}, con gli stessi permessi di ${b.signer}`, en: `Adds the backup ${backup} to the UP ${b.up}, with the same permissions as ${b.signer}` };
-    const problems = await sendBackupTx(b, data, async (at) => {
-      const [p, lenRaw, item] = await upData.getDataBatch([BK.permKey(backup), BK.ARRAY_KEY, BK.indexKey(b.r.len)], at);
-      const out = [];
-      if (String(p).toLowerCase() !== String(raw).toLowerCase()) out.push(`permissions ${p}`);
-      if (BigInt(lenRaw || "0x0") !== BigInt(b.r.len + 1)) out.push(`list length ${lenRaw}`);
-      if (String(item).toLowerCase() !== backup.toLowerCase()) out.push(`list entry ${item}`);
-      out.push(...await stillListed(b, at, null));
-      return out;
-    }, what);
-    if (problems === false) return;
-    bkLog(problems.length ? t("bkVerifyBad", { what: problems.join(", ") }) : t("bkAddOk", { addr: backup }), problems.length ? "line-warn" : "line-ok");
-    await readBackup();
-  } catch (e) {
-    if (e && (e.code === "ACTION_REJECTED" || e.code === 4001)) bkLog(t("bkCancelled"), "line-warn");
-    else bkLog(t("bkError", { err: e.shortMessage || e.message }), "line-err");
-  } finally {
-    setBusy(false);
-  }
-});
-
-$("removeBtn").addEventListener("click", async () => {
-  if (bkBusy) return;
-  bkSeparator();
-  if (!$("removeAck").checked) { bkLog(t("bkAckRequired"), "line-err"); return; }
-  const chosen = $("removeSelect").value;
-  if (!chosen) { bkLog(t("bkPickRemove"), "line-err"); return; }
-  setBusy(true);
-  try {
-    const b = await freshAdminState();
-    if (!b) return;
-    const target = b.r.controllers.find(c => c.role === "controller" && c.address === chosen);
-    if (!target || target.address === b.signer) { bkLog(t("bkChangedRead"), "line-err"); return; }
-    const last = b.r.len - 1;
-    const lastEntry = b.r.controllers[last];
-    if (!lastEntry || !lastEntry.address) { bkLog(t("bkRoleBad"), "line-err"); return; }
-    const upData = new ethers.Contract(b.up, UP_DATA_IFACE, b.provider);
-    const [calls, dataKeys] = await upData.getDataBatch([BK.callsKey(target.address), BK.dataKeysKey(target.address)]);
-    // Remove from AddressPermissions[]: move the last entry into the removed slot, shorten the list.
-    const keys = [], vals = [];
-    if (target.index !== last) { keys.push(BK.indexKey(target.index)); vals.push(lastEntry.address); }
-    keys.push(BK.indexKey(last), BK.ARRAY_KEY, BK.permKey(target.address));
-    vals.push("0x", ethers.toBeHex(last, 16), "0x");
-    let cleared = false;
-    if (calls && calls !== "0x") { keys.push(BK.callsKey(target.address)); vals.push("0x"); cleared = true; }
-    if (dataKeys && dataKeys !== "0x") { keys.push(BK.dataKeysKey(target.address)); vals.push("0x"); cleared = true; }
-    bkLog(t("bkPlanRemove", { signer: b.signer, km: b.km, target: target.address, index: target.index, len: b.r.len, len1: last,
-      moved: target.index !== last ? t("bkPlanMoved", { addr: lastEntry.address }) : "", extra: cleared ? t("bkPlanClear") : "" }), "line-dim");
-    if (b.genesis.includes(target.address.toLowerCase())) bkLog(t("bkGenesisWarn"), "line-warn");
-    if (!backupAmong(b.r.controllers.filter(c => c !== target))) bkLog(t("bkNoBackupAfter"), "line-warn");
-    const data = KM_EXEC_IFACE.encodeFunctionData("execute", [UP_DATA_IFACE.encodeFunctionData("setDataBatch", [keys, vals])]);
-    const what = { it: `Toglie il controller ${target.address} dalla UP ${b.up}`, en: `Removes the controller ${target.address} from the UP ${b.up}` };
-    const problems = await sendBackupTx(b, data, async (at) => {
-      const [p, lenRaw] = await upData.getDataBatch([BK.permKey(target.address), BK.ARRAY_KEY], at);
-      const len = Number(BigInt(lenRaw || "0x0"));
-      const list = len > 0 && len <= 50 ? await upData.getDataBatch(Array.from({ length: len }, (_, k) => BK.indexKey(k)), at) : [];
-      const out = [];
-      if (p && p !== "0x") out.push(`permissions ${p}`);
-      if (len !== last) out.push(`list length ${len}`);
-      if (list.some(v => v && v.toLowerCase() === target.address.toLowerCase())) out.push("still listed");
-      out.push(...await stillListed(b, at, target.address));
-      return out;
-    }, what);
-    if (problems === false) return;
-    bkLog(problems.length ? t("bkVerifyBad", { what: problems.join(", ") }) : t("bkRemoveOk", { addr: target.address }), problems.length ? "line-warn" : "line-ok");
-    $("removeAck").checked = false;
-    await readBackup();
-  } catch (e) {
-    if (e && (e.code === "ACTION_REJECTED" || e.code === 4001)) bkLog(t("bkCancelled"), "line-warn");
-    else bkLog(t("bkError", { err: e.shortMessage || e.message }), "line-err");
-  } finally {
-    setBusy(false);
-  }
-});
-
-// Links from the alert on the other pages: ?network=<key>&up=<address>#backup
+// Links from other pages: ?network=<key>&up=<address>
 {
   const q = new URLSearchParams(location.search);
   const presetNet = q.get("network"), presetUp = q.get("up");
