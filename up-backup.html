@@ -182,7 +182,7 @@ const I18N = {
     connectUpBtn: "Leggi l'indirizzo dalla tua UP (estensione o app)",
     upAddressLabel: "Indirizzo della UP",
     panel3Title: "3 · Il controller che firma (MetaMask)",
-    signerNote: "Il wallet connesso qui <b>deve essere un controller amministratore della UP</b> su questa rete (con ADDCONTROLLER ed EDITPERMISSIONS), e paga il gas. Su una UP appena deployata è la <b>chiave di genesi</b> importata in MetaMask: se hai fatto il deploy con quell'account, è già quello giusto. Va fatto <b>su ogni rete</b>, perché ogni rete ha la sua lista di controller, <b>LUKSO compresa</b>: lì il controller che firma è quello che la UP ha oggi su LUKSO, per esempio la chiave dell'estensione Universal Profile importata in MetaMask, che può essere diversa dalla chiave di genesi.",
+    signerNote: "Il wallet connesso qui <b>deve essere un controller amministratore della UP</b> su questa rete (con ADDCONTROLLER ed EDITPERMISSIONS), e paga il gas. Su una UP appena deployata è la <b>chiave di genesi</b> importata in MetaMask: se hai fatto il deploy con quell'account, è già quello giusto. Va fatto <b>su ogni rete</b>, perché ogni rete ha la sua lista di controller, <b>LUKSO compresa</b>: lì il controller che firma è quello che la UP ha oggi su LUKSO, per esempio la chiave dell'estensione Universal Profile importata in MetaMask, che può essere diversa dalla chiave di genesi. Dal telefono, dove il browser non ha MetaMask, il pulsante collega l'app MetaMask con WalletConnect: la transazione arriva nell'app da approvare.",
     panel4Title: "4 · Controller della UP su questa rete",
     genesisUnknown: "Chiave di genesi non riconosciuta: la transazione di creazione della UP non è stata trovata sull'explorer di LUKSO. Il resto funziona lo stesso.",
     backupNote: "<b>Il problema non è il furto, è la perdita.</b> Su ogni rete dove rifai il deploy, la UP nasce controllata solo dalla <b>chiave di genesi</b>: la stringa che hai estratto dall'estensione Universal Profile. Se la perdi (computer rotto, stringa mai salvata, password dimenticata) e non c'è un altro controller con gli stessi permessi, resti fuori da questa UP su questa rete per sempre, con tutto quello che contiene. Nessuno può rimediare. Un <b>controller di backup</b> è un secondo account (per esempio un altro account MetaMask, con la sua seed custodita a parte) con <b>esattamente gli stessi permessi</b> del controller che firma qui. Se perdi una delle due chiavi, con l'altra continui a firmare, aggiungi un nuovo backup e rimuovi quella persa. Se perdi proprio la chiave di genesi, l'unica cosa che non potrai più fare è il deploy su reti nuove, perché lì la UP nasce solo con lei.",
@@ -204,7 +204,7 @@ const I18N = {
     connectedBadge: "Connesso",
     connectionRejected: "Connessione rifiutata o fallita",
     notConnected: "Non connesso.",
-    noSignerFound: "Nessun wallet firmatario trovato",
+    wcDisconnectBtn: "Scollega",
     unknownNetworkLabel: (v) => `rete sconosciuta (chainId ${v.chainId})`,
     customNetName: "Rete custom",
     rpcChainMismatchErr: (v) => `❌ BLOCCANTE — l'RPC risponde con chainId ${v.rpcChainId}, ma la rete selezionata è ${v.netName} (chainId ${v.chainId}). Non procedere.`,
@@ -286,7 +286,7 @@ const I18N = {
     connectUpBtn: "Read the address from your UP (extension or app)",
     upAddressLabel: "UP address",
     panel3Title: "3 · The signing controller (MetaMask)",
-    signerNote: "The wallet connected here <b>must be an admin controller of the UP</b> on this network (with ADDCONTROLLER and EDITPERMISSIONS), and it pays the gas. On a UP you just deployed, that is the <b>genesis key</b> imported into MetaMask: if you made the deploy with that account, it is already the right one. Do it <b>on every network</b>: each network has its own list of controllers, <b>LUKSO included</b>. There the signer is the controller the UP has today on LUKSO, for example the Universal Profile extension's key imported into MetaMask, which may differ from the genesis key.",
+    signerNote: "The wallet connected here <b>must be an admin controller of the UP</b> on this network (with ADDCONTROLLER and EDITPERMISSIONS), and it pays the gas. On a UP you just deployed, that is the <b>genesis key</b> imported into MetaMask: if you made the deploy with that account, it is already the right one. Do it <b>on every network</b>: each network has its own list of controllers, <b>LUKSO included</b>. There the signer is the controller the UP has today on LUKSO, for example the Universal Profile extension's key imported into MetaMask, which may differ from the genesis key. On a phone, where the browser has no MetaMask, the button connects the MetaMask app with WalletConnect: the transaction reaches the app to approve.",
     panel4Title: "4 · The UP's controllers on this network",
     genesisUnknown: "Genesis key not recognized: the UP's creation transaction was not found on the LUKSO explorer. Everything else works the same.",
     backupNote: "<b>The risk here is loss, not theft.</b> On every network where you redeploy, the UP is born controlled only by the <b>genesis key</b>: the key string you extracted from the Universal Profile extension. If you lose it (a broken computer, a key never saved, a forgotten password) and no other controller has the same permissions, you are locked out of this UP on this network for good, with everything it holds. No one can fix it. A <b>backup controller</b> is a second account (for example another MetaMask account, with its own seed phrase kept separately) with <b>exactly the same permissions</b> as the controller signing here. If you lose one of the two keys, the other one still signs: it adds a new backup and removes the lost key. If the one you lose is the genesis key, the only thing you can no longer do is deploy on new networks, because there the UP is born with that key only.",
@@ -308,7 +308,7 @@ const I18N = {
     connectedBadge: "Connected",
     connectionRejected: "Connection rejected or failed",
     notConnected: "Not connected.",
-    noSignerFound: "No signing wallet found",
+    wcDisconnectBtn: "Disconnect",
     unknownNetworkLabel: (v) => `unknown network (chainId ${v.chainId})`,
     customNetName: "Custom network",
     rpcChainMismatchErr: (v) => `❌ BLOCKING — the RPC answers with chainId ${v.rpcChainId}, but the selected network is ${v.netName} (chainId ${v.chainId}). Do not proceed.`,
@@ -485,12 +485,29 @@ const discoveredProviders = [];
 window.addEventListener("eip6963:announceProvider", (e) => discoveredProviders.push(e.detail));
 window.dispatchEvent(new Event("eip6963:requestProvider"));
 function setSignerStatus(html) { $("signerStatus").innerHTML = html; }
+// The connected signer; through WalletConnect also the wallet's name and a button to disconnect (the way to
+// pick another account there).
+function showSigner(netLabel = "") {
+  const wc = signerProvider && signerProvider.isWalletConnect;
+  setSignerStatus(`<span class="badge ok">${t("connectedBadge")}</span> ${escapeHtml(signerAddress + netLabel)}` +
+    (wc ? `<div class="line-dim" style="margin-top:6px;">WalletConnect · ${escapeHtml(signerProvider.walletName)} <button type="button" id="signerDisconnect" class="secondary" style="width:auto; margin:0 0 0 8px; padding:4px 10px; font-size:12px;">${t("wcDisconnectBtn")}</button></div>` : ""));
+  if (wc) $("signerDisconnect").addEventListener("click", async () => {
+    await signerProvider.disconnect();
+    signerProvider = null; signerAddress = null; watchedSigner = null;
+    setSignerStatus(`<span class="empty">${t("notConnected")}</span>`);
+    resetBackupView();
+  });
+}
 async function connectSignerWallet() {
   let candidate = discoveredProviders.find(p => !/lukso|universal profile/i.test(p.info.name))?.provider;
   if (!candidate && window.ethereum && window.ethereum !== window.lukso) candidate = window.ethereum;
+  // No wallet in this browser (a phone): MetaMask on the phone through WalletConnect (site-ui.js).
   if (!candidate) {
-    setSignerStatus(`<span class="badge err">${t("noSignerFound")}</span>`);
-    return false;
+    try { candidate = await SiteUI.walletConnectSigner({ chain: getNetwork }); } catch (e) { candidate = null; }
+    if (!candidate) {
+      if (!signerAddress) setSignerStatus(`<span class="empty">${t("notConnected")}</span>`);
+      return false;
+    }
   }
   try {
     // Ask the wallet to show its account picker every time, so the signer can be chosen (genesis
@@ -507,7 +524,7 @@ async function connectSignerWallet() {
       const chainIdHex = await candidate.request({ method: "eth_chainId" });
       netLabel = ` · ${chainDisplayName(parseInt(chainIdHex, 16))}`;
     } catch (e) { /* the address is shown even when the network cannot be read */ }
-    setSignerStatus(`<span class="badge ok">${t("connectedBadge")}</span> ${escapeHtml(signerAddress + netLabel)}`);
+    showSigner(netLabel);
     return true;
   } catch (e) {
     setSignerStatus(`<span class="badge err">${t("connectionRejected")}</span>`);
@@ -521,7 +538,7 @@ function watchSigner(p) {
   p.on("chainChanged", () => resetBackupView());
   p.on("accountsChanged", (accs) => {
     signerAddress = accs && accs[0] ? accs[0] : null;
-    setSignerStatus(signerAddress ? `<span class="badge ok">${t("connectedBadge")}</span> ${escapeHtml(signerAddress)}` : `<span class="empty">${t("notConnected")}</span>`);
+    if (signerAddress) showSigner(); else setSignerStatus(`<span class="empty">${t("notConnected")}</span>`);
     resetBackupView();
   });
 }
@@ -785,7 +802,7 @@ async function freshAdminState() {
   let walletChainId;
   try { walletChainId = parseInt(await signerProvider.request({ method: "eth_chainId" }), 16); }
   catch (e) { bkLog(t("walletNetworkCheckFailed", { netName: b.netName }), "line-err"); return null; }
-  if (walletChainId !== b.chainId) { bkLog(t("walletWrongNetwork", { walletChainId, netName: b.netName, chainId: b.chainId }), "line-err"); return null; }
+  if (walletChainId !== b.chainId) { bkLog(t("walletWrongNetwork", { walletChainId, netName: b.netName, chainId: b.chainId }) + (signerProvider.isWalletConnect ? " " + signerProvider.wrongChainText() : ""), "line-err"); return null; }
   b.km = b.r.km ? ethers.getAddress(b.r.km) : null;
   if (!b.km || (await b.provider.getCode(b.km)) === "0x") { bkLog(t("bkReadFail", { err: "Key Manager" }), "line-err"); return null; }
   return b;
