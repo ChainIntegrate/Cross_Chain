@@ -65,13 +65,13 @@
     it: {
       title: (v) => `⚠️ Questa UP non ha un controller di backup su ${v.net}`,
       body: "Se perdi la chiave del controller (non perché te la rubano: la perdi, il computer si rompe, la stringa non era salvata da nessuna parte), resti fuori da questo profilo su questa rete per sempre, con tutto quello che contiene. Nessuno può rimediare, nemmeno LUKSO o noi. Un secondo controller con gli stessi permessi, custodito a parte, ti fa rientrare e ti permette di sostituire la chiave persa.",
-      link: "→ Aggiungi un controller di backup (pagina di deploy, sezione 5)",
+      link: "→ Aggiungi un controller di backup (pagina del backup)",
       lukso: "Su LUKSO il backup si aggiunge con gli strumenti di LUKSO (estensione Universal Profile).",
     },
     en: {
       title: (v) => `⚠️ This UP has no backup controller on ${v.net}`,
       body: "If you lose the controller key (not stolen: lost, a broken computer, a key string saved nowhere), you are locked out of this profile on this network for good, with everything it holds. No one can fix it, not LUKSO and not us. A second controller with the same permissions, kept separately, lets you back in and lets you replace the lost key.",
-      link: "→ Add a backup controller (deploy page, section 5)",
+      link: "→ Add a backup controller (backup page)",
       lukso: "On LUKSO the backup is added with LUKSO's own tools (Universal Profile extension).",
     },
   };
@@ -101,7 +101,7 @@
         const n = div("", tx.lukso); n.style.marginTop = "6px"; el.append(n);
       } else {
         const a = document.createElement("a");
-        a.href = "up-deploy-public.html?" + params.toString() + "#backup";
+        a.href = "up-backup.html?" + params.toString();
         a.target = "_blank"; a.rel = "noopener"; a.textContent = tx.link;
         a.style.cssText = "display:inline-block; margin-top:8px; color: var(--warn); font-weight:700; text-decoration:none;";
         el.append(a);
