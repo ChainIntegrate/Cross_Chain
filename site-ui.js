@@ -21,7 +21,14 @@
       wcIntro: "In questo browser non c'è l'estensione Universal Profile. Puoi prendere l'indirizzo della tua UP dall'app <b>Universal Profiles</b> di LUKSO, con WalletConnect. La pagina chiede solo l'indirizzo e poi chiude la sessione: non chiede firme né transazioni.",
       wcPhone: "Dal telefono: tocca il pulsante qui sotto e approva nell'app. Da computer: inquadra il QR con l'app.",
       wcSame: "L'app dà l'indirizzo della UP su LUKSO. Sulle altre reti l'indirizzo è lo stesso solo se la UP è stata replicata con questi strumenti: controllalo con i bollini delle reti.",
-      wcPrivacy: "La connessione passa dai server di WalletConnect (Reown), che vedono i metadati della sessione. Portions © 2025 Reown, Inc. All Rights Reserved." },
+      wcPrivacy: "La connessione passa dai server di WalletConnect (Reown), che vedono i metadati della sessione. Portions © 2025 Reown, Inc. All Rights Reserved.",
+      mmTitle: "📱 Collega MetaMask", mmOpen: "Apri MetaMask", mmOther: "Un altro wallet (link WalletConnect)",
+      mmIntro: "In questo browser non c'è un wallet. Puoi collegare <b>MetaMask</b> del telefono con WalletConnect: ogni transazione arriva nell'app, dove la controlli e la approvi. La chiave resta in MetaMask: la pagina non la vede mai.",
+      mmPhone: "Dal telefono: tocca \"Apri MetaMask\", approva la connessione e torna qui. Da computer: inquadra il QR con MetaMask.",
+      mmNets: "MetaMask collega solo le reti che ha già: se quella che ti serve non c'è, aggiungila in MetaMask, poi scollega e ricollega.",
+      mmNoId: "WalletConnect non è configurato su questo sito: usa MetaMask nel browser del computer.", mmNoAccount: "Il wallet non ha dato nessun account.",
+      mmPending: "📱 Richiesta inviata al wallet: aprilo per controllarla e approvarla.", mmPendingOpen: "Apri il wallet",
+      mmNoChain: "Questa rete non è nella connessione con il wallet (WalletConnect). Aggiungila in MetaMask, poi scollega e ricollega." },
     en: { riskTitle: "⚠️ Before you start", ok: "Continue", later: "Not now", reopen: "Read the warnings", gotIt: "Got it",
       accepted: "✅ Warnings accepted.", pending: "⚠️ Warnings not accepted yet: until you accept them the page does nothing.",
       read: "✅ Warnings read.", other: "Other networks and custom RPC:", here: "The UP exists on this network",
@@ -35,7 +42,14 @@
       wcIntro: "There is no Universal Profile extension in this browser. You can take your UP's address from LUKSO's <b>Universal Profiles</b> app, with WalletConnect. The page only asks for the address and then closes the session: it asks for no signatures or transactions.",
       wcPhone: "On the phone: tap the button below and approve in the app. On a computer: scan the QR code with the app.",
       wcSame: "The app gives the UP's address on LUKSO. On other networks the address is the same only if the UP was replicated with these tools: check it with the network dots.",
-      wcPrivacy: "The connection goes through WalletConnect's (Reown) servers, which see the session metadata. Portions © 2025 Reown, Inc. All Rights Reserved." },
+      wcPrivacy: "The connection goes through WalletConnect's (Reown) servers, which see the session metadata. Portions © 2025 Reown, Inc. All Rights Reserved.",
+      mmTitle: "📱 Connect MetaMask", mmOpen: "Open MetaMask", mmOther: "Another wallet (WalletConnect link)",
+      mmIntro: "There is no wallet in this browser. You can connect <b>MetaMask</b> on your phone with WalletConnect: every transaction reaches the app, where you check and approve it. The key stays in MetaMask: the page never sees it.",
+      mmPhone: "On the phone: tap \"Open MetaMask\", approve the connection and come back here. On a computer: scan the QR code with MetaMask.",
+      mmNets: "MetaMask connects only the networks it already has: if the one you need is missing, add it in MetaMask, then disconnect and connect again.",
+      mmNoId: "WalletConnect is not configured on this site: use MetaMask in a computer browser.", mmNoAccount: "The wallet gave no account.",
+      mmPending: "📱 Request sent to the wallet: open it to check and approve it.", mmPendingOpen: "Open the wallet",
+      mmNoChain: "This network is not in the connection with the wallet (WalletConnect). Add it in MetaMask, then disconnect and connect again." },
   };
   const lang = () => (document.documentElement.lang === "en" ? "en" : "it");
   const tt = (k) => T[lang()][k];
@@ -96,6 +110,12 @@ body.sui-open { overflow: hidden; }
 .sui-qr svg { width: min(240px, 70vw); height: auto; background: #fff; border-radius: 8px; padding: 8px; }
 a.sui-open-app { display: block; text-align: center; text-decoration: none; padding: 12px; border-radius: 10px; background: var(--accent); color: #fff; font-weight: 700; margin: 10px 0; }
 a.sui-open-app[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+a.sui-open-app.sui-alt { background: var(--chip); font-weight: 600; font-size: 13px; padding: 10px; }
+#suiPending { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 61; width: calc(100% - 32px); max-width: 620px;
+  background: var(--raised, #1d2330); border: 2px solid var(--accent); border-radius: 10px; padding: 12px 14px; font-size: 13.5px; line-height: 1.5;
+  display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
+#suiPending[hidden] { display: none; }
+#suiPending a { color: #fff; background: var(--accent); border-radius: 8px; padding: 8px 12px; font-weight: 700; text-decoration: none; }
 .sui-dim { font-size: 12px; color: var(--text-dim); margin-top: 8px; }
 .sui-more { width: auto !important; margin: 0 0 12px !important; padding: 0 !important; background: none !important; color: var(--accent) !important; font-size: 12.5px !important; font-weight: 600; }
 `;
@@ -309,30 +329,38 @@ a.sui-open-app[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
     const a = pick ? pick.split(":")[2] : "";
     return typeof ethers !== "undefined" && ethers.isAddress(a) ? ethers.getAddress(a) : null;
   }
-  let wcOpen = null;
-  async function upAddress() {
-    if (window.lukso) {
-      const accs = await window.lukso.request({ method: "eth_requestAccounts" });
-      return accs[0];
-    }
-    if (wcOpen) return wcOpen;
+  // A WalletConnect pairing window: links to open the wallet app, a QR code, the state, copy and cancel.
+  // links(uri): [{ text, href, alt }] (the first one is the main button); qr(uri): what the QR code holds.
+  // Resolves to the approved session, or null when the person cancels.
+  function pairWindow({ title, intro, phone, notes = [], links, qr, namespaces, noIdKey }) {
     addCss();
     const back = document.createElement("div");
     back.className = "sui-backdrop"; back.id = "suiConnect";
-    back.innerHTML = '<div class="sui-modal sui-info" role="dialog" aria-modal="true"><div class="sui-head"><div class="sui-title"></div></div><div class="sui-body"><div class="sui-intro"></div><div class="sui-dim sui-phone"></div><a class="sui-open-app" aria-disabled="true" rel="noopener"></a><div class="sui-qr"></div><div class="sui-wcstate"></div><div class="sui-dim sui-same"></div><div class="sui-dim sui-privacy"></div></div><div class="sui-foot"><div class="sui-btns"><button type="button" class="secondary sui-copy" disabled></button><button type="button" class="secondary sui-cancel"></button></div></div></div>';
-    const $q = (s) => back.querySelector(s);
-    let stateKey = "wcLoading", stateExtra = "", stateCls = "line-dim", link = "";
+    back.innerHTML = '<div class="sui-modal sui-info" role="dialog" aria-modal="true"><div class="sui-head"><div class="sui-title"></div></div><div class="sui-body"><div class="sui-intro"></div><div class="sui-dim sui-phone"></div><div class="sui-links"></div><div class="sui-qr"></div><div class="sui-wcstate"></div><div class="sui-notes"></div><div class="sui-dim sui-privacy"></div></div><div class="sui-foot"><div class="sui-btns"><button type="button" class="secondary sui-copy" disabled></button><button type="button" class="secondary sui-cancel"></button></div></div></div>';
+    const $q = (sel) => back.querySelector(sel);
+    let stateKey = "wcLoading", stateExtra = "", stateCls = "line-dim", uri = "", copyText = "";
+    const renderLinks = () => {
+      const box = $q(".sui-links"); box.textContent = "";
+      const list = links(uri);
+      list.forEach((l, i) => {
+        const a = document.createElement("a");
+        a.className = "sui-open-app" + (l.alt ? " sui-alt" : ""); a.rel = "noopener"; a.textContent = tt(l.text);
+        if (uri) a.href = l.href; else a.setAttribute("aria-disabled", "true");
+        box.appendChild(a);
+      });
+    };
     const texts = () => {
-      $q(".sui-title").textContent = tt("wcTitle");
-      $q(".sui-intro").innerHTML = tt("wcIntro");
-      $q(".sui-phone").textContent = tt("wcPhone");
-      $q(".sui-open-app").textContent = tt("wcOpen");
-      $q(".sui-same").textContent = tt("wcSame");
+      $q(".sui-title").textContent = tt(title);
+      $q(".sui-intro").innerHTML = tt(intro);
+      $q(".sui-phone").textContent = tt(phone);
+      $q(".sui-notes").innerHTML = "";
+      notes.forEach((k) => { const d = document.createElement("div"); d.className = "sui-dim"; d.textContent = tt(k); $q(".sui-notes").appendChild(d); });
       $q(".sui-privacy").textContent = tt("wcPrivacy");
       $q(".sui-copy").textContent = tt("wcCopy");
       $q(".sui-cancel").textContent = tt("wcCancel");
       $q(".sui-wcstate").textContent = tt(stateKey) + (stateExtra ? " " + stateExtra : "");
       $q(".sui-wcstate").className = "sui-wcstate " + stateCls;
+      renderLinks();
     };
     const state = (k, cls = "line-dim", extra = "") => { stateKey = k; stateCls = cls; stateExtra = extra; texts(); };
     document.body.appendChild(back);
@@ -340,47 +368,37 @@ a.sui-open-app[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
     const lang = new MutationObserver(texts);
     lang.observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
     texts();
-    let done = false, pairingTopic = null, onVisible = null;
-    wcOpen = new Promise((resolve) => {
-      const finish = (addr) => {
+    let done = false, pairingTopic = null, onVisible = null, client = null;
+    return new Promise((resolve) => {
+      const finish = (session) => {
         if (done) return;
         done = true;
         lang.disconnect();
         if (onVisible) document.removeEventListener("visibilitychange", onVisible);
         back.remove();
         document.body.classList.remove("sui-open");
-        wcOpen = null;
-        resolve(addr);
-      };
-      const gotSession = (session) => {
-        const addr = addressFrom(session);
-        // Only the address was needed: the session is closed at once.
-        if (wcClient && session) wcClient.disconnect({ topic: session.topic, reason: window.SignClientBundle.getSdkError("USER_DISCONNECTED") }).catch(() => { /* already gone */ });
-        if (addr) finish(addr); else state("wcNoAccount", "line-err");
+        resolve(session);
       };
       $q(".sui-cancel").addEventListener("click", () => {
-        if (wcClient && pairingTopic) wcClient.core.pairing.disconnect({ topic: pairingTopic }).catch(() => { /* not paired */ });
+        if (client && pairingTopic) client.core.pairing.disconnect({ topic: pairingTopic }).catch(() => { /* not paired */ });
         finish(null);
       });
       $q(".sui-copy").addEventListener("click", async () => {
-        try { await navigator.clipboard.writeText(link); state("wcCopied", "line-ok"); } catch (e) { /* no clipboard */ }
+        try { await navigator.clipboard.writeText(copyText); state("wcCopied", "line-ok"); } catch (e) { /* no clipboard */ }
       });
       (async () => {
         try {
-          const client = await signClient();
+          client = await signClient();
           if (done) return;
-          const { uri, approval } = await client.connect({
-            optionalNamespaces: { eip155: { chains: ["eip155:42", "eip155:4201"], methods: ["personal_sign"], events: ["accountsChanged", "chainChanged"] } },
-          });
+          const c = await client.connect({ optionalNamespaces: namespaces });
           if (done) return;
+          uri = c.uri;
           pairingTopic = uri.slice(3).split("@")[0];
-          link = appLink(uri);
-          const a = $q(".sui-open-app");
-          a.href = link; a.removeAttribute("aria-disabled");
+          copyText = links(uri)[0].href;
           $q(".sui-copy").disabled = false;
           try {
             if (!window.qrcode) await loadScript(QR_SRC);
-            const q = window.qrcode(0, "M"); q.addData(link); q.make();
+            const q = window.qrcode(0, "M"); q.addData(qr(uri)); q.make();
             $q(".sui-qr").innerHTML = q.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
           } catch (e) { /* the link still works */ }
           state("wcWaiting");
@@ -389,21 +407,184 @@ a.sui-open-app[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
             if (document.visibilityState !== "visible" || done) return;
             if (!client.core.relayer.connected) client.core.relayer.restartTransport().catch(() => { /* retried by the client */ });
             const s = client.session.getAll().find((x) => x.pairingTopic === pairingTopic);
-            if (s) gotSession(s);
+            if (s) finish(s);
           };
           document.addEventListener("visibilitychange", onVisible);
-          const session = await approval();
-          if (!done) gotSession(session);
+          const session = await c.approval();
+          finish(session);
         } catch (e) {
           if (done) return;
-          if (e && e.noId) state("wcNoId", "line-err");
+          if (e && e.noId) state(noIdKey, "line-err");
           else if (/reject/i.test((e && e.message) || "")) state("wcRejected", "line-err");
           else state("wcFail", "line-err", (e && e.message) || String(e));
         }
       })();
     });
+  }
+
+  let wcOpen = null;
+  async function upAddress() {
+    if (window.lukso) {
+      const accs = await window.lukso.request({ method: "eth_requestAccounts" });
+      return accs[0];
+    }
+    if (wcOpen) return wcOpen;
+    wcOpen = (async () => {
+      const session = await pairWindow({
+        title: "wcTitle", intro: "wcIntro", phone: "wcPhone", notes: ["wcSame"], noIdKey: "wcNoId",
+        links: (uri) => [{ text: "wcOpen", href: uri ? appLink(uri) : "" }],
+        qr: (uri) => appLink(uri),
+        namespaces: { eip155: { chains: ["eip155:42", "eip155:4201"], methods: ["personal_sign"], events: ["accountsChanged", "chainChanged"] } },
+      });
+      if (!session) return null;
+      // Only the address was needed: the session is closed at once.
+      wcClient.disconnect({ topic: session.topic, reason: window.SignClientBundle.getSdkError("USER_DISCONNECTED") }).catch(() => { /* already gone */ });
+      return addressFrom(session);
+    })().finally(() => { wcOpen = null; });
     return wcOpen;
   }
 
-  window.SiteUI = { initialLang, saveLang, riskWindow, netPicker, clampNotes, upAddress };
+  // ---- a signing wallet through WalletConnect (MetaMask on the phone), for pages that find none in the browser ----
+  // Returns an EIP-1193 provider, or null when the person cancels. The session is kept (in this browser) until
+  // disconnected, so the next page or reload does not pair again. What goes where:
+  // - signatures and transactions (eth_sendTransaction, personal_sign, eth_signTypedData_v4, wallet_*) go to the
+  //   wallet, on the network of the transaction (its chainId) or the page's network; a bar says to open the app;
+  // - eth_accounts / eth_requestAccounts: the session's account; wallet_requestPermissions: accepted as is (to
+  //   change account, disconnect and connect again);
+  // - eth_chainId: the page's network when the wallet approved it, else the first approved one (the page then
+  //   says the wallet is on another network; provider.wrongChainText() explains what to do);
+  // - every other call (reads, receipts, gas estimates) goes to the page network's own RPC, not to the wallet.
+  // chain(): the page's network now, { chainId, rpc } (chains.js entry or the custom one).
+  const SIGNER_KEY = "site.wcSigner";
+  const WALLET_METHODS = ["eth_sendTransaction", "personal_sign", "eth_signTypedData_v4", "wallet_switchEthereumChain", "wallet_addEthereumChain"];
+  let signerOpen = null, signerProv = null;
+  function pendingBar(on, href) {
+    let bar = document.getElementById("suiPending");
+    if (!on) { if (bar) bar.hidden = true; return; }
+    addCss();
+    if (!bar) {
+      bar = document.createElement("div"); bar.id = "suiPending"; bar.setAttribute("role", "status");
+      bar.innerHTML = '<span class="sui-pmsg"></span><a rel="noopener"></a>';
+      document.body.appendChild(bar);
+    }
+    bar.querySelector(".sui-pmsg").textContent = tt("mmPending");
+    const a = bar.querySelector("a"); a.textContent = tt("mmPendingOpen"); a.href = href;
+    bar.hidden = false;
+  }
+  function makeSignerProvider(client, session, chain) {
+    const topic = session.topic;
+    const listeners = {};
+    const emit = (ev, arg) => (listeners[ev] || []).slice().forEach((f) => { try { f(arg); } catch (e) { /* listener error */ } });
+    const live = () => { try { return client.session.get(topic); } catch (e) { return null; } };
+    const approved = () => { const s = live(); const accs = (s && s.namespaces.eip155 && s.namespaces.eip155.accounts) || []; return accs.map((a) => a.split(":")); };
+    const accounts = () => { const a = approved()[0]; return a && typeof ethers !== "undefined" && ethers.isAddress(a[2]) ? [ethers.getAddress(a[2])] : []; };
+    const chainIds = () => [...new Set(approved().map((a) => Number(a[1])))];
+    const peer = session.peer && session.peer.metadata ? session.peer.metadata : {};
+    const walletHref = (peer.redirect && (peer.redirect.native || peer.redirect.universal)) || "https://metamask.app.link/";
+    const rpcIds = {};
+    async function want() {
+      const c = (chain && chain()) || {};
+      let id = c.chainId || null;
+      if (!id && c.rpc) {
+        if (!rpcIds[c.rpc]) rpcIds[c.rpc] = rpcCall(c.rpc, "eth_chainId", []).then((h) => parseInt(h, 16)).catch(() => null);
+        id = await rpcIds[c.rpc];
+      }
+      return { id, rpc: c.rpc || null };
+    }
+    async function currentChain() {
+      const w = await want(), ok = chainIds();
+      return w.id && ok.includes(w.id) ? w.id : (ok[0] || w.id);
+    }
+    function rpcFor(id, w) {
+      if (w.id === id && w.rpc) return w.rpc;
+      const n = allNets().find((x) => x.chainId === id);
+      return n ? n.rpc : null;
+    }
+    let rid = 0;
+    async function rpcCall(url, method, params) {
+      const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: ++rid, method, params }) });
+      const j = await res.json();
+      if (j.error) throw Object.assign(new Error(j.error.message || "RPC error"), { code: j.error.code, data: j.error.data });
+      return j.result;
+    }
+    async function toWallet(method, params, id) {
+      pendingBar(true, walletHref);
+      try { return await client.request({ topic, chainId: "eip155:" + id, request: { method, params } }); }
+      catch (e) {
+        const msg = (e && e.message) || String(e);
+        // The wallet's "rejected" becomes the usual EIP-1193 code, so the pages say "cancelled" as with the extension.
+        if ((e && (e.code === 5000 || e.code === 4001)) || /reject|denied|cancel/i.test(msg)) throw Object.assign(new Error(msg), { code: 4001 });
+        throw e;
+      } finally { pendingBar(false); }
+    }
+    const prov = {
+      isWalletConnect: true,
+      walletName: peer.name || "WalletConnect",
+      on(ev, f) { (listeners[ev] = listeners[ev] || []).push(f); return prov; },
+      removeListener(ev, f) { listeners[ev] = (listeners[ev] || []).filter((x) => x !== f); return prov; },
+      wrongChainText: () => tt("mmNoChain"),
+      async disconnect() {
+        store.del(SIGNER_KEY);
+        signerProv = null;
+        try { await client.disconnect({ topic, reason: window.SignClientBundle.getSdkError("USER_DISCONNECTED") }); } catch (e) { /* already gone */ }
+        emit("accountsChanged", []);
+      },
+      async request({ method, params = [] }) {
+        if (method === "eth_accounts" || method === "eth_requestAccounts") return accounts();
+        if (method === "wallet_requestPermissions") return [{ parentCapability: "eth_accounts" }];
+        if (method === "eth_chainId") return "0x" + (await currentChain()).toString(16);
+        if (method === "net_version") return String(await currentChain());
+        if (WALLET_METHODS.includes(method)) {
+          let id = await currentChain();
+          if (method === "eth_sendTransaction" && params[0] && params[0].chainId) id = Number(BigInt(params[0].chainId));
+          if (!chainIds().includes(id)) throw new Error(tt("mmNoChain"));
+          return toWallet(method, params, id);
+        }
+        const w = await want(), id = await currentChain();
+        const url = rpcFor(id, w);
+        if (!url) throw new Error(tt("mmNoChain"));
+        return rpcCall(url, method, params);
+      },
+    };
+    client.on("session_event", ({ topic: t, params }) => {
+      if (t !== topic || !params || !params.event) return;
+      if (params.event.name === "accountsChanged") emit("accountsChanged", accounts());
+      if (params.event.name === "chainChanged") emit("chainChanged", params.event.data);
+    });
+    client.on("session_update", ({ topic: t }) => { if (t === topic) emit("accountsChanged", accounts()); });
+    client.on("session_delete", ({ topic: t }) => { if (t !== topic) return; store.del(SIGNER_KEY); signerProv = null; emit("accountsChanged", []); });
+    return prov;
+  }
+  async function walletConnectSigner({ chain } = {}) {
+    if (signerProv) return signerProv;
+    if (signerOpen) return signerOpen;
+    signerOpen = (async () => {
+      // A session kept from before (this page or another one of the site): no new pairing.
+      const kept = store.get(SIGNER_KEY);
+      if (kept) {
+        try {
+          const client = await signClient();
+          const s = client.session.get(kept);
+          if (s && s.expiry * 1000 > Date.now() + 60000) return (signerProv = makeSignerProvider(client, s, chain));
+        } catch (e) { /* gone: pair again */ }
+        store.del(SIGNER_KEY);
+      }
+      const ids = [...new Set(allNets().map((n) => n.chainId).filter(Boolean))];
+      const session = await pairWindow({
+        title: "mmTitle", intro: "mmIntro", phone: "mmPhone", notes: ["mmNets"], noIdKey: "mmNoId",
+        links: (uri) => [
+          { text: "mmOpen", href: uri ? "https://metamask.app.link/wc?uri=" + encodeURIComponent(uri) : "" },
+          { text: "mmOther", href: uri, alt: true },
+        ],
+        qr: (uri) => uri,
+        namespaces: { eip155: { chains: ids.map((i) => "eip155:" + i), methods: WALLET_METHODS, events: ["accountsChanged", "chainChanged"] } },
+      });
+      if (!session) return null;
+      store.set(SIGNER_KEY, session.topic);
+      return (signerProv = makeSignerProvider(wcClient, session, chain));
+    })().finally(() => { signerOpen = null; });
+    return signerOpen;
+  }
+
+  window.SiteUI = { initialLang, saveLang, riskWindow, netPicker, clampNotes, upAddress, walletConnectSigner };
 })();
