@@ -105,7 +105,7 @@ const I18N = {
   it: {
     pageTitle: "UP Wallet per Android — Privacy — ChainIntegrate",
     h1: "UP Wallet per Android — Informativa sulla privacy",
-    subtitle: "Ultimo aggiornamento: 12 ottobre 2026. Riguarda l'app Android UP Wallet (it.chainintegrate.upwallet), in prova.",
+    subtitle: "Ultimo aggiornamento: 18 ottobre 2026. Riguarda l'app Android UP Wallet (it.chainintegrate.upwallet), in prova.",
     langToggleBtn: "English",
     s1t: "1 · In breve",
     s1: `<ul>
@@ -130,6 +130,7 @@ const I18N = {
       <li><b>Nodi RPC pubblici</b> della rete scelta (l'elenco è nel codice del sito, <code>chains.js</code>): per leggere saldi, contratti e permessi e per simulare le operazioni. Vedono l'indirizzo IP e gli indirizzi consultati.</li>
       <li><b>L'indice dei token</b> della rete scelta (Alchemy, Inc. sulle reti che copre; altrimenti Blockscout, l'explorer pubblico della rete; su LUKSO l'explorer di LUKSO): quando la verifica è verde, per mostrare nel pannello "Invia dalla UP" i token e gli NFT che la UP possiede. Vede l'indirizzo IP e l'indirizzo della UP.</li>
       <li><b>L'indice dei profili di LUKSO</b> (envio.lukso-mainnet.universal.tech, gestito per LUKSO): solo se nel campo Destinatario scrivi un nome invece di un indirizzo, per cercare le Universal Profile con quel nome. Vede il nome cercato e l'indirizzo IP.</li>
+      <li><b>Google Play services</b> (Google LLC), solo se usi "Scansiona QR": il lettore QR di Google Play services usa la fotocamera e legge il codice sul telefono. L'app riceve solo il testo del codice, mai le immagini. Google lo tratta secondo la sua informativa.</li>
       <li><b>Le dApp</b> che colleghi: vedono l'indirizzo della UP e la rete, e ricevono le risposte che approvi.</li>
       <li><b>Il relayer del sito</b> (ChainIntegrate), solo se scegli "paga il gas con il relayer del sito": riceve l'operazione firmata (indirizzo della UP, rete, chiamata) e la invia alla blockchain. Vedi il punto 5. Per inviarla e per leggere la blockchain, il relayer e il servizio che approva le operazioni usano a loro volta dei nodi RPC: su alcune reti quelli di Alchemy, Inc., sulle altre nodi pubblici. Questi vedono l'operazione e l'indirizzo IP del server, non il tuo.</li>
     </ul>
@@ -144,6 +145,7 @@ const I18N = {
       <li><b>Notifiche</b>: per avvisarti quando una dApp manda una richiesta mentre l'app è in secondo piano;</li>
       <li><b>Servizio in primo piano</b>: tiene attiva l'app mentre una dApp è collegata, con una notifica fissa che lo dice; si ferma quando la sessione finisce;</li>
       <li><b>Elenco dei browser</b>: solo per il pulsante "Torna alla dApp", che riapre il tuo browser.</li>
+      <li><b>Nessun permesso della fotocamera</b>: "Scansiona QR" usa il lettore QR di Google Play services, che gestisce la fotocamera da sé (vedi il punto 4).</li>
     </ul>`,
     s7t: "7 · I tuoi diritti",
     s7: `Secondo il Regolamento UE 2016/679 (GDPR) puoi chiedere l'accesso ai dati che ti riguardano nei registri del punto 5, la loro rettifica o cancellazione, o opporti al trattamento, scrivendo ai contatti del punto 2 (indica rete, indirizzo della UP e giorno, così possiamo trovarli). Puoi anche presentare reclamo al Garante per la protezione dei dati personali (<a href="https://www.garanteprivacy.it" target="_blank" rel="noopener">garanteprivacy.it</a>). Quello che sta sulla blockchain non può essere cancellato da nessuno.`,
@@ -155,7 +157,7 @@ const I18N = {
   en: {
     pageTitle: "UP Wallet for Android — Privacy — ChainIntegrate",
     h1: "UP Wallet for Android — Privacy policy",
-    subtitle: "Last updated: 12 October 2026. Covers the UP Wallet Android app (it.chainintegrate.upwallet), in testing.",
+    subtitle: "Last updated: 18 October 2026. Covers the UP Wallet Android app (it.chainintegrate.upwallet), in testing.",
     langToggleBtn: "Italiano",
     s1t: "1 · In short",
     s1: `<ul>
@@ -180,6 +182,7 @@ const I18N = {
       <li><b>Public RPC nodes</b> of the chosen network (the list is in the site's code, <code>chains.js</code>): to read balances, contracts and permissions and to simulate operations. They see the IP address and the addresses looked up.</li>
       <li><b>The token index</b> of the chosen network (Alchemy, Inc. on the networks it covers; otherwise Blockscout, the network's public explorer; on LUKSO, LUKSO's explorer): once the check is green, to show in the "Send from the UP" panel the tokens and NFTs the UP holds. It sees the IP address and the UP address.</li>
       <li><b>LUKSO's profile index</b> (envio.lukso-mainnet.universal.tech, run for LUKSO): only if you write a name instead of an address in the Recipient field, to find the Universal Profiles with that name. It sees the name searched and the IP address.</li>
+      <li><b>Google Play services</b> (Google LLC), only if you use "Scan QR": Google Play services' QR scanner uses the camera and reads the code on the phone. The app receives only the text of the code, never the images. Google handles it under its own privacy policy.</li>
       <li><b>The dApps</b> you connect: they see the UP address and the network, and receive the answers you approve.</li>
       <li><b>The site's relayer</b> (ChainIntegrate), only if you choose "pay the gas with the site relayer": it receives the signed operation (UP address, network, call) and sends it to the blockchain. See section 5. To send it and to read the blockchain, the relayer and the service that approves operations use RPC nodes in turn: Alchemy, Inc.'s on some networks, public nodes on the others. They see the operation and the server's IP address, not yours.</li>
     </ul>
@@ -194,6 +197,7 @@ const I18N = {
       <li><b>Notifications</b>: to tell you when a dApp sends a request while the app is in the background;</li>
       <li><b>Foreground service</b>: keeps the app running while a dApp is connected, with a persistent notification saying so; it stops when the session ends;</li>
       <li><b>List of browsers</b>: only for the "Back to the dApp" button, which reopens your browser.</li>
+      <li><b>No camera permission</b>: "Scan QR" uses Google Play services' QR scanner, which handles the camera itself (see section 4).</li>
     </ul>`,
     s7t: "7 · Your rights",
     s7: `Under Regulation (EU) 2016/679 (GDPR) you can ask for access to the data about you in the logs of section 5, for its correction or deletion, or object to its processing, through the contacts in section 2 (give network, UP address and day, so that we can find it). You can also lodge a complaint with the Italian data protection authority, the Garante per la protezione dei dati personali (<a href="https://www.garanteprivacy.it" target="_blank" rel="noopener">garanteprivacy.it</a>). What is on the blockchain cannot be deleted by anyone.`,
