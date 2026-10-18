@@ -319,6 +319,7 @@ const validEmail = (e) => e.length <= 254 && /^[^\s@<>()",;:\\[\]]+@[^\s@<>()",;
 
 // ==================== networks and price list ====================
 let nets = [], prices = null, priceState = "loading", busy = false;
+let netPick = null;   // the network buttons (site-ui.js), set at the end of the page
 async function loadNetworks() {
   const info = await GasRelayClient.loadInfo(true);
   nets = CHAINS.filter(c => NATIVE_USDC[c.chainId] && info && info.chains[String(c.chainId)] && info.chains[String(c.chainId)].sponsorPaymaster);
@@ -326,6 +327,7 @@ async function loadNetworks() {
   nets.forEach(c => { const o = document.createElement("option"); o.value = c.key; o.textContent = `${c.name} (chainId ${c.chainId})`; sel.appendChild(o); });
   const want = new URLSearchParams(location.search).get("network");
   if (want && nets.some(c => c.key === want)) sel.value = want;
+  if (netPick) netPick.reload();   // the network buttons, now that the list is known
   // Any address that is not a customer gets the subscription data, price list included.
   if (nets.length) { const st = await GasRelayClient.sponsorStatus(nets[0].chainId, ethers.ZeroAddress); prices = st && st.subscription ? st.subscription.prices : null; priceState = prices ? "ok" : st ? "closed" : "down"; }
   renderPrices();
@@ -554,7 +556,7 @@ loadNetworks().then(() => scheduleCheck(0));
 // Shared look of the site (site-ui.js), as UP Wallet: the warnings in a window at the first opening,
 // the main networks as buttons with their logo (a green dot where the UP exists).
 SiteUI.riskWindow({ content: document.querySelector(".warn-box"), ack: document.getElementById("ackRisk") });
-SiteUI.netPicker({ select: document.getElementById("network"), filter: document.getElementById("networkFilter"), upInput: document.getElementById("upAddress") });
+netPick = SiteUI.netPicker({ select: document.getElementById("network"), filter: document.getElementById("networkFilter"), upInput: document.getElementById("upAddress") });
 SiteUI.clampNotes();   // long explanations: three lines and "Read more"
 </script>
 </body>

@@ -195,8 +195,9 @@ a.sui-open-app.sui-alt { background: var(--chip); font-weight: 600; font-size: 1
     box.insertAdjacentElement("afterend", note);
     note.insertAdjacentElement("afterend", other);
     let presence = {}, presenceFor = null, run = 0;
-    // The networks the page offers: its list as first rendered (before any filtering).
-    const offered = new Set([...select.options].map((o) => o.value));
+    // The networks the page offers: its list as first rendered (before any filtering); reload() reads it again,
+    // for a page that fills its list later (e.g. from a service).
+    let offered = new Set([...select.options].map((o) => o.value));
     function render() {
       other.textContent = tt("other");
       box.textContent = "";
@@ -241,7 +242,8 @@ a.sui-open-app.sui-alt { background: var(--chip); font-weight: 600; font-size: 1
     // The network: the one in the page's link (?network=), else the last one chosen on this site (shared with
     // UP Wallet), else Arc, when the page offers it.
     const NET_KEY = "upwallet.network";
-    if (!new URLSearchParams(location.search).get("network")) {
+    function pickStored() {
+      if (new URLSearchParams(location.search).get("network")) return;
       const pick = [store.get(NET_KEY), "arc"].find((k) => k && offered.has(k));
       if (pick && select.value !== pick) {
         if (filter && filter.value) { filter.value = ""; filter.dispatchEvent(new Event("input", { bubbles: true })); }
@@ -249,6 +251,7 @@ a.sui-open-app.sui-alt { background: var(--chip); font-weight: 600; font-size: 1
         select.dispatchEvent(new Event("change", { bubbles: true }));
       }
     }
+    pickStored();
     select.addEventListener("change", () => { if (offered.has(select.value)) store.set(NET_KEY, select.value); });
     select.addEventListener("change", render);
     if (filter) filter.addEventListener("input", () => setTimeout(render, 0));
@@ -257,7 +260,13 @@ a.sui-open-app.sui-alt { background: var(--chip); font-weight: 600; font-size: 1
     onLang(render);
     render();
     if (upInput && upInput.value) setTimeout(check, 300);
-    return { render, check };
+    function reload() {
+      offered = new Set([...select.options].map((o) => o.value));
+      pickStored();
+      render();
+      if (upInput && upInput.value) { presenceFor = null; check(); }
+    }
+    return { render, check, reload };
   }
 
   // ---- long explanations shortened ----
