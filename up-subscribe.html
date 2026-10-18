@@ -14,6 +14,7 @@
 <link rel="icon" href="favicon.ico">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="chains.js"></script>
+<script src="site-ui.js"></script>
 <script src="gas-relay-client.js"></script>
 <style>
   :root {
@@ -293,7 +294,7 @@ const I18N = {
     footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Source code on GitHub</a>`,
   },
 };
-let LANG = "it";
+let LANG = SiteUI.initialLang();
 function t(key, vars) { const e = I18N[LANG][key]; return typeof e === "function" ? e(vars || {}) : e; }
 function applyI18n() {
   document.documentElement.lang = LANG;
@@ -303,7 +304,7 @@ function applyI18n() {
   renderPrices(); if (lastCheck) renderCheck(lastCheck); updateButtons();
 }
 // The check's lines are written in the page's language: run it again after a switch.
-$("langToggle").addEventListener("click", () => { LANG = LANG === "it" ? "en" : "it"; applyI18n(); if (lastCheck) scheduleCheck(0); });
+$("langToggle").addEventListener("click", () => { LANG = LANG === "it" ? "en" : "it"; SiteUI.saveLang(LANG); applyI18n(); if (lastCheck) scheduleCheck(0); });
 
 // Data from wallets, RPCs and the service is written with textContent, never innerHTML.
 function setStatus(id, text, cls) { const el = $(id); el.textContent = ""; const s = document.createElement("span"); if (cls) s.className = cls; s.textContent = text; el.appendChild(s); }
@@ -508,6 +509,10 @@ const q = new URLSearchParams(location.search);
 if (q.get("up") && ethers.isAddress(q.get("up"))) $("upAddress").value = ethers.getAddress(q.get("up"));
 applyI18n();
 loadNetworks().then(() => scheduleCheck(0));
+// Shared look of the site (site-ui.js), as UP Wallet: the warnings in a window at the first opening,
+// the main networks as buttons with their logo (a green dot where the UP exists).
+SiteUI.riskWindow({ content: document.querySelector(".warn-box"), ack: document.getElementById("ackRisk") });
+SiteUI.netPicker({ select: document.getElementById("network"), filter: document.getElementById("networkFilter"), upInput: document.getElementById("upAddress") });
 </script>
 </body>
 </html>

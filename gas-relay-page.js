@@ -90,7 +90,7 @@ async function arbL1Gas(provider, data) {
 const UO_TUPLE = "tuple(address,uint256,bytes,bytes,uint256,uint256,uint256,uint256,uint256,bytes,bytes)";
 
 // ==================== I18N ====================
-let LANG = "it";
+let LANG = window.SiteUI ? SiteUI.initialLang() : "it";
 const I18N = {
   it: {
     pageTitle: "Gas pagato dal paymaster — ChainIntegrate",
@@ -600,7 +600,7 @@ function applyI18n() {
   if (state) render(state);
   updateButtons();
 }
-$("langToggle").addEventListener("click", () => { LANG = LANG === "it" ? "en" : "it"; applyI18n(); });
+$("langToggle").addEventListener("click", () => { LANG = LANG === "it" ? "en" : "it"; if (window.SiteUI) SiteUI.saveLang(LANG); applyI18n(); });
 
 // ==================== HELPERS ====================
 // Data from wallets and RPCs is written with textContent, never innerHTML.

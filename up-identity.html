@@ -16,6 +16,7 @@
 <meta name="twitter:card" content="summary">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="chains.js"></script>
+<script src="site-ui.js"></script>
 <script src="sign-check.js"></script>
 <script src="backup-check.js"></script>
 <script src="config.js"></script>
@@ -183,7 +184,7 @@
 const $ = (id) => document.getElementById(id);
 
 // ==================== I18N ====================
-let LANG = "it";
+let LANG = SiteUI.initialLang();
 const I18N = {
   it: {
     pageTitle: "UP Identity Cross-Chain — ChainIntegrate",
@@ -466,7 +467,7 @@ function applyI18n() {
   $("langToggle").textContent = t("langToggleBtn");
   if (last) render(last);
 }
-$("langToggle").addEventListener("click", () => { LANG = LANG === "it" ? "en" : "it"; applyI18n(); });
+$("langToggle").addEventListener("click", () => { LANG = LANG === "it" ? "en" : "it"; SiteUI.saveLang(LANG); applyI18n(); });
 
 // ==================== CONSTANTS ====================
 const LSP3_KEY = "0x5ef83ad9559033e6e941db7d7c495acdce616347d28e90c7ce47cbfcfcad3bc5"; // keccak256("LSP3Profile")
@@ -1063,6 +1064,10 @@ $("readBtn").addEventListener("click", async () => {
 });
 
 applyI18n();
+// Shared look of the site (site-ui.js), as UP Wallet: the warnings in a window at the first opening,
+// the main networks as buttons with their logo (a green dot where the UP exists).
+SiteUI.riskWindow({ content: document.querySelector(".disclaimer"), ack: null });
+SiteUI.netPicker({ select: document.getElementById("network"), filter: document.getElementById("networkFilter"), upInput: document.getElementById("upAddress") });
 </script>
 </body>
 </html>

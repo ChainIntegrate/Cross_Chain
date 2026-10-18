@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <script src="theme.js"></script>
+<script src="site-ui.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://crosschain-lukso.chainintegrate.it/og-image.png">
@@ -71,7 +72,7 @@
 <script>
 // Static text only: every string below is written in this file, none comes from outside.
 // The Send page was merged into UP Wallet (panel 6); this page stays so old links keep working.
-let LANG = new URLSearchParams(location.search).get("lang") === "en" ? "en" : "it";
+let LANG = SiteUI.initialLang();
 const I18N = {
   it: {
     pageTitle: "Invia — ora in UP Wallet — ChainIntegrate",
@@ -113,7 +114,7 @@ function applyI18n() {
   document.querySelectorAll("[data-i18n-html]").forEach((el) => { el.innerHTML = t(el.getAttribute("data-i18n-html")); });
 }
 applyI18n();
-document.getElementById("langToggle").addEventListener("click", () => { LANG = LANG === "it" ? "en" : "it"; applyI18n(); });
+document.getElementById("langToggle").addEventListener("click", () => { LANG = LANG === "it" ? "en" : "it"; SiteUI.saveLang(LANG); applyI18n(); });
 </script>
 </body>
 </html>
