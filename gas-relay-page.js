@@ -165,12 +165,13 @@ const I18N = {
     disclaimer: "<b>⚠️ Leggi prima di usare questa pagina</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Strumento sperimentale, non sottoposto ad audit.</b> Il paymaster e l'<code>Extension4337</code> di LUKSO non sono stati verificati da terzi. Usa importi piccoli.</li><li><b>Modifica la configurazione della UP su questa rete:</b> l'EntryPoint diventa un controller con permessi di chiamata e invio. Esegue solo operazioni firmate da un controller con il permesso 4337 e nei limiti dei permessi di chi firma.</li><li><b>Il deposito del paymaster</b> si consuma a ogni operazione delle UP in lista: aggiungi solo UP di cui ti fidi e tieni il deposito basso.</li><li><b>Nessuna garanzia.</b> Software \"così com'è\" (licenza MIT): lo usi a tuo rischio. Nessuna affiliazione con LUKSO o altri.</li><li><b>Questa pagina non chiede mai chiavi private</b>: firmi tutto in MetaMask.</li></ul>",
     ackLabel: "Ho letto e accetto",
     panel1Title: "1 · Rete, MetaMask e UP",
-    panel1Note: "Ogni sezione usa l'account attivo in MetaMask: la cassa per il paymaster e la lista, il controller della UP per la configurazione e la firma. Collega per prima la cassa: vedi la guida nella sezione 0.",
+    panel1Note: "Ogni sezione usa l'account attivo in MetaMask: la cassa per il paymaster e la lista, il controller della UP per la configurazione e la firma. Collega per prima la cassa: vedi la guida nella sezione 0. Dal telefono il pulsante collega l'app MetaMask con WalletConnect; per passare a un altro account, Scollega e ricollega scegliendolo in MetaMask.",
     networkFilterPlaceholder: "Filtra per nome... (es. base, polygon)",
     customRpcLabel: "RPC URL custom",
     customExplorerLabel: "Explorer URL custom (opzionale)",
     customNetName: "Rete custom",
     connectSignerBtn: "Connetti MetaMask",
+    wcDisconnectBtn: "Scollega",
     recheckBtn: "Ricontrolla tutto",
     notChecked: "Non ancora verificato.",
     checking: "Verifica in corso...",
@@ -265,7 +266,7 @@ const I18N = {
     ownerNotActive: (v) => `Il proprietario scritto (${v.owner}) NON è l'account attivo in MetaMask (${v.active}). Se stai per pubblicare o ricaricare, controlla che sia davvero il proprietario che vuoi: l'indirizzo del paymaster dipende da lui.`, kPmCode: "Codice", kPmOwner: "Proprietario", kPmDeposit: "Deposito", kPmCap: "Tetto per operazione", kPmUp: "UP in lista", kYou: "Account attivo",
     kUp: "UP", kKm: "Key Manager", kPerms: "Permessi dell'account attivo", kExt: "Extension4337", kExtKey: "Estensione registrata", kEpPerms: "Permessi dell'EntryPoint", kSigner4337: "Permesso 4337 dell'account", kReady: "Stato",
     rpcOk: (v) => `chainId ${v.id}`, rpcFail: (v) => `non risponde: ${v.err}`, rpcWrong: (v) => `chainId ${v.id}, atteso ${v.exp}`,
-    walletMissing: "non connesso", walletWrong: (v) => `${v.addr} è sulla rete ${v.id}, non ${v.exp}: cambia rete in MetaMask`, walletOk: (v) => `${v.addr} (chainId ${v.id})`,
+    walletMissing: "non connesso", walletWrong: (v) => `${v.addr} è sulla rete ${v.id}, non ${v.exp}: cambia rete in MetaMask${v.extra || ""}`, walletOk: (v) => `${v.addr} (chainId ${v.id})`,
     epOk: "presente", epMissing: "ASSENTE su questa rete: qui la pagina non può funzionare",
     pmMissing: "non ancora pubblicato", pmOk: "codice verificato", pmWrong: "codice DIVERSO dall'atteso: non usarlo",
     ownerInvalid: "scrivi qui sopra l'indirizzo della cassa", ownerMismatch: (v) => `${v.owner} (diverso da quello indicato)`,
@@ -413,12 +414,13 @@ const I18N = {
     disclaimer: "<b>⚠️ Read before using this page</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Experimental tool, not audited.</b> The paymaster and LUKSO's <code>Extension4337</code> have not been reviewed by third parties. Use small amounts.</li><li><b>It changes the UP's configuration on this chain:</b> the EntryPoint becomes a controller with call and value-transfer permissions. It only executes operations signed by a controller with the 4337 permission, within the signer's own permissions.</li><li><b>The paymaster deposit</b> is spent by every operation of allowlisted UPs: add only UPs you trust and keep the deposit low.</li><li><b>No warranty.</b> Software \"as is\" (MIT licence): use it at your own risk. No affiliation with LUKSO or anyone else.</li><li><b>This page never asks for private keys</b>: you sign everything in MetaMask.</li></ul>",
     ackLabel: "I have read and accept",
     panel1Title: "1 · Network, MetaMask and UP",
-    panel1Note: "Each section uses the account active in MetaMask: the cassa for the paymaster and the allowlist, the UP's controller for the setup and the signature. Connect the cassa first: see the guide in section 0.",
+    panel1Note: "Each section uses the account active in MetaMask: the cassa for the paymaster and the allowlist, the UP's controller for the setup and the signature. Connect the cassa first: see the guide in section 0. On a phone the button connects the MetaMask app with WalletConnect; to switch to another account, Disconnect and connect again choosing it in MetaMask.",
     networkFilterPlaceholder: "Filter by name... (e.g. base, polygon)",
     customRpcLabel: "Custom RPC URL",
     customExplorerLabel: "Custom explorer URL (optional)",
     customNetName: "Custom network",
     connectSignerBtn: "Connect MetaMask",
+    wcDisconnectBtn: "Disconnect",
     recheckBtn: "Check everything again",
     notChecked: "Not checked yet.",
     checking: "Checking...",
@@ -512,7 +514,7 @@ const I18N = {
     ownerNotActive: (v) => `The owner entered (${v.owner}) is NOT the account active in MetaMask (${v.active}). If you are about to publish or top up, check that it really is the owner you want: the paymaster's address depends on it.`, kPmCode: "Code", kPmOwner: "Owner", kPmDeposit: "Deposit", kPmCap: "Cap per operation", kPmUp: "UP on the allowlist", kYou: "Active account",
     kUp: "UP", kKm: "Key Manager", kPerms: "Active account's permissions", kExt: "Extension4337", kExtKey: "Extension registered", kEpPerms: "EntryPoint's permissions", kSigner4337: "Account's 4337 permission", kReady: "Status",
     rpcOk: (v) => `chainId ${v.id}`, rpcFail: (v) => `not answering: ${v.err}`, rpcWrong: (v) => `chainId ${v.id}, expected ${v.exp}`,
-    walletMissing: "not connected", walletWrong: (v) => `${v.addr} is on chain ${v.id}, not ${v.exp}: switch network in MetaMask`, walletOk: (v) => `${v.addr} (chainId ${v.id})`,
+    walletMissing: "not connected", walletWrong: (v) => `${v.addr} is on chain ${v.id}, not ${v.exp}: switch network in MetaMask${v.extra || ""}`, walletOk: (v) => `${v.addr} (chainId ${v.id})`,
     epOk: "present", epMissing: "MISSING on this network: the page cannot work here",
     pmMissing: "not published yet", pmOk: "code verified", pmWrong: "code DIFFERENT from the expected one: do not use it",
     ownerInvalid: "enter the cassa's address above", ownerMismatch: (v) => `${v.owner} (different from the one entered)`,
@@ -724,7 +726,11 @@ window.dispatchEvent(new Event("eip6963:requestProvider"));
 $("connectSigner").addEventListener("click", async () => {
   let candidate = discoveredProviders.find(p => !/lukso|universal profile/i.test(p.info.name))?.provider;
   if (!candidate && window.ethereum && window.ethereum !== window.lukso) candidate = window.ethereum;
-  if (!candidate) { setStatus("netBox", "MetaMask?", "line-err"); return; }
+  // No wallet in this browser (a phone): MetaMask on the phone through WalletConnect (site-ui.js).
+  if (!candidate) {
+    try { candidate = await SiteUI.walletConnectSigner({ chain: getNetwork }); } catch (e) { candidate = null; }
+    if (!candidate) return;
+  }
   try {
     const acc = await candidate.request({ method: "eth_requestAccounts" });
     signerAddress = acc[0] ? ethers.getAddress(acc[0]) : null;
@@ -738,9 +744,33 @@ $("connectSigner").addEventListener("click", async () => {
       candidate.on("chainChanged", () => scheduleCheck(0));
     }
     signerProvider = candidate;
+    showWc();
     scheduleCheck(0);
   } catch (e) { setStatus("netBox", e.shortMessage || e.message, "line-err"); }
 });
+// Through WalletConnect: a line under the button with the wallet's name and a button to disconnect (the way
+// to pick another account there, for example the cassa and then the UP's controller).
+function showWc() {
+  let el = document.getElementById("signerWc");   // not $(): on the user page it stands in for missing elements
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "signerWc"; el.className = "line-dim"; el.style.cssText = "margin-top:6px; font-size:12.5px;";
+    $("connectSigner").insertAdjacentElement("afterend", el);
+  }
+  el.hidden = !(signerProvider && signerProvider.isWalletConnect);
+  if (el.hidden) return;
+  el.textContent = `WalletConnect · ${signerProvider.walletName} `;
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "secondary"; b.style.cssText = "width:auto; margin:0 0 0 8px; padding:4px 10px; font-size:12px;";
+  b.textContent = t("wcDisconnectBtn");
+  b.addEventListener("click", async () => {
+    await signerProvider.disconnect();
+    signerProvider = null; signerAddress = null;
+    showWc();
+    scheduleCheck(0);
+  });
+  el.appendChild(b);
+}
 $("connectUp").addEventListener("click", async () => {
   // The extension, else the Universal Profiles app via WalletConnect (site-ui.js); null when cancelled.
   try { const a = await SiteUI.upAddress(); if (a) { $("upAddress").value = a; $("upAddress").dispatchEvent(new Event("change")); scheduleCheck(); } } catch (e) { /* rejected */ }
@@ -827,7 +857,7 @@ async function computeState() {
   if (!signerProvider || !signerAddress) { s.net.push(["kWallet", ["walletMissing"], "err"]); return s; }
   let walletId;
   try { walletId = parseInt(await signerProvider.request({ method: "eth_chainId" }), 16); } catch (e) { walletId = -1; }
-  if (walletId !== chainId) { s.net.push(["kWallet", ["walletWrong", { addr: signerAddress, id: walletId, exp: chainId }], "err"]); return s; }
+  if (walletId !== chainId) { s.net.push(["kWallet", ["walletWrong", { addr: signerAddress, id: walletId, exp: chainId, extra: signerProvider.isWalletConnect ? " " + signerProvider.wrongChainText() : "" }], "err"]); return s; }
   s.net.push(["kWallet", ["walletOk", { addr: signerAddress, id: walletId }], "ok"]);
   s.signer = signerAddress;
   // Independent reads run in parallel: the page re-checks on every change, so this sets its speed.
