@@ -204,7 +204,7 @@ const I18N = {
     decodeBtn: "Decodifica calldata",
     notDecodedYet: "Non ancora decodificato.",
     panel2Title: "3 · Wallet firmatario",
-    panel2Note: "Per il deploy può essere un account qualsiasi: paga solo il gas della transazione, non diventa controller della UP. Chi controllerà la UP è deciso esclusivamente dalla calldata originale — verificato al punto 2. Consiglio: usa la <b>chiave di genesi</b> importata in MetaMask. Paga il gas e poi è già il controller giusto per aggiungere il backup nella pagina del backup, senza cambiare account.",
+    panel2Note: "Per il deploy può essere un account qualsiasi: paga solo il gas della transazione, non diventa controller della UP. Chi controllerà la UP è deciso esclusivamente dalla calldata originale — verificato al punto 2. Consiglio: usa la <b>chiave di genesi</b> importata in MetaMask. Paga il gas e poi è già il controller giusto per aggiungere il backup nella pagina del backup, senza cambiare account. Dal telefono, dove il browser non ha MetaMask, il pulsante collega l'app MetaMask con WalletConnect: ogni transazione arriva nell'app da approvare.",
     connectSignerBtn: "Connetti wallet firmatario (es. MetaMask)",
     panel3Title: "1 · Rete di destinazione",
     networkFilterPlaceholder: "Filtra per nome... (es. base, polygon, arbitrum)",
@@ -219,7 +219,7 @@ const I18N = {
 
     connectedBadge: "Connesso",
     connectionRejected: "Connessione rifiutata o fallita",
-    noSignerFound: "Nessun wallet firmatario trovato",
+    wcDisconnectBtn: "Scollega",
     unknownNetworkLabel: (v) => `rete sconosciuta (chainId ${v.chainId})`,
 
     pasteCalldataFirst: "Incolla prima la calldata",
@@ -357,7 +357,7 @@ const I18N = {
     decodeBtn: "Decode calldata",
     notDecodedYet: "Not decoded yet.",
     panel2Title: "3 · Signing wallet",
-    panel2Note: "For the deploy this can be any account: it only pays the transaction gas and does not become a controller of the UP. Who controls the UP is decided exclusively by the original calldata — verified in step 2. Tip: use the <b>genesis key</b> imported into MetaMask. It pays the gas and is then already the right controller to add the backup on the backup page, with no account switch.",
+    panel2Note: "For the deploy this can be any account: it only pays the transaction gas and does not become a controller of the UP. Who controls the UP is decided exclusively by the original calldata — verified in step 2. Tip: use the <b>genesis key</b> imported into MetaMask. It pays the gas and is then already the right controller to add the backup on the backup page, with no account switch. On a phone, where the browser has no MetaMask, the button connects the MetaMask app with WalletConnect: every transaction reaches the app to approve.",
     connectSignerBtn: "Connect signing wallet (e.g. MetaMask)",
     panel3Title: "1 · Target network",
     networkFilterPlaceholder: "Filter by name... (e.g. base, polygon, arbitrum)",
@@ -372,7 +372,7 @@ const I18N = {
 
     connectedBadge: "Connected",
     connectionRejected: "Connection rejected or failed",
-    noSignerFound: "No signing wallet found",
+    wcDisconnectBtn: "Disconnect",
     unknownNetworkLabel: (v) => `unknown network (chainId ${v.chainId})`,
 
     pasteCalldataFirst: "Paste the calldata first",
@@ -865,12 +865,29 @@ window.addEventListener("eip6963:announceProvider", (e) => discoveredProviders.p
 window.dispatchEvent(new Event("eip6963:requestProvider"));
 
 function setSignerStatus(html) { $("signerStatus").innerHTML = html; }
+// The connected signer; through WalletConnect also the wallet's name and a button to disconnect (the way to
+// pick another account there).
+function showSigner(netLabel = "") {
+  const wc = signerProvider && signerProvider.isWalletConnect;
+  setSignerStatus(`<span class="badge ok">${t("connectedBadge")}</span> ${escapeHtml(signerAddress + netLabel)}` +
+    (wc ? `<div class="line-dim" style="margin-top:6px;">WalletConnect · ${escapeHtml(signerProvider.walletName)} <button type="button" id="signerDisconnect" class="secondary" style="width:auto; margin:0 0 0 8px; padding:4px 10px; font-size:12px;">${t("wcDisconnectBtn")}</button></div>` : ""));
+  if (wc) $("signerDisconnect").addEventListener("click", async () => {
+    await signerProvider.disconnect();
+    signerProvider = null; signerAddress = null; watchedSigner = null;
+    setSignerStatus(`<span class="empty">${t("notConnected")}</span>`);
+    invalidateCheck();
+  });
+}
 async function connectSignerWallet() {
   let candidate = discoveredProviders.find(p => !/lukso|universal profile/i.test(p.info.name))?.provider;
   if (!candidate && window.ethereum && window.ethereum !== window.lukso) candidate = window.ethereum;
+  // No wallet in this browser (a phone): MetaMask on the phone through WalletConnect (site-ui.js).
   if (!candidate) {
-    setSignerStatus(`<span class="badge err">${t("noSignerFound")}</span>`);
-    return false;
+    try { candidate = await SiteUI.walletConnectSigner({ chain: getNetwork }); } catch (e) { candidate = null; }
+    if (!candidate) {
+      if (!signerAddress) setSignerStatus(`<span class="empty">${t("notConnected")}</span>`);
+      return false;
+    }
   }
   try {
     // Ask the wallet to show its account picker every time, so the signer can be chosen (genesis
@@ -887,7 +904,7 @@ async function connectSignerWallet() {
       const chainIdHex = await candidate.request({ method: "eth_chainId" });
       netLabel = ` · ${chainDisplayName(parseInt(chainIdHex, 16))}`;
     } catch (e) { /* se non si riesce a leggere la rete, si mostra comunque l'indirizzo */ }
-    setSignerStatus(`<span class="badge ok">${t("connectedBadge")}</span> ${escapeHtml(signerAddress + netLabel)}`);
+    showSigner(netLabel);
     return true;
   } catch (e) {
     setSignerStatus(`<span class="badge err">${t("connectionRejected")}</span>`);
@@ -977,7 +994,7 @@ function watchSigner(p) {
   p.on("chainChanged", invalidateCheck);
   p.on("accountsChanged", (accs) => {
     signerAddress = accs && accs[0] ? accs[0] : null;
-    setSignerStatus(signerAddress ? `<span class="badge ok">${t("connectedBadge")}</span> ${escapeHtml(signerAddress)}` : `<span class="empty">${t("notConnected")}</span>`);
+    if (signerAddress) showSigner(); else setSignerStatus(`<span class="empty">${t("notConnected")}</span>`);
     invalidateCheck();
   });
 }
@@ -1001,7 +1018,7 @@ async function checkChains(net, provider) {
     return { ok: false, msg: t("walletNetworkCheckFailed", { netName: net.name }) };
   }
   if (walletChainId !== expectedChainId) {
-    return { ok: false, msg: t("walletWrongNetwork", { walletChainId, netName: net.name, chainId: expectedChainId }) };
+    return { ok: false, msg: t("walletWrongNetwork", { walletChainId, netName: net.name, chainId: expectedChainId }) + (signerProvider.isWalletConnect ? " " + signerProvider.wrongChainText() : "") };
   }
   return { ok: true, chainId: expectedChainId };
 }
@@ -1154,7 +1171,7 @@ $("deployBtn").addEventListener("click", async () => {
     // A failed check is blocking: never send a transaction on an unknown chain.
     const walletChainId = parseInt(await signerProvider.request({ method: "eth_chainId" }), 16);
     if (walletChainId !== checkedContext.chainId) {
-      log(t("walletNowWrongNetwork", { walletChainId, netName: net.name, chainId: checkedContext.chainId }), "line-err");
+      log(t("walletNowWrongNetwork", { walletChainId, netName: net.name, chainId: checkedContext.chainId }) + (signerProvider.isWalletConnect ? " " + signerProvider.wrongChainText() : ""), "line-err");
       return;
     }
 
