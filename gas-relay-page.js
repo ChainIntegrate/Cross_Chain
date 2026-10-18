@@ -202,7 +202,7 @@ const I18N = {
     panel3Title: "4 · La UP",
     listTitle: "Lista del paymaster · con la cassa", listNote: "Con la <b>cassa</b> attiva in MetaMask. <b>Aggiungi la UP alla lista</b> apre MetaMask, dopo qualche secondo, per confermare una transazione della cassa (costa pochissimo gas). Dopo la conferma qui sotto compare <b>La UP è nella lista</b>. Solo le UP nella lista possono usare il paymaster.", listIn: "✅ La UP è nella lista del paymaster.", listOut: "La UP non è nella lista: con la cassa attiva premi \"Aggiungi la UP alla lista\".", listNeed: "Servono un paymaster pubblicato (sezione 3) e l'indirizzo della UP.", setupTitle: "Configurazione della UP · con il controller",
     panel3Note: "Due passaggi, con account diversi:<br><b>1 · Pubblica l'Extension4337</b>, solo se qui sotto risulta <b>non pubblicata</b>: una volta per rete, poi vale per tutte le UP. <b>Può firmarla qualsiasi account</b>, per esempio la cassa: paga solo il gas e non ottiene nessun diritto sulle UP, perché il contratto è pubblico e uguale per tutti. In MetaMask la transazione va alla fabbrica di contratti standard <code>0x4e59b448…956C</code>, che può comparire senza nome o con caratteri strani: è normale.<br><b>2 · Configura la UP</b> con il <b>controller</b> della UP attivo in MetaMask (la chiave di genesi o il backup, <b>mai la cassa</b>): una sola transazione atomica del Key Manager, con un po' di gas pagato dal controller; se una parte fallisce, non cambia niente. Il controller che firma riceve il permesso 4337. Prima di firmare vedi l'elenco delle operazioni e la simulazione.",
-    connectUpBtn: "Leggi l'indirizzo dall'estensione UP",
+    connectUpBtn: "Leggi l'indirizzo dalla tua UP (estensione o app)",
     upAddressLabel: "Indirizzo della UP",
     publishExtBtn: "Pubblica l'Extension4337 su questa rete",
     prepareSetupBtn: "Prepara e simula la configurazione della UP",
@@ -450,7 +450,7 @@ const I18N = {
     panel3Title: "4 · The UP",
     listTitle: "Paymaster allowlist · with the cassa", listNote: "With the <b>cassa</b> active in MetaMask. <b>Add the UP to the allowlist</b> opens MetaMask, after a few seconds, to confirm a transaction of the cassa (it costs very little gas). After the confirmation the box below says <b>The UP is on the allowlist</b>. Only UPs on the allowlist can use the paymaster.", listIn: "✅ The UP is on the paymaster allowlist.", listOut: "The UP is not on the allowlist: with the cassa active press \"Add the UP to the allowlist\".", listNeed: "It needs a published paymaster (section 3) and the UP address.", setupTitle: "UP setup · with the controller",
     panel3Note: "Two steps, with different accounts:<br><b>1 · Publish Extension4337</b>, only if the box below says <b>not published</b>: once per network, then it serves every UP. <b>Any account can sign it</b>, for example the cassa: it only pays the gas and gets no rights over any UP, because the contract is public and the same for everyone. In MetaMask the transaction goes to the standard contract factory <code>0x4e59b448…956C</code>, which may show no name or odd characters: that is normal.<br><b>2 · Set up the UP</b> with the UP's <b>controller</b> active in MetaMask (the genesis key or the backup, <b>never the cassa</b>): one atomic Key Manager transaction, with a little gas paid by the controller; if any part fails, nothing changes. The signing controller receives the 4337 permission. Before signing you see the list of operations and the simulation.",
-    connectUpBtn: "Read the address from the UP extension",
+    connectUpBtn: "Read the address from your UP (extension or app)",
     upAddressLabel: "UP address",
     publishExtBtn: "Publish Extension4337 on this network",
     prepareSetupBtn: "Prepare and simulate the UP setup",
@@ -742,8 +742,8 @@ $("connectSigner").addEventListener("click", async () => {
   } catch (e) { setStatus("netBox", e.shortMessage || e.message, "line-err"); }
 });
 $("connectUp").addEventListener("click", async () => {
-  if (!window.lukso) return;
-  try { const a = await window.lukso.request({ method: "eth_requestAccounts" }); $("upAddress").value = a[0]; scheduleCheck(); } catch (e) { /* rejected */ }
+  // The extension, else the Universal Profiles app via WalletConnect (site-ui.js); null when cancelled.
+  try { const a = await SiteUI.upAddress(); if (a) { $("upAddress").value = a; $("upAddress").dispatchEvent(new Event("change")); scheduleCheck(); } } catch (e) { /* rejected */ }
 });
 function onInputsChanged() { $("customRpcWrap").style.display = networkSelectEl.value === "custom" ? "block" : "none"; scheduleCheck(); }
 $("networkFilter").addEventListener("input", (e) => { renderNetworkOptions(e.target.value); onInputsChanged(); });

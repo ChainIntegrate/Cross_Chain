@@ -258,7 +258,6 @@ const I18N = {
     deployBtn: "Deploy (irreversibile)",
     logInitial: "In attesa dei collegamenti sopra.",
 
-    extNotFound: "Estensione Universal Profile non trovata in questo browser",
     connectedBadge: "Connesso",
     connectionRejected: "Connessione rifiutata o fallita",
     noSignerFound: "Nessun wallet firmatario trovato",
@@ -487,7 +486,6 @@ const I18N = {
     deployBtn: "Deploy (irreversible)",
     logInitial: "Waiting for the connections above.",
 
-    extNotFound: "Universal Profile extension not found in this browser",
     connectedBadge: "Connected",
     connectionRejected: "Connection rejected or failed",
     noSignerFound: "No signing wallet found",
@@ -829,13 +827,10 @@ function getNetwork() {
 // letto direttamente dalla connessione, e deve fornire la propria calldata.
 let upAddressConnected = null;
 $("connectUp").addEventListener("click", async () => {
-  if (!window.lukso) {
-    $("upStatus").innerHTML = `<span class="badge err">${t("extNotFound")}</span>`;
-    return;
-  }
   try {
-    const accounts = await window.lukso.request({ method: "eth_requestAccounts" });
-    const upAddress = accounts[0];
+    // The extension, else the Universal Profiles app via WalletConnect (site-ui.js); null when cancelled.
+    const upAddress = await SiteUI.upAddress();
+    if (!upAddress) return;
     upAddressConnected = upAddress;
     $("upStatus").innerHTML = `<span class="badge ok">${t("connectedBadge")}</span> ${escapeHtml(upAddress)}`;
     $("expectedAddress").value = ethers.getAddress(upAddress);

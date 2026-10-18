@@ -29,4 +29,29 @@ sha256sum walletkit-1.6.0.min.js
 
 When the version changes, rename the file, update the `<script src>` in both pages and the SHA-256 above.
 
+## `signclient-2.25.0.min.js`
+
+WalletConnect client on the dApp side, loaded by `site-ui.js` (`SiteUI.upAddress`) only when a tool page asks for the UP's address and there is no Universal Profile extension: it connects LUKSO's Universal Profiles app, reads the address and closes the session. It exposes `window.SignClientBundle = { SignClient, getSdkError }` and is loaded with Subresource Integrity (the sha384 is in `site-ui.js`).
+
+- Packages: `@walletconnect/sign-client@2.25.0`, `@walletconnect/utils@2.25.0` (with `@walletconnect/core@2.25.0`, the same as in the walletkit bundle)
+- Bundler: `esbuild@0.28.2`
+- SHA-256: `34b5bcc607bb816a3b2ce86b1594524c71d07d97766bb2e293f469133ed74c48`
+
+```bash
+npm init -y
+npm install @walletconnect/sign-client@2.25.0 @walletconnect/utils@2.25.0 esbuild@0.28.2
+cat > entry.js <<'JS'
+import { SignClient } from "@walletconnect/sign-client";
+import { getSdkError } from "@walletconnect/utils";
+window.SignClientBundle = { SignClient, getSdkError };
+JS
+npx esbuild entry.js --bundle --minify --format=iife --platform=browser --target=es2020 \
+  --define:process.env.NODE_ENV='"production"' --define:global=globalThis \
+  --metafile=meta.json --outfile=signclient-2.25.0.min.js
+sha256sum signclient-2.25.0.min.js
+openssl dgst -sha384 -binary signclient-2.25.0.min.js | openssl base64 -A   # the integrity value in site-ui.js
+```
+
+The package list with licenses is in `signclient-2.25.0.THIRD-PARTY.txt`; the license terms are the same as for walletkit (below).
+
 **License.** The Reown / WalletConnect packages are under the WalletConnect Community License Agreement (not open source): a copy is in `walletkit-1.6.0.LICENSE.md`, and pages that load the bundle show "Portions © 2025 Reown, Inc. All Rights Reserved" in the footer. The other packages in the bundle and their license files are listed in `walletkit-1.6.0.THIRD-PARTY.txt`, generated from esbuild's metafile (add `--metafile=meta.json` to the command above). When the version changes, regenerate both files and check the license again. See also `THIRD_PARTY_NOTICES.md`.

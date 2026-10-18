@@ -696,6 +696,7 @@ applyI18n();
 // Shared look of the site (site-ui.js), as UP Wallet: the warnings in a window at the first opening,
 // the main networks as buttons with their logo (a green dot where the UP exists).
 SiteUI.netPicker({ select: document.getElementById("network"), filter: document.getElementById("networkFilter"), upInput: null });
+SiteUI.clampNotes();   // long explanations: three lines and "Read more"
 </script>
 
 </body>

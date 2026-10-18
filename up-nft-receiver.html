@@ -103,7 +103,7 @@
 
 <div class="panel">
   <h2 data-i18n="panel2Title">2 · La tua UP</h2>
-  <button id="connectUp" class="secondary" data-i18n="connectUpBtn">Leggi l'indirizzo dall'estensione UP</button>
+  <button id="connectUp" class="secondary" data-i18n="connectUpBtn">Leggi l'indirizzo dalla tua UP (estensione o app)</button>
   <label for="upAddress" data-i18n="upAddressLabel">Indirizzo della UP</label>
   <input type="text" id="upAddress" placeholder="0x...">
 </div>
@@ -214,7 +214,7 @@ const I18N = {
     customExplorerLabel: "Explorer URL custom (opzionale)",
     customNetName: "Rete custom",
     panel2Title: "2 · La tua UP",
-    connectUpBtn: "Leggi l'indirizzo dall'estensione UP",
+    connectUpBtn: "Leggi l'indirizzo dalla tua UP (estensione o app)",
     upAddressLabel: "Indirizzo della UP",
     panel3Title: "3 · Controller (MetaMask) e verifica",
     panel3Note: "MetaMask con la chiave del controller della UP, sulla rete scelta. Paga il gas. La verifica parte da sola e si ripete se cambi rete, UP, account o rete in MetaMask.",
@@ -267,7 +267,6 @@ const I18N = {
     verdictUpForEnable: "Per abilitare la ricezione NFT su una UP, inserisci l'indirizzo della UP e connetti il suo controller.",
     checkRunning: "Verifica in corso...",
 
-    extNotFound: "Estensione Universal Profile non trovata.",
     connectionRejected: "Connessione rifiutata o fallita.",
     noSignerFound: "Nessun wallet firmatario trovato (es. MetaMask).",
     genericError: (v) => `Errore: ${v.err}`,
@@ -316,7 +315,7 @@ const I18N = {
     customExplorerLabel: "Custom explorer URL (optional)",
     customNetName: "Custom network",
     panel2Title: "2 · Your UP",
-    connectUpBtn: "Read the address from the UP extension",
+    connectUpBtn: "Read the address from your UP (extension or app)",
     upAddressLabel: "UP address",
     panel3Title: "3 · Controller (MetaMask) and check",
     panel3Note: "MetaMask with the UP controller's key, on the chosen network. It pays the gas. The check starts by itself and runs again if you change network, UP, account or MetaMask's network.",
@@ -369,7 +368,6 @@ const I18N = {
     verdictUpForEnable: "To enable NFT reception on a UP, enter the UP address and connect its controller.",
     checkRunning: "Checking...",
 
-    extNotFound: "Universal Profile extension not found.",
     connectionRejected: "Connection rejected or failed.",
     noSignerFound: "No signing wallet found (e.g. MetaMask).",
     genericError: (v) => `Error: ${v.err}`,
@@ -495,10 +493,12 @@ $("customRpc").addEventListener("input", onInputsChanged);
 
 // ==================== 2. UP ====================
 $("connectUp").addEventListener("click", async () => {
-  if (!window.lukso) { setStatus("checkBox", t("extNotFound"), "line-err"); return; }
   try {
-    const accounts = await window.lukso.request({ method: "eth_requestAccounts" });
-    $("upAddress").value = accounts[0];
+    // The extension, else the Universal Profiles app via WalletConnect (site-ui.js); null when cancelled.
+    const a = await SiteUI.upAddress();
+    if (!a) return;
+    $("upAddress").value = a;
+    $("upAddress").dispatchEvent(new Event("change"));
     scheduleCheck();
   } catch (e) {
     setStatus("checkBox", t("connectionRejected"), "line-err");
@@ -851,6 +851,7 @@ onInputsChanged();
 // the main networks as buttons with their logo (a green dot where the UP exists).
 SiteUI.riskWindow({ content: document.querySelector(".warn-box"), ack: document.getElementById("ackRisk") });
 SiteUI.netPicker({ select: document.getElementById("network"), filter: document.getElementById("networkFilter"), upInput: document.getElementById("upAddress") });
+SiteUI.clampNotes();   // long explanations: three lines and "Read more"
 </script>
 
 </body>
