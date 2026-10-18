@@ -1469,6 +1469,14 @@ function renderNetworkOptions(filter) {
 renderNetworkOptions("");
 const presetNetworkKey = new URLSearchParams(location.search).get("network");
 if (presetNetworkKey && NETWORKS.some(c => c.key === presetNetworkKey)) networkSelectEl.value = presetNetworkKey;
+// Otherwise the last network chosen on this site (shared with the tool pages and kept by the app), else Arc.
+else {
+  let last = null;
+  try { last = localStorage.getItem("upwallet.network"); } catch (e) { /* none */ }
+  const pick = [last, "arc"].find((k) => k && NETWORKS.some((c) => c.key === k));
+  if (pick) networkSelectEl.value = pick;
+}
+networkSelectEl.addEventListener("change", () => { try { if (networkSelectEl.value !== "custom") localStorage.setItem("upwallet.network", networkSelectEl.value); } catch (e) { /* not kept */ } });
 
 function getNetwork() {
   const c = NETWORKS.find(x => x.key === networkSelectEl.value);

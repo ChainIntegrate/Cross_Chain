@@ -12,12 +12,14 @@
       accepted: "✅ Avvertenze accettate.", pending: "⚠️ Avvertenze non ancora accettate: finché non le accetti la pagina non fa operazioni.",
       read: "✅ Avvertenze lette.", other: "Altre reti e RPC personalizzato:", here: "La UP esiste su questa rete",
       notHere: "La UP non esiste su questa rete", unknown: "La rete non ha risposto", checking: "Controllo su quali reti esiste la UP…",
-      dots: "Bollino verde: la UP esiste su quella rete. Grigio: non c'è, o la rete non ha risposto.", lang: "English" },
+      dots: "Bollino verde: la UP esiste su quella rete. Grigio: non c'è, o la rete non ha risposto.", lang: "English",
+      more: "Leggi tutto", less: "Riduci" },
     en: { riskTitle: "⚠️ Before you start", ok: "Continue", later: "Not now", reopen: "Read the warnings", gotIt: "Got it",
       accepted: "✅ Warnings accepted.", pending: "⚠️ Warnings not accepted yet: until you accept them the page does nothing.",
       read: "✅ Warnings read.", other: "Other networks and custom RPC:", here: "The UP exists on this network",
       notHere: "The UP does not exist on this network", unknown: "The network did not answer", checking: "Checking on which networks the UP exists…",
-      dots: "Green dot: the UP exists on that network. Grey: it is not there, or the network did not answer.", lang: "Italiano" },
+      dots: "Green dot: the UP exists on that network. Grey: it is not there, or the network did not answer.", lang: "Italiano",
+      more: "Read more", less: "Show less" },
   };
   const lang = () => (document.documentElement.lang === "en" ? "en" : "it");
   const tt = (k) => T[lang()][k];
@@ -68,6 +70,8 @@ body.sui-open { overflow: hidden; }
 .sui-dot.yes { background: var(--ok); }
 .sui-other { font-size: 12.5px; color: var(--text-dim); margin: 4px 0 6px; }
 .sui-note { font-size: 12px; color: var(--text-dim); margin: -4px 0 10px; }
+.sui-clamp:not(.sui-open) { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 4px; }
+.sui-more { width: auto !important; margin: 0 0 12px !important; padding: 0 !important; background: none !important; color: var(--accent) !important; font-size: 12.5px !important; font-weight: 600; }
 `;
     document.head.appendChild(s);
   }
@@ -188,6 +192,18 @@ body.sui-open { overflow: hidden; }
         render();
       }
     }
+    // The network: the one in the page's link (?network=), else the last one chosen on this site (shared with
+    // UP Wallet), else Arc, when the page offers it.
+    const NET_KEY = "upwallet.network";
+    if (!new URLSearchParams(location.search).get("network")) {
+      const pick = [store.get(NET_KEY), "arc"].find((k) => k && offered.has(k));
+      if (pick && select.value !== pick) {
+        if (filter && filter.value) { filter.value = ""; filter.dispatchEvent(new Event("input", { bubbles: true })); }
+        select.value = pick;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    }
+    select.addEventListener("change", () => { if (offered.has(select.value)) store.set(NET_KEY, select.value); });
     select.addEventListener("change", render);
     if (filter) filter.addEventListener("input", () => setTimeout(render, 0));
     let timer = null;
@@ -198,5 +214,30 @@ body.sui-open { overflow: hidden; }
     return { render, check };
   }
 
-  window.SiteUI = { initialLang, saveLang, riskWindow, netPicker };
+  // ---- long explanations shortened ----
+  // The page's explanatory notes (static texts, data-i18n) longer than `min` characters show three lines and a
+  // "Read more" link; the text itself is unchanged (the language switch rewrites it in place).
+  function clampNotes({ root = document, min = 280 } = {}) {
+    addCss();
+    const notes = [...root.querySelectorAll(".panel .note[data-i18n-html], .panel .note[data-i18n]")];
+    const refresh = () => {
+      for (const n of notes) {
+        const long = (n.textContent || "").length > min;
+        let b = n.nextElementSibling && n.nextElementSibling.classList.contains("sui-more") ? n.nextElementSibling : null;
+        if (!long) { n.classList.remove("sui-clamp"); if (b) b.hidden = true; continue; }
+        n.classList.add("sui-clamp");
+        if (!b) {
+          b = document.createElement("button"); b.type = "button"; b.className = "sui-more";
+          b.addEventListener("click", () => { n.classList.toggle("sui-open"); b.textContent = tt(n.classList.contains("sui-open") ? "less" : "more"); });
+          n.insertAdjacentElement("afterend", b);
+        }
+        b.hidden = false;
+        b.textContent = tt(n.classList.contains("sui-open") ? "less" : "more");
+      }
+    };
+    onLang(() => setTimeout(refresh, 0));
+    refresh();
+  }
+
+  window.SiteUI = { initialLang, saveLang, riskWindow, netPicker, clampNotes };
 })();
