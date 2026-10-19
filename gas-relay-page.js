@@ -24,7 +24,7 @@ const VPM_ABI = [
   "function setSigner(address signer)", "function setMaxCostPerOp(uint256 maxCost)", "function withdrawTo(address to, uint256 amount)",
 ];
 const PM_ABI = [
-  "function owner() view returns (address)", "function maxCostPerOp() view returns (uint256)",
+  "function owner() view returns (address)", "function pendingOwner() view returns (address)", "function maxCostPerOp() view returns (uint256)",
   "function sponsored(address) view returns (bool)", "function deposit() view returns (uint256)",
   "function entryPoint() view returns (address)",
   "function setSponsored(address account, bool enabled)", "function setMaxCostPerOp(uint256 maxCost)",
@@ -46,6 +46,7 @@ const UP_IFACE = new ethers.Interface([
   "function getData(bytes32 dataKey) view returns (bytes)",
   "function getDataBatch(bytes32[] dataKeys) view returns (bytes[])",
   "function owner() view returns (address)",
+  "function pendingOwner() view returns (address)",
 ]);
 const KM_IFACE = new ethers.Interface([
   "function execute(bytes payload) payable returns (bytes)",
@@ -230,6 +231,8 @@ const I18N = {
     cfgSummaryOk: "✅ Configurazione in ordine: nessun problema trovato.",
     cfgSummary: (v) => `${v.err ? "❌" : "⚠️"} ${v.err} problemi, ${v.warn} avvisi: leggi le righe segnate.`,
     cfgUp: "UP", cfgUpOk: (v) => `contratto presente (${v.addr})`, cfgUpMissing: "nessun contratto a questo indirizzo su questa rete",
+    cfgKmTarget: "Key Manager di questa UP", cfgKmTargetOk: "sì: il suo target() è questa UP", cfgKmTargetBad: (v) => `no: target() è ${v.target}, non ${v.up}. Il proprietario della UP non è il suo Key Manager`,
+    cfgUpPending: "Passaggio di proprietà", cfgUpPendingWarn: (v) => `in corso verso ${v.addr} (LSP14), non ancora accettato: se lo accetta, controlla la UP. Se non l'hai avviato tu, annullalo`,
     cfgKm: "Proprietario (Key Manager)", cfgKmOk: (v) => `contratto ${v.addr}`, cfgKmBad: (v) => `${v.addr} non è un contratto: la UP non è governata da un Key Manager`,
     cfgExt: "Estensione validateUserOp", cfgExtOk: (v) => `${v.addr}, codice uguale a quello atteso`, cfgExtNone: "nessuna: il 4337 non è attivo su questa UP", cfgExtOther: (v) => `punta a ${v.addr}, non all'Extension4337 attesa`, cfgExtCode: (v) => `${v.addr} registrata, ma il codice a quell'indirizzo non è quello atteso`,
     cfgEp: "Permessi dell'EntryPoint", cfgEpOk: "0x000500 (SUPER_CALL, SUPER_TRANSFERVALUE): corretto", cfgEpNone: "nessuno: il 4337 non è attivo su questa UP", cfgEpBad: (v) => `${v.hex} (${v.names}): diversi da 0x000500. Se includono permessi di modifica, operazioni passate dal relayer potrebbero cambiare la UP. Disattiva il 4337 e rifai la configurazione.`,
@@ -291,6 +294,11 @@ const I18N = {
     badAmount: "Importo non valido.",
     badAddress: "Indirizzo non valido.",
     zeroAddress: "L'indirizzo zero (0x000…000) non è un destinatario: i fondi andrebbero persi.",
+    nativeCur: "valuta nativa",
+    withdrawToContract: (v) => `❌ ${v.addr} è un contratto, non un account né una Universal Profile: potrebbe non riuscire a spostare i fondi. Preleva verso un account (per esempio la cassa) o una UP.`,
+    echoFund: (v) => `Ricarica: ${v.v} su ${v.net}, nella valuta di questa rete (${v.cur}). Deposito attuale: ${v.old}.`,
+    echoCap: (v) => `Nuovo tetto per operazione: ${v.v} su ${v.net}, nella valuta di questa rete (${v.cur}). Tetto attuale: ${v.old}.`,
+    echoWithdraw: (v) => `Prelievo: ${v.v} su ${v.net}, nella valuta di questa rete (${v.cur}). Deposito attuale: ${v.old}.`,
     simulating: "Simulazione...",
     simOk: (v) => `✅ Simulazione riuscita (gas stimato ${v.gas}).`,
     simFail: (v) => `❌ Simulazione fallita: ${v.err}`,
@@ -315,6 +323,12 @@ const I18N = {
     planFinalExtra: ", senza i permessi temporanei",
     planAtomic: "Se una parte fallisce, l'intera transazione viene annullata e non cambia niente.",
     readyToSign: "Controlla l'elenco qui sopra, poi premi \"Firma e invia\".",
+    decTitle: "Cosa scrive davvero la transazione (letto dai dati che firmerai; valore attuale → nuovo):",
+    decExt: "estensione per validateUserOp", decLen: "AddressPermissions[] (numero di controller)", decIndex: (v) => `AddressPermissions[${v.i}]`, decPerms: (v) => `permessi di ${v.addr}`, decDeleted: "(cancellato)",
+    planExtReplace: (v) => `⚠️ La UP ha già un'altra estensione per validateUserOp: ${v.old}. Questa configurazione la SOSTITUISCE con ${v.ext}. Se ti serve ancora, non continuare. Questo browser se la ricorda: disattivando il 4337 da qui viene rimessa.`,
+    extReplaceAck: "Ho capito: la configurazione sostituisce l'estensione validateUserOp che la UP ha adesso.",
+    extReplaceAckNeeded: "❌ La configurazione sostituisce un'altra estensione validateUserOp: spunta la conferma sotto il piano, poi firma.",
+    revokeExtRestore: (v) => `estensione per validateUserOp: rimessa quella di prima (${v.prev}), che la configurazione aveva sostituito`,
     stale: "I dati sono cambiati dopo la preparazione: prepara di nuovo.",
     editedDuringCheckLog: "❌ Dati, rete o account sono cambiati mentre la preparazione era in corso: niente è stato preparato. Ripeti.",
     setupOk: "✅ Verifica finale: estensione registrata, EntryPoint con i permessi previsti, permesso 4337 al controller, nessun altro permesso cambiato.",
@@ -479,6 +493,8 @@ const I18N = {
     cfgSummaryOk: "✅ Configuration in order: no problem found.",
     cfgSummary: (v) => `${v.err ? "❌" : "⚠️"} ${v.err} problems, ${v.warn} warnings: read the marked rows.`,
     cfgUp: "UP", cfgUpOk: (v) => `contract present (${v.addr})`, cfgUpMissing: "no contract at this address on this network",
+    cfgKmTarget: "Key Manager of this UP", cfgKmTargetOk: "yes: its target() is this UP", cfgKmTargetBad: (v) => `no: target() is ${v.target}, not ${v.up}. The UP's owner is not its Key Manager`,
+    cfgUpPending: "Ownership transfer", cfgUpPendingWarn: (v) => `pending to ${v.addr} (LSP14), not accepted yet: if it accepts, it controls the UP. If you did not start it, cancel it`,
     cfgKm: "Owner (Key Manager)", cfgKmOk: (v) => `contract ${v.addr}`, cfgKmBad: (v) => `${v.addr} is not a contract: the UP is not governed by a Key Manager`,
     cfgExt: "validateUserOp extension", cfgExtOk: (v) => `${v.addr}, code as expected`, cfgExtNone: "none: 4337 is not active on this UP", cfgExtOther: (v) => `points to ${v.addr}, not to the expected Extension4337`, cfgExtCode: (v) => `${v.addr} registered, but the code at that address is not the expected one`,
     cfgEp: "EntryPoint's permissions", cfgEpOk: "0x000500 (SUPER_CALL, SUPER_TRANSFERVALUE): correct", cfgEpNone: "none: 4337 is not active on this UP", cfgEpBad: (v) => `${v.hex} (${v.names}): not 0x000500. If they include rights to change data, operations sent through the relayer could change the UP. Turn 4337 off and set it up again.`,
@@ -538,6 +554,11 @@ const I18N = {
     badAmount: "Invalid amount.",
     badAddress: "Invalid address.",
     zeroAddress: "The zero address (0x000…000) is not a recipient: the funds would be lost.",
+    nativeCur: "native currency",
+    withdrawToContract: (v) => `❌ ${v.addr} is a contract, neither an account nor a Universal Profile: it may be unable to move the funds on. Withdraw to an account (for example the cassa) or a UP.`,
+    echoFund: (v) => `Top up: ${v.v} on ${v.net}, in this network's currency (${v.cur}). Current deposit: ${v.old}.`,
+    echoCap: (v) => `New cap per operation: ${v.v} on ${v.net}, in this network's currency (${v.cur}). Current cap: ${v.old}.`,
+    echoWithdraw: (v) => `Withdrawal: ${v.v} on ${v.net}, in this network's currency (${v.cur}). Current deposit: ${v.old}.`,
     simulating: "Simulating...",
     simOk: (v) => `✅ Simulation succeeded (estimated gas ${v.gas}).`,
     simFail: (v) => `❌ Simulation failed: ${v.err}`,
@@ -562,6 +583,12 @@ const I18N = {
     planFinalExtra: ", without the temporary permissions",
     planAtomic: "If any part fails, the whole transaction reverts and nothing changes.",
     readyToSign: "Check the list above, then press \"Sign and send\".",
+    decTitle: "What the transaction really writes (read from the data you will sign; current value → new):",
+    decExt: "extension for validateUserOp", decLen: "AddressPermissions[] (number of controllers)", decIndex: (v) => `AddressPermissions[${v.i}]`, decPerms: (v) => `permissions of ${v.addr}`, decDeleted: "(deleted)",
+    planExtReplace: (v) => `⚠️ The UP already has another extension for validateUserOp: ${v.old}. This setup REPLACES it with ${v.ext}. If you still need it, do not continue. This browser remembers it: turning 4337 off from here puts it back.`,
+    extReplaceAck: "I understand: the setup replaces the validateUserOp extension the UP has now.",
+    extReplaceAckNeeded: "❌ The setup replaces another validateUserOp extension: tick the confirmation under the plan, then sign.",
+    revokeExtRestore: (v) => `extension for validateUserOp: the previous one put back (${v.prev}), which the setup had replaced`,
     stale: "The data changed after preparation: prepare again.",
     editedDuringCheckLog: "❌ Data, network or account changed while it was being prepared: nothing was prepared. Repeat.",
     setupOk: "✅ Final check: extension registered, EntryPoint with the expected permissions, 4337 permission for the controller, no other permission changed.",
@@ -891,7 +918,7 @@ async function computeState() {
   const pmC = pmState === "ok" ? new ethers.Contract(pmAddr, PM_ABI, provider) : null;
   const upC = upDeployed ? new ethers.Contract(up, UP_IFACE, provider) : null;
   const [pmRead, upOwner] = await Promise.all([
-    pmC ? Promise.all([pmC.owner(), pmC.maxCostPerOp(), pmC.deposit(), up ? pmC.sponsored(up) : Promise.resolve(false)]) : none,
+    pmC ? Promise.all([pmC.owner(), pmC.maxCostPerOp(), pmC.deposit(), up ? pmC.sponsored(up) : Promise.resolve(false), pmC.pendingOwner().catch(() => ethers.ZeroAddress)]) : none,
     upC ? upC.owner().catch(() => null) : none,
   ]);
   if (!owner) { s.pm.push(["kPmOwner", ["ownerInvalid"], "err"]); }
@@ -902,9 +929,10 @@ async function computeState() {
     if (owner !== signerAddress) s.pm.push(["kOwnerCheck", ["ownerNotActive", { owner, active: signerAddress }], "warn"]);
     s.pm.push(["kPmCode", [pmState === "ok" ? "pmOk" : pmState === "missing" ? "pmMissing" : "pmWrong"], pmState === "ok" ? "ok" : pmState === "missing" ? "warn" : "err"]);
     if (pmRead) {
-      const [onChainOwner, cap, dep, sponsored] = pmRead;
+      const [onChainOwner, cap, dep, sponsored, pmPending] = pmRead;
       Object.assign(s, { pmOwner: onChainOwner, cap, deposit: dep });
       s.pm.push(["kPmOwner", onChainOwner === owner ? owner : ["ownerMismatch", { owner: onChainOwner }], onChainOwner === owner ? "" : "err"]);
+      if (pmPending !== ethers.ZeroAddress) s.pm.push(["kVpmPending", pmPending, "warn"]);   // AUDIT I-4
       s.pm.push(["kPmDeposit", fmtUsd(dep, s), depCls(dep, s, "personal")]);
       s.pm.push(["kPmCap", cap > 0n ? fmt(cap, s.cur) : ["capZero"], cap > 0n ? "" : "warn"]);
       s.isOwner = onChainOwner === signerAddress;
@@ -925,7 +953,7 @@ async function computeState() {
     if (vpmState === "ok") {
       const v = new ethers.Contract(vpmAddr, VPM_ABI, provider);
       const [vOwner, vPending, vSigner, vCap, vDep] = await Promise.all([v.owner(), v.pendingOwner(), v.signer(), v.maxCostPerOp(), v.deposit()]);
-      Object.assign(s, { vpmOwner: vOwner, vpmSigner: vSigner, vpmIsOwner: vOwner === signerAddress });
+      Object.assign(s, { vpmOwner: vOwner, vpmSigner: vSigner, vpmIsOwner: vOwner === signerAddress, vpmCap: vCap, vpmDeposit: vDep });
       s.vpm.push(["kPmOwner", vOwner === owner ? owner : ["ownerMismatch", { owner: vOwner }], vOwner === owner ? "" : "err"]);
       if (vPending !== ethers.ZeroAddress) s.vpm.push(["kVpmPending", vPending, "warn"]);
       s.vpm.push(["kVpmSigner", vSigner === ethers.ZeroAddress ? ["vpmNoSigner"] : vSigner, vSigner === ethers.ZeroAddress ? "warn" : ""]);
@@ -1002,6 +1030,10 @@ function render(s) {
   renderKv("netBox", s.net);
   if (s.ok && s.pmState === "ok" && s.upAddr && s.sponsored !== undefined) setStatus("listBox", t(s.sponsored ? "listIn" : "listOut"), s.sponsored ? "line-ok" : "line-warn");
   else setStatus("listBox", s.ok ? t("listNeed") : t("notChecked"), "empty");
+  // The amount fields name the network's currency once it is known (AUDIT I-2).
+  const cur = (s && s.cur) || "";
+  [["fundAmount", "0.001"], ["capAmount", "0.0003"], ["withdrawAmount", "0.001"], ["vpmFundAmount", "0.001"], ["vpmCapAmount", "0.0003"], ["vpmWithdrawAmount", "0.001"]]
+    .forEach(([id, ex]) => { const el = document.getElementById(id); if (el) el.placeholder = cur ? `${ex} ${cur}` : ex; });
   if (s.pm.length) renderKv("pmBox", s.pm); else setStatus("pmBox", t("notChecked"), "empty");
   if (s.vpm.length) renderKv("vpmBox", s.vpm); else setStatus("vpmBox", t(s.ok ? "vpmNeedOwner" : "notChecked"), "empty");
   if (s.up.length) renderKv("upBox", s.up); else setStatus("upBox", t("notChecked"), "empty");
@@ -1106,9 +1138,26 @@ $("publishExtBtn").addEventListener("click", () => guarded(async () => {
 $("fundBtn").addEventListener("click", () => guarded(async () => {
   const v = amountWei("fundAmount"); if (!v) { log(t("badAmount"), "line-err"); return; }
   if (!state || !state.isOwner) { log(t("notOwner"), "line-err"); return; }
+  echoAmount("echoFund", v, state.deposit);
   await sendTx({ to: state.pmAddr, value: v }, { it: "Ricarica il deposito del paymaster personale (allowlist)", en: "Top up the personal paymaster's deposit (allowlist)" }, (s) => s.isOwner && s.pmAddr === state.pmAddr);
 }));
 const pmData = (fn, args) => new ethers.Interface(PM_ABI).encodeFunctionData(fn, args);
+// Amounts are in the selected network's currency: "0.5" typed with Polygon in mind is 0.5 ETH on Base.
+// Say it, with the value in dollars, before the wallet opens (AUDIT I-2).
+function echoAmount(key, v, old) {
+  const s = state;
+  log(t(key, { v: fmtUsd(v, s), old: old === undefined || old === null ? "—" : fmtUsd(old, s), net: (s.netInfo && s.netInfo.name) || "?", cur: s.cur || t("nativeCur") }), "line-warn");
+}
+// A withdrawal goes to an account or a Universal Profile; any other contract may not be able to move
+// the funds on (AUDIT I-2).
+async function withdrawTarget(to) {
+  if (ethers.getAddress(to) === ethers.ZeroAddress) { log(t("zeroAddress"), "line-err"); return false; }
+  const code = await state.provider.getCode(to);
+  if (code === "0x" || /^0xef0100[0-9a-f]{40}$/i.test(code)) return true;
+  const up = await new ethers.Contract(to, ["function supportsInterface(bytes4) view returns (bool)"], state.provider).supportsInterface("0x24871b3d").catch(() => false);
+  if (!up) { log(t("withdrawToContract", { addr: ethers.getAddress(to) }), "line-err"); return false; }
+  return true;
+}
 async function ownerTx(data) {
   if (!state || !state.isOwner) { log(t("notOwner"), "line-err"); return; }
   await sendTx({ to: state.pmAddr, data });
@@ -1116,6 +1165,7 @@ async function ownerTx(data) {
 $("capBtn").addEventListener("click", () => guarded(async () => {
   let v; try { v = ethers.parseEther($("capAmount").value.trim()); } catch (e) { v = null; }
   if (v === null || v < 0n) { log(t("badAmount"), "line-err"); return; }
+  if (state) echoAmount("echoCap", v, state.cap);
   await ownerTx(pmData("setMaxCostPerOp", [v]));
 }));
 $("sponsorBtn").addEventListener("click", () => guarded(() => ownerTx(pmData("setSponsored", [state.upAddr, true]))));
@@ -1123,8 +1173,9 @@ $("unsponsorBtn").addEventListener("click", () => guarded(() => ownerTx(pmData("
 $("withdrawBtn").addEventListener("click", () => guarded(async () => {
   const to = $("withdrawTo").value.trim(), v = amountWei("withdrawAmount");
   if (!ethers.isAddress(to)) { log(t("badAddress"), "line-err"); return; }
-  if (ethers.getAddress(to) === ethers.ZeroAddress) { log(t("zeroAddress"), "line-err"); return; }
   if (!v) { log(t("badAmount"), "line-err"); return; }
+  if (!state || !(await withdrawTarget(to))) return;
+  echoAmount("echoWithdraw", v, state.deposit);
   await ownerTx(pmData("withdrawTo", [ethers.getAddress(to), v]));
 }));
 
@@ -1139,6 +1190,7 @@ $("publishVpmBtn").addEventListener("click", () => guarded(async () => {
 $("vpmFundBtn").addEventListener("click", () => guarded(async () => {
   const v = amountWei("vpmFundAmount"); if (!v) { log(t("badAmount"), "line-err"); return; }
   if (!state || !state.vpmIsOwner) { log(t("notOwner"), "line-err"); return; }
+  echoAmount("echoFund", v, state.vpmDeposit);
   await sendTx({ to: state.vpmAddr, value: v }, { it: "Ricarica il deposito del paymaster pubblico (servizio di sponsorizzazione)", en: "Top up the public paymaster's deposit (sponsor service)" }, (s) => s.vpmIsOwner && s.vpmAddr === state.vpmAddr);
 }));
 const vpmData = (fn, args) => new ethers.Interface(VPM_ABI).encodeFunctionData(fn, args);
@@ -1155,15 +1207,58 @@ $("vpmStopBtn").addEventListener("click", () => guarded(() => vpmOwnerTx(vpmData
 $("vpmCapBtn").addEventListener("click", () => guarded(async () => {
   let v; try { v = ethers.parseEther($("vpmCapAmount").value.trim()); } catch (e) { v = null; }
   if (v === null || v < 0n) { log(t("badAmount"), "line-err"); return; }
+  if (state) echoAmount("echoCap", v, state.vpmCap);
   await vpmOwnerTx(vpmData("setMaxCostPerOp", [v]));
 }));
 $("vpmWithdrawBtn").addEventListener("click", () => guarded(async () => {
   const to = $("vpmWithdrawTo").value.trim(), v = amountWei("vpmWithdrawAmount");
   if (!ethers.isAddress(to)) { log(t("badAddress"), "line-err"); return; }
-  if (ethers.getAddress(to) === ethers.ZeroAddress) { log(t("zeroAddress"), "line-err"); return; }
   if (!v) { log(t("badAmount"), "line-err"); return; }
+  if (!state || !(await withdrawTarget(to))) return;
+  echoAmount("echoWithdraw", v, state.vpmDeposit);
   await vpmOwnerTx(vpmData("withdrawTo", [ethers.getAddress(to), v]));
 }));
+
+// The extension a setup replaced, per network and UP, so that revoking the setup can put it back (AUDIT I-3).
+const prevExtKey = (chainId, up) => `upGasRelay.prevExt.${chainId}.${String(up).toLowerCase()}`;
+const prevExtGet = (chainId, up) => { try { const v = localStorage.getItem(prevExtKey(chainId, up)); return v && ethers.isAddress(v) ? ethers.getAddress(v) : null; } catch (e) { return null; } };
+const prevExtSet = (chainId, up, v) => { try { if (v) localStorage.setItem(prevExtKey(chainId, up), v); else localStorage.removeItem(prevExtKey(chainId, up)); } catch (e) { /* not kept */ } };
+
+// What the transaction really writes, read back from its payloads (not from the state the plan was built
+// from): one line per data key, with the value it has now and the value it gets (AUDIT I-3).
+function decodePlan(s, payloads) {
+  const now = (key) => {
+    const k = key.toLowerCase();
+    if (k === LSP17_KEY(EXT.validateUserOpSelector).toLowerCase()) return s.extVal && s.extVal !== "0x" ? s.extVal : "—";
+    if (k === ARRAY_KEY.toLowerCase()) return String(s.len);
+    if (k === s.permKey.toLowerCase()) return permHex(s.perms);
+    if (k === PERM_KEY(ENTRY_POINT).toLowerCase()) return s.epPerms ? permHex(s.epPerms) : "—";
+    if (k.startsWith(ARRAY_KEY.slice(0, 34).toLowerCase())) { const i = Number(BigInt("0x" + k.slice(34))); return s.items && i < s.items.length && s.items[i] && s.items[i] !== "0x" ? s.items[i] : "—"; }
+    return "?";
+  };
+  const name = (key) => {
+    const k = key.toLowerCase();
+    if (k === LSP17_KEY(EXT.validateUserOpSelector).toLowerCase()) return t("decExt");
+    if (k === ARRAY_KEY.toLowerCase()) return t("decLen");
+    if (k.startsWith(ARRAY_KEY.slice(0, 34).toLowerCase())) return t("decIndex", { i: Number(BigInt("0x" + k.slice(34))) });
+    if (k.startsWith("0x4b80742de2bf82acb3630000")) return t("decPerms", { addr: ethers.getAddress("0x" + k.slice(26)) });
+    return key;
+  };
+  const shown = (key, v) => {
+    if (v === "0x") return t("decDeleted");
+    const k = key.toLowerCase();
+    if (k === ARRAY_KEY.toLowerCase()) return String(Number(BigInt(v)));
+    if (k.startsWith("0x4b80742de2bf82acb3630000")) return permHex(BigInt(v));
+    return ethers.dataLength(v) === 20 ? ethers.getAddress(v) : v;
+  };
+  const lines = [];
+  for (const pl of payloads) {
+    const d = UP_IFACE.parseTransaction({ data: pl });
+    const pairs = d.name === "setDataBatch" ? Array.from(d.args[0], (k, i) => [k, d.args[1][i]]) : [[d.args[0], d.args[1]]];
+    for (const [k, v] of pairs) lines.push(`   ${d.name}: ${name(k)}: ${now(k)} → ${shown(k, v)}`);
+  }
+  return [t("decTitle")].concat(lines).join("\n");
+}
 
 // ---- UP setup: one atomic executeBatch
 function buildSetup(s) {
@@ -1195,6 +1290,8 @@ $("prepareSetupBtn").addEventListener("click", () => guarded(async () => {
   if (s.epState !== "ok") dataLines.push(t("planDataEp", { ep: ENTRY_POINT, epPerms: permHex(EP_PERMS) }));
   if (dataLines.length) { lines.push([t("planData", { n })].concat(dataLines).join("\n")); n++; }
   lines.push(t("planFinal", { n, from: permHex(s.perms), to: permHex(finalPerms), extra: s.missingTemp ? t("planFinalExtra") : "" }));
+  lines.push(decodePlan(s, payloads));
+  if (s.extKey === "other") lines.push(t("planExtReplace", { old: s.extVal, ext: EXT.address }));
   lines.push(t("planAtomic"));
   setStatus("setupPlanBox", lines.join("\n"), "");
   log(lines.join("\n"), "line-compare");
@@ -1204,12 +1301,16 @@ $("prepareSetupBtn").addEventListener("click", () => guarded(async () => {
   log(t("simOk", { gas: (await s.provider.estimateGas({ from: s.signer, to: s.km, data })).toString() }), "line-ok");
   if (changedSince(gen)) return;
   setupPlan = { data, s, finalPerms };
+  // Replacing another extension needs an explicit acknowledgement (AUDIT I-3).
+  const ack = document.getElementById("ackExtReplace"), row = document.getElementById("ackExtReplaceRow");
+  if (ack && row) { ack.checked = false; row.hidden = s.extKey !== "other"; }
   log(t("readyToSign"), "line-warn");
 }, false));
 $("sendSetupBtn").addEventListener("click", async () => {
   if (!setupPlan || busy) return;
   const p = setupPlan;
   if (!riskAccepted()) { log(t("ackRequired"), "line-err"); return; }
+  if (p.s.extKey === "other" && !(document.getElementById("ackExtReplace") || {}).checked) { log(t("extReplaceAckNeeded"), "line-err"); return; }
   busy = true; updateButtons();
   try {
     const s = await freshState();
@@ -1219,7 +1320,9 @@ $("sendSetupBtn").addEventListener("click", async () => {
     setupPlan = p; // freshState cleared it
     const r = await sendTx({ to: p.s.km, data: p.data }, { it: `Configura la UP ${p.s.upAddr} per il gas pagato dal sito (ERC-4337)`, en: `Set up the UP ${p.s.upAddr} for gas paid by the site (ERC-4337)` });
     setupPlan = null;
+    { const row = document.getElementById("ackExtReplaceRow"); if (row) row.hidden = true; }
     if (!r) return;
+    if (p.s.extKey === "other") prevExtSet(p.s.chainId, p.s.upAddr, ethers.getAddress(p.s.extVal));
     const at = { blockTag: r.receipt.blockNumber };
     let problems = ["not read"];
     for (let i = 0; i < 6 && problems.length; i++) {
@@ -1240,7 +1343,7 @@ $("sendSetupBtn").addEventListener("click", async () => {
 // ---- revoke: one atomic executeBatch that undoes the setup
 function buildRevoke(s) {
   const keys = [], vals = [];
-  if (s.extKey === "ok") { keys.push(LSP17_KEY(EXT.validateUserOpSelector)); vals.push("0x"); }
+  if (s.extKey === "ok") { keys.push(LSP17_KEY(EXT.validateUserOpSelector)); vals.push(s.restoreExt || "0x"); }
   if (s.epPerms !== 0n) { keys.push(PERM_KEY(ENTRY_POINT)); vals.push("0x"); }
   if (s.epListed) {
     // Remove from AddressPermissions[]: move the last entry into the EntryPoint's slot, shorten the list.
@@ -1260,16 +1363,20 @@ $("prepareRevokeBtn").addEventListener("click", () => guarded(async () => {
   const gen = planGen;
   const s = await freshState();
   if (!s || !s.canRevoke) { log(t("notReady"), "line-err"); return; }
+  // The extension the setup replaced, if this browser remembers one and it still has code.
+  const prev = s.extKey === "ok" ? prevExtGet(s.chainId, s.upAddr) : null;
+  s.restoreExt = prev && (await s.provider.getCode(prev)) !== "0x" ? prev : null;
   const { payloads, finalPerms } = buildRevoke(s);
   const lines = [t("revokePlanTitle", { up: s.upAddr, signer: s.signer, km: s.km })];
   let n = 1;
   if (s.revokeTemp) { lines.push(t("planGrant", { bits: permNames(s.revokeTemp), from: permHex(s.perms), to: permHex(s.perms | s.revokeTemp) })); n++; }
   const what = [];
-  if (s.extKey === "ok") what.push(t("revokeExt"));
+  if (s.extKey === "ok") what.push(s.restoreExt ? t("revokeExtRestore", { prev: s.restoreExt }) : t("revokeExt"));
   if (s.epPerms !== 0n) what.push(t("revokeEpPerms", { ep: ENTRY_POINT }));
   if (s.epListed) what.push(t("revokeEpList", { i: s.epIndex }));
   if (what.length) { lines.push(`${n}. setDataBatch:\n` + what.map(w => "   - " + w).join("\n")); n++; }
   if (finalPerms !== s.perms || s.revokeTemp) lines.push(t("revokeFinal", { n, from: permHex(s.perms), to: permHex(finalPerms) }));
+  lines.push(decodePlan(s, payloads));
   lines.push(t("revokeAfter"));
   lines.push(t("planAtomic"));
   setStatus("setupPlanBox", lines.join("\n"), "");
@@ -1303,12 +1410,13 @@ $("sendRevokeBtn").addEventListener("click", async () => {
         const len = lenRaw && lenRaw !== "0x" ? Number(BigInt(lenRaw)) : 0;
         const list = len > 0 && len <= 50 ? await p.s.upC.getDataBatch(Array.from({ length: len }, (_, k) => ARRAY_INDEX_KEY(k)), at) : [];
         problems = [];
-        if (p.s.extKey === "ok" && ext && ext !== "0x") problems.push("extension key");
+        if (p.s.extKey === "ok" && String(ext || "0x").toLowerCase() !== String(p.s.restoreExt || "0x").toLowerCase()) problems.push("extension key");
         if (ep && ep !== "0x") problems.push("EntryPoint permissions");
         if (list.some(v => v && v.toLowerCase() === ENTRY_POINT.toLowerCase())) problems.push("EntryPoint still listed");
         if (mine !== b32(p.finalPerms)) problems.push(`controller permissions ${mine}`);
       } catch (e) { problems = [e.shortMessage || e.message]; }
     }
+    if (!problems.length && p.s.restoreExt) prevExtSet(p.s.chainId, p.s.upAddr, null);
     log(problems.length ? t("setupBad", { what: problems.join(", ") }) : t("revokeOk"), problems.length ? "line-warn" : "line-ok");
   } catch (e) { log(t("genericError", { err: revertReason(e) }), "line-err"); }
   finally { busy = false; scheduleCheck(0); }
@@ -1481,6 +1589,15 @@ async function checkConfig({ auto = false, given = null } = {}) {
   const km = ethers.getAddress(await upC.owner());
   const kmOk = (await pv.getCode(km)) !== "0x";
   add(t("cfgKm"), t(kmOk ? "cfgKmOk" : "cfgKmBad", { addr: km }), kmOk ? "ok" : "err");
+  // The owner must be a Key Manager of this UP (LSP6 target() = the UP), not any contract (AUDIT I-4).
+  if (kmOk) {
+    const target = await new ethers.Contract(km, ["function target() view returns (address)"], pv).getFunction("target")().catch(() => null);   // .target is the contract's own address in ethers
+    if (!target || ethers.getAddress(target) !== up) add(t("cfgKmTarget"), t("cfgKmTargetBad", { target: target || "—", up }), "err");
+    else add(t("cfgKmTarget"), t("cfgKmTargetOk"), "ok");
+  }
+  // An ownership transfer started and not accepted yet (LSP14): whoever accepts it controls the UP.
+  const upPending = await upC.pendingOwner().catch(() => ethers.ZeroAddress);
+  if (upPending !== ethers.ZeroAddress) add(t("cfgUpPending"), t("cfgUpPendingWarn", { addr: upPending }), "warn");
   const [extVal, epRaw, lenRaw, urdRaw] = await upC.getDataBatch([LSP17_KEY(EXT.validateUserOpSelector), PERM_KEY(ENTRY_POINT), ARRAY_KEY, URD_KEY]);
   // extension
   const extOn = extVal && extVal !== "0x";

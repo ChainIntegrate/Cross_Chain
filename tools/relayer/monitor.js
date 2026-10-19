@@ -41,9 +41,10 @@ const idxKey = (i) => ARRAY_KEY.slice(0, 34) + ethers.toBeHex(i, 16).slice(2);
 const permKey = (a) => "0x4b80742de2bf82acb3630000" + a.slice(2).toLowerCase();
 const EXT_KEY = "0xcee78b4094da8601109600003a871cdd00000000000000000000000000000000";
 const P = { CHANGEOWNER: 0x1n, ADDEXTENSIONS: 0x8n, CHANGEEXTENSIONS: 0x10n, SUPER_DELEGATECALL: 0x4000n, DELEGATECALL: 0x8000n, ERC4337: 0x800000n };
-const UP_ABI = ["function owner() view returns (address)", "function getDataBatch(bytes32[]) view returns (bytes[])"];
-const PM_ABI = ["function owner() view returns (address)", "function maxCostPerOp() view returns (uint256)", "function deposit() view returns (uint256)", "function sponsored(address) view returns (bool)"];
-const VPM_ABI = ["function owner() view returns (address)", "function maxCostPerOp() view returns (uint256)", "function deposit() view returns (uint256)", "function signer() view returns (address)"];
+const UP_ABI = ["function owner() view returns (address)", "function pendingOwner() view returns (address)", "function getDataBatch(bytes32[]) view returns (bytes[])"];
+const KM_ABI = ["function target() view returns (address)"];
+const PM_ABI = ["function owner() view returns (address)", "function pendingOwner() view returns (address)", "function maxCostPerOp() view returns (uint256)", "function deposit() view returns (uint256)", "function sponsored(address) view returns (bool)"];
+const VPM_ABI = ["function owner() view returns (address)", "function pendingOwner() view returns (address)", "function maxCostPerOp() view returns (uint256)", "function deposit() view returns (uint256)", "function signer() view returns (address)"];
 const hex6 = (n) => "0x" + n.toString(16).padStart(6, "0");
 const eth = (w) => `${ethers.formatEther(w)}`;
 const short = (a) => `${a.slice(0, 6)}…${a.slice(-4)}`;
@@ -70,6 +71,13 @@ async function checkUp(provider, up, chain, mon, out, where, chainId) {
   const upC = new ethers.Contract(up, UP_ABI, provider);
   const km = await upC.owner();
   if ((await provider.getCode(km)) === "0x") add("error", `owner ${km} is not a contract (no Key Manager)`);
+  else {
+    // The owner must be this UP's Key Manager (LSP6 target() = the UP), not just any contract.
+    const target = await new ethers.Contract(km, KM_ABI, provider).getFunction("target")().catch(() => null);   // .target is the contract's own address in ethers
+    if (!target || ethers.getAddress(target) !== ethers.getAddress(up)) add("error", `owner ${km} is not this UP's Key Manager (target() is ${target || "unreadable"})`);
+  }
+  const upPending = await upC.pendingOwner().catch(() => ethers.ZeroAddress);
+  if (upPending !== ethers.ZeroAddress) add("warning", `ownership transfer pending to ${upPending} (LSP14): whoever accepts it controls the UP`);
   const [ext, epRaw, lenRaw] = await upC.getDataBatch([EXT_KEY, permKey(ENTRY_POINT), ARRAY_KEY]);
   if (!ext || ext === "0x") add("error", "validateUserOp extension not set (4337 off)");
   else if (ethers.dataLength(ext) !== 20 || ethers.getAddress(ext) !== EXTENSION_4337) add("error", `validateUserOp extension points to ${ext}, not to Extension4337`);
@@ -139,7 +147,8 @@ async function checkChain(id, chain, mon, info, out, deposits = {}, balances = {
     const code = await provider.getCode(pm);
     if (code === "0x" || ethers.keccak256(code) !== PAYMASTER_RUNTIME_HASH) { out.push({ level: "error", where, msg: "code missing or different from UPPaymaster" }); continue; }
     const c = new ethers.Contract(pm, PM_ABI, provider);
-    const [owner, cap, dep] = await Promise.all([c.owner(), c.maxCostPerOp(), c.deposit()]);
+    const [owner, cap, dep, pending] = await Promise.all([c.owner(), c.maxCostPerOp(), c.deposit(), c.pendingOwner().catch(() => ethers.ZeroAddress)]);
+    if (pending !== ethers.ZeroAddress) out.push({ level: "warning", where, msg: `ownership transfer pending to ${pending}` });
     deposits[`${id}:${pm}`] = { dep: dep.toString(), cap: cap.toString() };
     keep("personal", pm, dep, minUsdPersonal);
     if (mon.paymasterOwner && ethers.getAddress(owner) !== ethers.getAddress(mon.paymasterOwner)) out.push({ level: "error", where, msg: `owner is ${owner}, expected ${mon.paymasterOwner}` });
@@ -153,6 +162,8 @@ async function checkChain(id, chain, mon, info, out, deposits = {}, balances = {
     else {
       const c = new ethers.Contract(pm, VPM_ABI, provider);
       const owner = await c.owner(), cap = await c.maxCostPerOp(), dep = await c.deposit(), signer = await c.signer();
+      const pending = await c.pendingOwner().catch(() => ethers.ZeroAddress);
+      if (pending !== ethers.ZeroAddress) out.push({ level: "warning", where, msg: `ownership transfer pending to ${pending}` });
       deposits[`${id}:${pm}`] = { dep: dep.toString(), cap: cap.toString(), sponsor: true };
       keep("public", pm, dep, minUsdPublic);
       if (mon.paymasterOwner && ethers.getAddress(owner) !== ethers.getAddress(mon.paymasterOwner)) out.push({ level: "error", where, msg: `owner is ${owner}, expected ${mon.paymasterOwner}` });

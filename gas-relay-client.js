@@ -577,8 +577,9 @@
 
   // Shows the option in `box` when the relayer can be used for the page's UP, network and controller;
   // a short note with what is missing when the UP is listed but not ready; nothing otherwise.
-  // onChange() is called when the option is turned on or off, or stops being available.
-  function attach({ box, getNetwork, getUp, getSigner, onChange }) {
+  // onChange() is called when the option is turned on or off, or stops being available; onState() after
+  // every change of what is shown (state or checkbox), so a page can mirror it elsewhere (UP Wallet's gas chip).
+  function attach({ box, getNetwork, getUp, getSigner, onChange, onState }) {
     let state = { state: "none" }, seq = 0, sig = "", timer = null;
     // Starts a moment after a change, after the page's own reads and the backup check: public RPCs answer
     // 429 "too many requests" to bursts.
@@ -592,7 +593,7 @@
     const note = document.createElement("div");
     note.style.cssText = "font-size:12px; color:var(--text-dim); margin-top:6px; line-height:1.5;";
     box.append(row, note);
-    cb.addEventListener("change", () => onChange && onChange());
+    cb.addEventListener("change", () => { if (onChange) onChange(); if (onState) onState(); });
     function render() {
       box.style.display = state.state === "none" ? "none" : "block";
       row.style.display = state.state === "ready" ? "flex" : "none";
@@ -609,6 +610,7 @@
         a.textContent = text("fix"); a.style.cssText = "color:var(--warn); font-weight:600; text-decoration:none;";
         note.append(p, ul, a);
       }
+      if (onState) onState();
     }
     async function refresh() {
       const my = ++seq;
@@ -643,7 +645,9 @@
     document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") later(); });
     new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
     render(); poll();
-    return { enabled: () => state.state === "ready" && cb.checked, refresh, state: () => state };
+    // set(on): the same as ticking the box (only when the option is available).
+    const set = (on) => { if (state.state !== "ready" || cb.checked === !!on) return; cb.checked = !!on; cb.dispatchEvent(new Event("change")); };
+    return { enabled: () => state.state === "ready" && cb.checked, refresh, state: () => state, set, note: () => note.textContent };
   }
 
   window.GasRelayClient = { check, prepare, signAndSend, showSignBox, waitResult, attach, text, userOpHash, sponsorHash, approvalProblem, pendingStatus, pendingView, sponsorStatus, loadInfo, ENTRY_POINT };
