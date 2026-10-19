@@ -302,7 +302,7 @@ a.sui-open-app.sui-alt { background: var(--chip); font-weight: 600; font-size: 1
   // Resolves to the address, or null when the person cancels. The WalletConnect code (vendor/signclient-*.js)
   // and config.js (the project ID, only on the server) load only here, when needed.
   const WC_SRC = "vendor/signclient-2.25.0.min.js";
-  const WC_SRI = "sha384-83XlR+kz9Za2Tp/8lIv5dzxNN87hWTxQ2CbKvAFB0cv+tg8Pb8pkpphePji8H5AZ";
+  const WC_SRI = "sha384-c7w3byL5Bai+XyQvcREtZ7kvdwoPYwG+Rp5DN/jAW59Jy0osp0u/gsgdp4YOsVUJ";
   const QR_SRC = "vendor/qrcode-generator-1.4.4.js";
   // The app's own link for a WalletConnect pairing, as LUKSO's up-modal builds it (@lukso/up-modal 0.21.11).
   const APP_LINK = "io.universaleverything.universalprofiles://wallet-connect/";
@@ -318,6 +318,13 @@ a.sui-open-app.sui-alt { background: var(--chip); font-weight: 600; font-size: 1
     });
     return loaded[src];
   }
+  // The SDK sends an "INIT" event (client id, user agent) to Reown's telemetry (pulse.walletconnect.org) even
+  // with telemetry off: its event client is muted before the client starts (AUDIT W-tel).
+  function muteTelemetry(core) {
+    if (!core || !core.eventClient) return;
+    core.eventClient.init = async () => {};
+    core.eventClient.sendEvent = async () => ({ ok: true });
+  }
   let wcClient = null;
   async function signClient() {
     if (wcClient) return wcClient;
@@ -325,9 +332,14 @@ a.sui-open-app.sui-alt { background: var(--chip); font-weight: 600; font-size: 1
     const projectId = (window.CROSSCHAIN_CONFIG && window.CROSSCHAIN_CONFIG.walletConnectProjectId) || "";
     if (!projectId) throw Object.assign(new Error(tt("wcNoId")), { noId: true });
     if (!window.SignClientBundle) await loadScript(WC_SRC, WC_SRI);
-    wcClient = await window.SignClientBundle.SignClient.init({
+    const { Core, SignClient } = window.SignClientBundle;
+    // Kept apart from UP Wallet's own WalletConnect data on this site; no usage telemetry to Reown (AUDIT W-tel).
+    const core = new Core({ projectId, customStoragePrefix: "site-connect", telemetryEnabled: false });
+    muteTelemetry(core);
+    wcClient = await SignClient.init({
+      core,
       projectId,
-      customStoragePrefix: "site-connect",   // kept apart from UP Wallet's own WalletConnect data on this site
+      customStoragePrefix: "site-connect",
       metadata: { name: "ChainIntegrate Cross-Chain tools", description: "Universal Profile tools across EVM networks", url: location.origin, icons: [location.origin + "/favicon.ico"] },
     });
     return wcClient;

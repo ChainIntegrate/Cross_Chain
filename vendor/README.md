@@ -6,6 +6,10 @@ Third-party code bundled into single static files, served by the website togethe
 
 WalletConnect wallet SDK, used by `up-wallet.html` (and by the deprecated `up-walletconnect-basenames.html`). It exposes `window.WalletKitBundle = { Core, WalletKit, buildApprovedNamespaces, getSdkError }`.
 
+The pages load it with Subresource Integrity (`integrity="sha384-o1OPho4aXup6dZTxTsaL+hXbLbZ9dmbU0j/hlmpw5t0P/k91PxXHqIdLkQWag92X"`): a changed file is refused by the browser. When the version changes, update that attribute in both pages too (`openssl dgst -sha384 -binary walletkit-1.6.0.min.js | openssl base64 -A`).
+
+**Telemetry (AUDIT W-tel).** WalletConnect's SDK sends usage events to Reown's `pulse.walletconnect.org`. The pages create the `Core` with `telemetryEnabled: false` and also mute its event client before it starts, because version 2.25.0 sends an "INIT" event (client id, user agent) even with telemetry off. What still goes to Reown is the relay connection and, for dApp requests, the domain verification (`verify.walletconnect.org`).
+
 - Packages: `@reown/walletkit@1.6.0`, `@walletconnect/core@2.25.0`, `@walletconnect/utils@2.25.0` (from the npm registry)
 - Bundler: `esbuild@0.28.2`
 - SHA-256: `374ff0a7781d43c6fc74c99d9184b4958c9635412c02d7e5a82521e2d561d9bd`
@@ -31,19 +35,20 @@ When the version changes, rename the file, update the `<script src>` in both pag
 
 ## `signclient-2.25.0.min.js`
 
-WalletConnect client on the dApp side, loaded by `site-ui.js` (`SiteUI.upAddress`) only when a tool page asks for the UP's address and there is no Universal Profile extension: it connects LUKSO's Universal Profiles app, reads the address and closes the session. It exposes `window.SignClientBundle = { SignClient, getSdkError }` and is loaded with Subresource Integrity (the sha384 is in `site-ui.js`).
+WalletConnect client on the dApp side, loaded by `site-ui.js` (`SiteUI.upAddress`) only when a tool page asks for the UP's address and there is no Universal Profile extension: it connects LUKSO's Universal Profiles app, reads the address and closes the session. It exposes `window.SignClientBundle = { Core, SignClient, getSdkError }` (`site-ui.js` creates the `Core` itself, to turn telemetry off, then passes it to `SignClient`) and is loaded with Subresource Integrity (the sha384 is in `site-ui.js`).
 
 - Packages: `@walletconnect/sign-client@2.25.0`, `@walletconnect/utils@2.25.0` (with `@walletconnect/core@2.25.0`, the same as in the walletkit bundle)
 - Bundler: `esbuild@0.28.2`
-- SHA-256: `34b5bcc607bb816a3b2ce86b1594524c71d07d97766bb2e293f469133ed74c48`
+- SHA-256: `3bc27e35fce1194c0a454f6ef07d210b8718152e23c76fcbfa6546a1b9d673c8`
 
 ```bash
 npm init -y
 npm install @walletconnect/sign-client@2.25.0 @walletconnect/utils@2.25.0 esbuild@0.28.2
 cat > entry.js <<'JS'
+import { Core } from "@walletconnect/core";
 import { SignClient } from "@walletconnect/sign-client";
 import { getSdkError } from "@walletconnect/utils";
-window.SignClientBundle = { SignClient, getSdkError };
+window.SignClientBundle = { Core, SignClient, getSdkError };
 JS
 npx esbuild entry.js --bundle --minify --format=iife --platform=browser --target=es2020 \
   --define:process.env.NODE_ENV='"production"' --define:global=globalThis \
