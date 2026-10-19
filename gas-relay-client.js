@@ -182,9 +182,14 @@
   function errorWords(e) {
     const data = e?.data || e?.info?.error?.data || e?.error?.data;
     if (typeof data === "string" && data.length >= 10) {
-      try { const d = ERR_IFACE.parseError(data); return `${d.name}(${d.args.map(String).join(", ")})`; } catch (x) { /* unknown */ }
+      // ERR_IFACE also decodes the built-ins Error(string) and Panic(uint256). A reason string is the
+      // contract's text: kept on one line (AUDIT L-8).
+      try { const d = ERR_IFACE.parseError(data); return `${d.name}(${d.args.map(String).join(", ")})`.replace(/[\p{Cc}\p{Cf}\u2028\u2029]/gu, " ").slice(0, 300); } catch (x) { /* unknown */ }
     }
-    return e?.shortMessage || e?.reason || e?.message || String(e);
+    // Never "[object Object]": an undecoded revert shows its first bytes (AUDIT L-8).
+    if (e?.shortMessage || e?.reason || e?.message) return e.shortMessage || e.reason || e.message;
+    if (typeof data === "string" && data !== "0x") return `revert ${data.slice(0, 74)}${data.length > 74 ? "…" : ""}`;
+    return typeof e === "string" ? e : "revert";
   }
 
   // /relay/info of the site relayer, read again at most every 5 seconds.

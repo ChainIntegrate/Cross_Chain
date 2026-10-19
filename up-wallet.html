@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-VA2J34lMK9Tmal5xElKy9VCckBD8P9pZ01issjTKnIE='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-1r1uqH2B6LVdvhbM3CfikLhZbqe3ltzOXY8rSGu/+FI='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -873,6 +873,8 @@ const I18N = {
     simulating: "Simulazione della transazione incapsulata...",
     simOk: (v) => `✅ Simulazione riuscita. Gas stimato: ${v.gas}.`,
     simFail: (v) => `❌ La simulazione fallisce: ${v.err}. Niente viene inviato.`,
+    simTokenFalse: "❌ Il token risponde «false» al trasferimento o all'approvazione nella simulazione: la transazione passerebbe ma non sposterebbe niente. Niente viene inviato.",
+    unknownError: "errore senza descrizione",
     signerNoGas: (v) => `❌ Il controller non ha abbastanza fondi per il gas: servono circa ${v.need}, ne ha ${v.have}.`,
     simOnlyDone: "Modalità simulazione: niente inviato. Alla dApp è stato risposto che si tratta di una simulazione.",
     simOnlyDoneLocal: "Modalità simulazione: niente inviato.",
@@ -1229,6 +1231,8 @@ const I18N = {
     simulating: "Simulating the wrapped transaction...",
     simOk: (v) => `✅ Simulation succeeded. Estimated gas: ${v.gas}.`,
     simFail: (v) => `❌ The simulation fails: ${v.err}. Nothing is sent.`,
+    simTokenFalse: "❌ The token answers \"false\" to the transfer or approval in the simulation: the transaction would go through but move nothing. Nothing is sent.",
+    unknownError: "error without a description",
     signerNoGas: (v) => `❌ The controller does not have enough funds for gas: about ${v.need} needed, it has ${v.have}.`,
     simOnlyDone: "Simulation mode: nothing sent. The dApp was told this was a simulation.",
     simOnlyDoneLocal: "Simulation mode: nothing sent.",
@@ -1762,7 +1766,7 @@ function showSessions() {
   if (!sessions.length) { setStatus("wcStatus", t("wcIdle"), "empty"); return; }
   const s = sessions[sessions.length - 1];
   const parts = (s.namespaces.eip155?.accounts?.[0] || "").split(":");
-  setStatus("wcStatus", t("sessionActive", { name: s.peer.metadata.name, url: s.peer.metadata.url, acc: parts[2] || "", id: parts[1] || "" }), "line-ok");
+  setStatus("wcStatus", t("sessionActive", { name: oneLine(s.peer.metadata.name), url: oneLine(s.peer.metadata.url, 120), acc: parts[2] || "", id: parts[1] || "" }), "line-ok");
 }
 
 // Network or UP changed: the dApp would keep a stale account/chain, so close every session.
@@ -1836,7 +1840,8 @@ function describeProposal(params) {
 
 async function onSessionProposal({ id, params, verifyContext }) {
   const { buildApprovedNamespaces, getSdkError } = window.WalletKitBundle;
-  const meta = params.proposer.metadata || {};
+  const raw = params.proposer.metadata || {};
+  const meta = { ...raw, name: oneLine(raw.name), url: oneLine(raw.url, 120) };
   const verified = verifyContext?.verified || {};
   const validation = verified.validation || "UNKNOWN";
   logSeparator();
@@ -1978,7 +1983,7 @@ function showRequestModal(kind, title, rows) {
 function sessionPeer(topic) {
   if (topic === LOCAL_TOPIC) return t("localSite");
   const s = walletKit?.getActiveSessions?.()[topic];
-  return s ? `${s.peer.metadata.name} (${s.peer.metadata.url})` : "—";
+  return s ? `${oneLine(s.peer.metadata.name)} (${oneLine(s.peer.metadata.url, 120)})` : "—";
 }
 function sessionHost(topic) {
   try { return new URL(walletKit.getActiveSessions()[topic].peer.metadata.url).host.toLowerCase(); } catch (e) { return ""; }
@@ -2042,9 +2047,30 @@ async function onSessionRequest(event) {
 function simError(e) {
   const data = e?.data || e?.info?.error?.data || e?.error?.data;
   if (typeof data === "string" && data.length >= 10) {
-    try { const d = KM_ERRORS.parseError(data); return `${d.name}(${d.args.map(String).join(", ")})`; } catch (x) { /* not an LSP6 error */ }
+    try { const d = KM_ERRORS.parseError(data); return oneLine(`${d.name}(${d.args.map(String).join(", ")})`, 300); } catch (x) { /* not an LSP6 error */ }
   }
-  return e?.shortMessage || e?.reason || e?.message || String(e);
+  return oneLine(e?.shortMessage || e?.reason || e?.message || (typeof data === "string" ? `revert ${data.slice(0, 74)}` : t("unknownError")), 300);
+}
+
+// A name, symbol or URL from a dApp, a token or typed data, shown inside the page's own lines and boxes:
+// line breaks, control and bidi characters removed and the length capped, so it cannot add lines of its
+// own (a fake "✅ ...") to the log or the request box (AUDIT L-8).
+function oneLine(v, max = 80) {
+  const s = String(v ?? "").replace(/[\p{Cc}\p{Cf}\u2028\u2029]/gu, " ").replace(/\s+/g, " ").trim();
+  return s.length > max ? s.slice(0, max - 1) + "…" : s;
+}
+
+// A token's transfer/transferFrom/approve that returns false instead of reverting: the call "succeeds"
+// but nothing moves. ret is what the Key Manager's execute returned in the simulation (AUDIT L-8).
+const TOKEN_BOOL_CALLS = ["0xa9059cbb", "0x23b872dd", "0x095ea7b3"];
+function tokenSaysFalse(data, ret) {
+  if (!TOKEN_BOOL_CALLS.includes(String(data).slice(0, 10).toLowerCase())) return false;
+  try {
+    const abi = ethers.AbiCoder.defaultAbiCoder();
+    const [fromUp] = abi.decode(["bytes"], ret);
+    const [raw] = abi.decode(["bytes"], fromUp);
+    return ethers.dataLength(raw) === 32 && BigInt(raw) === 0n;
+  } catch (e) { return false; }
 }
 
 // Fills rows/warnings for the request box and returns a one-line label of the operation for the log.
@@ -2104,7 +2130,7 @@ async function describeCall(c, to, value, data, rows, warnings) {
   try {
     const tok = new ethers.Contract(to, ["function symbol() view returns (string)", "function decimals() view returns (uint8)", "function supportsInterface(bytes4) view returns (bool)"], c.provider);
     [symbol, decimals, is721] = await Promise.all([
-      tok.symbol().catch(() => ""),
+      tok.symbol().then((x) => oneLine(x, 24)).catch(() => ""),
       tok.decimals().then(Number).catch(() => null),
       tok.supportsInterface("0x80ac58cd").catch(() => false),
     ]);
@@ -2280,8 +2306,8 @@ async function describeVault(c, to, value, data, rows, warnings) {
   if ((await c.provider.getCode(asset)) === "0x") return null;
   const tok = new ethers.Contract(asset, ["function symbol() view returns (string)", "function decimals() view returns (uint8)"], c.provider);
   const [vName, vSym, vDec, aSym, aDec] = await Promise.all([
-    v.name().catch(() => ""), v.symbol().catch(() => ""), v.decimals().then(Number).catch(() => null),
-    tok.symbol().catch(() => ""), tok.decimals().then(Number).catch(() => null),
+    v.name().then(oneLine).catch(() => ""), v.symbol().then((x) => oneLine(x, 24)).catch(() => ""), v.decimals().then(Number).catch(() => null),
+    tok.symbol().then((x) => oneLine(x, 24)).catch(() => ""), tok.decimals().then(Number).catch(() => null),
   ]);
   const fmt = (x, dec, sym) => dec !== null ? `${ethers.formatUnits(x, dec)} ${sym}`.trim() : `${x.toString()} ${sym}`.trim();
   const assets = (x) => fmt(x, aDec, aSym), shares = (x) => fmt(x, vDec, vSym || t("vaultShares"));
@@ -2319,8 +2345,8 @@ async function vaultInfo(c, vault) {
   try { asset = ethers.getAddress(await v.asset()); } catch (e) { asset = null; }
   const tok = asset ? new ethers.Contract(asset, ["function symbol() view returns (string)", "function decimals() view returns (uint8)"], c.provider) : null;
   const [name, sym, dec, aSym, aDec] = await Promise.all([
-    v.name().catch(() => ""), v.symbol().catch(() => ""), v.decimals().then(Number).catch(() => null),
-    tok ? tok.symbol().catch(() => "") : "", tok ? tok.decimals().then(Number).catch(() => null) : null,
+    v.name().then(oneLine).catch(() => ""), v.symbol().then((x) => oneLine(x, 24)).catch(() => ""), v.decimals().then(Number).catch(() => null),
+    tok ? tok.symbol().then((x) => oneLine(x, 24)).catch(() => "") : "", tok ? tok.decimals().then(Number).catch(() => null) : null,
   ]);
   const fmt = (x, d, s) => d !== null ? `${ethers.formatUnits(x, d)} ${s}`.trim() : `${x.toString()} ${s}`.trim();
   return { v, asset, label: `${name || "?"}${sym ? " (" + sym + ")" : ""} · ${t("vaultAsset")}: ${aSym || "?"} ${asset || "?"}`,
@@ -2484,7 +2510,8 @@ async function handleSendTransaction(topic, id, c, tx, validation, reject, after
     log(t("simulating"), "line-dim");
     let gas;
     try {
-      await c.provider.call({ from: c.signer, to: c.km, data: wrapped });
+      const ret = await c.provider.call({ from: c.signer, to: c.km, data: wrapped });
+      if (tokenSaysFalse(data, ret)) return reject(t("simTokenFalse"));
       gas = await c.provider.estimateGas({ from: c.signer, to: c.km, data: wrapped });
     } catch (e) {
       return reject(t("simFail", { err: simError(e) }));
@@ -2659,10 +2686,10 @@ async function handleSignRequest(topic, id, c, request, validation, reject) {
       delete types.EIP712Domain;
       hash = ethers.TypedDataEncoder.hash(domain, types, data.message);
       walletParams = typeof raw === "string" ? raw : JSON.stringify(raw);
-      compare = `${data.primaryType || "?"} · ${domain.name || "?"} · verifyingContract ${domain.verifyingContract || "—"} · chainId ${domain.chainId ?? "—"}`;
+      compare = `${oneLine(data.primaryType) || "?"} · ${oneLine(domain.name) || "?"} · verifyingContract ${oneLine(domain.verifyingContract, 42) || "—"} · chainId ${oneLine(domain.chainId ?? "—", 20)}`;
       rows.push([t("kContentType"), t("ctTyped"), {}]);
       rows.push([t("kDomain"), JSON.stringify(domain, null, 2), { block: true }]);
-      rows.push([t("kPrimaryType"), String(data.primaryType || "—"), {}]);
+      rows.push([t("kPrimaryType"), oneLine(data.primaryType) || "—", {}]);
       rows.push([t("kContent"), JSON.stringify(data.message, null, 2), { block: true }]);
       const vc = String(domain.verifyingContract || "").toLowerCase();
       const pt = String(data.primaryType || "");
@@ -2784,7 +2811,7 @@ async function sendToken(provider, address, up) {
     if (!(await sendSupports(provider, address, SEND_IDS[k]))) continue;
     const name = k === "lsp8" ? await text("LSP4TokenName") : await sendRead(provider, address, "name");
     // A collection without a name on the chain (many ERC-1155): the index's name, from the balances list.
-    return { kind: k, name: name || holdNames[address] || "?" };
+    return { kind: k, name: oneLine(name || holdNames[address]) || "?" };
   }
   const lsp7 = await sendSupports(provider, address, SEND_IDS.lsp7);
   const decimals = await sendRead(provider, address, "decimals");
@@ -2792,7 +2819,7 @@ async function sendToken(provider, address, up) {
   if (decimals === null || balance === null) return { kind: "none" };
   const name = lsp7 ? await text("LSP4TokenName") : await sendRead(provider, address, "name");
   const symbol = lsp7 ? await text("LSP4TokenSymbol") : await sendRead(provider, address, "symbol");
-  return { kind: lsp7 ? "lsp7" : "erc20", decimals: Number(decimals), balance, name: name || "?", symbol: symbol || "" };
+  return { kind: lsp7 ? "lsp7" : "erc20", decimals: Number(decimals), balance, name: oneLine(name) || "?", symbol: oneLine(symbol, 24) };
 }
 const SEND_KIND = { erc20: "ERC-20", lsp7: "LSP7", lsp8: "LSP8", erc721: "ERC-721", erc1155: "ERC-1155" };
 // A token ID as typed: a number, or for LSP8 also its 32-byte hex form (as on the Send page).

@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-agSOvQxBHD9JwfsZxRqyZh3zUzocIKcjtJpgAhjzjuI='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-w2+bZiBnNYw0IGGNnl7MInBmlBPQ5plmRzM6XWt9jwU='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
@@ -454,7 +454,14 @@ async function checkChains(net, provider) {
   return { ok: true, chainId: expectedChainId };
 }
 
+// One test at a time: a second click while the first runs would send a second transaction (AUDIT L-8).
+let testRunning = false;
 $("testBtn").addEventListener("click", async () => {
+  if (testRunning) return;
+  testRunning = true; $("testBtn").disabled = true;
+  try { await runTest(); } finally { testRunning = false; $("testBtn").disabled = false; }
+});
+async function runTest() {
   $("log").innerHTML = "";
   const profile = currentProfile();
   if (!profile.address || !ethers.isAddress(profile.address)) { log(t("missingAddrErr"), "line-err"); return; }
@@ -548,7 +555,7 @@ $("testBtn").addEventListener("click", async () => {
   } catch (e) {
     log(t("genericErrorLog", { err: e.shortMessage || e.message }), "line-err");
   }
-});
+}
 // Shared look of the site (site-ui.js), as UP Wallet: the warnings in a window at the first opening,
 // the main networks as buttons with their logo (a green dot where the UP exists).
 SiteUI.netPicker({ select: document.getElementById("network"), filter: document.getElementById("networkFilter"), upInput: null });
