@@ -35,7 +35,7 @@ When the version changes, rename the file, update the `<script src>` in both pag
 
 ## `signclient-2.25.0.min.js`
 
-WalletConnect client on the dApp side, loaded by `site-ui.js` (`SiteUI.upAddress`) only when a tool page asks for the UP's address and there is no Universal Profile extension: it connects LUKSO's Universal Profiles app, reads the address and closes the session. It exposes `window.SignClientBundle = { Core, SignClient, getSdkError }` (`site-ui.js` creates the `Core` itself, to turn telemetry off, then passes it to `SignClient`) and is loaded with Subresource Integrity (the sha384 is in `site-ui.js`).
+WalletConnect client on the dApp side, loaded by `site-ui.js` only when it is needed: `SiteUI.upAddress`, when a tool page asks for the UP's address and there is no Universal Profile extension (it connects LUKSO's Universal Profiles app, reads the address and closes the session), and `SiteUI.walletConnectSigner`, when a page has to sign and the browser has no wallet (it connects MetaMask on the phone; the session is kept until "Disconnect"). It exposes `window.SignClientBundle = { Core, SignClient, getSdkError }` (`site-ui.js` creates the `Core` itself, to turn telemetry off, then passes it to `SignClient`) and is loaded with Subresource Integrity (the sha384 is in `site-ui.js`).
 
 - Packages: `@walletconnect/sign-client@2.25.0`, `@walletconnect/utils@2.25.0` (with `@walletconnect/core@2.25.0`, the same as in the walletkit bundle)
 - Bundler: `esbuild@0.28.2`

@@ -21,7 +21,7 @@ Used by `up-wallet.html` (and by the deprecated `up-walletconnect-basenames.html
 
 ## WalletConnect client for dApps: `vendor/signclient-2.25.0.min.js`
 
-Loaded by `site-ui.js` only when a tool page asks for the UP's address and there is no Universal Profile extension: it connects LUKSO's Universal Profiles app, reads the address and closes the session. Built as described in [vendor/README.md](vendor/README.md).
+Loaded by `site-ui.js` only when it is needed: when a tool page asks for the UP's address and there is no Universal Profile extension (it connects LUKSO's Universal Profiles app, reads the address and closes the session), and when a page has to sign and the browser has no wallet (it connects MetaMask on the phone, until "Disconnect"). Built as described in [vendor/README.md](vendor/README.md).
 
 - **Reown / WalletConnect packages** — `@walletconnect/sign-client`, `@walletconnect/core`, `@walletconnect/types`, `@walletconnect/utils`, all 2.25.0: the same **WalletConnect Community License Agreement** as above (the license files in these packages are identical to [vendor/walletkit-1.6.0.LICENSE.md](vendor/walletkit-1.6.0.LICENSE.md)). The notice "Portions © 2025 Reown, Inc. All Rights Reserved" is shown in the connection window, the only place the bundle is used. Same relay and thresholds as above.
 - **Other packages in the bundle** — 38 packages under MIT, ISC, 0BSD, Apache-2.0, or Apache-2.0 AND MIT. The list with versions and each package's license file: [vendor/signclient-2.25.0.THIRD-PARTY.txt](vendor/signclient-2.25.0.THIRD-PARTY.txt).
@@ -32,7 +32,7 @@ Used by `up-wallet.html` (Receive) and by the connection window of `site-ui.js`.
 
 ## Network logos: `chain-logos/*.png`
 
-Used by `up-wallet.html` to show the networks. `lukso.png` and `arc.png` are LUKSO's and Arc's own logos; the others are taken from the [Trust Wallet assets](https://github.com/trustwallet/assets) repository (**MIT**, © Trust Wallet). All are resized to 64×64. The logos are trademarks of their networks' projects and are used only to name those networks; no affiliation is implied. Networks without a file are shown with their initial.
+Used by `up-wallet.html` and by the network buttons of the tool pages (`site-ui.js`) to show the networks. `lukso.png` and `arc.png` are LUKSO's and Arc's own logos; the others are taken from the [Trust Wallet assets](https://github.com/trustwallet/assets) repository (**MIT**, © Trust Wallet). All are resized to 64×64. The logos are trademarks of their networks' projects and are used only to name those networks; no affiliation is implied. Networks without a file are shown with their initial.
 
 ## Contract sources for explorer verification: `contracts/*.input.json`
 
@@ -51,4 +51,4 @@ These standard-JSON compiler inputs embed third-party Solidity files so that any
 
 - [licenses/GPL-3.0.txt](licenses/GPL-3.0.txt) — GNU General Public License v3.0
 - [licenses/Apache-2.0.txt](licenses/Apache-2.0.txt) — Apache License 2.0
-- MIT: [LICENSE](LICENSE) for our code; each third-party MIT package's own text is in `vendor/walletkit-1.6.0.THIRD-PARTY.txt` or in the embedded source headers.
+- MIT: [LICENSE](LICENSE) for our code; each third-party MIT package's own text is in `vendor/walletkit-1.6.0.THIRD-PARTY.txt`, `vendor/signclient-2.25.0.THIRD-PARTY.txt` or in the embedded source headers.
