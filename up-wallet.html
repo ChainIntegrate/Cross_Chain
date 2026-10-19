@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-ZXGjHmP+tzc+ck6JN6L4lZQzbVBFQ5hQ0mHexyv1OmE='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-Z7n3byGe092cx6/su1FByLso4Yndgd/llBKyBvCEnLA='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -17,6 +17,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="chains.js"></script>
 <script src="asset-list.js"></script>
+<script src="usd-price.js"></script>
 <script src="backup-check.js"></script>
 <script src="gas-relay-client.js"></script>
 <script src="vendor/walletkit-1.6.0.min.js" integrity="sha384-o1OPho4aXup6dZTxTsaL+hXbLbZ9dmbU0j/hlmpw5t0P/k91PxXHqIdLkQWag92X"></script>
@@ -132,6 +133,14 @@
               display: inline-flex; align-items: center; justify-content: center; margin-bottom: 4px; }
   .tile-t { font-size: 14px; font-weight: 700; }
   .tile-s { font-size: 11.5px; color: var(--text-dim); line-height: 1.35; }
+  .tile.wide { grid-column: 1 / -1; min-height: 0; }
+  #ovBox { font-family: inherit; font-size: 14px; }
+  .ov-total { font-size: 20px; font-weight: 700; margin: 4px 0; }
+  .ov-net { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin: 10px 0; }
+  .ov-head { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+  .ov-line { display: flex; gap: 10px; font-size: 13px; padding: 3px 0; overflow-wrap: anywhere; }
+  .ov-usd { margin-left: auto; color: var(--text-dim); white-space: nowrap; font-weight: 400; }
+  .ov-sub { font-size: 11.5px; color: var(--text-dim); margin-top: 4px; }
   .view-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
   .view-title { font-size: 16px; font-weight: 700; }
   body[data-view="home"] .panel { display: none; }
@@ -139,7 +148,8 @@
   body[data-view="home"] .view-bar, body[data-view="all"] .view-bar { display: none; }
   body[data-view="send"] .panel:not([data-view="send"]), body[data-view="receive"] .panel:not([data-view="receive"]),
   body[data-view="dapp"] .panel:not([data-view="dapp"]), body[data-view="activity"] .panel:not([data-view="activity"]),
-  body[data-view="settings"] .panel:not([data-view="settings"]), body[data-view="help"] .panel:not([data-view="help"]) { display: none; }
+  body[data-view="settings"] .panel:not([data-view="settings"]), body[data-view="help"] .panel:not([data-view="help"]),
+  body[data-view="overview"] .panel:not([data-view="overview"]) { display: none; }
   /* Networks: the main ones as buttons with their logo; a green dot where the UP exists. */
   .net-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   @media (max-width: 560px) { .net-picker { grid-template-columns: repeat(2, 1fr); } }
@@ -210,10 +220,11 @@
   <div class="tiles">
     <button type="button" class="tile" data-go="send"><span class="tile-ico">↗</span><span class="tile-t" data-i18n="tileSend">Invia</span><span class="tile-s" data-i18n="tileSendSub"></span></button>
     <button type="button" class="tile" data-go="receive"><span class="tile-ico">↙</span><span class="tile-t" data-i18n="tileReceive">Ricevi</span><span class="tile-s" data-i18n="tileReceiveSub"></span></button>
+    <button type="button" class="tile" data-go="overview"><span class="tile-ico">◎</span><span class="tile-t" data-i18n="tileOverview">Tutte le reti</span><span class="tile-s" data-i18n="tileOverviewSub"></span></button>
     <button type="button" class="tile" data-go="dapp"><span class="tile-ico">⇄</span><span class="tile-t" data-i18n="tileDapp">Collega una dApp</span><span class="tile-s" data-i18n="tileDappSub"></span></button>
     <button type="button" class="tile" data-go="activity"><span class="tile-ico">☰</span><span class="tile-t" data-i18n="tileActivity">Attività</span><span class="tile-s" data-i18n="tileActivitySub"></span></button>
     <button type="button" class="tile" data-go="settings"><span class="tile-ico">⚙</span><span class="tile-t" data-i18n="tileSettings">Impostazioni</span><span class="tile-s" data-i18n="tileSettingsSub"></span></button>
-    <button type="button" class="tile" data-go="help"><span class="tile-ico">?</span><span class="tile-t" data-i18n="tileHelp">Cos'è e come funziona</span><span class="tile-s" data-i18n="tileHelpSub"></span></button>
+    <button type="button" class="tile wide" data-go="help"><span class="tile-ico">?</span><span class="tile-t" data-i18n="tileHelp">Cos'è e come funziona</span><span class="tile-s" data-i18n="tileHelpSub"></span></button>
   </div>
 </div>
 <div class="view-bar" id="viewBar"><button type="button" id="backHome" class="secondary small" data-i18n="backBtn">← Menu</button><span class="view-title" id="viewTitle"></span></div>
@@ -263,6 +274,13 @@
   <h2 data-i18n="panelViewTitle">Vista</h2>
   <div class="check-row"><input type="checkbox" id="viewAll"><label for="viewAll" style="margin:0;" data-i18n="viewAllLabel">Vista completa: tutti i pannelli in una pagina</label></div>
   <div class="note" style="margin-top:6px;" data-i18n="viewAllNote"></div>
+</div>
+
+<div class="panel" data-view="overview">
+  <h2 data-i18n="panelOverviewTitle">Tutte le reti</h2>
+  <div class="note" data-i18n="overviewNote"></div>
+  <button type="button" id="ovRefresh" class="secondary" data-i18n="ovRefresh">Aggiorna</button>
+  <div id="ovBox" class="status-box"><span class="empty" data-i18n="ovNoUp">Imposta la UP nelle Impostazioni.</span></div>
 </div>
 
 <div class="panel" data-view="receive">
@@ -570,13 +588,26 @@ const I18N = {
     setupBanner: "Per iniziare imposta rete, UP e MetaMask: tre passi.",
     setupGoBtn: "Configura",
     tileSend: "Invia", tileSendSub: "Valuta, token e NFT dalla UP",
+    tileOverview: "Tutte le reti", tileOverviewSub: "Cosa possiede la UP su ogni rete",
+    panelOverviewTitle: "Tutte le reti",
+    overviewNote: "Cosa possiede la UP su ogni rete principale dove esiste, letto dalle reti e dagli indici (Alchemy o Blockscout), in sola lettura. Il valore in dollari è una stima: c'è solo per la valuta della rete (prezzo Chainlink) e per l'USDC nativo di Circle; gli altri token sono elencati senza prezzo e non entrano nel totale. I token segnalati come spam non sono contati.",
+    ovRefresh: "Aggiorna", ovNoUp: "Imposta la UP nelle Impostazioni.",
+    ovReading: (v) => `Lettura delle reti: ${v.done} di ${v.total}…`,
+    ovTotal: (v) => `≈ ${v.usd} USD`, ovTotalLabel: "Totale stimato (valuta delle reti e USDC)",
+    ovReadAt: (v) => `Letto alle ${v.time}. Per rileggere: Aggiorna.`,
+    ovNoPrice: "senza prezzo", ovNftCount: (v) => `${v.count} NFT`, ovNative: "valuta della rete",
+    ovSpam: (v) => `${v.n} segnalati come spam, non contati`,
+    ovIxFail: (v) => `Indice ${v.ix} non disponibile (${v.err}): mancano i token che solo lui elenca.`,
+    ovNothing: (v) => `Niente su: ${v.list}.`, ovAbsent: (v) => `La UP non esiste su: ${v.list}.`,
+    ovFailed: (v) => `Non lette (rete non raggiungibile): ${v.list}. Riprova con Aggiorna.`,
+    ovUnpriced: "contiene anche token senza prezzo",
     tileReceive: "Ricevi", tileReceiveSub: "Indirizzo e QR della UP",
     tileDapp: "Collega una dApp", tileDappSub: "Usa una dApp con la UP (WalletConnect)",
     tileActivity: "Attività", tileActivitySub: "Richieste, simulazione e messaggi",
     tileSettings: "Impostazioni", tileSettingsSub: "Rete, UP, MetaMask, gas",
     tileHelp: "Cos'è e come funziona", tileHelpSub: "Cosa fa il wallet, avvertenze",
     backBtn: "← Menu",
-    viewTitle_home: "", viewTitle_all: "", viewTitle_send: "Invia", viewTitle_receive: "Ricevi", viewTitle_dapp: "Collega una dApp",
+    viewTitle_home: "", viewTitle_all: "", viewTitle_send: "Invia", viewTitle_receive: "Ricevi", viewTitle_overview: "Tutte le reti", viewTitle_dapp: "Collega una dApp",
     viewTitle_activity: "Attività", viewTitle_settings: "Impostazioni", viewTitle_help: "Cos'è e come funziona",
     netMoreSummary: "Altre reti e RPC personalizzato",
     netPresenceChecking: "Controllo su quali reti esiste la UP…",
@@ -966,13 +997,26 @@ const I18N = {
     setupBanner: "To start, set the network, the UP and MetaMask: three steps.",
     setupGoBtn: "Set up",
     tileSend: "Send", tileSendSub: "Currency, tokens and NFTs from the UP",
+    tileOverview: "Every network", tileOverviewSub: "What the UP holds on each network",
+    panelOverviewTitle: "Every network",
+    overviewNote: "What the UP holds on every main network where it exists, read from the networks and from the indexes (Alchemy or Blockscout), read only. The dollar value is an estimate: only for the network's currency (Chainlink price) and Circle's native USDC; other tokens are listed without a price and are not in the total. Tokens flagged as spam are not counted.",
+    ovRefresh: "Refresh", ovNoUp: "Set the UP in Settings.",
+    ovReading: (v) => `Reading the networks: ${v.done} of ${v.total}…`,
+    ovTotal: (v) => `≈ ${v.usd} USD`, ovTotalLabel: "Estimated total (networks' currency and USDC)",
+    ovReadAt: (v) => `Read at ${v.time}. To read again: Refresh.`,
+    ovNoPrice: "no price", ovNftCount: (v) => `${v.count} NFT`, ovNative: "network currency",
+    ovSpam: (v) => `${v.n} flagged as spam, not counted`,
+    ovIxFail: (v) => `${v.ix} index not available (${v.err}): tokens only it lists are missing.`,
+    ovNothing: (v) => `Nothing on: ${v.list}.`, ovAbsent: (v) => `The UP does not exist on: ${v.list}.`,
+    ovFailed: (v) => `Not read (network not reachable): ${v.list}. Try again with Refresh.`,
+    ovUnpriced: "also holds tokens without a price",
     tileReceive: "Receive", tileReceiveSub: "The UP's address and QR",
     tileDapp: "Connect a dApp", tileDappSub: "Use a dApp with the UP (WalletConnect)",
     tileActivity: "Activity", tileActivitySub: "Requests, simulation and messages",
     tileSettings: "Settings", tileSettingsSub: "Network, UP, MetaMask, gas",
     tileHelp: "What it is and how it works", tileHelpSub: "What the wallet does, warnings",
     backBtn: "← Menu",
-    viewTitle_home: "", viewTitle_all: "", viewTitle_send: "Send", viewTitle_receive: "Receive", viewTitle_dapp: "Connect a dApp",
+    viewTitle_home: "", viewTitle_all: "", viewTitle_send: "Send", viewTitle_receive: "Receive", viewTitle_overview: "Every network", viewTitle_dapp: "Connect a dApp",
     viewTitle_activity: "Activity", viewTitle_settings: "Settings", viewTitle_help: "What it is and how it works",
     netMoreSummary: "Other networks and custom RPC",
     netPresenceChecking: "Checking on which networks the UP exists…",
@@ -1340,6 +1384,7 @@ function switchLang() {
   LANG = LANG === "it" ? "en" : "it";
   try { localStorage.setItem(LANG_KEY, LANG); } catch (e) { /* not remembered */ }
   applyI18n();
+  if (typeof renderOverview === "function") renderOverview();
 }
 $("langToggle").addEventListener("click", switchLang);
 $("riskLang").addEventListener("click", switchLang);
@@ -3237,6 +3282,7 @@ function showView(v, remember = true) {
   $("viewTitle").textContent = t("viewTitle_" + v);
   if (v === "all") $("netMore").open = true;
   if (v === "receive") renderReceive();
+  if (v === "overview") openOverview();
   if (v !== "home" && v !== "all") window.scrollTo(0, 0);
   fabState();
 }
@@ -3324,6 +3370,128 @@ function updateNav() {
   renderNetPicker();
   if (document.body.dataset.view === "receive") renderReceive();
 }
+// Overview: what the UP holds on every main network where it exists (and on the chosen network, if it is
+// another one), read only. Two networks at a time, so public RPCs do not answer "too many requests".
+// Dollar values only where the price is known: the network's currency (Chainlink, usd-price.js) and
+// Circle's native USDC, recognised by its contract address (a symbol can be copied by anyone).
+const OV_USDC = {
+  1: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", 10: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+  137: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359", 8453: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  42161: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", 43114: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",
+};
+let ovState = null, ovRun = 0;
+function openOverview() {
+  const raw = $("upAddress").value.trim();
+  if (!ethers.isAddress(raw)) { ovState = null; renderOverview(); return; }
+  if (!ovState || ovState.up !== ethers.getAddress(raw)) readOverview(); else renderOverview();
+}
+async function readOverview() {
+  const raw = $("upAddress").value.trim();
+  if (!ethers.isAddress(raw)) { ovState = null; renderOverview(); return; }
+  const up = ethers.getAddress(raw), run = ++ovRun;
+  const cur = getNetwork();
+  const nets = MAIN_NETS.map((k) => NETWORKS.find((x) => x.key === k)).filter((n) => n && n.rpc);
+  if (cur && cur.rpc && !nets.some((n) => n.key === cur.key)) nets.push(cur);
+  ovState = { up, total: nets.length, results: [], at: null };
+  renderOverview();
+  const timeout = (p, ms) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error("timeout")), ms))]);
+  const one = async (n) => {
+    const pv = new ethers.JsonRpcProvider(n.rpc, n.chainId || undefined, { staticNetwork: !!n.chainId, batchMaxCount: 1 });
+    try {
+      if ((await timeout(pv.getCode(up), 10000)) === "0x") return { n, absent: true };
+      const a = await timeout(AssetList.list(pv, up, n.key), 60000);
+      let price = null;
+      if (window.UsdPrice && n.chainId) price = await timeout(UsdPrice.read(pv, n.chainId, ethers), 10000).catch(() => null);
+      return { n, a, price };
+    } catch (e) { return { n, err: e.shortMessage || e.message }; }
+    finally { pv.destroy(); }
+  };
+  let next = 0;
+  const worker = async () => {
+    while (next < nets.length) {
+      const r = await one(nets[next++]);
+      if (run !== ovRun) return;
+      ovState.results.push(r);
+      renderOverview();
+    }
+  };
+  await Promise.all([worker(), worker()]);
+  if (run !== ovRun) return;
+  ovState.at = new Date();
+  renderOverview();
+}
+function ovUsdText(x) {
+  if (x === null) return t("ovNoPrice");
+  if (x > 0 && x < 0.01) return "< 0.01 USD";
+  return x.toLocaleString(LANG === "it" ? "it-IT" : "en-US", { maximumFractionDigits: 2, minimumFractionDigits: 2 }) + " USD";
+}
+// One network's lines: [label, detail, usd | null], its known total, and whether something has no price.
+function ovLines(r) {
+  const lines = [];
+  let usd = 0, unpriced = false;
+  const cur = r.n.currency || "";
+  if (r.a.native !== null && r.a.native > 0n) {
+    const v = r.price && window.UsdPrice ? UsdPrice.usd(r.a.native, r.price) : null;
+    if (v === null) unpriced = true; else usd += v;
+    lines.push([`${shortAmount(ethers.formatEther(r.a.native))} ${cur}`.trim(), t("ovNative"), v]);
+  }
+  const usdc = OV_USDC[r.n.chainId] ? ethers.getAddress(OV_USDC[r.n.chainId]) : null;
+  for (const x of r.a.rows.filter((x) => !x.spam)) {
+    const label = oneLine(x.symbol || x.name || x.address, 24);
+    if (x.amount !== undefined) {
+      const v = usdc && x.address === usdc ? Number(x.amount) : null;
+      if (v === null) unpriced = true; else usd += v;
+      lines.push([`${shortAmount(x.amount)} ${label}`, `${x.type} · ${shortAddr(x.address)}`, v, x.address]);
+    } else {
+      unpriced = true;
+      lines.push([`${oneLine(x.name || label)} · ${x.type}`, `${t("ovNftCount", { count: x.count || "?" })} · ${shortAddr(x.address)}`, null, x.address]);
+    }
+  }
+  return { lines, usd, unpriced, spam: r.a.rows.filter((x) => x.spam).length };
+}
+function renderOverview() {
+  const box = $("ovBox");
+  if (!box) return;
+  box.textContent = "";
+  const add = (tag, cls, text, parent = box) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; parent.appendChild(e); return e; };
+  if (!ovState) { add("span", "empty", t("ovNoUp")); return; }
+  const done = ovState.results;
+  const held = [], empty = [], absent = [], failed = [];
+  for (const r of done) {
+    if (r.err) failed.push(r.n.name);
+    else if (r.absent) absent.push(r.n.name);
+    else { const l = ovLines(r); if (l.lines.length || l.spam) held.push({ r, ...l }); else empty.push(r.n.name); }
+  }
+  const total = held.reduce((s, h) => s + h.usd, 0);
+  add("div", "ov-sub", t("ovTotalLabel"));
+  add("div", "ov-total", t("ovTotal", { usd: ovUsdText(total).replace(/ USD$/, "") }));
+  add("div", "ov-sub", ovState.at ? t("ovReadAt", { time: ovState.at.toLocaleTimeString(LANG === "it" ? "it-IT" : "en-US", { hour: "2-digit", minute: "2-digit" }) }) : t("ovReading", { done: done.length, total: ovState.total }));
+  held.sort((x, y) => y.usd - x.usd || y.lines.length - x.lines.length);
+  for (const h of held) {
+    const card = add("div", "ov-net");
+    const head = add("div", "ov-head", undefined, card);
+    head.appendChild(netLogo(h.r.n.key, h.r.n.name));
+    add("span", "", h.r.n.name, head);
+    add("span", "ov-usd", h.usd > 0 ? "≈ " + ovUsdText(h.usd) : t("ovNoPrice"), head);
+    for (const [main, detail, v, full] of h.lines) {
+      const line = add("div", "ov-line", undefined, card);
+      if (full) line.title = full;
+      const left = add("div", "", undefined, line);
+      add("div", "", main, left);
+      add("div", "ov-sub", detail, left);
+      add("span", "ov-usd", v === null ? "—" : "≈ " + ovUsdText(v), line);
+    }
+    if (h.usd > 0 && h.unpriced) add("div", "ov-sub", t("ovUnpriced"), card);
+    if (h.spam) add("div", "ov-sub", t("ovSpam", { n: h.spam }), card);
+    const ix = h.r.a.indexer;
+    if (ix && ix.err) add("div", "ov-sub line-warn", t("ovIxFail", { ix: ix.kind === "alchemy" ? "Alchemy" : "Blockscout", err: oneLine(ix.err, 120) }), card);
+  }
+  if (empty.length) add("div", "ov-sub", t("ovNothing", { list: empty.join(", ") }));
+  if (absent.length) add("div", "ov-sub", t("ovAbsent", { list: absent.join(", ") }));
+  if (failed.length) add("div", "ov-sub line-warn", t("ovFailed", { list: failed.join(", ") }));
+}
+$("ovRefresh").addEventListener("click", () => readOverview());
+
 // Receive: the UP's address as a QR (EIP-681, with the network's chain id, so wallets pick the network)
 // and a link to the UP's identity page on the site, to share.
 function siteBase() { return window.__upwalletSite || location.href.replace(/[?#].*$/, "").replace(/[^/]*$/, ""); }
