@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-1r1uqH2B6LVdvhbM3CfikLhZbqe3ltzOXY8rSGu/+FI='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-ZXGjHmP+tzc+ck6JN6L4lZQzbVBFQ5hQ0mHexyv1OmE='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -99,6 +99,8 @@
   .sim-chip { width: auto; margin: 0; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; background: transparent; }
   .sim-chip.on { border: 1px solid var(--warn); color: var(--warn); }
   .sim-chip.off { border: 1px solid var(--err); color: var(--err); }
+  .sim-chip.site { border: 1px solid var(--ok); color: var(--ok); }
+  .sim-chip.ctl { border: 1px solid var(--text-dim); color: var(--text-dim); }
   .sim-modal { border-color: var(--warn); width: min(520px, 100%); }
   .send-btns { display: flex; gap: 10px; }
   /* An unrecognised call: its data ready to copy, or to e-mail, to have it decoded in a next version. */
@@ -202,7 +204,7 @@
 <div id="nav">
   <div class="up-card" id="upCard" role="button" tabindex="0">
     <span class="net-logo" id="upCardLogo"></span>
-    <span class="up-card-main"><span class="up-card-addr" id="upCardAddr"></span><span class="up-card-sub" id="upCardSub"></span><span class="up-card-state" id="upCardState"><span id="upCardStateText"></span><button type="button" class="sim-chip" id="simChip"></button></span></span>
+    <span class="up-card-main"><span class="up-card-addr" id="upCardAddr"></span><span class="up-card-sub" id="upCardSub"></span><span class="up-card-state" id="upCardState"><span id="upCardStateText"></span><button type="button" class="sim-chip" id="simChip"></button><button type="button" class="sim-chip" id="gasChip"></button></span></span>
   </div>
   <div class="setup-banner" id="setupBanner" hidden><span data-i18n="setupBanner"></span><button type="button" class="small" data-go="settings" data-i18n="setupGoBtn">Configura</button></div>
   <div class="tiles">
@@ -355,6 +357,17 @@
       <div id="simWarn"></div>
     </div>
     <div class="modal-foot"><button id="simClose" type="button" data-i18n="simCloseBtn">Fatto</button></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="gasModal" hidden>
+  <div class="modal sim-modal" role="dialog" aria-modal="true" aria-labelledby="gasTitle">
+    <div class="modal-head"><div class="modal-title" id="gasTitle" data-i18n="gasTitle">⛽ Chi paga il gas</div></div>
+    <div class="modal-body">
+      <div class="check-row" style="margin-top:0;"><input type="checkbox" id="gasToggle"><label for="gasToggle" style="margin:0; color: var(--text);" data-i18n="gasToggleLabel">Paga il gas con il relayer del sito</label></div>
+      <div class="note" style="margin-top:8px;" id="gasNote"></div>
+    </div>
+    <div class="modal-foot"><button id="gasClose" type="button" data-i18n="simCloseBtn">Fatto</button></div>
   </div>
 </div>
 
@@ -588,6 +601,11 @@ const I18N = {
     decodeSubject: (v) => `UP Wallet: chiamata da decodificare ${v.sel} su ${v.net}`,
     decodePrivacy: "Nota: i dati della chiamata possono contenere l'indirizzo della tua UP o altri indirizzi. Se la transazione viene inviata diventano comunque pubblici sulla rete.",
     cardReal: "⚡ invio reale", simChipTitle: "Tocca per cambiare la modalità simulazione",
+    gasChipSite: "⛽ gas: sito", gasChipCtl: "⛽ gas: controller", gasChipTitle: "Tocca per scegliere chi paga il gas",
+    gasTitle: "⛽ Chi paga il gas", gasToggleLabel: "Paga il gas con il relayer del sito",
+    gasNoteNone: "Su questa rete, per questa UP, il relayer del sito non è disponibile: il gas lo paga il controller (l'account MetaMask che firma).",
+    gasNoteNotReady: "La UP è sulla lista del relayer del sito, ma manca qualcosa: vedi la nota nelle Impostazioni (opzione del relayer). Finché non è pronta, il gas lo paga il controller.",
+    gasNoteOff: "Opzione spenta: il gas lo paga il controller (l'account MetaMask che firma).",
     simTitle: "🧪 Modalità simulazione", simCloseBtn: "Fatto",
     simOffWarn: "Spunta tolta: dopo la tua conferma in MetaMask le transazioni partono davvero e sono irreversibili. Usa importi piccoli.",
     sendClearBtn: "Pulisci",
@@ -885,7 +903,8 @@ const I18N = {
     readyToSend: "Pronto. Controlla i dati sopra, poi premi \"Firma e invia\". In MetaMask vedrai come destinatario il Key Manager della UP e nessun valore: è corretto, è l'incapsulamento (il valore esce dalla UP).",
     signerChanged: "❌ L'account attivo in MetaMask non è quello verificato: rifiutata.",
     sending: "Invio della transazione incapsulata (conferma in MetaMask)...",
-    txSummary: (v) => `Riepilogo: verso ${v.to} · valore dalla UP: ${v.value} · operazione: ${v.op}`,
+    txSummary: (v) => `Riepilogo: verso ${v.to} · valore dalla UP: ${v.value} · operazione: ${v.op} · ${v.gas}`,
+    sumGasSite: "⛽ gas: lo paga il sito (relayer del sito, nessun gas per il controller)", sumGasController: "⛽ gas: lo paga il controller",
     txSent: (v) => `Tx inviata: ${v.hash}`,
     txNotDelivered: (v) => `⚠️ La transazione È STATA INVIATA (hash sopra), ma la dApp non ha ricevuto la risposta (${v.err}): la sessione era chiusa o scaduta. NON ripeterla: controlla l'esito sull'explorer.`,
     invalidValue: "❌ Valore della transazione non valido: rifiutata.",
@@ -910,6 +929,9 @@ const I18N = {
     sign32Refused: "❌ Firma rifiutata: il messaggio è di 32 byte (un hash). Su ogni rete dove la UP ha il gas relay (ERC-4337), una firma di 32 byte del controller vale come autorizzazione a spendere dalla UP, e la firma non è legata a una rete: firmata qui, varrebbe anche là, e il sito potrebbe usarla per svuotare la UP. Per questo UP Wallet non firma mai hash per una dApp: le firme di hash si fanno solo dalle pagine di questo sito (UP Wallet e Iscrizione, con il relayer del sito).",
     signOpaque: "⚠️ Il contenuto NON è leggibile: è un hash o dati binari. Non puoi sapere cosa autorizzi. Se non sai esattamente a cosa serve, rifiuta.",
     signPermit: "⚠️⚠️ Questo messaggio sembra un PERMESSO A SPENDERE TOKEN (Permit/Permit2): chi lo riceve può spostare token della UP senza altre conferme. Firma solo se sai esattamente perché.",
+    signTransferAuth: (v) => `⚠️⚠️ Questo messaggio è un TRASFERIMENTO FIRMATO (EIP-3009, token ${v.token}): chiunque lo riceva può inviarlo e spostare ${v.value} (unità del token) dalla UP a ${v.to}, senza altre conferme. Firma solo se sei tu a voler fare questo pagamento.`,
+    signNotForUp: (v) => `⚠️⚠️ Il messaggio non è per questa UP ma per ${v.who}: la firma del controller vale anche per quell'indirizzo. Rifiuta, a meno che tu sappia esattamente perché.`,
+    siweOtherAccount: (v) => `⚠️⚠️ L'accesso è chiesto per un altro account (${v.acc}), non per questa UP: rifiuta.`,
     signOrder: "⚠️⚠️ Questo messaggio sembra un ORDINE (per esempio di vendita): chi lo esegue può trasferire beni della UP alle condizioni scritte. Controlla ogni campo.",
     siweDomainMismatch: (v) => `⚠️⚠️ Messaggio di accesso per il dominio \"${v.d}\", ma il sito collegato è ${v.site}: possibile phishing. Rifiuta se non sei sicuro.`,
     siweChainMismatch: (v) => `⚠️ Il messaggio di accesso indica chainId ${v.id}, diverso dalla rete scelta.`,
@@ -975,6 +997,11 @@ const I18N = {
     decodeSubject: (v) => `UP Wallet: call to decode ${v.sel} on ${v.net}`,
     decodePrivacy: "Note: the call's data may contain your UP's address or other addresses. If the transaction is sent, they become public on the network anyway.",
     cardReal: "⚡ real sending", simChipTitle: "Tap to change the simulation mode",
+    gasChipSite: "⛽ gas: site", gasChipCtl: "⛽ gas: controller", gasChipTitle: "Tap to choose who pays the gas",
+    gasTitle: "⛽ Who pays the gas", gasToggleLabel: "Pay the gas with the site relayer",
+    gasNoteNone: "On this network, for this UP, the site relayer is not available: the controller (the signing MetaMask account) pays the gas.",
+    gasNoteNotReady: "The UP is on the site relayer's list, but something is missing: see the note in Settings (relayer option). Until it is ready, the controller pays the gas.",
+    gasNoteOff: "Option off: the controller (the signing MetaMask account) pays the gas.",
     simTitle: "🧪 Simulation mode", simCloseBtn: "Done",
     simOffWarn: "Unticked: after your confirmation in MetaMask, transactions are really sent and cannot be undone. Use small amounts.",
     sendClearBtn: "Clear",
@@ -1243,7 +1270,8 @@ const I18N = {
     readyToSend: "Ready. Check the data above, then press \"Sign and send\". MetaMask will show the UP's Key Manager as the recipient and no value: that is correct, it is the wrapping (the value comes from the UP).",
     signerChanged: "❌ The active MetaMask account is not the verified one: rejected.",
     sending: "Sending the wrapped transaction (confirm in MetaMask)...",
-    txSummary: (v) => `Summary: to ${v.to} · value from the UP: ${v.value} · operation: ${v.op}`,
+    txSummary: (v) => `Summary: to ${v.to} · value from the UP: ${v.value} · operation: ${v.op} · ${v.gas}`,
+    sumGasSite: "⛽ gas: paid by the site (site relayer, no gas for the controller)", sumGasController: "⛽ gas: paid by the controller",
     txSent: (v) => `Tx sent: ${v.hash}`,
     txNotDelivered: (v) => `⚠️ The transaction WAS SENT (hash above), but the dApp did not receive the answer (${v.err}): the session was closed or expired. Do NOT repeat it: check the outcome on the explorer.`,
     invalidValue: "❌ Invalid transaction value: rejected.",
@@ -1267,6 +1295,9 @@ const I18N = {
     sign32Refused: "❌ Signature refused: the message is 32 bytes (a hash). On every network where the UP has the gas relay (ERC-4337), a 32-byte signature by the controller is an authorization to spend from the UP, and the signature is not tied to a network: signed here, it would be valid there too, and the site could use it to drain the UP. So UP Wallet never signs a hash for a dApp: hash signatures are made only by this site's own pages (UP Wallet and Subscription, with the site relayer).",
     signOpaque: "⚠️ The content is NOT readable: it is a hash or binary data. You cannot know what you are authorising. Unless you know exactly what it is for, reject it.",
     signPermit: "⚠️⚠️ This message looks like a PERMISSION TO SPEND TOKENS (Permit/Permit2): whoever receives it can move the UP's tokens without further confirmation. Only sign if you know exactly why.",
+    signTransferAuth: (v) => `⚠️⚠️ This message is a SIGNED TRANSFER (EIP-3009, token ${v.token}): whoever receives it can submit it and move ${v.value} (token units) from the UP to ${v.to}, with no further confirmation. Only sign if you are the one making this payment.`,
+    signNotForUp: (v) => `⚠️⚠️ The message is not for this UP but for ${v.who}: the controller's signature is valid for that address too. Reject it unless you know exactly why.`,
+    siweOtherAccount: (v) => `⚠️⚠️ The sign-in is asked for another account (${v.acc}), not this UP: reject it.`,
     signOrder: "⚠️⚠️ This message looks like an ORDER (for example a sale): whoever executes it can transfer the UP's assets on the stated terms. Check every field.",
     siweDomainMismatch: (v) => `⚠️⚠️ Sign-in message for the domain \"${v.d}\", but the connected site is ${v.site}: possible phishing. Reject it unless you are sure.`,
     siweChainMismatch: (v) => `⚠️ The sign-in message states chainId ${v.id}, which is not the chosen network.`,
@@ -1547,7 +1578,7 @@ $("recheckBtn").addEventListener("click", () => scheduleCompliance(0));
 let compliance = null, lastCompliance = null, complianceRun = 0, complianceTimer = null;
 // "Pay the gas with the site relayer": shown only when the relayer can be used for this UP, network and
 // controller (gas-relay-client.js). Applies to transactions; message signatures are unchanged.
-const relayOption = GasRelayClient.attach({ box: $("relayBox"), getNetwork, getUp: () => $("upAddress").value, getSigner: () => signerAddress, onChange: () => {} });
+const relayOption = GasRelayClient.attach({ box: $("relayBox"), getNetwork, getUp: () => $("upAddress").value, getSigner: () => signerAddress, onChange: () => {}, onState: () => { try { renderGasChip(); } catch (e) { /* the first render runs before relayOption exists */ } } });
 
 function scheduleCompliance(delay = 500) {
   compliance = null;
@@ -2464,7 +2495,7 @@ async function handleSendTransaction(topic, id, c, tx, validation, reject, after
     setDecodeHelp(op === t("unknownCall", { sel: data.slice(0, 10) }) ? { site: sessionPeer(topic), net: `${c.net.name} (chainId ${c.net.chainId})`, to, value: valueText, data } : null);
     // The request box is replaced by the next request: the log keeps what was asked.
     const toLabel = await labelAddress(c.provider, to, c.net.chainId);
-    log(t("txSummary", { to: toLabel, value: valueText, op }), "line-compare");
+    log(t("txSummary", { to: toLabel, value: valueText, op, gas: t(relayOption.enabled() ? "sumGasSite" : "sumGasController") }), "line-compare");
     rows.push([t("kKm"), c.km, {}], [t("kSigner"), c.signer, {}]);
     renderKv("requestBox", rows);
     for (const [w, cls] of warnings) log(w, cls);
@@ -2627,6 +2658,9 @@ function checkSiwe(text, topic, c, warnings) {
   }
   const ch = text.match(/^Chain ID: (\d+)$/m);
   if (ch && Number(ch[1]) !== c.chainId) warnings.push([t("siweChainMismatch", { id: ch[1] }), "line-warn"]);
+  // The account line (the second one) must be the UP: a sign-in for another account is not this UP's (AUDIT I-7).
+  const acc = text.split("\n")[1];
+  if (acc !== undefined && /^0x[0-9a-fA-F]{40}$/.test(acc.trim()) && acc.trim().toLowerCase() !== c.up.toLowerCase()) warnings.push([t("siweOtherAccount", { acc: acc.trim() }), "line-danger"]);
 }
 
 // hup.social's chat sign-in ("Sign in to Hup chat", wallet, nonce, timestamp): a login to its chat,
@@ -2703,6 +2737,17 @@ async function handleSignRequest(topic, id, c, request, validation, reject) {
         }
       }
       else if (/order/i.test(pt)) warnings.push([t("signOrder"), "line-danger"]);
+      // EIP-3009 (USDC and others): a signed transfer that anyone can submit (AUDIT I-7).
+      if (/^(Transfer|Receive)WithAuthorization$/.test(pt)) {
+        const m = data.message || {};
+        warnings.push([t("signTransferAuth", { to: oneLine(m.to, 42), value: oneLine(m.value, 40), token: oneLine(domain.name) || oneLine(domain.verifyingContract, 42) || "?" }), "line-danger"]);
+      }
+      // The account a Permit or a transfer authorization is for must be the UP: a controller's signature is
+      // also valid for its own address and any other UP it controls (AUDIT I-7).
+      const forWho = /permit/i.test(pt) ? data.message?.owner : /WithAuthorization$/.test(pt) ? data.message?.from : undefined;
+      if (typeof forWho === "string" && ethers.isAddress(forWho) && ethers.getAddress(forWho) !== ethers.getAddress(up)) {
+        warnings.push([t("signNotForUp", { who: ethers.getAddress(forWho) }), "line-danger"]);
+      }
     }
   } catch (e) {
     return reject(t("signBadData", { err: e.shortMessage || e.message }));
@@ -3274,6 +3319,7 @@ function updateNav() {
   $("simChip").textContent = t(sim ? "cardSim" : "cardReal");
   $("simChip").className = "sim-chip " + (sim ? "on" : "off");
   $("simChip").title = t("simChipTitle");
+  renderGasChip();
   $("setupBanner").hidden = ok;
   renderNetPicker();
   if (document.body.dataset.view === "receive") renderReceive();
@@ -3319,7 +3365,7 @@ $("upAddress").addEventListener("input", () => { updateNav(); clearTimeout(prese
 networkSelectEl.addEventListener("change", updateNav);
 $("simulateOnly").addEventListener("change", updateNav);
 // The UP card opens Settings; its simulation chip opens the small simulation window instead.
-$("upCard").addEventListener("click", (e) => { if (!e.target.closest("#simChip")) showView("settings", false); });
+$("upCard").addEventListener("click", (e) => { if (!e.target.closest("#simChip") && !e.target.closest("#gasChip")) showView("settings", false); });
 $("upCard").addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target === $("upCard")) { e.preventDefault(); showView("settings", false); } });
 function showSimWarn() {
   const w = $("simWarn"); w.textContent = "";
@@ -3338,6 +3384,31 @@ $("simToggle").addEventListener("change", () => {
 });
 $("simClose").addEventListener("click", () => openSim(false));
 $("simModal").addEventListener("click", (e) => { if (e.target === $("simModal")) openSim(false); });
+// The gas chip, next to the simulation chip: who pays the gas of the next transaction (the site relayer or
+// the controller). It opens a small window with the same option as Settings.
+function renderGasChip() {
+  const chip = $("gasChip"); if (!chip) return;
+  const site = relayOption.enabled();
+  chip.textContent = t(site ? "gasChipSite" : "gasChipCtl");
+  chip.className = "sim-chip " + (site ? "site" : "ctl");
+  chip.title = t("gasChipTitle");
+  if (!$("gasModal").hidden) renderGasModal();
+}
+function renderGasModal() {
+  const st = relayOption.state().state;
+  $("gasToggle").checked = relayOption.enabled();
+  $("gasToggle").disabled = st !== "ready";
+  $("gasNote").textContent = st === "ready" ? (relayOption.enabled() ? relayOption.note() : t("gasNoteOff") + " " + relayOption.note()) : t(st === "notReady" ? "gasNoteNotReady" : "gasNoteNone");
+}
+function openGas(open) {
+  $("gasModal").hidden = !open;
+  document.body.classList.toggle("modal-open", open || !$("requestModal").hidden || !$("riskModal").hidden);
+  if (open) renderGasModal();
+}
+$("gasChip").addEventListener("click", (e) => { e.stopPropagation(); openGas(true); });
+$("gasToggle").addEventListener("change", () => { relayOption.set($("gasToggle").checked); renderGasChip(); renderGasModal(); });
+$("gasClose").addEventListener("click", () => openGas(false));
+$("gasModal").addEventListener("click", (e) => { if (e.target === $("gasModal")) openGas(false); });
 // Send: "Clear" empties the form (what to send, token, ID, recipient, amount); the balances stay.
 $("sendClearBtn").addEventListener("click", () => {
   $("sendAsset").value = "native";
