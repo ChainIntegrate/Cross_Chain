@@ -14,6 +14,15 @@ node tools/decrypt.js
 
 The script asks for SALT and IV (press Enter to use the public defaults of the UP extension backup format), SECRET (base64, from your backup) and the password, which is not echoed. Run it offline on a trusted machine, then clear your terminal and its scrollback: the output is a private key that gives full control of the profile. **Do not paste your values into the file.**
 
+## `csp.js`
+
+Writes in every page the `<meta http-equiv="Content-Security-Policy">` that allows only the site's own scripts, ethers from the CDN and the page's inline scripts, by their SHA-256 hash (see "Security headers" in the main README). Run it after changing an inline `<script>`, and commit the pages it updates; `--check` changes nothing and fails if a page is out of date (the GitHub workflow runs it on every push and pull request).
+
+```bash
+node tools/csp.js
+node tools/csp.js --check
+```
+
 ## `PLAN.md`
 
 Working notes for the maintainer: decisions already taken and next steps (gas relay and sponsor paymaster status, paid subscriptions, open audit items, hardening backlog, Ledger test). Not published on the website.
