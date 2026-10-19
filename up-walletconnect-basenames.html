@@ -9,7 +9,7 @@
 <title>DEPRECATED — UP WalletConnect — Basenames demo — ChainIntegrate</title>
 <link rel="icon" href="favicon.ico">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="vendor/walletkit-1.6.0.min.js"></script>
+<script src="vendor/walletkit-1.6.0.min.js" integrity="sha384-o1OPho4aXup6dZTxTsaL+hXbLbZ9dmbU0j/hlmpw5t0P/k91PxXHqIdLkQWag92X"></script>
 <!-- Site configuration, created on the server from config.example.js (not in the repository). -->
 <script src="config.js"></script>
 <style>
@@ -555,7 +555,10 @@ async function getWalletKit() {
   if (walletKit) return walletKit;
   if (!WALLETCONNECT_PROJECT_ID) throw new Error(t("noProjectId"));
   const { Core, WalletKit } = window.WalletKitBundle;
-  const core = new Core({ projectId: WALLETCONNECT_PROJECT_ID });
+  // No usage telemetry to Reown (pulse.walletconnect.org), AUDIT W-tel: off, and the "INIT" event the SDK sends
+  // anyway (client id, user agent) is muted before the client starts.
+  const core = new Core({ projectId: WALLETCONNECT_PROJECT_ID, telemetryEnabled: false });
+  if (core.eventClient) { core.eventClient.init = async () => {}; core.eventClient.sendEvent = async () => ({ ok: true }); }
   walletKit = await WalletKit.init({
     core,
     metadata: {
