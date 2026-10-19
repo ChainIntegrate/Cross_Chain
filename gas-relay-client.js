@@ -97,6 +97,9 @@
       signBoxSite: (v) => `Richiesta dal sito: ${v.site}`,
       signBoxNoGas: "È solo una firma: nessuna transazione e nessun gas. Se il messaggio è diverso, rifiuta in MetaMask.",
       signed: (v) => `✅ Messaggio firmato da ${v.who} (il controller). Hash dell'operazione firmato: ${v.hash}`,
+      emailSending: "Invio dell'e-mail al servizio, legata a questo pagamento firmato...",
+      emailOk: "✅ E-mail registrata per questo pagamento.",
+      emailRefused: (v) => `❌ Il servizio non ha registrato l'e-mail (${v.err}): il pagamento NON è stato inviato. Riprova.`,
       wrongSigner: (v) => `Ha firmato ${v.who}, non il controller atteso ${v.exp}: niente è stato inviato.`,
       sending: "Invio al relayer del sito...",
       refused: (v) => `Il relayer ha rifiutato l'operazione, non è stato inviato niente (puoi riprovare più tardi): ${v.err}`,
@@ -150,6 +153,9 @@
       signBoxSite: (v) => `Requested by: ${v.site}`,
       signBoxNoGas: "It is only a signature: no transaction and no gas. If the message differs, reject it in MetaMask.",
       signed: (v) => `✅ Message signed by ${v.who} (the controller). Operation hash signed: ${v.hash}`,
+      emailSending: "Sending the e-mail to the service, bound to this signed payment...",
+      emailOk: "✅ E-mail recorded for this payment.",
+      emailRefused: (v) => `❌ The service did not record the e-mail (${v.err}): the payment was NOT sent. Try again.`,
       wrongSigner: (v) => `Signed by ${v.who}, not the expected controller ${v.exp}: nothing was sent.`,
       sending: "Sending to the site relayer...",
       refused: (v) => `The relayer refused the operation, nothing was sent (you can try again later): ${v.err}`,
@@ -421,12 +427,14 @@
 
   // Asks the sponsor service to approve prep.op, checks the approval, and updates prep.op and prep.hash.
   // `subscribe` ({ email }) goes with the subscription payment only.
-  async function getApproval(prep, log, subscribe) {
+  async function getApproval(prep, log) {
     log(text("sponsorAsk"), "line-dim");
     const pm = prep.view.pm;
     let r, j;
     try {
-      r = await fetch("relay/sponsor/sign", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chainId: prep.chainId, op: opJson(prep.op), ...(subscribe ? { subscribe } : {}) }) });
+      // A subscription payment's e-mail is not sent with the approval request: only after the controller
+      // has signed (see signAndSend; audit F2-2).
+      r = await fetch("relay/sponsor/sign", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chainId: prep.chainId, op: opJson(prep.op) }) });
       j = await r.json();
     } catch (e) { throw new Error(text("sponsorUnreachable")); }
     if (!r.ok || !j || !j.paymasterAndData) throw new Error(text("sponsorRefused", { err: (j && j.error) || `HTTP ${r.status}` }));
@@ -470,7 +478,7 @@
   // change, so the caller must read prep.hash only after this returns.
   async function signAndSend(signerProvider, { chainId, prep, signer, log, subscribe }) {
     if (prep.chainId !== chainId) throw new Error(text("hashMismatch"));
-    if (prep.sponsor) await getApproval(prep, log, subscribe);
+    if (prep.sponsor) await getApproval(prep, log);
     log(text("signAsk", { hash: prep.hash }), "line-warn");
     const s = await new ethers.BrowserProvider(signerProvider).getSigner();
     const box = showSignBox({ hash: prep.hash, signer, view: prep.view });
@@ -479,6 +487,19 @@
     const who = ethers.verifyMessage(ethers.getBytes(prep.hash), prep.op.signature);
     if (who.toLowerCase() !== signer.toLowerCase()) throw new Error(text("wrongSigner", { who, exp: signer }));
     log(text("signed", { who, hash: prep.hash }), "line-ok");
+    // Subscription payment: the e-mail goes to the service now, with the signature, bound to this operation's
+    // hash; the service records it only for a payment it approved, signed by a controller of the UP (audit
+    // F2-2). Without it the payment is not sent: nothing has left the page yet.
+    if (subscribe && subscribe.email) {
+      log(text("emailSending"), "line-dim");
+      let r = null, j = null;
+      try {
+        r = await fetch("relay/sponsor/email", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chainId, hash: prep.hash, signature: prep.op.signature, email: subscribe.email }) });
+        j = await r.json().catch(() => null);
+      } catch (e) { throw new Error(text("emailRefused", { err: text("sponsorUnreachable") })); }
+      if (!r.ok || !j || !j.ok) throw new Error(text("emailRefused", { err: (j && j.error) || `HTTP ${r.status}` }));
+      log(text("emailOk"), "line-ok");
+    }
     log(text("sending"), "line-dim");
     // From here the signed operation exists. A clear refusal (4xx) on the first try means it was not
     // sent. Anything else (no answer, 5xx, a refusal after an unclear try) may hide a send: the same
