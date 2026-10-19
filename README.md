@@ -123,14 +123,24 @@ After that, `git pull` works exactly as before. The root `.htaccess` stays in th
 
 **Site configuration.** Some pages read their settings from `config.js`, which is not in the repository. Create it once on the server, in the site folder, by copying `config.example.js` and filling in the values; `git pull` leaves it untouched. Its values are not secret (the browser receives them): protect the WalletConnect Project ID with the allowed-domains list in the Reown dashboard, and the Alchemy API key (used by the Identity and UP Wallet pages to list a UP's tokens and NFTs) with the app's domain allowlist in the Alchemy dashboard.
 
-**Security headers.** The web server (nginx) adds four headers to every response, pages and images: no other site may show the pages in a frame (`X-Frame-Options: DENY`, `Content-Security-Policy: frame-ancestors 'none'`; UP Wallet signs transactions, so it must not be framed by a site that could trick clicks), files keep their declared type (`X-Content-Type-Options: nosniff`) and no referrer is sent (`Referrer-Policy: no-referrer`). They are in `/etc/nginx/snippets/security-headers.conf`, included in the site's `server` block and again in every `location` that has its own `add_header` (nginx drops the server-level headers there). Check: `curl -sI https://crosschain-lukso.chainintegrate.it/up-wallet.html`. A full Content-Security-Policy is not set yet (AUDIT R-02).
+**Security headers.** The web server (nginx) adds these headers to every response, pages and images: no other site may show the pages in a frame (`X-Frame-Options: DENY`, `frame-ancestors 'none'`; UP Wallet signs transactions, so it must not be framed by a site that could trick clicks), files keep their declared type (`X-Content-Type-Options: nosniff`), no referrer is sent (`Referrer-Policy: no-referrer`), and a fixed Content-Security-Policy:
 
-**Check after every deploy.** Each of these URLs must return *404 Not Found*; `/.git` may return the one-line `gitdir:` file, which contains only a path and no repository data:
+```
+default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss://relay.walletconnect.org wss://relay.walletconnect.com; frame-src https://verify.walletconnect.org https://verify.walletconnect.com; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+```
+
+`connect-src` allows any HTTPS host because the pages talk to the RPCs and explorers of many networks, custom RPCs included; `img-src` too, because profiles and tokens point to images anywhere. Scripts are restricted by a second policy in each page: a `<meta http-equiv="Content-Security-Policy">` whose `script-src` allows the site's files, ethers from the CDN and the page's own inline scripts by their SHA-256 hash, nothing else. The browser applies both policies, so an injected script or an inline event handler does not run. `node tools/csp.js` writes the hashes; run it after every change to an inline script (`node tools/csp.js --check` only checks, as the GitHub workflow does on every push).
+
+The headers are in `/etc/nginx/snippets/security-headers.conf`, included in the site's `server` block and again in every `location` that has its own `add_header` (nginx drops the server-level headers there). The same `server` block includes `/etc/nginx/snippets/crosschain-deny.conf`, which returns 404 for dot files and folders (except `/.well-known/`, used to renew the certificate), `/tools/` and every `.md` file, whatever the git clone contains. Check: `curl -sI https://crosschain-lukso.chainintegrate.it/up-wallet.html`.
+
+**Check after every deploy.** Each of these URLs must return *404 Not Found*:
 
 - `https://crosschain-lukso.chainintegrate.it/.git/HEAD`
 - `https://crosschain-lukso.chainintegrate.it/.git/config`
 - `https://crosschain-lukso.chainintegrate.it/tools/decrypt.js`
 - `https://crosschain-lukso.chainintegrate.it/decrypt.js` (old location, removed by the pull)
+- `https://crosschain-lukso.chainintegrate.it/.gitignore`
+- `https://crosschain-lukso.chainintegrate.it/AUDIT.md` (and any other `.md`, such as `vendor/README.md`)
 
 ## Roadmap
 

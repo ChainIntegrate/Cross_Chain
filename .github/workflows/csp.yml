@@ -1,0 +1,11 @@
+name: Content-Security-Policy
+# Every page carries the SHA-256 hashes of its inline scripts (tools/csp.js); a stale hash blocks the script.
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: node tools/csp.js --check
