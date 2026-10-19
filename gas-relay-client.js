@@ -305,12 +305,17 @@
   // Such an operation can still land later. Until its nonce is used, a new operation through the relayer
   // takes the same nonce, so at most one of the two runs; a send by another path (the controller pays)
   // has no such protection and is blocked.
+  // A list per chain and UP (AUDIT GS-2): a second unclear operation is added, not written over the first,
+  // so each one that lands after all is still reported. Older pages kept a single record: read as a list.
   const PENDING_KEY = "ci-relay-pending";
+  const PENDING_MAX = 10;
   const pendingKey = (chainId, up) => `${chainId}:${up.toLowerCase()}`;
   function pendingAll() { try { return JSON.parse(localStorage.getItem(PENDING_KEY) || "{}") || {}; } catch (e) { return {}; } }
-  function pendingPut(key, v) {
-    try { const a = pendingAll(); if (v) a[key] = v; else delete a[key]; localStorage.setItem(PENDING_KEY, JSON.stringify(a)); } catch (e) { /* not kept: the page still warns now */ }
+  function pendingList(key) { const v = pendingAll()[key]; return !v ? [] : Array.isArray(v) ? v : [v]; }
+  function pendingSet(key, list) {
+    try { const a = pendingAll(); if (list.length) a[key] = list; else delete a[key]; localStorage.setItem(PENDING_KEY, JSON.stringify(a)); } catch (e) { /* not kept: the page still warns now */ }
   }
+  function pendingAdd(key, p) { pendingSet(key, [...pendingList(key).filter((x) => x.hash !== p.hash), p].slice(-PENDING_MAX)); }
   // The UserOperationEvent of `hash`, looked up in the recent blocks: { tx, success } or null.
   async function findOpEvent(provider, hash) {
     const ev = EP_IFACE.getEvent("UserOperationEvent");
@@ -322,20 +327,31 @@
     }
     return null;
   }
-  // { state: "none" } | { state: "outstanding", p } | { state: "landed", p, ev }. Once the nonce is used,
-  // the operation is forgotten: "landed" (reported once) when its own event is found, otherwise another
+  // { state: "none" } | { state: "outstanding", p } | { state: "landed", p, ev }. Once its nonce is used,
+  // an operation is forgotten: "landed" (reported once) when its own event is found, otherwise another
   // operation with the same nonce ran instead. An expired sponsor approval can no longer land either.
+  // With several records, one "landed" is reported per call (the others wait for the next call), and
+  // "outstanding" names the one with the lowest nonce. Nothing is changed when a read fails.
   async function pendingStatus(provider, { chainId, up }) {
-    const key = pendingKey(chainId, up), p = pendingAll()[key];
-    if (!p) return { state: "none" };
+    const key = pendingKey(chainId, up), list = pendingList(key);
+    if (!list.length) return { state: "none" };
     const nonce = await new ethers.Contract(ENTRY_POINT, EP_IFACE, provider).getNonce(up, 0);
-    if (nonce > BigInt(p.nonce)) {
-      const ev = await findOpEvent(provider, p.hash);
-      pendingPut(key, null);
-      return ev ? { state: "landed", p, ev } : { state: "none" };
+    const now = Math.floor(Date.now() / 1000), keep = [];
+    let landed = null;
+    for (const p of list) {
+      if (nonce > BigInt(p.nonce)) {
+        if (landed) { keep.push(p); continue; }   // reported at the next call
+        const ev = await findOpEvent(provider, p.hash);
+        if (ev) landed = { p, ev };
+        continue;
+      }
+      if (p.validUntil && p.validUntil < now) continue;
+      keep.push(p);
     }
-    if (p.validUntil && p.validUntil < Math.floor(Date.now() / 1000)) { pendingPut(key, null); return { state: "none" }; }
-    return { state: "outstanding", p };
+    pendingSet(key, keep);
+    if (landed) return { state: "landed", ...landed };
+    const open = keep.filter((p) => BigInt(p.nonce) >= nonce).sort((a, b) => (BigInt(a.nonce) < BigInt(b.nonce) ? -1 : 1))[0];
+    return open ? { state: "outstanding", p: open } : { state: "none" };
   }
   const pendingView = (p) => ({ at: new Date(p.at).toLocaleTimeString(), hash: p.hash, nonce: p.nonce });
 
@@ -482,15 +498,17 @@
     }
     const p = { nonce: prep.op.nonce.toString(), hash: prep.hash, at: Date.now(),
       validUntil: prep.sponsor ? Number(BigInt(ethers.dataSlice(prep.op.paymasterAndData, 20, 26))) : 0 };
-    pendingPut(pendingKey(chainId, prep.op.sender), p);
+    pendingAdd(pendingKey(chainId, prep.op.sender), p);
     if (prep.provider) {
       log(text("checkingChain"), "line-dim");
       for (let i = 0; i < 12; i++) {
         if (i) await new Promise((res) => setTimeout(res, 5000));
         try {
           const st = await pendingStatus(prep.provider, { chainId, up: prep.op.sender });
-          if (st.state === "landed" && st.ev) { log(text("landedAfterAll", { tx: st.ev.tx }), "line-ok"); return st.ev.tx; }
-          if (st.state !== "outstanding") break;
+          if (st.state === "landed" && st.ev && st.p.hash === prep.hash) { log(text("landedAfterAll", { tx: st.ev.tx }), "line-ok"); return st.ev.tx; }
+          // An earlier unclear operation that landed meanwhile: said now, not lost (AUDIT GS-2).
+          if (st.state === "landed" && st.ev) { log(text("pendingLanded", { ...pendingView(st.p), ok: st.ev.success }), "line-warn"); continue; }
+          if (st.state !== "outstanding" || st.p.hash !== prep.hash && !pendingList(pendingKey(chainId, prep.op.sender)).some((x) => x.hash === prep.hash)) break;
         } catch (e) { /* RPC hiccup: try again */ }
       }
     }
