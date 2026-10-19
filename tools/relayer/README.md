@@ -50,7 +50,8 @@ A chain in the configuration can also have `"sponsorPaymaster": "0x…"`, a `UPV
 | Method and path | Body | Answer |
 |---|---|---|
 | `POST /relay/sponsor/check` | `{ "chainId": 43114, "sender": "0x…UP" }` | `{ "sponsored": true }`, or `{ "sponsored": false, "reason": "…" }`. With paid subscriptions also `balance` and `price` (USDC) and `subscription` (`amount`, `receiver`, `usdc`, `status`: none, requested, paid, active; `prices` per chain) |
-| `POST /relay/sponsor/sign` | `{ "chainId": 43114, "op": { … } }` with `paymasterAndData` set to the paymaster followed by 77 placeholder bytes; for the subscription payment also `"subscribe": { "email": "…" }` (`up-subscribe.html`) | `{ "paymasterAndData": "0x…" }` (97 bytes: paymaster, validUntil, validAfter, signature), or `{ "error": "…" }` with status 4xx/5xx |
+| `POST /relay/sponsor/sign` | `{ "chainId": 43114, "op": { … } }` with `paymasterAndData` set to the paymaster followed by 77 placeholder bytes. No e-mail, also for the subscription payment (AUDIT F2-2; pages from before sent `"subscribe": { "email": "…" }` here, still accepted) | `{ "paymasterAndData": "0x…" }` (97 bytes: paymaster, validUntil, validAfter, signature), or `{ "error": "…" }` with status 4xx/5xx |
+| `POST /relay/sponsor/email` | Subscription payment only, after the controller signed: `{ "chainId": 43114, "hash": "0x…userOpHash", "signature": "0x…", "email": "…" }` (`up-subscribe.html`, before it sends the operation) | `{ "ok": true }`; refused when the hash is not an approved payment (404), the e-mail or signature is invalid (400), the signer is not a 4337 controller of the UP (403), or the payment already has an e-mail (409) |
 
 The page checks the approval before the controller signs: right paymaster, 97 bytes, and a signature that recovers to the paymaster's `signer()` over `getHash(op, validUntil, validAfter)`.
 
