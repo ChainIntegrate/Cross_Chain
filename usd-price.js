@@ -1,5 +1,5 @@
 // Cross_Chain — USD value of a chain's gas token, from Chainlink price feeds read on that chain.
-// Used by the operator's gas page (up-gas-relay-admin.html), the relayer monitor and its balance
+// Used by the operator's gas page (up-gas-relay-admin.html), UP Wallet's overview of every network, the relayer monitor and its balance
 // script (tools/relayer), and the sponsor service's weekly report (a copy in that repository).
 // No external API: the feed is read through the same RPC as everything else. Before a feed is used,
 // its description() must be exactly the expected pair. A price is marked stale when it is older than
@@ -17,6 +17,9 @@
     42161: { name: "Arbitrum One", symbol: "ETH", feed: "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612", pairs: ["ETH / USD"] },  // Arbitrum One
     137: { name: "Polygon", symbol: "POL", feed: "0xAB594600376Ec9fD91F8e885dADF0CE036862dE0", pairs: ["POL / USD", "MATIC / USD"] }, // Polygon (renamed feed)
     43114: { name: "Avalanche", symbol: "AVAX", feed: "0x0A77230d17318075983913bC2145DB16C7366156", pairs: ["AVAX / USD"] }, // Avalanche C-Chain
+    1: { name: "Ethereum", symbol: "ETH", feed: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419", pairs: ["ETH / USD"] },   // Ethereum
+    10: { name: "Optimism", symbol: "ETH", feed: "0x13e3Ee699D1909E989722E753853AE30b17e08c5", pairs: ["ETH / USD"] },  // OP Mainnet
+    56: { name: "BNB Smart Chain", symbol: "BNB", feed: "0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE", pairs: ["BNB / USD"] }, // BNB Smart Chain
     5042: { name: "Arc", symbol: "USDC", stable: true },                                                               // Arc: gas is USDC
   };
   const ABI = ["function description() view returns (string)", "function decimals() view returns (uint8)",
