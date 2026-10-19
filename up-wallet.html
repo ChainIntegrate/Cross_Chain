@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-Z7n3byGe092cx6/su1FByLso4Yndgd/llBKyBvCEnLA='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-tiiIeAAf6/x98HGKUmGe0HdVdS3hDWhJg7yVtoNToSw='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -783,7 +783,8 @@ const I18N = {
     proposalScam: "❌ WalletConnect segnala questo sito come truffa o dominio non valido: connessione rifiutata.",
     proposalAsks: (v) => `La dApp chiede — reti richieste: ${v.required}; reti facoltative: ${v.optional}; metodi: ${v.methods}; altri tipi di account: ${v.other}.`,
     proposalNone: "nessuna",
-    proposalApproved: (v) => `Connessione approvata solo per ${v.net}, la rete scelta nel pannello 1.`,
+    proposalApproved: (v) => `Connessione approvata. Rete attiva: ${v.net}, quella scelta nel pannello 1.`,
+    proposalAlsoChains: (v) => `La dApp vede la UP anche su: ${v.list}, dove esiste. Le richieste però sono accettate solo su ${v.net}: per operare su un'altra rete, sceglila nel pannello 1 e ricollega.`,
     proposalUnverified: "⚠️ Dominio non verificato da WalletConnect: controlla di essere sul sito giusto prima di approvare qualsiasi cosa.",
     proposalRejectedChains: (v) => `❌ Connessione rifiutata: la dApp richiede reti diverse da quella scelta (${v.err}). Scegli nel pannello 1 la rete che la dApp usa e ricollega.`,
     proposalOtherChains: (v) => `❌ Connessione rifiutata: la dApp chiede ${v.want}, nel pannello 1 è scelta ${v.have}. Scegli la rete della dApp, poi ricollega dalla dApp.`,
@@ -802,7 +803,7 @@ const I18N = {
     reqBusy: "C'è già una richiesta in attesa: la nuova viene rifiutata.",
     reqCapabilities: "La dApp chiede le capacità del wallet (EIP-5792): risposta \"nessuna capacità speciale\" sulla rete della sessione. Le transazioni arrivano una alla volta, ognuna con i soliti controlli.",
     reqUnsupported: (v) => `Metodo non supportato, rifiutato: ${v.method}`,
-    reqWrongChain: (v) => `❌ Richiesta sulla rete ${v.chain}, diversa da quella scelta (${v.exp}): rifiutata.`,
+    reqWrongChain: (v) => `❌ Richiesta sulla rete ${v.chain}, diversa da quella attiva (${v.exp}): rifiutata. Per operare su quella rete, sceglila nel pannello 1 e ricollega la dApp.`,
     reqSwitchChain: (v) => `La dApp chiede di passare alla rete con chainId ${v.id}. Qui si usa una rete alla volta: se serve, scegli quella rete nel pannello 1 e ricollega. Rifiutata.`,
     complianceLost: "❌ La verifica di compatibilità non è più verde (vedi pannello 3): richiesta rifiutata.",
     reqWrongFrom: (v) => `❌ La transazione non parte dalla UP (from = ${v.from}): rifiutata.`,
@@ -1196,7 +1197,8 @@ const I18N = {
     proposalScam: "❌ WalletConnect flags this site as a scam or invalid domain: connection rejected.",
     proposalAsks: (v) => `The dApp asks for — required networks: ${v.required}; optional networks: ${v.optional}; methods: ${v.methods}; other account types: ${v.other}.`,
     proposalNone: "none",
-    proposalApproved: (v) => `Connection approved for ${v.net} only, the network chosen in panel 1.`,
+    proposalApproved: (v) => `Connection approved. Active network: ${v.net}, the one chosen in panel 1.`,
+    proposalAlsoChains: (v) => `The dApp also sees the UP on: ${v.list}, where it exists. Requests are accepted only on ${v.net}: to operate on another network, choose it in panel 1 and connect again.`,
     proposalUnverified: "⚠️ Domain not verified by WalletConnect: check that you are on the right site before approving anything.",
     proposalRejectedChains: (v) => `❌ Connection rejected: the dApp requires networks other than the chosen one (${v.err}). Choose in panel 1 the network the dApp uses and connect again.`,
     sessionActive: (v) => `✅ Session active with ${v.name} (${v.url}) — account presented: ${v.acc} on chainId ${v.id}.`,
@@ -1208,7 +1210,7 @@ const I18N = {
     reqBusy: "A request is already pending: the new one is rejected.",
     reqCapabilities: "The dApp asks for the wallet's capabilities (EIP-5792): answered \"no special capabilities\" on the session's network. Transactions come one at a time, each with the usual checks.",
     reqUnsupported: (v) => `Unsupported method, rejected: ${v.method}`,
-    reqWrongChain: (v) => `❌ Request on network ${v.chain}, not the chosen one (${v.exp}): rejected.`,
+    reqWrongChain: (v) => `❌ Request on network ${v.chain}, not the active one (${v.exp}): rejected. To operate on that network, choose it in panel 1 and connect the dApp again.`,
     reqSwitchChain: (v) => `The dApp asks to switch to chainId ${v.id}. This page uses one network at a time: if needed, choose that network in panel 1 and connect again. Rejected.`,
     complianceLost: "❌ The compatibility check is no longer green (see panel 3): request rejected.",
     reqWrongFrom: (v) => `❌ The transaction does not come from the UP (from = ${v.from}): rejected.`,
@@ -1827,8 +1829,9 @@ async function getWalletKit() {
   // Sessions restored from a previous visit may present another UP or network: close them.
   const { getSdkError } = window.WalletKitBundle;
   for (const s of Object.values(walletKit.getActiveSessions())) {
-    const acc = s.namespaces?.eip155?.accounts || [];
-    if (!compliance || acc.length !== 1 || acc[0].toLowerCase() !== `${compliance.caip}:${compliance.up}`.toLowerCase()) {
+    const acc = (s.namespaces?.eip155?.accounts || []).map((a) => a.toLowerCase());
+    const mine = compliance && acc.length && acc.every((a) => a.endsWith(":" + compliance.up.toLowerCase())) && acc.includes(`${compliance.caip}:${compliance.up}`.toLowerCase());
+    if (!mine) {
       try { await walletKit.disconnectSession({ topic: s.topic, reason: getSdkError("USER_DISCONNECTED") }); } catch (e) { /* already gone */ }
     } else sessionChain = compliance.caip;
   }
@@ -1914,6 +1917,24 @@ function describeProposal(params) {
   };
 }
 
+// The networks of a proposal, other than the chosen one, where the UP exists (its code read now, or the
+// presence check of the network buttons): approved in the session too, so that dApps that check the
+// session's networks after connecting (wagmi, Reown AppKit: Silo, for example) find theirs. Requests are
+// still served only on the chosen network; the others are refused with a message.
+async function upChainsOf(c, caips) {
+  const timeout = (p, ms) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error("timeout")), ms))]);
+  const checks = caips.filter((x) => x !== c.caip).slice(0, 12).map(async (caip) => {
+    const n = NETWORKS.find((k) => k.chainId && `eip155:${k.chainId}` === caip);
+    if (!n || !n.rpc) return null;
+    if (presenceFor === c.up && presence[n.key] === true) return caip;
+    if (presenceFor === c.up && presence[n.key] === false) return null;
+    const pv = new ethers.JsonRpcProvider(n.rpc, n.chainId, { staticNetwork: true, batchMaxCount: 1 });
+    try { return (await timeout(pv.getCode(c.up), 6000)) !== "0x" ? caip : null; } catch (e) { return null; } finally { pv.destroy(); }
+  });
+  return (await Promise.all(checks)).filter(Boolean);
+}
+const caipName = (caip) => { const n = NETWORKS.find((k) => k.chainId && `eip155:${k.chainId}` === caip); return n ? `${n.name} (${n.chainId})` : caip; };
+
 async function onSessionProposal({ id, params, verifyContext }) {
   const { buildApprovedNamespaces, getSdkError } = window.WalletKitBundle;
   const raw = params.proposer.metadata || {};
@@ -1937,21 +1958,29 @@ async function onSessionProposal({ id, params, verifyContext }) {
     return;
   }
   try {
-    // The UP address is the account presented to the dApp, on the chosen network only.
+    // The UP address is the account presented to the dApp: on the chosen network (the active one, first),
+    // and on the other proposed networks where the UP exists.
+    const proposed = [...new Set([...(params.requiredNamespaces?.eip155?.chains || []),
+      ...Object.entries(params.optionalNamespaces || {}).filter(([k]) => k.split(":")[0] === "eip155").flatMap(([k, v]) => v.chains || (k.includes(":") ? [k] : []))])];
+    // Only when the dApp also accepts the chosen network: otherwise the session would sit on networks where
+    // every request is refused; the dApp is refused instead, with a button for each network it accepts.
+    const extra = proposed.includes(c.caip) ? await upChainsOf(c, proposed) : [];
+    const chains = [c.caip, ...extra];
     const namespaces = buildApprovedNamespaces({
       proposal: params,
       supportedNamespaces: {
         eip155: {
-          chains: [c.caip],
+          chains,
           methods: ["eth_sendTransaction", "personal_sign", "eth_signTypedData_v4", "eth_signTypedData", "eth_signTypedData_v3", "eth_sign", "wallet_switchEthereumChain", "wallet_getCapabilities"],
           events: ["accountsChanged", "chainChanged"],
-          accounts: [`${c.caip}:${c.up}`],
+          accounts: chains.map((x) => `${x}:${c.up}`),
         },
       },
     });
     await walletKit.approveSession({ id, namespaces });
     sessionChain = c.caip;
     log(t("proposalApproved", { net: `${c.net.name} (${c.net.chainId})` }), "line-dim");
+    if (extra.length) log(t("proposalAlsoChains", { list: extra.map(caipName).join(", "), net: c.net.name }), "line-dim");
     showSessions();
   } catch (e) {
     // The networks the dApp requires, other than the chosen one: named, and one click away when the page has
@@ -2112,7 +2141,7 @@ async function onSessionRequest(event) {
   // Fresh compatibility check: network, account and permissions as they are now.
   const c = await freshCompliance();
   if (!c) return reject(t("complianceLost"));
-  if (chainId !== c.caip) return reject(t("reqWrongChain", { chain: chainId, exp: c.caip }));
+  if (chainId !== c.caip) return reject(t("reqWrongChain", { chain: caipName(chainId), exp: caipName(c.caip) }));
   log(t("chainsOk"), "line-ok");
 
   if (request.method === "eth_sendTransaction") return handleSendTransaction(topic, id, c, request.params?.[0] || {}, validation, reject);
