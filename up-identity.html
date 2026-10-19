@@ -18,6 +18,7 @@
 <script src="chains.js"></script>
 <script src="site-ui.js"></script>
 <script src="sign-check.js"></script>
+<script src="deploy-check.js"></script>
 <script src="backup-check.js"></script>
 <script src="config.js"></script>
 <script src="asset-list.js"></script>
@@ -281,6 +282,7 @@ const I18N = {
     pubRejected: "Connessione rifiutata.",
     pubSignerOk: (v) => `Firmerà ${v.addr}: controller della UP su questa rete, può scrivere LSP3Profile (${v.why}).`,
     pubSignerNot: (v) => `${v.addr} non è un controller di questa UP su questa rete: connetti la chiave di genesi o il backup.`,
+    pubNotLinked: (v) => `❌ La UP non è collegata al suo Key Manager come previsto: il suo proprietario è ${v.km}, che non controlla questa UP (controlla ${v.target}). Non viene firmato niente: controlla la UP con le pagine di verifica.`,
     pubSignerNoPerm: (v) => `${v.addr} è un controller, ma non può scrivere LSP3Profile (manca SUPER_SETDATA, e SETDATA non la consente).`,
     pubWhySuper: "SUPER_SETDATA",
     pubWhyAllowed: "SETDATA, chiave consentita",
@@ -415,6 +417,7 @@ const I18N = {
     pubRejected: "Connection rejected.",
     pubSignerOk: (v) => `${v.addr} will sign: a controller of the UP on this network, allowed to write LSP3Profile (${v.why}).`,
     pubSignerNot: (v) => `${v.addr} is not a controller of this UP on this network: connect the genesis key or the backup.`,
+    pubNotLinked: (v) => `❌ The UP is not linked to its Key Manager as expected: its owner is ${v.km}, which does not control this UP (it controls ${v.target}). Nothing is signed: check the UP with the verify pages.`,
     pubSignerNoPerm: (v) => `${v.addr} is a controller but cannot write LSP3Profile (no SUPER_SETDATA, and SETDATA does not allow it).`,
     pubWhySuper: "SUPER_SETDATA",
     pubWhyAllowed: "SETDATA, key allowed",
@@ -972,6 +975,10 @@ $("pubBtn").addEventListener("click", async () => {
     const perm = await lsp3Permission(provider, up, pubAddr);
     if (!perm.ok) { pubLog(perm.ctrl ? t("pubSignerNoPerm", { addr: pubAddr }) : t("pubSignerNot", { addr: pubAddr }), "line-err"); return; }
     const km = ethers.getAddress(await new ethers.Contract(up, UP_W_IFACE, provider).owner());
+    // The UP's owner must be a Key Manager that controls this same UP (deploy-check.js, as on the deploy
+    // and verify pages): otherwise the write would go to a contract the page knows nothing about (AUDIT N-2).
+    const lk = await DeployCheck.link(provider, up, km);
+    if (!lk.ok) { pubLog(t("pubNotLinked", { km, target: lk.target || "—" }), "line-err"); return; }
     const data = KM_IFACE.encodeFunctionData("execute", [UP_W_IFACE.encodeFunctionData("setData", [LSP3_KEY, value])]);
     pubLog(t("pubPlan", { signer: pubAddr, km, net: r.netName, uri: r.lukso.uri }), "line-dim");
     pubLog(t("pubSimulating"), "line-dim");
