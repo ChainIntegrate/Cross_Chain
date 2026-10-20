@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-ZOkZqqJRJVzyqQ9A9bgEYDET/TrZ9mM63gL4QdpPEDY='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-RdxLsQY3+SR8Wsrj97DUBNScuIJCo2RIfeEOeGs4RrQ='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -822,7 +822,8 @@ const I18N = {
     reqCapabilities: "La dApp chiede le capacità del wallet (EIP-5792): risposta \"nessuna capacità speciale\" sulla rete della sessione. Le transazioni arrivano una alla volta, ognuna con i soliti controlli.",
     reqUnsupported: (v) => `Metodo non supportato, rifiutato: ${v.method}`,
     reqWrongChain: (v) => `❌ Richiesta sulla rete ${v.chain}, diversa da quella scelta (${v.exp}): rifiutata.`,
-    reqSwitchChain: (v) => `La dApp chiede di passare alla rete con chainId ${v.id}. Qui si usa una rete alla volta: se serve, scegli quella rete nel pannello 1 e ricollega. Rifiutata.`,
+    reqSwitchChain: (v) => `La dApp chiede di passare alla rete con chainId ${v.id}. Qui si usa una rete alla volta, ${v.net}: rifiutata. Nella dApp scegli ${v.net}; se invece ti serve l'altra rete, sceglila nel pannello 1 e ricollega.`,
+    reqSwitchTold: (v) => `Comunicato alla dApp che la rete collegata è ${v.net}.`,
     complianceLost: "❌ La verifica di compatibilità non è più verde (vedi pannello 3): richiesta rifiutata.",
     reqWrongFrom: (v) => `❌ La transazione non parte dalla UP (from = ${v.from}): rifiutata.`,
     reqCreate: "❌ Creazione di contratti non supportata: rifiutata.",
@@ -1230,7 +1231,8 @@ const I18N = {
     reqCapabilities: "The dApp asks for the wallet's capabilities (EIP-5792): answered \"no special capabilities\" on the session's network. Transactions come one at a time, each with the usual checks.",
     reqUnsupported: (v) => `Unsupported method, rejected: ${v.method}`,
     reqWrongChain: (v) => `❌ Request on network ${v.chain}, not the chosen one (${v.exp}): rejected.`,
-    reqSwitchChain: (v) => `The dApp asks to switch to chainId ${v.id}. This page uses one network at a time: if needed, choose that network in panel 1 and connect again. Rejected.`,
+    reqSwitchChain: (v) => `The dApp asks to switch to chainId ${v.id}. This page uses one network at a time, ${v.net}: rejected. Choose ${v.net} in the dApp; if you need the other network instead, choose it in panel 1 and connect again.`,
+    reqSwitchTold: (v) => `The dApp was told that the connected network is ${v.net}.`,
     complianceLost: "❌ The compatibility check is no longer green (see panel 3): request rejected.",
     reqWrongFrom: (v) => `❌ The transaction does not come from the UP (from = ${v.from}): rejected.`,
     reqCreate: "❌ Contract creation is not supported: rejected.",
@@ -2107,8 +2109,18 @@ async function onSessionRequest(event) {
   if (request.method === "wallet_switchEthereumChain") {
     const wanted = parseInt(request.params?.[0]?.chainId, 16);
     if (sessionChain === `eip155:${wanted}`) return respondResult(topic, id, null);
-    log(t("reqSwitchChain", { id: wanted }), "line-warn");
-    return respondError(topic, id, "Only the chosen network is supported", 4902);
+    const net = NETWORKS.find((n) => sessionChain === `eip155:${n.chainId}`);
+    log(t("reqSwitchChain", { id: wanted, net: net ? net.name : sessionChain }), "line-warn");
+    await respondError(topic, id, "Only the chosen network is supported", 4902);
+    // Some dApps (Aave's, on its default Ethereum) then stay on the network they asked for and send
+    // nothing: the session's network is announced to them again, so they can follow it.
+    if (sessionChain && topic !== LOCAL_TOPIC) {
+      try {
+        await walletKit.emitSessionEvent({ topic, chainId: sessionChain, event: { name: "chainChanged", data: "0x" + Number(sessionChain.split(":")[1]).toString(16) } });
+        log(t("reqSwitchTold", { net: net ? net.name : sessionChain }), "line-dim");
+      } catch (e) { /* the dApp may have closed the session meanwhile */ }
+    }
+    return;
   }
   // EIP-5792: some dApps (Reown AppKit) ask the wallet's capabilities right after connecting and may stall
   // when the method is missing. The answer: nothing special on the session's network (no batched calls,
