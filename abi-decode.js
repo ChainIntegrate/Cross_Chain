@@ -17,8 +17,10 @@
   // Networks enabled, by chains.js key: their Blockscout explorer.
   const EXPLORERS = {
     "base": "https://base.blockscout.com",
+    "arbitrum-one": "https://arbitrum.blockscout.com",
+    "arc": "https://explorer.arc.io",
   };
-  const CHAIN_KEYS = { 8453: "base" };
+  const CHAIN_KEYS = { 8453: "base", 42161: "arbitrum-one", 5042: "arc" };
   const lang = () => (document.documentElement.lang === "en" ? "en" : "it");
   const TEXT = {
     it: {
