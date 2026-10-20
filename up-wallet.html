@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-KPnodBCYvhKu97joBd8tmMo0ZfauV50Wi75mV+1mJbw='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-4bQvvOxlrdBOFoioOcNxd16cr4jMGM1hggFIctKhqRQ='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -18,6 +18,7 @@
 <script src="chains.js"></script>
 <script src="asset-list.js"></script>
 <script src="usd-price.js"></script>
+<script src="token-image.js"></script>
 <script src="backup-check.js"></script>
 <script src="gas-relay-client.js"></script>
 <script src="call-decode.js"></script>
@@ -143,6 +144,11 @@
   .ov-line { display: flex; gap: 10px; font-size: 13px; padding: 3px 0; overflow-wrap: anywhere; }
   .ov-usd { margin-left: auto; color: var(--text-dim); white-space: nowrap; font-weight: 400; }
   .ov-sub { font-size: 11.5px; color: var(--text-dim); margin-top: 4px; }
+  .ov-line { align-items: center; }
+  .ov-thumb { width: 28px; height: 28px; flex: none; border-radius: 6px; background: var(--field) center / cover no-repeat; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--text-dim); overflow: hidden; }
+  .ov-thumb.has-img { color: transparent; }
+  .ov-thumb.img-ask { cursor: pointer; outline: 1px dashed var(--accent); outline-offset: -1px; color: var(--accent); }
+  .ov-thumb .net-logo { width: 28px; height: 28px; }
   .view-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
   .view-title { font-size: 16px; font-weight: 700; }
   body[data-view="home"] .panel { display: none; }
@@ -603,6 +609,7 @@ const I18N = {
     ovNothing: (v) => `Niente su: ${v.list}.`, ovAbsent: (v) => `La UP non esiste su: ${v.list}.`,
     ovFailed: (v) => `Non lette (rete non raggiungibile): ${v.list}. Riprova con Aggiorna.`,
     ovUnpriced: "contiene anche token senza prezzo",
+    ovImgAsk: "Immagine su un server esterno: toccala per caricarla. Quel server vedrà il tuo indirizzo IP e quando guardi questa UP.",
     tileReceive: "Ricevi", tileReceiveSub: "Indirizzo e QR della UP",
     tileDapp: "Collega una dApp", tileDappSub: "Usa una dApp con la UP (WalletConnect)",
     tileActivity: "Attività", tileActivitySub: "Richieste, simulazione e messaggi",
@@ -1013,6 +1020,7 @@ const I18N = {
     ovNothing: (v) => `Nothing on: ${v.list}.`, ovAbsent: (v) => `The UP does not exist on: ${v.list}.`,
     ovFailed: (v) => `Not read (network not reachable): ${v.list}. Try again with Refresh.`,
     ovUnpriced: "also holds tokens without a price",
+    ovImgAsk: "Image on an external server: tap to load it. That server will see your IP address and when you look at this UP.",
     tileReceive: "Receive", tileReceiveSub: "The UP's address and QR",
     tileDapp: "Connect a dApp", tileDappSub: "Use a dApp with the UP (WalletConnect)",
     tileActivity: "Activity", tileActivitySub: "Requests, simulation and messages",
@@ -3465,7 +3473,7 @@ function ovLines(r) {
   if (r.a.native !== null && r.a.native > 0n) {
     const v = r.price && window.UsdPrice ? UsdPrice.usd(r.a.native, r.price) : null;
     if (v === null) unpriced = true; else usd += v;
-    lines.push([`${shortAmount(ethers.formatEther(r.a.native))} ${cur}`.trim(), t("ovNative"), v]);
+    lines.push([`${shortAmount(ethers.formatEther(r.a.native))} ${cur}`.trim(), t("ovNative"), v, null, { native: r.n }]);
   }
   const usdc = OV_USDC[r.n.chainId] ? ethers.getAddress(OV_USDC[r.n.chainId]) : null;
   for (const x of r.a.rows.filter((x) => !x.spam)) {
@@ -3473,10 +3481,10 @@ function ovLines(r) {
     if (x.amount !== undefined) {
       const v = usdc && x.address === usdc ? Number(x.amount) : null;
       if (v === null) unpriced = true; else usd += v;
-      lines.push([`${shortAmount(x.amount)} ${label}`, `${x.type} · ${shortAddr(x.address)}`, v, x.address]);
+      lines.push([`${shortAmount(x.amount)} ${label}`, `${x.type} · ${shortAddr(x.address)}`, v, x.address, { row: x, letter: label }]);
     } else {
       unpriced = true;
-      lines.push([`${oneLine(x.name || label)} · ${x.type}`, `${t("ovNftCount", { count: x.count || "?" })} · ${shortAddr(x.address)}`, null, x.address]);
+      lines.push([`${oneLine(x.name || label)} · ${x.type}`, `${t("ovNftCount", { count: x.count || "?" })} · ${shortAddr(x.address)}`, null, x.address, { row: x, letter: oneLine(x.name || label) }]);
     }
   }
   return { lines, usd, unpriced, spam: r.a.rows.filter((x) => x.spam).length };
@@ -3505,9 +3513,17 @@ function renderOverview() {
     head.appendChild(netLogo(h.r.n.key, h.r.n.name));
     add("span", "", h.r.n.name, head);
     add("span", "ov-usd", h.usd > 0 ? "≈ " + ovUsdText(h.usd) : t("ovNoPrice"), head);
-    for (const [main, detail, v, full] of h.lines) {
+    for (const [main, detail, v, full, th] of h.lines) {
       const line = add("div", "ov-line", undefined, card);
       if (full) line.title = full;
+      // The token's image where there is one (AUDIT N-1: only IPFS and the indexes' own hosts load by
+      // themselves; any other server waits for a tap), else its initial; the network's logo for its currency.
+      const thumb = add("span", "ov-thumb", undefined, line);
+      if (th && th.native) thumb.appendChild(netLogo(th.native.key, th.native.name));
+      else if (th && th.row) {
+        thumb.textContent = (String(th.letter || "?").replace(/[^\p{L}\p{N}]/gu, "")[0] || "?").toUpperCase();
+        if (window.TokenImage) TokenImage.show(thumb, th.row, t("ovImgAsk"));
+      }
       const left = add("div", "", undefined, line);
       add("div", "", main, left);
       add("div", "ov-sub", detail, left);
