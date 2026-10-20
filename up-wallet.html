@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-uDLfzz/vUzb8OvuT8tlrY0DgIE+fxlYqi0KX3bVm5cE='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-KPnodBCYvhKu97joBd8tmMo0ZfauV50Wi75mV+1mJbw='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -21,6 +21,7 @@
 <script src="backup-check.js"></script>
 <script src="gas-relay-client.js"></script>
 <script src="call-decode.js"></script>
+<script src="abi-decode.js"></script>
 <script src="vendor/walletkit-1.6.0.min.js" integrity="sha384-o1OPho4aXup6dZTxTsaL+hXbLbZ9dmbU0j/hlmpw5t0P/k91PxXHqIdLkQWag92X"></script>
 <script src="vendor/qrcode-generator-1.4.4.js"></script>
 <!-- Site configuration, created on the server from config.example.js (not in the repository). -->
@@ -2213,6 +2214,17 @@ async function describeCall(c, to, value, data, rows, warnings) {
   }
   let parsed = null;
   try { parsed = KNOWN_IFACE.parseTransaction({ data, value }); } catch (e) { parsed = null; }
+  // Last: the contract's verified ABI from the network's explorer (abi-decode.js), function and parameters.
+  if (!parsed && isContract && window.AbiDecode) {
+    const d = await AbiDecode.describe({ netKey: c.net.key, chainId: c.net.chainId, up: c.up, to, value, data });
+    if (d) {
+      rows.push([t("kCall"), d.op, {}]);
+      rows.push([t("kParams"), d.params, { block: true }]);
+      rows.push([t("kRaw"), data, { raw: true }]);
+      for (const n of d.notes) warnings.push(n);
+      return d.op;
+    }
+  }
   if (!parsed) {
     const op = t("unknownCall", { sel: data.slice(0, 10) });
     rows.push([t("kCall"), op, { cls: "warn" }]);
