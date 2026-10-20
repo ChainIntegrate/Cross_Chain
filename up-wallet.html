@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-4bQvvOxlrdBOFoioOcNxd16cr4jMGM1hggFIctKhqRQ='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-NyWdjTaqAAjSz4HsEqZVgSVhlJy5LscsRsW+oBVTP0c='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -2226,6 +2226,8 @@ async function describeCall(c, to, value, data, rows, warnings) {
   if (!parsed && isContract && window.AbiDecode) {
     const d = await AbiDecode.describe({ netKey: c.net.key, chainId: c.net.chainId, up: c.up, to, value, data });
     if (d) {
+      const toRow = rows.find((r) => r[0] === t("kTo"));
+      if (d.label && toRow && !known && !dapp) toRow[1] = toRow[1].replace(/\)$/, ` · ${d.label})`);
       rows.push([t("kCall"), d.op, {}]);
       rows.push([t("kParams"), d.params, { block: true }]);
       rows.push([t("kRaw"), data, { raw: true }]);
