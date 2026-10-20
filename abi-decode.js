@@ -18,6 +18,7 @@
   const EXPLORERS = {
     "base": "https://base.blockscout.com",
   };
+  const CHAIN_KEYS = { 8453: "base" };
   const lang = () => (document.documentElement.lang === "en" ? "en" : "it");
   const TEXT = {
     it: {
@@ -29,6 +30,9 @@
       more: (v) => `… altri ${v.n}`,
       tagLabel: (v) => `${v.tag} (etichetta di ${v.explorer})`,
       nameLabel: (v) => `${v.name} (nome del codice verificato)`,
+      nameShort: (v) => `"${v.name}" secondo l'explorer`,
+      tokenLabel: (v) => `token ${v.sym} (simbolo dichiarato dal token)`,
+      tokenShort: (v) => `token "${v.sym}"`,
       inner: (v) => `ℹ️ Contiene ${v.n} chiamate allo stesso contratto, decodificate una per una sotto data.`,
       innerUnknown: "chiamata non presente nell'ABI pubblicata",
     },
@@ -41,6 +45,9 @@
       more: (v) => `… ${v.n} more`,
       tagLabel: (v) => `${v.tag} (tag on ${v.explorer})`,
       nameLabel: (v) => `${v.name} (verified source name)`,
+      nameShort: (v) => `"${v.name}" per the explorer`,
+      tokenLabel: (v) => `token ${v.sym} (symbol the token declares)`,
+      tokenShort: (v) => `token "${v.sym}"`,
       inner: (v) => `ℹ️ It contains ${v.n} calls to the same contract, decoded one by one under data.`,
       innerUnknown: "call not in the published ABI",
     },
@@ -82,6 +89,34 @@
     const old = Array.isArray(a.public_tags) ? a.public_tags.find((x) => x && typeof x.display_name === "string") : null;
     return old ? clean(old.display_name, 50) : "";
   }
+  // How the explorer names an address: { tag, token, name } (any may be ""), cached like the ABIs.
+  // tag: Blockscout's public tag; token: the symbol the token contract declares; name: the verified source's
+  // contract name (of the implementation, for a proxy). Only the tag is set by the explorer.
+  async function infoOf(explorer, chainId, addr) {
+    const key = `addr.${chainId}.${addr.toLowerCase()}`;
+    const c = cached(key);
+    if (c) return c;
+    if (memory.has("miss." + key)) return null;
+    const a = await getJson(`${explorer}/api/v2/addresses/${addr}`);
+    if (!a) { memory.set("miss." + key, true); return null; }
+    const impl = Array.isArray(a.implementations) ? a.implementations.find((x) => x && typeof x.name === "string" && x.name) : null;
+    const v = { abi: [], at: Date.now(), tag: tagOf(a),
+      token: a.token && typeof a.token.symbol === "string" ? clean(a.token.symbol, 20) : "",
+      name: clean((impl && impl.name) || (a.is_verified && typeof a.name === "string" ? a.name : ""), 50) };
+    keep(key, v);
+    return v;
+  }
+  async function labelOf(chainId, addr) {
+    const explorer = EXPLORERS[CHAIN_KEYS[chainId]];
+    if (!explorer || !ethers.isAddress(addr)) return null;
+    const i = await infoOf(explorer, chainId, addr);
+    if (!i || !(i.tag || i.token || i.name)) return null;
+    const host = new URL(explorer).host;
+    // long: with its source, for the recipient row; short: for the summary and the approval line.
+    if (i.tag) return { long: text("tagLabel", { tag: i.tag, explorer: host }), short: i.tag };
+    if (i.token) return { long: text("tokenLabel", { sym: i.token }), short: text("tokenShort", { sym: i.token }) };
+    return { long: text("nameLabel", { name: i.name }), short: text("nameShort", { name: i.name }) };
+  }
   // The verified ABI of a contract, with its implementations' when it is a proxy. null: not available.
   async function abiOf(explorer, chainId, addr) {
     const key = `${chainId}.${addr.toLowerCase()}`;
@@ -96,7 +131,7 @@
       const k = await getJson(`${explorer}/api/v2/smart-contracts/${impl}`);
       if (k && Array.isArray(k.abi)) { abi = abi.concat(k.abi); if (k.name) name = clean(k.name); }
     }
-    const v = { abi: abi.filter((x) => x && x.type === "function"), name, tag: tagOf(await getJson(`${explorer}/api/v2/addresses/${addr}`)), at: Date.now() };
+    const v = { abi: abi.filter((x) => x && x.type === "function"), name, tag: ((await infoOf(explorer, chainId, addr)) || {}).tag || "", at: Date.now() };
     keep(key, v);
     return v;
   }
@@ -144,7 +179,9 @@
       try { q = iface.parseTransaction({ data: c }); } catch (e) { q = null; }
       if (!q) { out.push(`  [${k}] ${show(c, "bytes", up)} (${text("innerUnknown")})`); return; }
       out.push(`  [${k}] ${clean(`${q.name}(${q.fragment.inputs.map((i) => i.type).join(",")})`, 200)}`);
-      lines(q.fragment.inputs, q.args, up, "      ", out, recips);
+      const mine = [];
+      lines(q.fragment.inputs, q.args, up, "      ", out, mine);
+      for (const [n, who] of mine) recips.push([`[${k}] ${n}`, who]);
     });
     if (calls.length > 10) out.push(`  ${text("more", { n: calls.length - 10 })}`);
     return calls.length;
@@ -173,5 +210,5 @@
     return { label, op: text("op", { contract: info.name || `${to.slice(0, 6)}…${to.slice(-4)}`, fn: clean(p.name, 40) }), params: [clean(sig, 200), ...out].join("\n"), notes };
   }
 
-  window.AbiDecode = { describe, EXPLORERS, text, TEXT };
+  window.AbiDecode = { describe, labelOf, EXPLORERS, text, TEXT };
 })();
