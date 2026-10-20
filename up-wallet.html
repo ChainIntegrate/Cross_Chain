@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-Z7n3byGe092cx6/su1FByLso4Yndgd/llBKyBvCEnLA='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-uDLfzz/vUzb8OvuT8tlrY0DgIE+fxlYqi0KX3bVm5cE='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -20,6 +20,7 @@
 <script src="usd-price.js"></script>
 <script src="backup-check.js"></script>
 <script src="gas-relay-client.js"></script>
+<script src="call-decode.js"></script>
 <script src="vendor/walletkit-1.6.0.min.js" integrity="sha384-o1OPho4aXup6dZTxTsaL+hXbLbZ9dmbU0j/hlmpw5t0P/k91PxXHqIdLkQWag92X"></script>
 <script src="vendor/qrcode-generator-1.4.4.js"></script>
 <!-- Site configuration, created on the server from config.example.js (not in the repository). -->
@@ -629,6 +630,7 @@ const I18N = {
     decodeHead: "UP Wallet: chiamata non riconosciuta", decodeContract: "Contratto", decodeSelector: "Selettore", decodeData: "Dati",
     decodeDoing: "Cosa stavo facendo sul sito: ",
     decodeCut: "(tagliati: usa \"Copia i dati\" per averli interi)",
+    decodePasteHint: "(Se i dati qui sotto risultano tagliati, cancellali e incolla qui il testo completo con Ctrl+V o \"Incolla\": UP Wallet l'ha già copiato.)",
     decodeSubject: (v) => `UP Wallet: chiamata da decodificare ${v.sel} su ${v.net}`,
     decodePrivacy: "Nota: i dati della chiamata possono contenere l'indirizzo della tua UP o altri indirizzi. Se la transazione viene inviata diventano comunque pubblici sulla rete.",
     cardReal: "⚡ invio reale", simChipTitle: "Tocca per cambiare la modalità simulazione",
@@ -1038,6 +1040,7 @@ const I18N = {
     decodeHead: "UP Wallet: unrecognised call", decodeContract: "Contract", decodeSelector: "Selector", decodeData: "Data",
     decodeDoing: "What I was doing on the site: ",
     decodeCut: "(cut: use \"Copy the data\" for all of it)",
+    decodePasteHint: "(If the data below look cut, delete them and paste the full text here with Ctrl+V or \"Paste\": UP Wallet has already copied it.)",
     decodeSubject: (v) => `UP Wallet: call to decode ${v.sel} on ${v.net}`,
     decodePrivacy: "Note: the call's data may contain your UP's address or other addresses. If the transaction is sent, they become public on the network anyway.",
     cardReal: "⚡ real sending", simChipTitle: "Tap to change the simulation mode",
@@ -2026,9 +2029,14 @@ function fillDecodeHelp(box) {
   const copy = document.createElement("button"); copy.type = "button"; copy.className = "secondary"; copy.textContent = t("decodeCopyBtn");
   copy.addEventListener("click", () => copyText(decodeText(r), copy));
   const mail = document.createElement("a"); mail.className = "decode-mail";
-  mail.href = `mailto:${DECODE_MAIL}?subject=${encodeURIComponent(t("decodeSubject", { sel: r.data.slice(0, 10), net: r.net }))}&body=${encodeURIComponent(decodeText(r, 1500) + "\n\n" + t("decodePrivacy"))}`;
+  // The whole data, never cut: the maintainer needs all of it. Some mail programs cut a very long mailto:
+  // link, so the full text also goes to the clipboard, and the e-mail says to paste it if the data look short.
+  mail.href = `mailto:${DECODE_MAIL}?subject=${encodeURIComponent(t("decodeSubject", { sel: r.data.slice(0, 10), net: r.net }))}&body=${encodeURIComponent(t("decodePasteHint") + "\n\n" + decodeText(r) + "\n\n" + t("decodePrivacy"))}`;
   const mailBtn = document.createElement("button"); mailBtn.type = "button"; mailBtn.className = "secondary"; mailBtn.textContent = t("decodeMailBtn");
-  mailBtn.addEventListener("click", () => mail.click());
+  mailBtn.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(decodeText(r)); } catch (e) { /* the e-mail carries the data anyway */ }
+    mail.click();
+  });
   row.append(copy, mailBtn); box.appendChild(row); box.appendChild(mail);
   const n = document.createElement("div"); n.className = "note"; n.style.margin = "8px 0 0"; n.textContent = t("decodePrivacy"); box.appendChild(n);
 }
@@ -2190,6 +2198,18 @@ async function describeCall(c, to, value, data, rows, warnings) {
     const op = await describeMorphoBundles(c, to, value, data, rows, warnings, dapp === "Morpho VaultBundlesV1")
       || await describeVault(c, to, value, data, rows, warnings);
     if (op) return op;
+  }
+  // Swap routers and aggregators, bridges, Spark (call-decode.js): what goes in, what comes out at least,
+  // to whom and on which network.
+  if (isContract && window.CallDecode) {
+    const d = await CallDecode.describe({ provider: c.provider, chainId: c.net.chainId, up: c.up, to, value, data, cur, networks: NETWORKS, dapp: dapp || null });
+    if (d) {
+      rows.push([t("kCall"), d.op, {}]);
+      rows.push([t("kParams"), d.params, { block: true }]);
+      rows.push([t("kRaw"), data, { raw: true }]);
+      for (const n of d.notes) warnings.push(n);
+      return d.op;
+    }
   }
   let parsed = null;
   try { parsed = KNOWN_IFACE.parseTransaction({ data, value }); } catch (e) { parsed = null; }
