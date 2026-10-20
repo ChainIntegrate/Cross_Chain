@@ -9,7 +9,9 @@
 // shows the call as unrecognised, as before.
 //
 //   const d = await AbiDecode.describe({ netKey, chainId, up, to, value, data })
-//   -> null | { op, params, notes: [[text, cls]] }
+//   -> null | { op, params, notes: [[text, cls]], label }
+//   label: how the explorer names the contract: its public tag (set by Blockscout, e.g. "Aave: Spoke") or
+//   else the verified contract name (chosen by whoever verified it). For the page's recipient row.
 (function () {
   "use strict";
   // Networks enabled, by chains.js key: their Blockscout explorer.
@@ -25,6 +27,8 @@
       toOther: (v) => `⚠️⚠️ Il parametro ${v.p} è ${v.who}, non la UP. Se è chi riceve qualcosa, rifiuta a meno che tu sappia perché.`,
       upSelf: "la UP",
       more: (v) => `… altri ${v.n}`,
+      tagLabel: (v) => `${v.tag} (etichetta di ${v.explorer})`,
+      nameLabel: (v) => `${v.name} (nome del codice verificato)`,
       inner: (v) => `ℹ️ Contiene ${v.n} chiamate allo stesso contratto, decodificate una per una sotto data.`,
       innerUnknown: "chiamata non presente nell'ABI pubblicata",
     },
@@ -35,6 +39,8 @@
       toOther: (v) => `⚠️⚠️ Parameter ${v.p} is ${v.who}, not the UP. If it is whoever receives something, reject it unless you know why.`,
       upSelf: "the UP",
       more: (v) => `… ${v.n} more`,
+      tagLabel: (v) => `${v.tag} (tag on ${v.explorer})`,
+      nameLabel: (v) => `${v.name} (verified source name)`,
       inner: (v) => `ℹ️ It contains ${v.n} calls to the same contract, decoded one by one under data.`,
       innerUnknown: "call not in the published ABI",
     },
@@ -46,7 +52,7 @@
   const RECIPIENT = /^_?(to|recipient|receiver|beneficiary|dst|destination|onbehalfof|onbehalf|account|user|owner)$/i;
 
   const memory = new Map();
-  const STORE = "abi.v1.";
+  const STORE = "abi.v2."; // v2: with the explorer tag
   const TTL = 7 * 24 * 3600 * 1000;
   function cached(key) {
     if (memory.has(key)) return memory.get(key);
@@ -67,6 +73,15 @@
       return r.ok ? await r.json() : null;
     } catch (e) { return null; } finally { clearTimeout(timer); }
   }
+  // The explorer's public name tag of an address (Blockscout metadata; older versions: public_tags).
+  function tagOf(a) {
+    if (!a) return "";
+    const tags = (a.metadata && Array.isArray(a.metadata.tags) ? a.metadata.tags : []).filter((x) => x && typeof x.name === "string");
+    const t = tags.find((x) => x.tagType === "name") || tags.find((x) => x.tagType === "protocol");
+    if (t) return clean(t.name, 50);
+    const old = Array.isArray(a.public_tags) ? a.public_tags.find((x) => x && typeof x.display_name === "string") : null;
+    return old ? clean(old.display_name, 50) : "";
+  }
   // The verified ABI of a contract, with its implementations' when it is a proxy. null: not available.
   async function abiOf(explorer, chainId, addr) {
     const key = `${chainId}.${addr.toLowerCase()}`;
@@ -81,7 +96,7 @@
       const k = await getJson(`${explorer}/api/v2/smart-contracts/${impl}`);
       if (k && Array.isArray(k.abi)) { abi = abi.concat(k.abi); if (k.name) name = clean(k.name); }
     }
-    const v = { abi: abi.filter((x) => x && x.type === "function"), name, at: Date.now() };
+    const v = { abi: abi.filter((x) => x && x.type === "function"), name, tag: tagOf(await getJson(`${explorer}/api/v2/addresses/${addr}`)), at: Date.now() };
     keep(key, v);
     return v;
   }
@@ -153,7 +168,9 @@
     }
     if (inner) notes.push([text("inner", { n: inner }), "line-ok"]);
     notes.push([text("source", { explorer: new URL(explorer).host, name: info.name }), "line-warn"]);
-    return { op: text("op", { contract: info.name || `${to.slice(0, 6)}…${to.slice(-4)}`, fn: clean(p.name, 40) }), params: [clean(sig, 200), ...out].join("\n"), notes };
+    const host = new URL(explorer).host;
+    const label = info.tag ? text("tagLabel", { tag: info.tag, explorer: host }) : info.name ? text("nameLabel", { name: info.name }) : "";
+    return { label, op: text("op", { contract: info.name || `${to.slice(0, 6)}…${to.slice(-4)}`, fn: clean(p.name, 40) }), params: [clean(sig, 200), ...out].join("\n"), notes };
   }
 
   window.AbiDecode = { describe, EXPLORERS, text, TEXT };
