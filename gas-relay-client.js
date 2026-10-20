@@ -61,16 +61,27 @@
     "error ERC725X_InsufficientBalance(uint256 balance, uint256 value)",
   ]);
 
+  // The site's own paymasters, by their published addresses (contracts/README.md): named in the texts.
+  // Any other paymaster is shown by its address only.
+  const SITE_PAYMASTERS = {
+    "0xb353565d1f801e7402dbc267b8c0e30e3540d4ed": "pmPersonal", // UPPaymaster (allowlist)
+    "0xbea7ea6562cea4da9050bcd81e21ca569440d21e": "pmPaid",     // UPVerifyingPaymaster (sponsor service)
+  };
+  const pmText = (pm) => text(SITE_PAYMASTERS[String(pm).toLowerCase()] || "pmOther", { a: pm });
+
   const TEXT = {
     it: {
+      pmPersonal: (v) => `il paymaster personale del sito (${v.a})`,
+      pmPaid: (v) => `il paymaster a pagamento del sito (${v.a})`,
+      pmOther: (v) => `il paymaster ${v.a}`,
       option: "Paga il gas con il relayer del sito",
-      optionNote: (v) => `Il controller firma un messaggio in MetaMask, senza gas; il relayer del sito invia e il paymaster ${v.pm} paga. Solo chiamate e invii di valore.`,
-      optionNoteSponsor: (v) => `Il controller firma un messaggio in MetaMask, senza gas; il servizio di sponsorizzazione del sito approva l'operazione, il relayer la invia e il paymaster ${v.pm} paga. Solo chiamate e invii di valore.`,
+      optionNote: (v) => `Il controller firma un messaggio in MetaMask, senza gas; il relayer del sito invia e ${v.pm} paga. Solo chiamate e invii di valore.`,
+      optionNoteSponsor: (v) => `Il controller firma un messaggio in MetaMask, senza gas; il servizio di sponsorizzazione del sito approva l'operazione, il relayer la invia e ${v.pm} paga. Solo chiamate e invii di valore.`,
       balanceNote: (v) => `Saldo della UP: ${v.bal} USDC; questa operazione costa ${v.price} USDC.`,
       notReady: "Il relayer del sito serve questa rete e la UP è nella lista del paymaster, ma manca qualcosa:",
       notReadySponsor: "Il servizio di sponsorizzazione del sito accetta questa UP, ma manca qualcosa:",
       noSponsorSigner: "il paymaster di sponsorizzazione non ha un firmatario impostato",
-      planSponsor: (v) => `Gas: relayer del sito, con l'approvazione del servizio di sponsorizzazione (chiesta al momento della firma). Paymaster ${v.pm}; limite di gas dell'esecuzione ${v.gas}.`,
+      planSponsor: (v) => `Gas: relayer del sito, con l'approvazione del servizio di sponsorizzazione (chiesta al momento della firma). Paga ${v.pm}; limite di gas dell'esecuzione ${v.gas}.`,
       sponsorAsk: "Richiesta di approvazione al servizio di sponsorizzazione...",
       sponsorRefused: (v) => `Il servizio di sponsorizzazione non approva l'operazione: ${v.err}. Niente è stato firmato.`,
       sponsorUnreachable: "Il servizio di sponsorizzazione non risponde. Niente è stato firmato.",
@@ -87,12 +98,12 @@
       tooHeavy: (v) => `L'operazione richiede troppo gas per il relayer (${v.gas}, massimo 1.000.000).`,
       overCap: "Questa operazione supera il limite per operazione del paymaster del sito: invia senza il relayer (il gas lo paga il controller).",
       lowDeposit: "Il paymaster del sito non ha fondi sufficienti in questo momento: riprova più tardi, o invia senza il relayer.",
-      plan: (v) => `Gas: relayer del sito. Paymaster ${v.pm}; limite di gas dell'esecuzione ${v.gas}.`,
+      plan: (v) => `Gas: relayer del sito. Paga ${v.pm}; limite di gas dell'esecuzione ${v.gas}.`,
       signAsk: (v) => `Firma in MetaMask il messaggio ${v.hash} (nessun gas): deve essere identico a quello mostrato da MetaMask.`,
       signBoxTitle: "Firma in MetaMask",
       signBoxMsg: "MetaMask mostra un messaggio da firmare. Deve essere esattamente questo:",
       signBoxAccount: (v) => `Account che firma: ${v.addr} (il controller)`,
-      signBoxOp: (v) => `Cosa autorizzi: la UP ${v.up} chiama ${v.to} inviando ${v.value}; nonce ${v.nonce}; paga il paymaster ${v.pm}; rete chainId ${v.chainId}. L'hash qui sopra è calcolato da questa pagina, non dall'RPC.`,
+      signBoxOp: (v) => `Cosa autorizzi: la UP ${v.up} chiama ${v.to} inviando ${v.value}; nonce ${v.nonce}; paga ${v.pm}; rete chainId ${v.chainId}. L'hash qui sopra è calcolato da questa pagina, non dall'RPC.`,
       hashMismatch: "❌ L'RPC ha restituito un hash dell'operazione diverso da quello calcolato dalla pagina: potrebbe voler farti firmare un'altra operazione. Niente è stato firmato. Usa un altro RPC.",
       signBoxSite: (v) => `Richiesta dal sito: ${v.site}`,
       signBoxNoGas: "È solo una firma: nessuna transazione e nessun gas. Se il messaggio è diverso, rifiuta in MetaMask.",
@@ -119,14 +130,17 @@
       pendingBlocksDirect: (v) => `❌ Un'operazione firmata alle ${v.at} per il relayer del sito (hash ${v.hash}) non ha avuto risposta e potrebbe ancora arrivare. Inviare ora per un'altra strada (il controller paga il gas) potrebbe eseguire il trasferimento due volte. Usa l'opzione del relayer (stesso nonce: al massimo una delle due) oppure aspetta che sia chiaro.`,
     },
     en: {
+      pmPersonal: (v) => `the site's personal paymaster (${v.a})`,
+      pmPaid: (v) => `the site's paid paymaster (${v.a})`,
+      pmOther: (v) => `the paymaster ${v.a}`,
       option: "Pay the gas with the site relayer",
-      optionNote: (v) => `The controller signs a message in MetaMask, no gas; the site relayer sends it and the paymaster ${v.pm} pays. Calls and value transfers only.`,
-      optionNoteSponsor: (v) => `The controller signs a message in MetaMask, no gas; the site's sponsor service approves the operation, the relayer sends it and the paymaster ${v.pm} pays. Calls and value transfers only.`,
+      optionNote: (v) => `The controller signs a message in MetaMask, no gas; the site relayer sends it and ${v.pm} pays. Calls and value transfers only.`,
+      optionNoteSponsor: (v) => `The controller signs a message in MetaMask, no gas; the site's sponsor service approves the operation, the relayer sends it and ${v.pm} pays. Calls and value transfers only.`,
       balanceNote: (v) => `UP balance: ${v.bal} USDC; this operation costs ${v.price} USDC.`,
       notReady: "The site relayer serves this network and the UP is on the paymaster's list, but something is missing:",
       notReadySponsor: "The site's sponsor service accepts this UP, but something is missing:",
       noSponsorSigner: "the sponsor paymaster has no signer set",
-      planSponsor: (v) => `Gas: site relayer, with the sponsor service's approval (asked for at signing time). Paymaster ${v.pm}; execution gas limit ${v.gas}.`,
+      planSponsor: (v) => `Gas: site relayer, with the sponsor service's approval (asked for at signing time). Paid by ${v.pm}; execution gas limit ${v.gas}.`,
       sponsorAsk: "Asking the sponsor service for approval...",
       sponsorRefused: (v) => `The sponsor service does not approve the operation: ${v.err}. Nothing was signed.`,
       sponsorUnreachable: "The sponsor service does not answer. Nothing was signed.",
@@ -143,12 +157,12 @@
       tooHeavy: (v) => `The operation needs too much gas for the relayer (${v.gas}, at most 1,000,000).`,
       overCap: "This operation is above the site paymaster's limit per operation: send without the relayer (the controller pays the gas).",
       lowDeposit: "The site paymaster does not have enough funds right now: try again later, or send without the relayer.",
-      plan: (v) => `Gas: site relayer. Paymaster ${v.pm}; execution gas limit ${v.gas}.`,
+      plan: (v) => `Gas: site relayer. Paid by ${v.pm}; execution gas limit ${v.gas}.`,
       signAsk: (v) => `Sign the message ${v.hash} in MetaMask (no gas): it must be identical to the one MetaMask shows.`,
       signBoxTitle: "Sign in MetaMask",
       signBoxMsg: "MetaMask shows a message to sign. It must be exactly this:",
       signBoxAccount: (v) => `Signing account: ${v.addr} (the controller)`,
-      signBoxOp: (v) => `What you authorize: the UP ${v.up} calls ${v.to} sending ${v.value}; nonce ${v.nonce}; the paymaster ${v.pm} pays; network chainId ${v.chainId}. The hash above is computed by this page, not by the RPC.`,
+      signBoxOp: (v) => `What you authorize: the UP ${v.up} calls ${v.to} sending ${v.value}; nonce ${v.nonce}; ${v.pm} pays; network chainId ${v.chainId}. The hash above is computed by this page, not by the RPC.`,
       hashMismatch: "❌ The RPC returned an operation hash different from the one computed by the page: it may be trying to have you sign another operation. Nothing was signed. Use another RPC.",
       signBoxSite: (v) => `Requested by: ${v.site}`,
       signBoxNoGas: "It is only a signature: no transaction and no gas. If the message differs, reject it in MetaMask.",
@@ -399,7 +413,7 @@
     const rpcHash = await ep.getUserOpHash(op);
     if (rpcHash.toLowerCase() !== hash.toLowerCase()) throw new Error(text("hashMismatch"));
     return { op, hash, maxCost, chainId, sponsor: ready.sponsor || null, provider, view: { up, to, value: fmt(value), nonce: op.nonce.toString(), pm: ready.pm, chainId },
-      plan: text(ready.sponsor ? "planSponsor" : "plan", { pm: ready.pm, max: fmt(maxCost), cap: fmt(ready.cap), gas: callGas.toString() })
+      plan: text(ready.sponsor ? "planSponsor" : "plan", { pm: pmText(ready.pm), max: fmt(maxCost), cap: fmt(ready.cap), gas: callGas.toString() })
         + (pend.state === "outstanding" && BigInt(pend.p.nonce) === op.nonce ? "\n" + text("pendingSameNonce", pendingView(pend.p)) : "") };
   }
 
@@ -467,7 +481,7 @@
     line(text("signBoxMsg"), "margin-top:6px;");
     // The hash in groups of 8, so it can be compared by eye with MetaMask's message.
     line(hash.slice(0, 2) + " " + hash.slice(2).match(/.{1,8}/g).join(" "), "margin-top:6px; font-family:monospace; font-size:15px; word-break:break-all; color:var(--ok, #3fbf6f);");
-    if (view) line(text("signBoxOp", view), "margin-top:8px; font-size:12.5px;");
+    if (view) line(text("signBoxOp", { ...view, pm: pmText(view.pm) }), "margin-top:8px; font-size:12.5px;");
     line(text("signBoxAccount", { addr: signer }), "margin-top:8px;");
     line(text("signBoxSite", { site: location.host }), "margin-top:2px;");
     line(text("signBoxNoGas"), "margin-top:8px; color:var(--text-dim, #9aa1ad);");
@@ -600,7 +614,7 @@
       label.textContent = text("option");
       note.innerHTML = "";
       if (state.state === "ready") {
-        note.textContent = text(state.sponsor ? "optionNoteSponsor" : "optionNote", { pm: state.pm, cap: state.capText })
+        note.textContent = text(state.sponsor ? "optionNoteSponsor" : "optionNote", { pm: pmText(state.pm), cap: state.capText })
           + (state.sponsor && state.sponsor.balance ? " " + text("balanceNote", { bal: state.sponsor.balance, price: state.sponsor.price }) : "");
       } else if (state.state === "notReady") {
         const p = document.createElement("div"); p.textContent = text(state.sponsor ? "notReadySponsor" : "notReady");
