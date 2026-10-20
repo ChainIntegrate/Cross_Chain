@@ -25,6 +25,8 @@
       toOther: (v) => `⚠️⚠️ Il parametro ${v.p} è ${v.who}, non la UP. Se è chi riceve qualcosa, rifiuta a meno che tu sappia perché.`,
       upSelf: "la UP",
       more: (v) => `… altri ${v.n}`,
+      inner: (v) => `ℹ️ Contiene ${v.n} chiamate allo stesso contratto, decodificate una per una sotto data.`,
+      innerUnknown: "chiamata non presente nell'ABI pubblicata",
     },
     en: {
       op: (v) => `${v.contract}.${v.fn}`,
@@ -33,6 +35,8 @@
       toOther: (v) => `⚠️⚠️ Parameter ${v.p} is ${v.who}, not the UP. If it is whoever receives something, reject it unless you know why.`,
       upSelf: "the UP",
       more: (v) => `… ${v.n} more`,
+      inner: (v) => `ℹ️ It contains ${v.n} calls to the same contract, decoded one by one under data.`,
+      innerUnknown: "call not in the published ABI",
     },
   };
   function text(key, vars) { const v = TEXT[lang()][key]; return typeof v === "function" ? v(vars || {}) : v; }
@@ -111,21 +115,43 @@
     });
   }
 
+  // multicall(bytes[]) and multicall(deadline, bytes[]): calls the contract makes to itself, each decoded
+  // with the same ABI (one level: a multicall inside is shown as such, not opened again).
+  const MULTICALL = /^(multicall|batch|aggregate|multiCall)$/i;
+  function innerCalls(iface, p, up, out, recips) {
+    const idx = p.fragment.inputs.findIndex((i) => i.type === "bytes[]");
+    if (!MULTICALL.test(p.name) || idx < 0) return 0;
+    const calls = Array.from(p.args[idx]);
+    p.fragment.inputs.forEach((inp, i) => { if (i !== idx) lines([inp], [p.args[i]], up, "", out, recips); });
+    out.push(`${clean(p.fragment.inputs[idx].name || "data", 30)}: ${calls.length} ×`);
+    calls.slice(0, 10).forEach((c, k) => {
+      let q = null;
+      try { q = iface.parseTransaction({ data: c }); } catch (e) { q = null; }
+      if (!q) { out.push(`  [${k}] ${show(c, "bytes", up)} (${text("innerUnknown")})`); return; }
+      out.push(`  [${k}] ${clean(`${q.name}(${q.fragment.inputs.map((i) => i.type).join(",")})`, 200)}`);
+      lines(q.fragment.inputs, q.args, up, "      ", out, recips);
+    });
+    if (calls.length > 10) out.push(`  ${text("more", { n: calls.length - 10 })}`);
+    return calls.length;
+  }
+
   async function describe({ netKey, chainId, up, to, value, data }) {
     const explorer = EXPLORERS[netKey];
     if (!explorer || !data || data.length < 10) return null;
     const info = await abiOf(explorer, chainId, to);
     if (!info || !info.abi.length) return null;
-    let p = null;
-    try { p = new ethers.Interface(info.abi).parseTransaction({ data, value }); } catch (e) { p = null; }
+    let p = null, iface = null;
+    try { iface = new ethers.Interface(info.abi); p = iface.parseTransaction({ data, value }); } catch (e) { p = null; }
     if (!p) return null;
     const out = [], recips = [];
-    lines(p.fragment.inputs, p.args, up, "", out, recips);
+    const inner = innerCalls(iface, p, up, out, recips);
+    if (!inner) lines(p.fragment.inputs, p.args, up, "", out, recips);
     const sig = `${p.name}(${p.fragment.inputs.map((i) => i.type).join(",")})`;
     const notes = [];
     for (const [n, who] of recips) {
       notes.push(who.toLowerCase() === up.toLowerCase() ? [text("toUp", { p: n }), "line-ok"] : [text("toOther", { p: n, who }), "line-danger"]);
     }
+    if (inner) notes.push([text("inner", { n: inner }), "line-ok"]);
     notes.push([text("source", { explorer: new URL(explorer).host, name: info.name }), "line-warn"]);
     return { op: text("op", { contract: info.name || `${to.slice(0, 6)}…${to.slice(-4)}`, fn: clean(p.name, 40) }), params: [clean(sig, 200), ...out].join("\n"), notes };
   }
