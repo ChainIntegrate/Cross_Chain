@@ -97,9 +97,11 @@ same page, taken from this repository at a pinned commit, and adds what a phone 
 
 The app holds no keys: signing stays in MetaMask, and permissions are enforced by the UP's Key
 Manager as on the site. The APKs are built and signed by that repository's CI and attached to its
-GitHub releases (0.7.25 today); there is no store release yet. It is a prototype (0.x), tested on one
+GitHub releases (0.8.1 today); there is no store release yet. It is a prototype (0.x), tested on one
 Android phone; iPhone is not started. Version 1.0.0 is planned as the first public Google Play release,
-after a closed test. Privacy policy: [up-wallet-app-privacy.html](https://crosschain-lukso.chainintegrate.it/up-wallet-app-privacy.html).
+under an organization developer account for ChainIntegrate (Google's developer verification: see
+[docs/developer-verification.md](https://github.com/ChainIntegrate/up-wallet-android/blob/main/docs/developer-verification.md)
+in the app's repository). Privacy policy: [up-wallet-app-privacy.html](https://crosschain-lukso.chainintegrate.it/up-wallet-app-privacy.html).
 
 ### Advanced: `tools/decrypt.js` (offline only)
 
@@ -151,10 +153,10 @@ The headers are in `/etc/nginx/snippets/security-headers.conf`, included in the 
 
 ## Roadmap
 
-A direction, not a schedule. UP Wallet is growing towards a complete wallet for a Universal Profile on every network where it exists: open source, explaining every request in plain words, cross-chain first. The steps are ordered so that the app keeps no keys until the last ones: it stays a simple, non-custodial app that signs through an external wallet, which suits a store listing under a personal developer account.
+A direction, not a schedule. UP Wallet is growing towards a complete wallet for a Universal Profile on every network where it exists: open source, explaining every request in plain words, cross-chain first. The steps are ordered so that the app keeps no keys until the last ones: it stays a simple, non-custodial app that signs through an external wallet, which suits a store listing under ChainIntegrate's organization developer account.
 
-1. **The Android app on Google Play, as it is.** Signing stays in MetaMask and the app holds no keys. Before the listing: a closed test with testers, and the store's forms (financial features, data safety, with the existing privacy policy). Google Play's licensing rules for crypto apps cover custodial wallets and exchanges; non-custodial wallets are excluded.
-2. **Clearer requests.** Decode any call to a contract verified on the network's explorer, from its published ABI, besides the cases decoded today. Name smart-account recipients from what they declare (ERC-7579 `accountId()`), as a hint.
+1. **The Android app on Google Play, as it is.** Signing stays in MetaMask and the app holds no keys. Before the listing: Google's developer verification of the organization account, any test the Play Console requires, and the store's forms (financial features, data safety, with the existing privacy policy). Google Play's licensing rules for crypto apps cover custodial wallets and exchanges; non-custodial wallets are excluded.
+2. **Clearer requests.** Decode any call to a contract verified on the network's explorer, from its published ABI, besides the cases decoded today: done on Base, Arbitrum One and Arc (`abi-decode.js`, app 0.8.0), with contracts named as the explorer names them; more networks as their explorers allow it. Name smart-account recipients from what they declare (ERC-7579 `accountId()`), as a hint.
 3. **dApps without WalletConnect, in the app.** A dApp browser inside the Android app that offers the UP to web dApps as an injected wallet (EIP-1193, announced through EIP-6963), with bookmarks. Every request goes through the same checks, simulation and confirmation window, and is still signed in MetaMask. Native apps keep using WalletConnect.
 4. **Recovery from the identity itself.** A guided flow to add, rotate and revoke the UP's keys on every network where it exists, signed by an existing controller.
 5. **A professional audit** of the paymasters, the ERC-4337 flow and the app, before the next step and before the paid gas service holds significant funds.
