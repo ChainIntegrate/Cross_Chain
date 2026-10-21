@@ -1,7 +1,8 @@
 # UP Wallet: changes waiting for the next batch
 
 Changes to `up-wallet.html` and its scripts are collected here and made together, in one PR, then
-one app release. Remove an item when its PR is merged.
+one app release. Changes to the other pages asked at the same time are listed below, under "Other
+pages", and go in the same batch (they need no app release). Remove an item when its PR is merged.
 
 ## Open
 
@@ -30,3 +31,15 @@ one app release. Remove an item when its PR is merged.
    example the deposits on pro.aave.com, Base); ERC-4626 vault shares (Morpho, Spark) shown as the
    underlying asset with its price; Aave v3 aTokens shown as deposits. Read only, from the chain.
    Asked on 2026-10-21.
+
+## Other pages
+
+1. **Identity page: a link to the subscription page** (`up-subscribe.html`), with the UP and the
+   network already filled in, so the gas paid by the site is one tap away from the UP's overview.
+   Asked on 2026-10-21.
+2. **Guide: a step-by-step recap at the end** (IT/EN), numbered, one line per phase with the link to
+   its page, in order: check the calldata (Verify), publish missing implementations if needed
+   (Publish implementation), deploy (Deploy), check the result (Verify), add a backup controller
+   (Backup), test operation (Test), align the profile (Identity), NFT reception (NFT receiving), gas
+   paid by the site and subscription (gas relay, Subscription), then use the UP (UP Wallet). The page
+   names are clear, but a recap in one place helps. Asked on 2026-10-21.
