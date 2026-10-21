@@ -21,3 +21,7 @@ one app release. Remove an item when its PR is merged.
 4. **The token's image in the Send panel**: when a token or NFT is chosen to send, show its image
    next to it (as in the "Every network" view, through `token-image.js` with the same privacy rule:
    an image on another server loads only on a tap). Asked on 2026-10-21.
+5. **The UP's profile picture in the summary card** (the menu's card with the UP, its network and its
+   state): the LSP3 profile image read from LUKSO (the profile that has it; a redeploy may hold an
+   older copy), hash-checked, through the IPFS gateways, with the same privacy rule as the other
+   images; the UP's name next to it is already there. Asked on 2026-10-21.
