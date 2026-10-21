@@ -18,3 +18,6 @@ one app release. Remove an item when its PR is merged.
 3. **Contract name from the ABI when the explorer gives no name to the address**: on Arc,
    `StockDesk` (Astock, `0x3Ac6…6D69`) is decoded but the summary shows no name. `labelOf` falls back
    to the verified source's name from the smart-contracts endpoint.
+4. **The token's image in the Send panel**: when a token or NFT is chosen to send, show its image
+   next to it (as in the "Every network" view, through `token-image.js` with the same privacy rule:
+   an image on another server loads only on a tap). Asked on 2026-10-21.
