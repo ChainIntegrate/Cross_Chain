@@ -1,6 +1,6 @@
 # tools/ — offline tools, not for the website
 
-This folder contains command-line tools meant to be run **locally, offline**, by people who know exactly what they are doing. **This folder must not be served by the website**: the root `.htaccess` blocks it on Apache; for other servers see "Publishing the website" in the main README.
+This folder contains command-line tools meant to be run **locally, offline**, by people who know exactly what they are doing. **This folder must not be served by the website**: the server's sparse checkout leaves it out, the live site's nginx rule answers 404 for `/tools/`, and the root `.htaccess` blocks it on Apache (see "Publishing the website" in the main README).
 
 ## `decrypt.js`
 
@@ -29,7 +29,7 @@ Working notes for the maintainer: decisions already taken and next steps (gas re
 
 ## `relayer/`
 
-The gas relayer service (experimental), behind every "Pay the gas with the site relayer" option (Send page, UP Wallet, subscription page, the operator's test operation), and its hourly monitor (`monitor.js`). It runs on the server from **its own clone outside the web root**, never from the site folder. Installation and rules: [relayer/README.md](relayer/README.md).
+The gas relayer service (experimental), behind every "Pay the gas with the site relayer" option (UP Wallet, for dApp requests and its Send panel; the subscription page; the operator's test operation), and its hourly monitor (`monitor.js`). It runs on the server from **its own clone outside the web root**, never from the site folder. Installation and rules: [relayer/README.md](relayer/README.md).
 
 ## `audits/`
 

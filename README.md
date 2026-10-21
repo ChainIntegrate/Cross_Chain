@@ -2,6 +2,13 @@
 
 Browser tools by [ChainIntegrate](https://chainintegrate.it) for redeploying an existing **LUKSO Universal Profile (UP)** at the **same address** on other EVM chains, then checking and using it there.
 
+What it contains, in short:
+- **Redeploy and check** the UP on another network (Deploy, Verify, Backup controller, Identity, NFT reception, Publish implementation): the guide walks through them.
+- **UP Wallet** (`up-wallet.html`, experimental): the UP's wallet on every network where it exists; it connects to dApps through WalletConnect, explains and simulates every request and signs through the controller's wallet (MetaMask). Also an Android app ([up-wallet-android](https://github.com/ChainIntegrate/up-wallet-android)).
+- **Gas paid by the site** (experimental): an ERC-4337 relayer and two paymasters, so a UP's controller needs no gas on the networks the site serves; paid subscriptions are in beta.
+
+Non-custodial throughout: the pages and the app never hold a key, and every transaction is signed in the user's own wallet.
+
 ## How it works
 
 A UP is created by LUKSO's `LSP23LinkedContractsFactory`, which lives at the same address (`0x2300000A84D25dF63081feAa37ba6b62C4c89a30`) on every EVM chain where it has been published. The profile's address is a `CREATE2` result computed from the **entire original creation calldata** (`deployERC1167Proxies`, selector `0x6a66a753`). If you send that exact calldata to the factory on another chain, you get the same UP (LSP0) and Key Manager (LSP6) addresses there. The controller that gets control of the profile is the one named in that calldata.
@@ -73,6 +80,7 @@ The tools never ask for a private key. The calldata is public on-chain data, and
 | `guide-assets/` | Screenshots used by the guide. |
 | `banner.png`, `logo.png`, `favicon.ico` | Branding for the pages. |
 | `AUDIT.md` | Full security, privacy and bug audit report. |
+| `WALLET-BACKLOG.md` | Changes to UP Wallet waiting for the next batch: they are made together, in one pull request, followed by one app release. |
 | `SECURITY.md` | How to report a vulnerability privately. |
 | `CONTRIBUTING.md` | What contributions are accepted, and how to propose them. |
 | `THIRD_PARTY_NOTICES.md`, `licenses/` | Third-party code included in the repository, and the license texts. |
