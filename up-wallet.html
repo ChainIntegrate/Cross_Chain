@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-RdxLsQY3+SR8Wsrj97DUBNScuIJCo2RIfeEOeGs4RrQ='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-q8Ldx85gSkivNj4cD0OKRv2z6jed/zquVLPSX3IIc5M='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -824,6 +824,7 @@ const I18N = {
     reqWrongChain: (v) => `❌ Richiesta sulla rete ${v.chain}, diversa da quella scelta (${v.exp}): rifiutata.`,
     reqSwitchChain: (v) => `La dApp chiede di passare alla rete con chainId ${v.id}. Qui si usa una rete alla volta, ${v.net}: rifiutata. Nella dApp scegli ${v.net}; se invece ti serve l'altra rete, sceglila nel pannello 1 e ricollega.`,
     reqSwitchTold: (v) => `Comunicato alla dApp che la rete collegata è ${v.net}.`,
+    dappRpcDown: (v) => `⚠️ Nota su ${v.dapp} su ${v.net}: per preparare le transazioni ${v.dapp} usa un suo nodo (${v.rpc}) che in questo momento non risponde alle pagine web (verificato ora da qui). Se premendo il pulsante della dApp non arriva nessuna richiesta a questo wallet, il blocco è in ${v.dapp}: la richiesta non parte nemmeno. Non dipende dal wallet né dalla UP; si può segnalare a ${v.dapp}.`,
     complianceLost: "❌ La verifica di compatibilità non è più verde (vedi pannello 3): richiesta rifiutata.",
     reqWrongFrom: (v) => `❌ La transazione non parte dalla UP (from = ${v.from}): rifiutata.`,
     reqCreate: "❌ Creazione di contratti non supportata: rifiutata.",
@@ -1233,6 +1234,7 @@ const I18N = {
     reqWrongChain: (v) => `❌ Request on network ${v.chain}, not the chosen one (${v.exp}): rejected.`,
     reqSwitchChain: (v) => `The dApp asks to switch to chainId ${v.id}. This page uses one network at a time, ${v.net}: rejected. Choose ${v.net} in the dApp; if you need the other network instead, choose it in panel 1 and connect again.`,
     reqSwitchTold: (v) => `The dApp was told that the connected network is ${v.net}.`,
+    dappRpcDown: (v) => `⚠️ Note on ${v.dapp} on ${v.net}: to prepare transactions ${v.dapp} uses its own node (${v.rpc}), which right now does not answer web pages (checked just now from here). If no request reaches this wallet when you press the dApp's button, the block is in ${v.dapp}: the request is never sent. It does not depend on the wallet or the UP; it can be reported to ${v.dapp}.`,
     complianceLost: "❌ The compatibility check is no longer green (see panel 3): request rejected.",
     reqWrongFrom: (v) => `❌ The transaction does not come from the UP (from = ${v.from}): rejected.`,
     reqCreate: "❌ Contract creation is not supported: rejected.",
@@ -1910,6 +1912,28 @@ $("disconnectBtn").addEventListener("click", async () => {
 
 // What the dApp asks for at connection, for the log: networks (required / optional), methods, and any
 // namespace other than EVM (e.g. Solana), which the UP cannot serve. Helps tell why a dApp misbehaves.
+// dApps known to estimate gas through their own RPC for a network, outside this wallet: when that RPC does
+// not answer web pages (CORS), the dApp stops before sending any request here. Checked at each connection,
+// so the note goes away by itself once the dApp's RPC works again.
+const DAPP_RPC_NOTES = [
+  { host: "pro.aave.com", chainId: 5042, rpc: "https://rpc.arc-scan.org", dapp: "Aave Pro" },
+];
+async function dappRpcNote(url, net) {
+  let host = "";
+  try { host = new URL(url).hostname; } catch (e) { return; }
+  const n = DAPP_RPC_NOTES.find((x) => x.host === host && x.chainId === net.chainId);
+  if (!n) return;
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 8000);
+  let ok = false;
+  try {
+    const r = await fetch(n.rpc, { method: "POST", headers: { "content-type": "application/json" }, credentials: "omit", referrerPolicy: "no-referrer", signal: ctl.signal,
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_chainId", params: [] }) });
+    const j = r.ok ? await r.json() : null;
+    ok = !!(j && j.result && Number(j.result) === net.chainId);
+  } catch (e) { ok = false; } finally { clearTimeout(timer); }
+  if (!ok) log(t("dappRpcDown", { dapp: n.dapp, net: net.name, rpc: new URL(n.rpc).host }), "line-warn");
+}
+
 function describeProposal(params) {
   const netName = (x) => {
     const [ns, ref] = String(x).split(":");
@@ -1975,6 +1999,7 @@ async function onSessionProposal({ id, params, verifyContext }) {
     await walletKit.approveSession({ id, namespaces });
     sessionChain = c.caip;
     log(t("proposalApproved", { net: `${c.net.name} (${c.net.chainId})` }), "line-dim");
+    dappRpcNote(params.proposer?.metadata?.url, c.net);
     showSessions();
   } catch (e) {
     // The networks the dApp requires, other than the chosen one: named, and one click away when the page has
@@ -2111,7 +2136,9 @@ async function onSessionRequest(event) {
     if (sessionChain === `eip155:${wanted}`) return respondResult(topic, id, null);
     const net = NETWORKS.find((n) => sessionChain === `eip155:${n.chainId}`);
     log(t("reqSwitchChain", { id: wanted, net: net ? net.name : sessionChain }), "line-warn");
-    await respondError(topic, id, "Only the chosen network is supported", 4902);
+    // 4001 (refused), not 4902 (unknown network): with 4902 the dApp's library tries wallet_addEthereumChain,
+    // which this wallet does not offer, and the dApp shows an obscure error instead of a refusal.
+    await respondError(topic, id, "Only the chosen network is supported", 4001);
     // Some dApps (Aave's, on its default Ethereum) then stay on the network they asked for and send
     // nothing: the session's network is announced to them again, so they can follow it.
     if (sessionChain && topic !== LOCAL_TOPIC) {
