@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-q8Ldx85gSkivNj4cD0OKRv2z6jed/zquVLPSX3IIc5M='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-fnllaLXsy+hFh3ihvNK8Ra+iO19WWPdT2974J6j1iaI='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -824,7 +824,7 @@ const I18N = {
     reqWrongChain: (v) => `❌ Richiesta sulla rete ${v.chain}, diversa da quella scelta (${v.exp}): rifiutata.`,
     reqSwitchChain: (v) => `La dApp chiede di passare alla rete con chainId ${v.id}. Qui si usa una rete alla volta, ${v.net}: rifiutata. Nella dApp scegli ${v.net}; se invece ti serve l'altra rete, sceglila nel pannello 1 e ricollega.`,
     reqSwitchTold: (v) => `Comunicato alla dApp che la rete collegata è ${v.net}.`,
-    dappRpcDown: (v) => `⚠️ Nota su ${v.dapp} su ${v.net}: per preparare le transazioni ${v.dapp} usa un suo nodo (${v.rpc}) che in questo momento non risponde alle pagine web (verificato ora da qui). Se premendo il pulsante della dApp non arriva nessuna richiesta a questo wallet, il blocco è in ${v.dapp}: la richiesta non parte nemmeno. Non dipende dal wallet né dalla UP; si può segnalare a ${v.dapp}.`,
+    dappRpcDown: (v) => `⚠️ Nota su ${v.dapp} su ${v.net}: per preparare le transazioni ${v.dapp} usa un suo nodo (${v.rpc}) che in questo momento non risponde alle pagine web (verificato ora da qui). Se premendo il pulsante della dApp non arriva nessuna richiesta a questo wallet, il blocco è in ${v.dapp}: la richiesta non parte nemmeno. Non dipende dal wallet né dalla UP; si può segnalare a chi gestisce ${v.dapp}.`,
     complianceLost: "❌ La verifica di compatibilità non è più verde (vedi pannello 3): richiesta rifiutata.",
     reqWrongFrom: (v) => `❌ La transazione non parte dalla UP (from = ${v.from}): rifiutata.`,
     reqCreate: "❌ Creazione di contratti non supportata: rifiutata.",
@@ -1234,7 +1234,7 @@ const I18N = {
     reqWrongChain: (v) => `❌ Request on network ${v.chain}, not the chosen one (${v.exp}): rejected.`,
     reqSwitchChain: (v) => `The dApp asks to switch to chainId ${v.id}. This page uses one network at a time, ${v.net}: rejected. Choose ${v.net} in the dApp; if you need the other network instead, choose it in panel 1 and connect again.`,
     reqSwitchTold: (v) => `The dApp was told that the connected network is ${v.net}.`,
-    dappRpcDown: (v) => `⚠️ Note on ${v.dapp} on ${v.net}: to prepare transactions ${v.dapp} uses its own node (${v.rpc}), which right now does not answer web pages (checked just now from here). If no request reaches this wallet when you press the dApp's button, the block is in ${v.dapp}: the request is never sent. It does not depend on the wallet or the UP; it can be reported to ${v.dapp}.`,
+    dappRpcDown: (v) => `⚠️ Note on ${v.dapp} on ${v.net}: to prepare transactions ${v.dapp} uses its own node (${v.rpc}), which right now does not answer web pages (checked just now from here). If no request reaches this wallet when you press the dApp's button, the block is in ${v.dapp}: the request is never sent. It does not depend on the wallet or the UP; it can be reported to whoever runs ${v.dapp}.`,
     complianceLost: "❌ The compatibility check is no longer green (see panel 3): request rejected.",
     reqWrongFrom: (v) => `❌ The transaction does not come from the UP (from = ${v.from}): rejected.`,
     reqCreate: "❌ Contract creation is not supported: rejected.",
