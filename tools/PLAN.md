@@ -2,7 +2,7 @@
 
 Internal notes for the maintainer. They live in `tools/`, which is **not published on the website**: the server's sparse checkout excludes `tools/`, and the root `.htaccess` blocks it on Apache. Keep secrets, email credentials and private addresses out of this file anyway: the repository is public.
 
-Last update: 2026-09-30.
+Last update: 2026-09-30, with later entries dated. **Current state (2026-10-21):** README (Contents, Roadmap), `AUDIT.md` rev. 12 (open by design: M-1, L-07) and `WALLET-BACKLOG.md` are the reference; the entries below are kept as history and may be outdated where they disagree.
 
 ---
 
@@ -25,7 +25,7 @@ Last update: 2026-09-30.
 - **`tools/`** is never served.
 - **Contributors** fix their own branches (CONTRIBUTING rule 5); the maintainer reviews and merges.
 - **WalletConnect Project ID** only in the server's `config.js` (git-ignored), protected by the Reown domain allowlist.
-- **Alchemy API key** (free plan) only in the server's `config.js`, restricted to the site's domain in the Alchemy dashboard. Used by the Send page to list a UP's tokens and NFTs. Networks enabled in the Alchemy app: Ethereum, Polygon, Arbitrum, Base, Avalanche, Gnosis; others can be enabled in the dashboard without code changes.
+- **Alchemy API key** (free plan) only in the server's `config.js`, restricted to the site's domain in the Alchemy dashboard. Used by UP Wallet and the Identity page to list a UP's tokens and NFTs. Networks enabled in the Alchemy app: Ethereum, Polygon, Arbitrum, Base, Avalanche, Gnosis; others can be enabled in the dashboard without code changes.
 - **Finding a UP's holdings:** Alchemy first; Blockscout as the alternative without a key (its index proved incomplete on Polygon and Base); pasting the contract address always works. The `eth_getLogs` scan was tried and removed: public RPCs allow only small block ranges, hundreds of requests per search. The list is only a shortcut: the check reads everything again from the chain.
 - **Spam label:** only Alchemy's `isSpam` verdict (or Blockscout's reputation) marks a row; `spamClassifications` are signals, not a verdict. Alchemy flags Basenames as spam (false positive): accepted as is, explained in the guide. No allowlist of "trusted" contracts.
 - **No browser extension impersonating a wallet.**
@@ -227,7 +227,7 @@ A page that reads and shows a UP's LSP3 identity on any network where it is depl
   - **Paid subscriptions (2026-10-04):** 5 USDC (Circle-native) paid from the UP to ChainIntegrate's UP, with the gas paid by the site; one balance per UP for every chain; price per operation 0.01 USDC on Base and Arc, 0.02 on Polygon and Avalanche, 0.03 on Arbitrum One (raised from 0.01 on 2026-10-05), charged when the operation runs; manual activation with an e-mail. Page `up-subscribe.html`; the rules, the ledger and the e-mails are in the private service.
   - **Subscriptions open (2026-10-05):** the service runs the subscription code, with the price list above. First customer: `0x328A…317b` on Base, end to end (payment, recording, operator e-mail, `activate`, user e-mail, one sponsored transfer charged 0.01 → 4.99 USDC). Log: `tools/logs/2026-10-05-subscriptions-and-arbitrum.txt`.
   - To do: one test operation on Polygon; a professional audit of `UPVerifyingPaymaster`, `UPPaymaster` and the 4337 flow before the service holds significant customer funds (until then, the pages and README say there is none); ask an accountant about the tax treatment of the USDC received.
-- **The site relayer is for the maintainer's personal use.** A "pro" version (public service) is under evaluation; it needs a new paymaster contract (verifying paymaster: the service signs each operation it agrees to pay), not the current `UPPaymaster`.
+- **The site relayer is for the maintainer's personal use.** *(Superseded: since 2026-10-05 the sponsor paymaster with paid subscriptions serves any UP, in beta.)* A "pro" version (public service) is under evaluation; it needs a new paymaster contract (verifying paymaster: the service signs each operation it agrees to pay), not the current `UPPaymaster`.
 - **Licenses: done 2026-10-03** (`THIRD_PARTY_NOTICES.md`): paymaster GPL-3.0; WalletConnect bundle under Reown's WalletConnect Community License (notice in the pages' footer, copy in `vendor/`). **For a paid / public version:** that license requires a paid commercial license above 500 monthly active users or 2.5M monthly RPC calls, and requires Reown's relay network; evaluate it (or an alternative) before launching. **To evaluate:** AGPL-3.0 for `tools/relayer/` (the part that would become the service).
 - **Contract source verification (done 2026-10-04):** all four contracts verified on the main explorers (Basescan, Polygonscan, Snowscan). Blockscout and Snowtrace are tracked as best effort only. Table in `contracts/README.md`, "Source verification status".
 - **Gas pages split (2026-10-04):** `up-gas-relay.html` is now the user's page (check, UP setup, revoke; the check ends with whether the site pays the UP's gas). `up-gas-relay-admin.html` is the operator's page (paymasters, sponsor paymaster, allowlist, test operation), not linked from the public pages. Both run `gas-relay-page.js`. The guide points users to the user page and to `up-subscribe.html`.
@@ -238,8 +238,7 @@ A page that reads and shows a UP's LSP3 identity on any network where it is depl
 - **Launch reviews 2026-10-04 and 2026-10-05 (`AUDIT.md` section 12), to do, in this order:**
   1. ~~SP-A and SP-B in the signing service~~ Done: payment approvals only for a set-up UP holding the amount; budget reserved by an approval released when it expires, then counted from the real on-chain spend; the e-mail taken from the last *paid* subscription.
   2. ~~GS-1, N-1, L-6~~ Done on 2026-10-06: Top up only by the paymaster's owner (and a warning for an owner from a link); Identity images on outside servers only on a click; the Send page refuses the UP's Key Manager, the EntryPoint and the site's paymasters as recipients.
-  2. GS-1 (admin page: Top up gated on the owner and the relayer's paymaster), N-1 (Identity: no automatic images from token metadata), L-6 (Send: refuse the Key Manager, EntryPoint and paymasters as recipients).
-  3. SP-C, SP-2, GS-2, N-2, F2-2, WalletConnect telemetry and SRI, CSP; M-08 checked on the live site.
+  3. ~~SP-C, SP-2, GS-2, N-2, F2-2, WalletConnect telemetry and SRI, CSP; M-08 checked on the live site.~~ Done by 2026-10-19 (`AUDIT.md` rev. 12).
 - **Ledger (hardware wallet), to do:** test with a real Ledger connected to MetaMask, with small amounts on Base:
   1. add the Ledger as a controller with the 4337 permission;
   2. a normal send;
@@ -252,6 +251,6 @@ A page that reads and shows a UP's LSP3 identity on any network where it is depl
 - **UP Wallet hint:** add a short note: "if the dApp hangs after the page delivered the answer, disconnect all sessions, disconnect on the dApp and reconnect with a new `wc:` link; do not reload the dApp with the session open".
 - **AUDIT R-06:** second review of `up-wallet.html` before removing the "experimental" label.
 - **AUDIT R-07:** decided 2026-10-03: Basenames demo deprecated.
-- **AUDIT R-02 / I-03:** Content-Security-Policy and security headers.
+- ~~**AUDIT R-02 / I-03:** Content-Security-Policy and security headers.~~ Done (2026-10-12 headers, 2026-10-19 CSP).
 - **AUDIT R-03 / L-07:** refresh stale RPCs (e.g. `rpc.sepolia.org`).
 - **`banner.png`:** about 6 MB; optimise it.

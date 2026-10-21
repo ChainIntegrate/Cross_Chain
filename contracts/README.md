@@ -67,7 +67,7 @@ LSP6 checks each payload when it runs, so the three steps work in one transactio
 
 **License:** GPL-3.0 (since 2026-10-03; it was MIT), because it is built on the GPL-3.0 ERC-4337 interfaces of `@account-abstraction/contracts`. Only the header changed: the compiled code is identical, so the address and the already verified source (which still shows the MIT header on Basescan) are the same contract. New verifications show GPL-3.0.
 
-**Status:** experimental. No professional audit (AI-assisted review on 2026-10-01, AUDIT.md section 8). Published on Base, Polygon, Avalanche C-Chain and Arbitrum One (same address) for the ChainIntegrate cassa (owner `0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9`): `0xb353565d1f801E7402DBC267b8C0E30E3540D4eD`, source verified on Basescan, Polygonscan, Snowscan and Arbiscan (see [Source verification status](#source-verification-status)). The first sponsored operation succeeded on 2026-09-30. Keep deposits small.
+**Status:** experimental. No professional audit (AI-assisted review on 2026-10-01, AUDIT.md section 8). Published on Base, Polygon, Avalanche C-Chain, Arbitrum One and Arc (same address) for the ChainIntegrate cassa (owner `0x6C5d0fa04aE90371e809114E9C3932ea7a3715C9`): `0xb353565d1f801E7402DBC267b8C0E30E3540D4eD`, source verified on Basescan, Polygonscan, Snowscan, Arbiscan and explorer.arc.io (see [Source verification status](#source-verification-status)). The first sponsored operation succeeded on 2026-09-30. Keep deposits small.
 
 **What it does**
 - `validatePaymasterUserOp` accepts an operation only if the sender UP is on the allowlist and the operation cannot cost more than `maxCostPerOp`. It reads only storage keyed by the sender.
@@ -127,7 +127,7 @@ The controller signs the user operation hash with `personal_sign`, so MetaMask w
 
 `UPVerifyingPaymaster.sol` is an ERC-4337 paymaster for EntryPoint v0.6, like `UPPaymaster`, but it does not keep a list of accounts. It pays for a user operation only when an **off-chain signing service** has approved that operation: the service decides (subscription, quota, which contracts, budget) and signs; the contract checks the signature. It is the base for a sponsored-gas service where the rules live in the service, not on chain.
 
-**Status:** experimental. No professional audit; an AI-assisted review on 2026-10-04 found no Critical, High or Medium bug in the code (AUDIT.md, section 10). Published on **Avalanche C-Chain, Polygon and Base** (2026-10-04) and **Arbitrum One** (2026-10-04, not yet served by the relayer), at the same address `0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e` (owner: the cassa), and in use by the site relayer on all three. Log of the first operation: `tools/logs/2026-10-04-avalanche-sponsor-paymaster.txt`. Source verified on Basescan, Polygonscan, Snowscan and Arbiscan (2026-10-04); see [Source verification status](#source-verification-status).
+**Status:** experimental. No professional audit; an AI-assisted review on 2026-10-04 found no Critical, High or Medium bug in the code (AUDIT.md, section 10). Published on **Avalanche C-Chain, Polygon and Base** (2026-10-04) **Arbitrum One** (2026-10-04, served by the relayer since 2026-10-05) and **Arc** (2026-10-05), at the same address `0xbEA7Ea6562CEA4DA9050bCd81e21CA569440d21e` (owner: the cassa), and in use by the site relayer on all five. Log of the first operation: `tools/logs/2026-10-04-avalanche-sponsor-paymaster.txt`. Source verified on Basescan, Polygonscan, Snowscan and Arbiscan (2026-10-04) and explorer.arc.io; see [Source verification status](#source-verification-status).
 
 **Only with the site's own relayer.** The paymaster cannot be staked, so public bundlers that apply the ERC-7562 rules refuse its operations.
 
@@ -191,7 +191,7 @@ It has no owner. Its constructor takes only the EntryPoint, so published through
 | EntryPoint | `0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789` |
 | Runtime code hash | `0x91968b95ee6f8e01a554060b775c13e8df3f0173d87a55a48ed54b8ff02c052d` |
 
-Published on Base (2026-09-30), Polygon (2026-10-01), Avalanche C-Chain and Arbitrum One (2026-10-04). `up-gas-relay.html` publishes it when missing, and checks this code hash before using it. LUKSO confirmed it is experimental and has never been audited: treat it as the least proven part of the system.
+Published on Base (2026-09-30), Polygon (2026-10-01), Avalanche C-Chain and Arbitrum One (2026-10-04) and Arc (2026-10-05). `up-gas-relay.html` publishes it when missing, and checks this code hash before using it. LUKSO confirmed it is experimental and has never been audited: treat it as the least proven part of the system.
 
 **Verify it:**
 1. Compare `creationCode` with the `bytecode` of `artifacts/Extension4337.json` in the npm package `@lukso/lsp-smart-contracts@0.17.4`.

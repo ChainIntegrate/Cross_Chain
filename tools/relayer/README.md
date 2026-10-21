@@ -1,6 +1,6 @@
 # tools/relayer — gas relayer service (experimental)
 
-A small Node.js service that sends ERC-4337 user operations for Universal Profiles, so their controllers need no gas. It is behind every "Pay the gas with the site relayer" option: the Send page, the UP Wallet and the subscription page (through `gas-relay-client.js`), and button **B · Send (through the site relayer)** of the operator's page `up-gas-relay-admin.html`. The page posts the signed operation to this service.
+A small Node.js service that sends ERC-4337 user operations for Universal Profiles, so their controllers need no gas. It is behind every "Pay the gas with the site relayer" option: UP Wallet (dApp requests and its Send panel) and the subscription page (through `gas-relay-client.js`), and button **B · Send (through the site relayer)** of the operator's page `up-gas-relay-admin.html`. The page posts the signed operation to this service.
 
 **The live site relayer** (ChainIntegrate's server) is `0xbb683923c2Df0269996C0E2F276A5097cE863C2F`, the same on every chain it serves: Base, Polygon, Avalanche C-Chain, Arbitrum One and Arc. Fund it with the chain's gas token when you add a chain (on Arc the gas token is USDC). `GET /relay/info` also shows it.
 
