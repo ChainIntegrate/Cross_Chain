@@ -31,6 +31,26 @@ pages", and go in the same batch (they need no app release). Remove an item when
    example the deposits on pro.aave.com, Base); ERC-4626 vault shares (Morpho, Spark) shown as the
    underlying asset with its price; Aave v3 aTokens shown as deposits. Read only, from the chain.
    Asked on 2026-10-21.
+7. **Higher gas limit for the site relayer**: an operation's `callGasLimit` is capped at 1,000,000
+   today, in three places that must stay equal: `gas-relay-client.js` (`MAX_CALL_GAS`), the relayer
+   (`tools/relayer/relay.js`, bounds) and the private signing service (`sponsor.js`, `MAX`). Astock's
+   "mint via reserve" on Arc (LayerZero, contract `0xedaD…22DE`) needed 1,172,396 and was refused
+   (2026-10-22). Raise it (about 2,000,000) and check that each paymaster's cap per operation still
+   covers the maximum cost on every chain (the page already refuses an operation above the cap).
+   Server side: relayer and signing service updated and restarted together.
+8. **A clear answer when the relayer cannot take an operation** (too much gas, above the cap, no
+   deposit, relayer not ready): today the request is refused before the confirmation window, the
+   reason is only a line in the log and the dApp gets a generic "Rejected by the UP bridge". Show
+   the reason in the request window, with what to do: "pay the gas with the controller" as a button,
+   with the controller's balance of the network's currency and the estimated cost (or why it is not
+   possible), and send the dApp an error with the same reason. Asked on 2026-10-22.
+9. **App: an error stays visible.** In the app the log shows only its last message, and every return
+   to the app writes "MetaMask connection renewed": an error from a request (as in item 8, seen on
+   the phone on 2026-10-22) is replaced at once and the user cannot tell what happened. Keep the last
+   error of a request visible until the next request or a tap (routine lines like the MetaMask
+   renewal do not replace it), and notify it like a request when the app is in the background. Part
+   of it may be in `up-wallet-android` (`app/metamask.js` writes the renewal line, `app/app.css` the
+   one-line log).
 
 ## Other pages
 
