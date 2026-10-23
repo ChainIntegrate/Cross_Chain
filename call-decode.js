@@ -1,6 +1,7 @@
 // Cross_Chain — decoding of common DeFi calls for UP Wallet's request window: swap routers and
-// aggregators (Uniswap's and Aerodrome's Universal Router, KyberSwap, LI.FI), Across bridge deposits and
-// Spark's savings vault and PSM. Each decoder says, in plain words, what goes in, what comes out at least,
+// aggregators (Uniswap's and Aerodrome's Universal Router, KyberSwap, LI.FI), Across bridge deposits,
+// Spark's savings vault and PSM, Aave (v3's Pool and native-currency gateway; v4's Spokes) and CoW
+// Protocol's pre-signed orders (read from CoW's API and checked against the order's hash). Each decoder says, in plain words, what goes in, what comes out at least,
 // who receives it and on which network, and flags what deserves attention: a recipient other than the UP,
 // fees to third parties, Permit2 authorizations, a bridge to a network where the UP does not exist yet.
 //
@@ -46,7 +47,34 @@
       psmOut: (v) => `Spark PSM: al massimo ${v.inn} → ${v.out}`,
       receiverUp: "✅ Il destinatario è la UP.",
       receiverOther: (v) => `⚠️⚠️ Il destinatario è ${v.who}, non la UP. Rifiuta, a meno che tu sappia perché.`,
-      router: "il router (passaggio intermedio)",
+      aaveSupply: (v) => `Aave v3: deposita ${v.amount}`,
+      aaveWithdraw: (v) => `Aave v3: preleva ${v.amount}`,
+      aaveBorrow: (v) => `Aave v3: prende in prestito ${v.amount}`,
+      aaveRepay: (v) => `Aave v3: rimborsa ${v.amount}`,
+      aaveNativeIn: (v) => `Aave v3: deposita ${v.amount} (valuta della rete, tramite il gateway)`,
+      aaveNativeOut: (v) => `Aave v3: preleva ${v.amount} in valuta della rete (tramite il gateway)`,
+      aaveFor: (v) => `✅ La posizione è della UP (${v.p}).`,
+      aaveForOther: (v) => `⚠️⚠️ La posizione (${v.p}) è di ${v.who}, non della UP: il deposito va a lui. Rifiuta, a meno che tu sappia perché.`,
+      aaveValueOk: "✅ Il valore inviato è l'importo depositato.",
+      aaveValueOff: (v) => `⚠️⚠️ Il valore inviato (${v.value}) non è l'importo indicato (${v.amount}).`,
+      aaveBorrowNote: "⚠️ Un prestito va restituito con gli interessi: se il valore del collaterale scende troppo, una parte viene liquidata.",
+      v4: (v) => `Aave v4: ${v.what}`,
+      v4Supply: (v) => `deposita ${v.amount} nella riserva ${v.id}`,
+      v4Withdraw: (v) => `preleva ${v.amount} dalla riserva ${v.id}`,
+      v4Borrow: (v) => `prende in prestito ${v.amount} dalla riserva ${v.id}`,
+      v4Repay: (v) => `rimborsa ${v.amount} alla riserva ${v.id}`,
+      v4Collateral: (v) => `${v.on ? "usa" : "non usa più"} la riserva ${v.id} come collaterale`,
+      v4Units: "unità del token: la pagina non legge quale token è la riserva",
+      v4Spoke: (v) => `ℹ️ Spoke di Aave v4 conosciuto dalla pagina (${v.net}).`,
+      cowSell: (v) => `Ordine CoW: vende ${v.inn} → almeno ${v.out}`,
+      cowBuy: (v) => `Ordine CoW: compra ${v.out} → al massimo ${v.inn}`,
+      cowCancel: "Ordine CoW: annulla la pre-firma di un ordine",
+      cowUnverified: "Ordine CoW: autorizza un ordine che la pagina non ha potuto leggere",
+      cowChecked: "✅ Ordine letto dall'API di CoW e verificato: il suo hash è quello autorizzato dalla transazione, e l'ordine è della UP.",
+      cowNotChecked: (v) => `⚠️⚠️ La pagina non ha potuto verificare l'ordine (${v.why}): la transazione autorizza CoW a eseguirlo, ma non si vede cosa vende, cosa compra né a chi va. Rifiuta, a meno che tu sappia cosa hai chiesto.`,
+      cowOwnerOther: (v) => `⚠️⚠️ L'ordine è di ${v.who}, non della UP.`,
+      cowValid: (v) => `ℹ️ Valido fino al ${v.until}. CoW lo esegue dopo la conferma, di solito entro un minuto; una parte del prezzo può andare in commissioni di rete incluse nell'importo.`,
+      cowPartial: "ℹ️ L'ordine può essere eseguito anche in parte.",
       upSelf: "la UP",
       native: "valuta della rete",
     },
@@ -81,7 +109,34 @@
       psmOut: (v) => `Spark PSM: at most ${v.inn} → ${v.out}`,
       receiverUp: "✅ The recipient is the UP.",
       receiverOther: (v) => `⚠️⚠️ The recipient is ${v.who}, not the UP. Reject it unless you know why.`,
-      router: "the router (intermediate step)",
+      aaveSupply: (v) => `Aave v3: supply ${v.amount}`,
+      aaveWithdraw: (v) => `Aave v3: withdraw ${v.amount}`,
+      aaveBorrow: (v) => `Aave v3: borrow ${v.amount}`,
+      aaveRepay: (v) => `Aave v3: repay ${v.amount}`,
+      aaveNativeIn: (v) => `Aave v3: supply ${v.amount} (the network's currency, through the gateway)`,
+      aaveNativeOut: (v) => `Aave v3: withdraw ${v.amount} as the network's currency (through the gateway)`,
+      aaveFor: (v) => `✅ The position is the UP's (${v.p}).`,
+      aaveForOther: (v) => `⚠️⚠️ The position (${v.p}) is ${v.who}'s, not the UP's: the deposit goes to it. Reject it unless you know why.`,
+      aaveValueOk: "✅ The value sent is the amount supplied.",
+      aaveValueOff: (v) => `⚠️⚠️ The value sent (${v.value}) is not the amount stated (${v.amount}).`,
+      aaveBorrowNote: "⚠️ A loan is repaid with interest: if the collateral's value falls too far, part of it is liquidated.",
+      v4: (v) => `Aave v4: ${v.what}`,
+      v4Supply: (v) => `supply ${v.amount} to reserve ${v.id}`,
+      v4Withdraw: (v) => `withdraw ${v.amount} from reserve ${v.id}`,
+      v4Borrow: (v) => `borrow ${v.amount} from reserve ${v.id}`,
+      v4Repay: (v) => `repay ${v.amount} to reserve ${v.id}`,
+      v4Collateral: (v) => `${v.on ? "use" : "stop using"} reserve ${v.id} as collateral`,
+      v4Units: "token units: the page does not read which token the reserve is",
+      v4Spoke: (v) => `ℹ️ An Aave v4 Spoke known to the page (${v.net}).`,
+      cowSell: (v) => `CoW order: sell ${v.inn} → at least ${v.out}`,
+      cowBuy: (v) => `CoW order: buy ${v.out} → at most ${v.inn}`,
+      cowCancel: "CoW order: cancel an order's pre-signature",
+      cowUnverified: "CoW order: authorizes an order the page could not read",
+      cowChecked: "✅ Order read from CoW's API and verified: its hash is the one the transaction authorizes, and the order is the UP's.",
+      cowNotChecked: (v) => `⚠️⚠️ The page could not verify the order (${v.why}): the transaction lets CoW fill it, but what it sells, what it buys and who receives it cannot be seen. Reject it unless you know what you asked for.`,
+      cowOwnerOther: (v) => `⚠️⚠️ The order is ${v.who}'s, not the UP's.`,
+      cowValid: (v) => `ℹ️ Valid until ${v.until}. CoW fills it after the confirmation, usually within a minute; network costs may be included in the amounts.`,
+      cowPartial: "ℹ️ The order may be filled in part.",
       upSelf: "the UP",
       native: "network currency",
     },
@@ -307,6 +362,155 @@
     return { op, params, notes: [ok ? [text("receiverUp"), "line-ok"] : [text("receiverOther", { who: ethers.getAddress(rcpt) }), "line-danger"]] };
   }
 
+  // ---- Aave v3: the Pool (same functions on every network) and the gateway for the network's currency
+  const AAVE3 = {
+    [sel("supply(address,uint256,address,uint16)")]: ["supply", ["address", "uint256", "address", "uint16"], 2],
+    [sel("deposit(address,uint256,address,uint16)")]: ["supply", ["address", "uint256", "address", "uint16"], 2],
+    [sel("withdraw(address,uint256,address)")]: ["withdraw", ["address", "uint256", "address"], 2],
+    [sel("borrow(address,uint256,uint256,uint16,address)")]: ["borrow", ["address", "uint256", "uint256", "uint16", "address"], 4],
+    [sel("repay(address,uint256,uint256,address)")]: ["repay", ["address", "uint256", "uint256", "address"], 3],
+  };
+  const AAVE3_NATIVE = {
+    [sel("depositETH(address,address,uint16)")]: ["in", ["address", "address", "uint16"], 1],
+    [sel("withdrawETH(address,uint256,address)")]: ["out", ["address", "uint256", "address"], 2],
+  };
+  const NAMES = { supply: ["onBehalfOf", "aaveSupply"], withdraw: ["to", "aaveWithdraw"], borrow: ["onBehalfOf", "aaveBorrow"], repay: ["onBehalfOf", "aaveRepay"] };
+  const MAX_UINT = (1n << 256n) - 1n;
+  async function aave3(ctx) {
+    const s = ctx.data.slice(0, 10), body = "0x" + ctx.data.slice(10);
+    const f = AAVE3[s];
+    if (f) {
+      const [kind, types, at] = f;
+      const v = abi().decode(types, body);
+      const [asset, x] = v;
+      const all = x === MAX_UINT;
+      const amount = all ? (lang() === "en" ? "everything" : "tutto") : await amt(ctx, asset, x);
+      const who = v[at], [pname, key] = NAMES[kind];
+      const mine = String(who).toLowerCase() === ctx.up.toLowerCase();
+      const notes = [mine ? [text("aaveFor", { p: pname }), "line-ok"] : [text(kind === "withdraw" ? "receiverOther" : "aaveForOther", { p: pname, who: ethers.getAddress(who) }), "line-danger"]];
+      if (kind === "borrow") notes.push([text("aaveBorrowNote"), "line-warn"]);
+      return { op: text(key, { amount }), params: `${kind}(${types.join(",")})
+asset: ${asset}
+amount: ${all ? "max" : x}
+${pname}: ${who}`, notes };
+    }
+    const g = AAVE3_NATIVE[s];
+    if (!g) return null;
+    const [kind, types, at] = g;
+    const v = abi().decode(types, body);
+    const who = v[at], pool = v[0];
+    const x = kind === "in" ? ctx.value : v[1];
+    const amount = `${short(ethers.formatEther(x))} ${ctx.cur}`.trim();
+    const mine = String(who).toLowerCase() === ctx.up.toLowerCase();
+    const pname = kind === "in" ? "onBehalfOf" : "to";
+    const notes = [mine ? [text("aaveFor", { p: pname }), "line-ok"] : [text(kind === "in" ? "aaveForOther" : "receiverOther", { p: pname, who: ethers.getAddress(who) }), "line-danger"]];
+    if (kind === "in" && ctx.value === 0n) notes.push([text("aaveValueOff", { value: "0", amount: "?" }), "line-danger"]);
+    return { op: text(kind === "in" ? "aaveNativeIn" : "aaveNativeOut", { amount }), params: `${kind === "in" ? "depositETH" : "withdrawETH"}(${types.join(",")})
+pool: ${pool}
+${kind === "in" ? "" : `amount: ${v[1]}\n`}${pname}: ${who}`, notes };
+  }
+
+  // ---- Aave v4 Spokes: positions are kept per reserve id inside the Spoke. Recognised only at the Spokes
+  // listed here (their functions take plain numbers, so a selector alone is not enough), also inside the
+  // Spoke's own multicall.
+  const SPOKES = {
+    8453: ["0x17905db0e4a3514467539956c084180616ae7b8d"],                                              // Base (Coinbase Stocks hub)
+    43114: ["0x3b517594277c67307cf2d7cbe6fe1d4399b68c41", "0x435272ceff93a1e657e8abfdf0a13e95900a3a56"], // Avalanche
+  };
+  const V4 = {
+    [sel("supply(uint256,uint256,address)")]: "v4Supply", [sel("withdraw(uint256,uint256,address)")]: "v4Withdraw",
+    [sel("borrow(uint256,uint256,address)")]: "v4Borrow", [sel("repay(uint256,uint256,address)")]: "v4Repay",
+    [sel("setUsingAsCollateral(uint256,bool,address)")]: "v4Collateral",
+  };
+  const V4_MULTI = sel("multicall(bytes[])");
+  async function aave4(ctx) {
+    const list = SPOKES[Number(ctx.chainId)] || [];
+    if (!list.includes(ctx.to.toLowerCase())) return null;
+    const s = ctx.data.slice(0, 10);
+    const calls = s === V4_MULTI ? abi().decode(["bytes[]"], "0x" + ctx.data.slice(10))[0] : [ctx.data];
+    const whats = [], lines = [], others = new Set();
+    let mine = false, borrow = false;
+    for (const c of calls) {
+      const key = V4[c.slice(0, 10)];
+      if (!key) return null;
+      const [id, x, who] = abi().decode(key === "v4Collateral" ? ["uint256", "bool", "address"] : ["uint256", "uint256", "address"], "0x" + c.slice(10));
+      whats.push(key === "v4Collateral" ? text(key, { id: id.toString(), on: x }) : text(key, { id: id.toString(), amount: x === MAX_UINT ? "max" : x.toString() }));
+      lines.push(`${key.slice(2).toLowerCase()}: reserveId ${id}, ${key === "v4Collateral" ? `usingAsCollateral ${x}` : `amount ${x}`}, onBehalfOf ${who}`);
+      if (String(who).toLowerCase() === ctx.up.toLowerCase()) mine = true; else others.add(ethers.getAddress(who));
+      if (key === "v4Borrow") borrow = true;
+    }
+    const notes = [];
+    if (others.size) notes.push([text("aaveForOther", { p: "onBehalfOf", who: [...others].join(", ") }), "line-danger"]);
+    else if (mine) notes.push([text("aaveFor", { p: "onBehalfOf" }), "line-ok"]);
+    if (borrow) notes.push([text("aaveBorrowNote"), "line-warn"]);
+    if (calls.some((c) => V4[c.slice(0, 10)] !== "v4Collateral")) notes.push([`ℹ️ ${text("v4Units")}.`, "line-dim"]);
+    notes.push([text("v4Spoke", { net: String(ctx.chainId) }), "line-dim"]);
+    return { op: text("v4", { what: whats.join("; ") }), params: (s === V4_MULTI ? `multicall(bytes[]): ${calls.length}\n` : "") + lines.join("\n"), notes };
+  }
+
+  // ---- CoW Protocol: setPreSignature(orderUid, signed) on GPv2Settlement. The order itself is not in the
+  // transaction, only its uid (EIP-712 hash ++ owner ++ validTo): it is read from CoW's public API and
+  // accepted only if its hash, owner and validity are exactly the uid's.
+  const COW_SETTLEMENT = "0x9008d19f58aabd9ed0d60971565aa8510560ab41";
+  const COW_PRESIGN = sel("setPreSignature(bytes,bool)");
+  const COW_API = { 1: "mainnet", 100: "xdai", 42161: "arbitrum_one", 8453: "base", 43114: "avalanche", 137: "polygon", 56: "bnb" };
+  const COW_TYPES = { Order: [
+    { name: "sellToken", type: "address" }, { name: "buyToken", type: "address" }, { name: "receiver", type: "address" },
+    { name: "sellAmount", type: "uint256" }, { name: "buyAmount", type: "uint256" }, { name: "validTo", type: "uint32" },
+    { name: "appData", type: "bytes32" }, { name: "feeAmount", type: "uint256" }, { name: "kind", type: "string" },
+    { name: "partiallyFillable", type: "bool" }, { name: "sellTokenBalance", type: "string" }, { name: "buyTokenBalance", type: "string" },
+  ] };
+  async function cowOrder(chainId, uid) {
+    const net = COW_API[Number(chainId)];
+    if (!net) throw new Error("network");
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 8000);
+    try {
+      const r = await fetch(`https://api.cow.fi/${net}/api/v1/orders/${uid}`, { credentials: "omit", referrerPolicy: "no-referrer", signal: ctl.signal, headers: { accept: "application/json" } });
+      if (!r.ok) throw new Error(`API ${r.status}`);
+      return await r.json();
+    } finally { clearTimeout(timer); }
+  }
+  async function cow(ctx) {
+    if (ctx.data.slice(0, 10) !== COW_PRESIGN || ctx.to.toLowerCase() !== COW_SETTLEMENT) return null;
+    const [uid, signed] = abi().decode(["bytes", "bool"], "0x" + ctx.data.slice(10));
+    const h = uid.slice(2);
+    const params = `setPreSignature(bytes,bool)\norderUid: ${uid}\nsigned: ${signed}`;
+    if (!signed) return { op: text("cowCancel"), params, notes: [] };
+    const notes = [];
+    if (h.length !== 112) return { op: text("cowUnverified"), params, notes: [[text("cowNotChecked", { why: "orderUid" }), "line-danger"]] };
+    const digest = "0x" + h.slice(0, 64), owner = ethers.getAddress("0x" + h.slice(64, 104)), validTo = parseInt(h.slice(104, 112), 16);
+    if (owner.toLowerCase() !== ctx.up.toLowerCase()) notes.push([text("cowOwnerOther", { who: owner }), "line-danger"]);
+    let o = null, why = "";
+    try { o = await cowOrder(ctx.chainId, uid); } catch (e) { why = e.name === "AbortError" ? "timeout" : e.message; }
+    let ok = false;
+    if (o) {
+      try {
+        const app = /^0x[0-9a-fA-F]{64}$/.test(o.appData || "") ? o.appData : o.appDataHash;
+        const order = {
+          sellToken: o.sellToken, buyToken: o.buyToken, receiver: o.receiver || ethers.ZeroAddress,
+          sellAmount: o.sellAmount, buyAmount: o.buyAmount, validTo: o.validTo, appData: app, feeAmount: o.feeAmount || "0",
+          kind: o.kind, partiallyFillable: !!o.partiallyFillable, sellTokenBalance: o.sellTokenBalance || "erc20", buyTokenBalance: o.buyTokenBalance || "erc20",
+        };
+        const dom = { name: "Gnosis Protocol", version: "v2", chainId: Number(ctx.chainId), verifyingContract: ethers.getAddress(COW_SETTLEMENT) };
+        ok = ethers.TypedDataEncoder.hash(dom, COW_TYPES, order).toLowerCase() === digest.toLowerCase() && Number(o.validTo) === validTo;
+        if (!ok) why = "hash";
+        else {
+          const inn = await amt(ctx, o.sellToken, BigInt(o.sellAmount) + BigInt(o.feeAmount || "0")), out = await amt(ctx, o.buyToken, BigInt(o.buyAmount));
+          const rcpt = order.receiver === ethers.ZeroAddress ? owner : order.receiver;
+          const mine = rcpt.toLowerCase() === ctx.up.toLowerCase();
+          if (owner.toLowerCase() === ctx.up.toLowerCase()) notes.unshift([text("cowChecked"), "line-ok"]);
+          notes.push(mine ? [text("receiverUp"), "line-ok"] : [text("receiverOther", { who: ethers.getAddress(rcpt) }), "line-danger"]);
+          notes.push([text("cowValid", { until: new Date(validTo * 1000).toISOString().slice(0, 16).replace("T", " ") + " UTC" }), "line-dim"]);
+          if (order.partiallyFillable) notes.push([text("cowPartial"), "line-dim"]);
+          const op = text(o.kind === "buy" ? "cowBuy" : "cowSell", { inn, out });
+          return { op, params: `${params}\nsellToken: ${o.sellToken}\nbuyToken: ${o.buyToken}\nsellAmount: ${o.sellAmount}\nbuyAmount: ${o.buyAmount}\nkind: ${o.kind}\nreceiver: ${rcpt}\nvalidTo: ${validTo}`, notes };
+        }
+      } catch (e) { why = "hash"; ok = false; }
+    }
+    notes.push([text("cowNotChecked", { why: why || "API" }), "line-danger"]);
+    return { op: text("cowUnverified"), params, notes };
+  }
+
   // A swap summary: the first input and the last output, every recipient checked.
   async function finish(ctx, out, via) {
     const notes = [];
@@ -328,10 +532,10 @@
   }
 
   async function describe(ctx) {
-    for (const f of [universalRouter, kyber, lifi, across, spark]) {
+    for (const f of [universalRouter, kyber, lifi, across, spark, aave3, aave4, cow]) {
       try { const r = await f(ctx); if (r) return r; } catch (e) { /* not this kind, or malformed: the next, then the generic view */ }
     }
     return null;
   }
-  window.CallDecode = { describe, text, TEXT };
+  window.CallDecode = { describe, text, TEXT, aave4Spokes: SPOKES };
 })();

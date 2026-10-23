@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-fnllaLXsy+hFh3ihvNK8Ra+iO19WWPdT2974J6j1iaI='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-EfObyfe+Ct/wEf3csgYjkUnxVxKjNx3QNT5RWfycsj0='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -98,6 +98,7 @@
   .up-card-addr { font-family: monospace; font-size: 15px; font-weight: 700; overflow-wrap: anywhere; }
   .up-card-sub { font-size: 12.5px; color: var(--text-dim); }
   .up-card { cursor: pointer; }
+  .up-card-pic { width: 40px; height: 40px; border-radius: 50%; }
   .up-card-state { font-size: 12.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   /* Simulation on/off, in the UP card: a tap opens a small window to change it. */
   .sim-chip { width: auto; margin: 0; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; background: transparent; }
@@ -149,6 +150,7 @@
   .ov-thumb.has-img { color: transparent; }
   .ov-thumb.img-ask { cursor: pointer; outline: 1px dashed var(--accent); outline-offset: -1px; color: var(--accent); }
   .ov-thumb .net-logo { width: 28px; height: 28px; }
+  .send-chosen { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 13px; }
   .view-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
   .view-title { font-size: 16px; font-weight: 700; }
   body[data-view="home"] .panel { display: none; }
@@ -192,6 +194,8 @@
   .log-title { font-size: 13px; color: var(--text-dim); font-weight: 600; }
   #log { margin-top: 6px; }
   #log.last-only > :not(:last-child) { display: none; }
+  /* The current request's last error stays visible in the short log too, until the next request or a tap. */
+  #log.last-only > .sticky-err:not(:last-child) { display: block; cursor: pointer; }
   .warn-box { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--err); border-radius: 8px; background: rgba(224,90,90,0.08); font-size: 13px; line-height: 1.5; }
   @media (max-width: 560px) { .kv { grid-template-columns: 1fr; } }
   /* While the page works (a dApp request, a connection, a send): a fixed box with the current step. */
@@ -221,6 +225,7 @@
 
 <div id="nav">
   <div class="up-card" id="upCard" role="button" tabindex="0">
+    <span class="ov-thumb up-card-pic" id="upCardPic" hidden></span>
     <span class="net-logo" id="upCardLogo"></span>
     <span class="up-card-main"><span class="up-card-addr" id="upCardAddr"></span><span class="up-card-sub" id="upCardSub"></span><span class="up-card-state" id="upCardState"><span id="upCardStateText"></span><button type="button" class="sim-chip" id="simChip"></button><button type="button" class="sim-chip" id="gasChip"></button></span></span>
   </div>
@@ -335,6 +340,7 @@
     <option value="native" data-i18n="sendAssetNative">La valuta della rete</option>
     <option value="token" data-i18n="sendAssetToken">Un token o un NFT: incolla l'indirizzo del contratto</option>
   </select>
+  <div id="sendChosen" class="send-chosen" hidden></div>
   <div id="sendTokenWrap" hidden>
     <label for="sendToken" data-i18n="sendTokenLabel">Indirizzo del token</label>
     <input type="text" id="sendToken" placeholder="0x...">
@@ -477,6 +483,7 @@ const DAPP_CONTRACTS = {
   "8453:0xe401af10caa79f9bb6945c87ee196503e5de6bea": "hup.social", // Base
   "5042:0xa5e73b15c1c3ee477aed682741f0324c6787bbb8": "hup.social", // Arc
   "42:0xf6eec4e32a532b23acc56b72865e79c79877cec8": "hup.social", // LUKSO
+  "1:0xd1aec7bb7679fa30e74ab30877fbdf96d51333d4": "hup.social", // Ethereum (a reply from hup.social, 2026-10-22)
   "42:0x7a5134435e029b5bbff0d4eb5aebcf0255d76d88": "hup.social", // LUKSO, polls
   // LUKSO's LSP26 Follower System (the standard's own contract; hup.social uses it for follows).
   "42:0xf01103e5a9909fc0dbe8166da7085e0285daddca": "LSP26 Follower System",
@@ -618,6 +625,8 @@ const I18N = {
     ovNothing: (v) => `Niente su: ${v.list}.`, ovAbsent: (v) => `La UP non esiste su: ${v.list}.`,
     ovFailed: (v) => `Non lette (rete non raggiungibile): ${v.list}. Riprova con Aggiorna.`,
     ovUnpriced: "contiene anche token senza prezzo",
+    ovAToken: (v) => `deposito Aave v3 di ${v.amount} ${v.sym}`, ovVault: (v) => `quote di un vault, valgono ≈ ${v.amount} ${v.sym}`,
+    ovSpoke: "deposito Aave v4 (pro.aave.com), non è un token nella UP",
     ovImgAsk: "Immagine su un server esterno: toccala per caricarla. Quel server vedrà il tuo indirizzo IP e quando guardi questa UP.",
     tileReceive: "Ricevi", tileReceiveSub: "Indirizzo e QR della UP",
     tileDapp: "Collega una dApp", tileDappSub: "Usa una dApp con la UP (WalletConnect)",
@@ -933,6 +942,11 @@ const I18N = {
     infoWrap: (v) => `ℹ️ Conversione: ${v.amount} della UP diventano ${v.name} (wrap, 1:1).`,
     infoUnwrap: (v) => `ℹ️ Riconversione: ${v.amount} della UP tornano ${v.cur || "valuta nativa"} (unwrap, 1:1).`,
     gasByController: (v) => `pagato dal controller (fino a circa ${v.need})`,
+    gasByControllerBal: (v) => `pagato dal controller: fino a circa ${v.need}; il controller ha ${v.have}`,
+    kRelayNo: "Gas pagato dal sito",
+    relayFallback: (v) => `⚠️ Il relayer del sito non può prendere questa operazione: ${v.why}\nPuoi pagare il gas con il controller: costo e saldo nella finestra della richiesta.`,
+    relayFallbackNoGas: (v) => `❌ Il relayer del sito non può prendere questa operazione (${v.why}) e il controller non ha abbastanza gas: servono fino a circa ${v.need}, ne ha ${v.have}. Ricarica il controller con la valuta della rete, poi ripeti dalla dApp.`,
+    sendBtnController: "Paga il gas con il controller, firma e invia (irreversibile)",
     relayAvailableOff: "ℹ️ Il relayer del sito è disponibile per questa UP, ma l'opzione è spenta: il gas lo paga il controller. Per usarlo: Rifiuta, spunta \"Paga il gas con il relayer del sito\" nella sezione 3 e ripeti l'operazione dalla dApp.",
     busyProposal: "Richiesta di connessione dalla dApp: verifica di rete, UP e controller...",
     busyRequest: "Richiesta dalla dApp: verifica, lettura dei dati e simulazione...",
@@ -1031,6 +1045,8 @@ const I18N = {
     ovNothing: (v) => `Nothing on: ${v.list}.`, ovAbsent: (v) => `The UP does not exist on: ${v.list}.`,
     ovFailed: (v) => `Not read (network not reachable): ${v.list}. Try again with Refresh.`,
     ovUnpriced: "also holds tokens without a price",
+    ovAToken: (v) => `Aave v3 deposit of ${v.amount} ${v.sym}`, ovVault: (v) => `vault shares, worth ≈ ${v.amount} ${v.sym}`,
+    ovSpoke: "Aave v4 deposit (pro.aave.com), not a token in the UP",
     ovImgAsk: "Image on an external server: tap to load it. That server will see your IP address and when you look at this UP.",
     tileReceive: "Receive", tileReceiveSub: "The UP's address and QR",
     tileDapp: "Connect a dApp", tileDappSub: "Use a dApp with the UP (WalletConnect)",
@@ -1317,6 +1333,11 @@ const I18N = {
     infoWrap: (v) => `ℹ️ Conversion: ${v.amount} of the UP become ${v.name} (wrap, 1:1).`,
     infoUnwrap: (v) => `ℹ️ Conversion back: ${v.amount} of the UP return to ${v.cur || "native currency"} (unwrap, 1:1).`,
     gasByController: (v) => `paid by the controller (up to about ${v.need})`,
+    gasByControllerBal: (v) => `paid by the controller: up to about ${v.need}; the controller has ${v.have}`,
+    kRelayNo: "Gas paid by the site",
+    relayFallback: (v) => `⚠️ The site relayer cannot take this operation: ${v.why}\nYou can pay the gas with the controller: cost and balance in the request window.`,
+    relayFallbackNoGas: (v) => `❌ The site relayer cannot take this operation (${v.why}) and the controller does not have enough gas: up to about ${v.need} is needed, it has ${v.have}. Top up the controller with the network's currency, then try again from the dApp.`,
+    sendBtnController: "Pay the gas with the controller, sign and send (irreversible)",
     relayAvailableOff: "ℹ️ The site relayer is available for this UP, but the option is off: the controller pays the gas. To use it: Reject, tick \"Pay the gas with the site relayer\" in section 3 and repeat the operation from the dApp.",
     busyProposal: "Connection request from the dApp: checking network, UP and controller...",
     busyRequest: "Request from the dApp: checking, reading data and simulating...",
@@ -1439,6 +1460,11 @@ function log(msg, cls) {
   const l = document.createElement("div");
   if (cls) l.className = cls;
   l.textContent = msg;
+  if (cls === "line-err" || cls === "line-danger") {
+    for (const e of $("log").querySelectorAll(".sticky-err")) e.classList.remove("sticky-err");
+    l.classList.add("sticky-err");
+    l.addEventListener("click", () => l.classList.remove("sticky-err"));
+  }
   $("log").appendChild(l);
   requestNotes.push([msg, cls]);
   if (!$("requestModal").hidden) {
@@ -1479,6 +1505,7 @@ function askNotifications() {
 // The log keeps the history of the session: each request starts with a separator.
 function logSeparator() {
   requestNotes = [];
+  for (const e of $("log").querySelectorAll(".sticky-err")) e.classList.remove("sticky-err");
   const l = document.createElement("div");
   l.className = "line-dim";
   l.textContent = `—— ${new Date().toLocaleTimeString()} ——`;
@@ -2088,7 +2115,7 @@ function fillDecodeHelp(box) {
 function setDecodeHelp(r) { decodeReport = r; fillDecodeHelp($("decodeHelp")); }
 
 // Opens the modal with the checks of this request, its details and the buttons.
-function showRequestModal(kind, title, rows) {
+function showRequestModal(kind, title, rows, sendLabel) {
   $("modalTitle").textContent = title;
   const notes = $("modalNotes");
   notes.textContent = "";
@@ -2100,6 +2127,7 @@ function showRequestModal(kind, title, rows) {
   }
   renderKv("modalDetails", rows);
   fillDecodeHelp($("modalDecodeHelp"));
+  $("sendBtn").textContent = sendLabel || t("sendBtn");
   $("sendBtn").hidden = kind !== "tx";
   $("signBtn").hidden = kind !== "sign";
   $("sendBtn").disabled = kind !== "tx";
@@ -2165,7 +2193,8 @@ async function onSessionRequest(event) {
     log(t("reqBusy"), "line-warn");
     return respondError(topic, id, "Another request is pending", 5000);
   }
-  const reject = async (msg) => { log(msg, "line-err"); await respondError(topic, id, "Rejected by the UP bridge", 5000); };
+  // The dApp gets the same reason the user sees, on one line.
+  const reject = async (msg) => { log(msg, "line-err"); await respondError(topic, id, "Rejected by the UP bridge: " + oneLine(String(msg).replace(/^[^\p{L}\p{N}]+/u, ""), 300), 5000); };
   if (!riskAccepted()) return reject(t("ackRequired"));
 
   // Domain verification by WalletConnect/Reown.
@@ -2640,15 +2669,26 @@ async function handleSendTransaction(topic, id, c, tx, validation, reject, after
     const upBal = await c.provider.getBalance(c.up);
     if (upBal < value) return reject(t("upNoFunds", { need: `${ethers.formatEther(value)} ${cur}`, have: `${ethers.formatEther(upBal)} ${cur}` }));
 
+    // When the site relayer cannot take the operation (too much gas, above the cap, low deposit, not
+    // ready), the request is not refused: the reason is shown and the controller can pay the gas instead.
+    let relayWhy = null, prep = null;
     if (relayOption.enabled()) {
       // Through the site relayer: the EntryPoint calls the UP (msg.sender for the dApp is still the UP),
       // the paymaster pays, the controller only signs a message.
       const ready = await GasRelayClient.check(c.provider, { chainId: c.chainId, up: c.up, signer: c.signer });
-      if (ready.state !== "ready") return reject(t("relayNotReady"));
-      log(t("simulating"), "line-dim");
-      let prep;
-      try { prep = await GasRelayClient.prepare(c.provider, { chainId: c.chainId, up: c.up, ready, to, value, data, fmt: (w) => `${ethers.formatEther(w)} ${cur}`.trim() }); }
-      catch (e) { return reject(e.message); }
+      if (ready.state !== "ready") relayWhy = t("relayNotReady");
+      else {
+        log(t("simulating"), "line-dim");
+        try { prep = await GasRelayClient.prepare(c.provider, { chainId: c.chainId, up: c.up, ready, to, value, data, fmt: (w) => `${ethers.formatEther(w)} ${cur}`.trim() }); }
+        catch (e) {
+          // An RPC that answers a different operation hash is not trusted for any path.
+          if (e.message === GasRelayClient.text("hashMismatch")) return reject(e.message);
+          relayWhy = e.message;
+        }
+      }
+      if (relayWhy) log(t("relayFallback", { why: relayWhy }), "line-warn");
+    }
+    if (prep) {
       log(t("relaySimOk"), "line-ok");
       log(prep.plan, "line-dim");
       rows.push([t("kGas"), prep.plan, { cls: "ok" }]);
@@ -2689,17 +2729,19 @@ async function handleSendTransaction(topic, id, c, tx, validation, reject, after
     const gasLimit = gas + gas / 4n;
     const need = gasLimit * (await estimateMaxGasPrice(c.provider));
     const signerBal = await c.provider.getBalance(c.signer);
-    if (signerBal < need) return reject(t("signerNoGas", { need: `${ethers.formatEther(need)} ${cur}`, have: `${ethers.formatEther(signerBal)} ${cur}` }));
+    const needText = `${ethers.formatEther(need)} ${cur}`.trim(), haveText = `${ethers.formatEther(signerBal)} ${cur}`.trim();
+    if (signerBal < need) return reject(relayWhy ? t("relayFallbackNoGas", { why: relayWhy, need: needText, have: haveText }) : t("signerNoGas", { need: needText, have: haveText }));
 
     if ($("simulateOnly").checked) {
       log(t(topic === LOCAL_TOPIC ? "simOnlyDoneLocal" : "simOnlyDone"), "line-warn");
       return respondError(topic, id, "Simulation only: transaction not sent", 5000);
     }
-    rows.push([t("kGas"), t("gasByController", { need: `${ethers.formatEther(need)} ${cur}`.trim() }), {}]);
-    if (relayOption.state().state === "ready") log(t("relayAvailableOff"), "line-warn");
+    if (relayWhy) rows.push([t("kRelayNo"), relayWhy, { cls: "warn" }], [t("kGas"), t("gasByControllerBal", { need: needText, have: haveText }), {}]);
+    else rows.push([t("kGas"), t("gasByController", { need: needText }), {}]);
+    if (!relayWhy && relayOption.state().state === "ready") log(t("relayAvailableOff"), "line-warn");
     pending = { kind: "tx", topic, id, wrapped, gasLimit, c, to: toLabel, valueText, after };
     log(t("readyToSend"), "line-warn");
-    showRequestModal("tx", t("actionTitleTx", { site: sessionPeer(topic) }), rows);
+    showRequestModal("tx", t("actionTitleTx", { site: sessionPeer(topic) }), rows, relayWhy ? t("sendBtnController") : null);
   } catch (e) {
     return reject(t("genericError", { err: e.shortMessage || e.message }));
   }
@@ -3033,7 +3075,7 @@ function sendFields(kind) {
 }
 // Token IDs the balances list found for each collection (full IDs, by contract address), and the
 // contracts the index flags as spam.
-let holdIds = {}, holdSpam = new Set(), holdNames = {};
+let holdIds = {}, holdSpam = new Set(), holdNames = {}, holdRows = {};
 
 // What the UP holds, in panel 6 (shared asset-list.js, as on the Identity page): the currency and the
 // LSP7/LSP8 tokens registered in the UP from the chain, other tokens from an index. A row chooses what
@@ -3050,7 +3092,7 @@ function shortAmount(text) {
 async function loadHoldings(c) {
   holdKey = `${c.chainId}:${c.up}`;
   const run = ++holdRun, box = $("holdBox");
-  holdIds = {}; holdNames = {};
+  holdIds = {}; holdNames = {}; holdRows = {};
   box.textContent = t("holdReading"); box.className = "status-box line-dim";
   const a = await AssetList.list(c.provider, c.up, c.net.key);
   if (run !== holdRun) return;
@@ -3072,6 +3114,7 @@ async function loadHoldings(c) {
   const good = a.rows.filter((r) => !r.spam), spam = a.rows.filter((r) => r.spam);
   // Spam names often carry a link or a "claim" message: shown as plain text, cut short, never as a link.
   const asset = (r, parent, flag) => {
+    holdRows[r.address] = r;
     const cut = (v) => (v && v.length > 40 ? v.slice(0, 40) + "…" : v);
     const label = cut(r.symbol || r.name || r.address), name = cut(r.name) || "";
     const choose = (focus) => () => {
@@ -3173,8 +3216,29 @@ $("sendTo").addEventListener("input", () => {
   }, 500);
 });
 
+// What is being sent, with its image: the network's logo for its currency; for a token or an NFT the
+// image from the balances list (token-image.js, same rule as the overview: other servers only on a tap).
+function sendChosen(kind, address, label) {
+  const box = $("sendChosen");
+  box.textContent = "";
+  box.hidden = !kind;
+  if (!kind) return;
+  const thumb = document.createElement("span");
+  thumb.className = "ov-thumb";
+  const c = compliance;
+  if (kind === "native") { if (c) thumb.appendChild(netLogo(c.net.key, c.net.name)); }
+  else {
+    thumb.textContent = (label || "?").trim().charAt(0).toUpperCase();
+    const r = holdRows[address];
+    if (r && window.TokenImage) TokenImage.show(thumb, r, t("ovImgAsk"));
+  }
+  const name = document.createElement("span");
+  name.textContent = kind === "native" ? (c ? `${c.net.currency || ""} · ${c.net.name}`.trim() : "") : label;
+  box.append(thumb, name);
+}
 $("sendAsset").addEventListener("change", () => {
   $("sendTokenWrap").hidden = $("sendAsset").value !== "token";
+  sendChosen($("sendAsset").value === "native" ? "native" : null);
   sendFields($("sendAsset").value === "token" ? null : "native");
   sendTokenShown = null;
   if ($("sendAsset").value === "token" && $("sendToken").value.trim()) $("sendToken").dispatchEvent(new Event("change"));
@@ -3188,6 +3252,7 @@ $("sendToken").addEventListener("change", async () => {
   if (key && key === sendTokenShown) return;
   sendTokenShown = key;
   info.textContent = ""; info.className = "note";
+  sendChosen(null);
   sendFields(null);
   if (!c || !ethers.isAddress(raw)) return;
   info.textContent = t("sendReading");
@@ -3201,6 +3266,7 @@ $("sendToken").addEventListener("change", async () => {
   }
   if ($("sendToken").value.trim() !== raw) return;
   const spamNote = () => { if (!holdSpam.has(address)) return; const w = document.createElement("div"); w.className = "line-warn"; w.textContent = t("sendSpamWarn"); info.appendChild(w); };
+  if (a.kind === "erc20" || a.kind === "lsp7" || SEND_NFT.includes(a.kind)) sendChosen("token", address, oneLine(String(a.symbol || a.name || address)).slice(0, 40));
   if (a.kind === "erc20" || a.kind === "lsp7") { info.textContent = t("sendTokenOk", { kind: SEND_KIND[a.kind], name: a.name, balance: ethers.formatUnits(a.balance, a.decimals), symbol: a.symbol }); info.className = "note line-ok"; spamNote(); }
   else if (SEND_NFT.includes(a.kind)) {
     info.textContent = t("sendNftOk", { kind: SEND_KIND[a.kind], name: a.name }); info.className = "note line-ok"; spamNote();
@@ -3443,6 +3509,36 @@ async function profileName(up) {
   } catch (e) { profileNames[up] = null; }
   return profileNames[up];
 }
+// The UP's LSP3Profile value, for its profile picture: read on LUKSO, where the profile is kept up to
+// date, else on the chosen network (a redeploy may hold an older copy). token-image.js checks its hash
+// and applies the image privacy rule.
+const LSP3_PROFILE_KEY = "0x5ef83ad9559033e6e941db7d7c495acdce616347d28e90c7ce47cbfcfcad3bc5";
+const profilePics = {};
+async function profilePicValue(up) {
+  if (up in profilePics) return profilePics[up];
+  profilePics[up] = null;
+  const net = getNetwork();
+  const nets = [LUKSO_CHAIN].concat(net && net.rpc && net.key !== LUKSO_CHAIN.key ? [net] : []);
+  const iface = new ethers.Interface(["function getData(bytes32) view returns (bytes)"]);
+  for (const n of nets) {
+    const pv = new ethers.JsonRpcProvider(n.rpc, n.chainId || undefined, { staticNetwork: !!n.chainId, batchMaxCount: 1 });
+    try {
+      const call = pv.call({ to: up, data: iface.encodeFunctionData("getData", [LSP3_PROFILE_KEY]) });
+      const out = await Promise.race([call, new Promise((_, no) => setTimeout(() => no(new Error("timeout")), 8000))]);
+      const [v] = iface.decodeFunctionResult("getData", out);
+      if (v && v !== "0x" && TokenImage.verifiableUri(v)) { profilePics[up] = v; break; }
+    } catch (e) { /* not a UP here, or the RPC did not answer */ }
+    finally { pv.destroy(); }
+  }
+  return profilePics[up];
+}
+function showProfilePic(up) {
+  const old = $("upCardPic"), v = up ? profilePics[up] : null;
+  const pic = Object.assign(document.createElement("span"), { id: "upCardPic", className: "ov-thumb up-card-pic", hidden: !v });
+  pic.dataset.up = up || "";
+  old.replaceWith(pic);
+  if (v) TokenImage.show(pic, { lsp3Profile: v }, t("ovImgAsk"));
+}
 function updateNav() {
   const raw = $("upAddress").value.trim(), net = getNetwork();
   const ok = !!compliance, up = ethers.isAddress(raw) ? ethers.getAddress(raw) : null;
@@ -3450,6 +3546,8 @@ function updateNav() {
   logo.replaceWith(Object.assign(netLogo(net ? net.key : "custom", net ? net.name : "?"), { id: "upCardLogo" }));
   const name = up ? profileNames[up] : null;
   if (up && !(up in profileNames)) profileName(up).then((n) => { if (n) updateNav(); });
+  if (($("upCardPic").dataset.up || "") !== (up || "")) showProfilePic(up);
+  if (up && !(up in profilePics)) profilePicValue(up).then((v) => { if (v && $("upCardPic").dataset.up === up) showProfilePic(up); });
   $("upCardAddr").textContent = up ? (name ? `${name}#${tag(up)}` : shortAddr(up)) : t("cardNoUp");
   $("upCardSub").textContent = (name ? shortAddr(up) + " · " : "") + (net ? net.name : "—") + (up && presence[net && net.key] === false ? " · " + t("cardNotHere") : "");
   $("upCardStateText").textContent = ok ? "✅ " + t("cardReady") : complianceTimer && !lastCompliance ? "⏳" : "⚠️ " + t("cardNotReady");
@@ -3471,6 +3569,64 @@ const OV_USDC = {
   137: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359", 8453: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
   42161: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", 43114: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",
 };
+// Positions in protocols, read only from the chain: ERC-4626 vault shares (Morpho, Spark) as the
+// underlying asset they are worth, Aave v3 aTokens as deposits, and Aave v4 supplies, which are kept inside
+// the Spoke and are not tokens in the UP (Spokes listed in call-decode.js). Anything that does not answer
+// as expected is left as it is.
+const POS_IFACE = new ethers.Interface([
+  "function asset() view returns (address)", "function convertToAssets(uint256) view returns (uint256)",
+  "function UNDERLYING_ASSET_ADDRESS() view returns (address)", "function balanceOf(address) view returns (uint256)",
+  "function decimals() view returns (uint8)", "function symbol() view returns (string)",
+  "function getReserveCount() view returns (uint256)", "function getUserSuppliedAssets(uint256,address) view returns (uint256)",
+  "function getReserve(uint256)",
+]);
+// Arc's USDC is also the network's currency, with an ERC-20 interface at this address.
+const OV_USDC_EXTRA = { 5042: "0x3600000000000000000000000000000000000000" };
+async function readPositions(pv, up, n, a) {
+  const pos = { vault: {}, atoken: {}, spoke: [] };
+  const call = (to, fn, args = []) => pv.call({ to, data: POS_IFACE.encodeFunctionData(fn, args) }).then((out) => POS_IFACE.decodeFunctionResult(fn, out)[0]);
+  const meta = {};
+  const tokenMeta = (addr) => meta[addr] || (meta[addr] = Promise.all([call(addr, "symbol"), call(addr, "decimals")])
+    .then(([sym, dec]) => ({ symbol: oneLine(String(sym), 16), decimals: Number(dec) })));
+  const rows = a.rows.filter((x) => !x.spam && x.amount !== undefined && Number(x.amount) > 0).slice(0, 30);
+  await Promise.all(rows.map(async (x) => {
+    try {
+      const u = ethers.getAddress(await call(x.address, "UNDERLYING_ASSET_ADDRESS"));
+      pos.atoken[x.address] = { asset: u, ...(await tokenMeta(u)) };
+      return;
+    } catch (e) { /* not an aToken */ }
+    try {
+      const u = ethers.getAddress(await call(x.address, "asset"));
+      const assets = await call(x.address, "convertToAssets", [await call(x.address, "balanceOf", [up])]);
+      const m = await tokenMeta(u);
+      pos.vault[x.address] = { asset: u, amount: ethers.formatUnits(assets, m.decimals), ...m };
+    } catch (e) { /* not an ERC-4626 vault */ }
+  }));
+  const spokes = (window.CallDecode && CallDecode.aave4Spokes && CallDecode.aave4Spokes[n.chainId]) || [];
+  for (const spoke of spokes) {
+    try {
+      const count = Math.min(Number(await call(spoke, "getReserveCount")), 64);
+      const ids = Array.from({ length: count }, (_, i) => i);
+      const amounts = await Promise.all(ids.map((id) => call(spoke, "getUserSuppliedAssets", [id, up]).catch(() => 0n)));
+      for (const id of ids) {
+        if (!amounts[id]) continue;
+        // The reserve's first field is its underlying token (inline, or after an offset if the struct is dynamic).
+        const raw = await pv.call({ to: spoke, data: POS_IFACE.encodeFunctionData("getReserve", [id]) });
+        let w = ethers.dataSlice(raw, 0, 32);
+        if (BigInt(w) === 32n) w = ethers.dataSlice(raw, 32, 64);
+        const u = ethers.getAddress(ethers.dataSlice(w, 12));
+        const m = await tokenMeta(u);
+        pos.spoke.push({ spoke: ethers.getAddress(spoke), id, asset: u, amount: ethers.formatUnits(amounts[id], m.decimals), ...m });
+      }
+    } catch (e) { /* not readable this way */ }
+  }
+  return pos;
+}
+// Dollar value of an amount of an underlying asset: only USDC, as for the tokens held.
+function posUsd(n, asset, amount) {
+  const usdc = [OV_USDC[n.chainId], OV_USDC_EXTRA[n.chainId]].filter(Boolean).map((x) => x.toLowerCase());
+  return usdc.includes(String(asset).toLowerCase()) ? Number(amount) : null;
+}
 let ovState = null, ovRun = 0;
 function openOverview() {
   const raw = $("upAddress").value.trim();
@@ -3494,7 +3650,8 @@ async function readOverview() {
       const a = await timeout(AssetList.list(pv, up, n.key), 60000);
       let price = null;
       if (window.UsdPrice && n.chainId) price = await timeout(UsdPrice.read(pv, n.chainId, ethers), 10000).catch(() => null);
-      return { n, a, price };
+      const pos = await timeout(readPositions(pv, up, n, a), 30000).catch(() => null);
+      return { n, a, price, pos };
     } catch (e) { return { n, err: e.shortMessage || e.message }; }
     finally { pv.destroy(); }
   };
@@ -3530,7 +3687,13 @@ function ovLines(r) {
   const usdc = OV_USDC[r.n.chainId] ? ethers.getAddress(OV_USDC[r.n.chainId]) : null;
   for (const x of r.a.rows.filter((x) => !x.spam)) {
     const label = oneLine(x.symbol || x.name || x.address, 24);
-    if (x.amount !== undefined) {
+    const at = r.pos && r.pos.atoken[x.address], vt = r.pos && r.pos.vault[x.address];
+    if (x.amount !== undefined && (at || vt)) {
+      const amount = at ? x.amount : vt.amount, p = at || vt;
+      const v = posUsd(r.n, p.asset, amount);
+      if (v === null) unpriced = true; else usd += v;
+      lines.push([`${shortAmount(x.amount)} ${label}`, `${t(at ? "ovAToken" : "ovVault", { amount: shortAmount(amount), sym: p.symbol })} · ${shortAddr(x.address)}`, v, x.address, { row: x, letter: label }]);
+    } else if (x.amount !== undefined) {
       const v = usdc && x.address === usdc ? Number(x.amount) : null;
       if (v === null) unpriced = true; else usd += v;
       lines.push([`${shortAmount(x.amount)} ${label}`, `${x.type} · ${shortAddr(x.address)}`, v, x.address, { row: x, letter: label }]);
@@ -3538,6 +3701,11 @@ function ovLines(r) {
       unpriced = true;
       lines.push([`${oneLine(x.name || label)} · ${x.type}`, `${t("ovNftCount", { count: x.count || "?" })} · ${shortAddr(x.address)}`, null, x.address, { row: x, letter: oneLine(x.name || label) }]);
     }
+  }
+  for (const p of (r.pos && r.pos.spoke) || []) {
+    const v = posUsd(r.n, p.asset, p.amount);
+    if (v === null) unpriced = true; else usd += v;
+    lines.push([`${shortAmount(p.amount)} ${p.symbol}`, `${t("ovSpoke")} · ${shortAddr(p.spoke)}`, v, p.spoke, { row: {}, letter: p.symbol }]);
   }
   return { lines, usd, unpriced, spam: r.a.rows.filter((x) => x.spam).length };
 }

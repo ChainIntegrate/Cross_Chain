@@ -20,11 +20,12 @@
   const VALIDATE_USER_OP = "0x3a871cdd";
   const EP_PERMS = 0x500n; // SUPER_CALL | SUPER_TRANSFERVALUE
   const ERC4337 = 1n << 23n;
-  // EntryPoint v0.6 counts verification 3 times when a paymaster is used; the relayer accepts up to 1M each.
+  // EntryPoint v0.6 counts verification 3 times when a paymaster is used; the relayer accepts up to 1M for
+  // verification and 2M for the execution (MAX_CALL_GAS; same limits in tools/relayer/relay.js and the sponsor service).
   // Measured on a local chain with the real contracts (LUKSO UP/LSP6 0.12.1 and 0.14.0, Extension4337,
   // UPPaymaster): about 82,000 for native and token transfers. 180,000 leaves more than twice that.
   const VERIFICATION_GAS = 180000n;
-  const MAX_CALL_GAS = 1000000n;
+  const MAX_CALL_GAS = 2000000n;
   const OP_GAS_ORACLE = "0x420000000000000000000000000000000000000F";
   // Arbitrum charges the L1 data cost as extra L2 gas on the whole transaction, outside what the EntryPoint
   // measures, so preVerificationGas must carry it. NodeInterface is a virtual contract (eth_call only, no code)
@@ -95,7 +96,7 @@
       epPerms: (v) => `i permessi dell'EntryPoint sono ${v.p}, non esattamente 0x500`,
       no4337: "il controller collegato non ha il permesso 4337",
       simFail: (v) => `La simulazione (EntryPoint → UP) fallisce: ${v.err}. Niente è stato firmato.`,
-      tooHeavy: (v) => `L'operazione richiede troppo gas per il relayer (${v.gas}, massimo 1.000.000).`,
+      tooHeavy: (v) => `L'operazione richiede troppo gas per il relayer (${v.gas}, massimo 2.000.000).`,
       overCap: "Questa operazione supera il limite per operazione del paymaster del sito: invia senza il relayer (il gas lo paga il controller).",
       lowDeposit: "Il paymaster del sito non ha fondi sufficienti in questo momento: riprova più tardi, o invia senza il relayer.",
       plan: (v) => `Gas: relayer del sito. Paga ${v.pm}; limite di gas dell'esecuzione ${v.gas}.`,
@@ -154,7 +155,7 @@
       epPerms: (v) => `the EntryPoint's permissions are ${v.p}, not exactly 0x500`,
       no4337: "the connected controller lacks the 4337 permission",
       simFail: (v) => `The simulation (EntryPoint → UP) fails: ${v.err}. Nothing was signed.`,
-      tooHeavy: (v) => `The operation needs too much gas for the relayer (${v.gas}, at most 1,000,000).`,
+      tooHeavy: (v) => `The operation needs too much gas for the relayer (${v.gas}, at most 2,000,000).`,
       overCap: "This operation is above the site paymaster's limit per operation: send without the relayer (the controller pays the gas).",
       lowDeposit: "The site paymaster does not have enough funds right now: try again later, or send without the relayer.",
       plan: (v) => `Gas: site relayer. Paid by ${v.pm}; execution gas limit ${v.gas}.`,

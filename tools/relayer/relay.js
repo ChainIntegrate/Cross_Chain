@@ -57,7 +57,7 @@ async function arbL1Gas(provider, data) {
 
 // Hard limits on what an operation may ask. They bound what one handleOps can cost the relayer.
 const MAX = {
-  callGasLimit: 1_000_000n,
+  callGasLimit: 2_000_000n,
   verificationGasLimit: 1_000_000n,
   preVerificationGas: 2_000_000n,
   txGas: 4_000_000n,

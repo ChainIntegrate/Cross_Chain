@@ -6,7 +6,10 @@
 // LSP7 / LSP8 rows carry their LSP4Metadata: the JSON is read (ipfs:// or https://, same rule) and its
 // keccak256 checked before its icon or first image is used.
 //
-//   TokenImage.show(thumbElement, row, askText)   (row: { image?, lsp4Metadata? } from asset-list.js)
+// The UP's LSP3Profile value is read the same way, for its profile picture.
+//
+//   TokenImage.show(thumbElement, row, askText)   (row: { image?, lsp4Metadata? } from asset-list.js,
+//                                                  or { lsp3Profile } for a profile picture)
 (function () {
   "use strict";
   const GATEWAYS = ["https://api.universalprofile.cloud/ipfs/", "https://ipfs.chainintegrate.it/ipfs/", "https://ipfs.io/ipfs/"];
@@ -57,7 +60,8 @@
     const s = list.filter((i) => i && typeof i.url === "string").sort((a, b) => Math.abs((a.width || want) - want) - Math.abs((b.width || want) - want));
     return s.length ? s[0].url : null;
   };
-  // The icon (or first image) of an LSP4Metadata value, hash checked; cached per value.
+  // The icon (or first image) of an LSP4Metadata value, or the picture of an LSP3Profile value, hash
+  // checked; cached per value.
   const lsp4 = new Map();
   function lsp4Image(raw) {
     if (!lsp4.has(raw)) lsp4.set(raw, (async () => {
@@ -66,8 +70,8 @@
       const bytes = await fetchBytes(v.uri);
       if (v.method.toLowerCase() === KECCAK_UTF8 && ethers.keccak256(bytes).toLowerCase() !== v.hash.toLowerCase()) return null;
       const j = JSON.parse(ethers.toUtf8String(bytes));
-      const m = (j && j.LSP4Metadata) || j || {};
-      return pick(m.icon, 64) || (Array.isArray(m.images) && Array.isArray(m.images[0]) ? pick(m.images[0], 128) : null);
+      const m = (j && (j.LSP4Metadata || j.LSP3Profile)) || j || {};
+      return pick(m.profileImage, 64) || pick(m.icon, 64) || (Array.isArray(m.images) && Array.isArray(m.images[0]) ? pick(m.images[0], 128) : null);
     })().catch(() => null));
     return lsp4.get(raw);
   }
@@ -93,10 +97,11 @@
   }
   function show(thumb, row, askText) {
     if (row.image) { if (autoLoad(row.image)) setImage(thumb, row.image); else ask(thumb, () => setImage(thumb, row.image), askText); return; }
-    if (!row.lsp4Metadata) return;
-    const v = verifiableUri(row.lsp4Metadata);
+    const raw = row.lsp4Metadata || row.lsp3Profile;
+    if (!raw) return;
+    const v = verifiableUri(raw);
     if (!v) return;
-    const resolve = (clicked) => lsp4Image(row.lsp4Metadata).then((url) => {
+    const resolve = (clicked) => lsp4Image(raw).then((url) => {
       if (!url) return;
       if (clicked || autoLoad(url)) setImage(thumb, url); else ask(thumb, () => setImage(thumb, url), askText);
     });
