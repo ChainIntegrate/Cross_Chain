@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-N6GhTC+1kbiak5OuQvOEpyoVdSpOQuX+f5dVUUH2eLI='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-ThJpPia0HTE0mIIoPbAtgqpgZ5fXHXZzrj6fBE0vW7g='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
@@ -859,7 +859,12 @@ function renderCaps(c, netDef, up) {
   const item = (title, lines, link) => {
     const d = el("div", "cap"); d.append(el("div", "t", title));
     lines.forEach(([txt, cls]) => d.append(el("div", cls || "", txt)));
-    if (link) { const a = el("a", "", link[0]); a.href = link[1] + "?" + q.toString(); a.target = "_blank"; a.rel = "noopener"; d.append(a); }
+    // One link [text, page], or several.
+    const links = !link ? [] : Array.isArray(link[0]) ? link : [link];
+    links.forEach(([txt, page], i) => {
+      if (i) d.append(document.createTextNode(" · "));
+      const a = el("a", "", txt); a.href = page + "?" + q.toString(); a.target = "_blank"; a.rel = "noopener"; d.append(a);
+    });
     box.append(d);
   };
   item(t("capLspT"), [[c.lsp ? t("capLspOk") : t("capLspNo"), c.lsp ? "line-ok" : "line-warn"]]);
@@ -883,10 +888,11 @@ function renderCaps(c, netDef, up) {
     else if (r.state === "notReady") lines.push([t("capGasNotReady", r), "line-warn"]);
     else lines.push([t("capGasNoRelay"), "line-dim"]);
   }
-  // The UP side to fix: the setup page. Set up: the subscription page (subscribe, balance, top-ups),
-  // except for a UP on the operator's list, which needs nothing.
+  // The UP side to fix: the setup page. The subscription page (subscribe, balance, top-ups) is always one
+  // tap away, with the UP and the network filled in, except for a UP on the operator's list, which needs nothing.
   const onList = c.relay && c.relay.state === "ready" && !c.relay.sponsor;
-  item(t("capGasT"), lines, g.state !== "ok" ? [t("capGasLink"), "up-gas-relay.html"] : onList ? null : [t("capSubLink"), "up-subscribe.html"]);
+  const sub = [t("capSubLink"), "up-subscribe.html"];
+  item(t("capGasT"), lines, g.state !== "ok" ? [[t("capGasLink"), "up-gas-relay.html"], sub] : onList ? null : sub);
 }
 
 // ==================== 6. PUBLISH (align LSP3Profile with LUKSO) ====================

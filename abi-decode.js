@@ -57,8 +57,8 @@
   function text(key, vars) { const v = TEXT[lang()][key]; return typeof v === "function" ? v(vars || {}) : v; }
   // Names come from whoever verified the contract: one line, no control characters, short.
   const clean = (s, max = 40) => { const x = String(s ?? "").replace(/[\p{Cc}\p{Cf}\u2028\u2029]/gu, " ").replace(/\s+/g, " ").trim(); return x.length > max ? x.slice(0, max - 1) + "…" : x; };
-  // Parameters that usually name who receives something.
-  const RECIPIENT = /^_?(to|recipient|receiver|beneficiary|dst|destination|onbehalfof|onbehalf|account|user|owner)$/i;
+  // Parameters that usually name who receives something, or who gets a refund of what is left.
+  const RECIPIENT = /^_?(to|recipient|receiver|beneficiary|dst|destination|onbehalfof|onbehalf|account|user|owner|refund|refundaddress|refundto|refundrecipient|refundreceiver)$/i;
 
   const memory = new Map();
   const STORE = "abi.v2."; // v2: with the explorer tag
@@ -111,8 +111,14 @@
   async function labelOf(chainId, addr) {
     const explorer = EXPLORERS[CHAIN_KEYS[chainId]];
     if (!explorer || !ethers.isAddress(addr)) return null;
-    const i = await infoOf(explorer, chainId, addr);
-    if (!i || !(i.tag || i.token || i.name)) return null;
+    let i = await infoOf(explorer, chainId, addr);
+    // No name on the address (Arc's explorer gives none to some verified contracts): the verified
+    // source's name, from the same request that gives the ABI.
+    if (!i || !(i.tag || i.token || i.name)) {
+      const a = await abiOf(explorer, chainId, addr);
+      if (!a || !a.name) return null;
+      i = { tag: "", token: "", name: a.name };
+    }
     const host = new URL(explorer).host;
     // long: with its source, for the recipient row; short: for the summary and the approval line.
     if (i.tag) return { long: text("tagLabel", { tag: i.tag, explorer: host }), short: i.tag };
