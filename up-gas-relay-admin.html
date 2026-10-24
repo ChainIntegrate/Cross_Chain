@@ -14,6 +14,7 @@
 <script src="site-ui.js"></script>
 <script src="usd-price.js"></script>
 <script src="op-cost.js"></script>
+<script src="lifi-topup.js"></script>
 <script src="sign-check.js"></script>
 <script src="gas-relay-client.js"></script>
 <style>
@@ -184,6 +185,18 @@
     <button id="vpmWithdrawBtn" class="secondary" disabled data-i18n="withdrawBtn">Preleva</button>
   </div>
   <button id="vpmStopBtn" class="secondary" disabled data-i18n="vpmStopBtn">Ferma subito (firmatario a zero)</button>
+</div>
+
+<div class="panel" id="lifiPanel">
+  <h2 data-i18n="lifiTitle">3c · Ricarica da USDC su Base (con la cassa)</h2>
+  <div class="note" data-i18n-html="lifiNote"></div>
+  <div class="row">
+    <div><label for="lifiPm" data-i18n="lifiPmLabel">Paymaster da ricaricare</label><select id="lifiPm"><option value="public" data-i18n="lifiPmPublic">pubblico, per i clienti (3b)</option><option value="personal" data-i18n="lifiPmPersonal">personale (3)</option></select></div>
+    <div><label for="lifiOps" data-i18n="lifiOpsLabel">Operazioni da coprire</label><input type="text" id="lifiOps" value="200" inputmode="numeric"></div>
+    <button id="lifiQuoteBtn" class="secondary" disabled data-i18n="lifiQuoteBtn">Chiedi il preventivo a LI.FI</button>
+  </div>
+  <div class="status-box" id="lifiBox"><span class="empty" data-i18n="lifiNone">Nessun preventivo.</span></div>
+  <button id="lifiSendBtn" class="danger" disabled data-i18n="lifiSendBtn">Approva e invia da Base (irreversibile)</button>
 </div>
 
 <div class="panel">
