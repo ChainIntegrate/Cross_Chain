@@ -133,5 +133,5 @@
     return { status: String(j.status || "UNKNOWN"), substatus: String(j.substatus || ""), received, receivingTx: j.receiving && j.receiving.txHash || null };
   }
 
-  window.LifiTopup = { usdcFor, quote, check, status, decode, BASE, USDC_BASE, DIAMOND, NATIVE };
+  window.LifiTopup = { usdcFor, quote, check, status, decode, BASE, USDC_BASE, DIAMOND, NATIVE, TWIN };
 })();
