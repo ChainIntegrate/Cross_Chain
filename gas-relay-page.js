@@ -183,6 +183,36 @@ const I18N = {
     publishPmBtn: "Pubblica il paymaster su questa rete",
     fundLabel: "Ricarica (valuta nativa della rete)",
     fundBtn: "Ricarica",
+    lifiTitle: "3c · Ricarica da USDC su Base (con la cassa)",
+    lifiNote: "Compra la valuta di questa rete con gli <b>USDC della cassa su Base</b>, tramite LI.FI (swap e, se serve, bridge), per coprire un numero di operazioni. La pagina controlla la transazione di LI.FI prima di fartela firmare: su Base, verso il contratto di LI.FI, senza valore, con <b>la cassa come destinatario</b> e questa rete come arrivo, letti dai dati della transazione stessa. Firmi due volte su Base (il permesso per l'importo esatto di USDC, poi l'invio); all'arrivo l'importo è già scritto nella ricarica della sezione 3 o 3b: torna su questa rete e premi <b>Ricarica</b>. Serve un po' di ETH su Base per il gas, e un po' della valuta di questa rete per la ricarica.",
+    lifiPmLabel: "Paymaster da ricaricare", lifiPmPublic: "pubblico, per i clienti (3b)", lifiPmPersonal: "personale (3)",
+    lifiOpsLabel: "Operazioni da coprire", lifiQuoteBtn: "Chiedi il preventivo a LI.FI", lifiSendBtn: "Approva e invia da Base (irreversibile)",
+    lifiNone: "Nessun preventivo.",
+    lifiBadOps: "Scrivi un numero di operazioni (da 1 a 100000).",
+    lifiNoCost: (v) => `Per ${v.net} non c'è un costo per operazione (op-cost.js): la ricarica da USDC non è disponibile qui.`,
+    lifiNoPrice: "Prezzo della valuta di questa rete non disponibile o non aggiornato (Chainlink): niente preventivo.",
+    lifiAsk: (v) => `Preventivo per ${v.n} operazioni: servono ≈ ${v.need}; chiedo a LI.FI ${v.usdc} USDC da Base (con il ${v.margin}% di margine)…`,
+    lifiQuoteFail: (v) => `LI.FI non dà un percorso: ${v.err}`,
+    lifiBad: (v) => `❌ Il preventivo di LI.FI non fa quello che è stato chiesto, non viene usato: ${v.list}.`,
+    lifiOk: "✅ Preventivo controllato: destinatario la cassa, arrivo su questa rete, nessuna chiamata all'arrivo.",
+    kLifiIn: "Da Base", kLifiOut: "Arrivo", kLifiTool: "Percorso", kLifiTime: "Tempo stimato", kLifiTo: "Destinatario", kLifiFees: "Costi stimati",
+    lifiOut: (v) => `≈ ${v.amt} (almeno ${v.min}) su ${v.net}: copre ≈ ${v.ops} operazioni`,
+    lifiShort: (v) => `Il minimo garantito copre solo ≈ ${v.ops} operazioni delle ${v.n} chieste.`,
+    lifiToCassa: (v) => `${v.addr} (la cassa, controllato nei dati della transazione)`,
+    lifiSwitch: "Passa a Base in MetaMask…",
+    lifiNotBase: (v) => `Il wallet è sulla rete ${v.id}, non su Base: cambia rete in MetaMask e riprova.`,
+    lifiNoUsdc: (v) => `La cassa ha ${v.have} USDC su Base, servono ${v.need}.`,
+    lifiApprove: (v) => `Permesso a LI.FI per ${v.usdc} USDC esatti…`,
+    lifiRequote: "Preventivo di nuovo, appena prima dell'invio…",
+    lifiChanged: (v) => `Il nuovo preventivo dà meno del minimo controllato prima (${v.min}): niente inviato. Chiedi un altro preventivo.`,
+    lifiSimFail: (v) => `La simulazione su Base fallisce: ${v.err}. Niente inviato.`,
+    lifiSent: "Inviato da Base.",
+    lifiWait: (v) => `In viaggio verso ${v.net} (${v.st})… controllo ogni 15 secondi.`,
+    lifiFailed: (v) => `❌ LI.FI dice che il trasferimento è fallito (${v.st}): gli USDC tornano alla cassa secondo le regole del bridge. Controlla su https://scan.li.fi/tx/${v.hash}`,
+    lifiTimeout: (v) => `Ancora non arrivato dopo 40 minuti: controlla su https://scan.li.fi/tx/${v.hash}, poi ricarica a mano nella sezione ${v.sec}.`,
+    lifiDone: (v) => `✅ Arrivati ${v.amt} sulla cassa. L'importo da ricaricare (${v.dep}, ≈ ${v.ops} operazioni) è scritto nella sezione ${v.sec}: torna su ${v.net} in MetaMask e premi Ricarica.`,
+    lifiBack: (v) => `Torna su ${v.net} in MetaMask…`,
+    lifiStale: "Il preventivo è di prima di un cambio (rete, account o paymaster): chiedine un altro.",
     capLabel: "Tetto per operazione (valuta nativa)",
     capBtn: "Imposta",
     sponsorBtn: "Aggiungi la UP alla lista",
@@ -445,6 +475,36 @@ const I18N = {
     publishPmBtn: "Publish the paymaster on this network",
     fundLabel: "Top up (network native currency)",
     fundBtn: "Top up",
+    lifiTitle: "3c · Top up from USDC on Base (with the cassa)",
+    lifiNote: "Buys this network's currency with the <b>cassa's USDC on Base</b>, through LI.FI (a swap and, when needed, a bridge), to cover a number of operations. The page checks LI.FI's transaction before you sign it: on Base, to LI.FI's contract, with no value, with <b>the cassa as receiver</b> and this network as destination, read from the transaction's own data. You sign twice on Base (the approval of the exact USDC amount, then the transaction); on arrival the amount is already written in the top-up of section 3 or 3b: switch back to this network and press <b>Top up</b>. It needs a little ETH on Base for gas, and a little of this network's currency for the top-up.",
+    lifiPmLabel: "Paymaster to top up", lifiPmPublic: "public, for customers (3b)", lifiPmPersonal: "personal (3)",
+    lifiOpsLabel: "Operations to cover", lifiQuoteBtn: "Ask LI.FI for a quote", lifiSendBtn: "Approve and send from Base (irreversible)",
+    lifiNone: "No quote.",
+    lifiBadOps: "Enter a number of operations (1 to 100000).",
+    lifiNoCost: (v) => `${v.net} has no cost per operation (op-cost.js): the top-up from USDC is not available here.`,
+    lifiNoPrice: "This network's currency has no price, or not an up-to-date one (Chainlink): no quote.",
+    lifiAsk: (v) => `Quote for ${v.n} operations: ≈ ${v.need} needed; asking LI.FI for ${v.usdc} USDC from Base (with a ${v.margin}% margin)…`,
+    lifiQuoteFail: (v) => `LI.FI gives no route: ${v.err}`,
+    lifiBad: (v) => `❌ LI.FI's quote does not do what was asked, so it is not used: ${v.list}.`,
+    lifiOk: "✅ Quote checked: the cassa as receiver, arrival on this network, no call on arrival.",
+    kLifiIn: "From Base", kLifiOut: "Arrival", kLifiTool: "Route", kLifiTime: "Estimated time", kLifiTo: "Receiver", kLifiFees: "Estimated costs",
+    lifiOut: (v) => `≈ ${v.amt} (at least ${v.min}) on ${v.net}: covers ≈ ${v.ops} operations`,
+    lifiShort: (v) => `The guaranteed minimum covers only ≈ ${v.ops} of the ${v.n} operations asked.`,
+    lifiToCassa: (v) => `${v.addr} (the cassa, checked in the transaction's data)`,
+    lifiSwitch: "Switching MetaMask to Base…",
+    lifiNotBase: (v) => `The wallet is on chain ${v.id}, not Base: switch network in MetaMask and try again.`,
+    lifiNoUsdc: (v) => `The cassa has ${v.have} USDC on Base, ${v.need} needed.`,
+    lifiApprove: (v) => `Approving LI.FI for exactly ${v.usdc} USDC…`,
+    lifiRequote: "Quoting again, just before sending…",
+    lifiChanged: (v) => `The new quote gives less than the minimum checked before (${v.min}): nothing sent. Ask for another quote.`,
+    lifiSimFail: (v) => `The simulation on Base fails: ${v.err}. Nothing sent.`,
+    lifiSent: "Sent from Base.",
+    lifiWait: (v) => `On its way to ${v.net} (${v.st})… checking every 15 seconds.`,
+    lifiFailed: (v) => `❌ LI.FI says the transfer failed (${v.st}): the USDC goes back to the cassa as the bridge's rules say. Check on https://scan.li.fi/tx/${v.hash}`,
+    lifiTimeout: (v) => `Not arrived yet after 40 minutes: check on https://scan.li.fi/tx/${v.hash}, then top up by hand in section ${v.sec}.`,
+    lifiDone: (v) => `✅ ${v.amt} arrived on the cassa. The amount to top up (${v.dep}, ≈ ${v.ops} operations) is written in section ${v.sec}: switch back to ${v.net} in MetaMask and press Top up.`,
+    lifiBack: (v) => `Switching MetaMask back to ${v.net}…`,
+    lifiStale: "The quote is from before a change (network, account or paymaster): ask for another one.",
     capLabel: "Cap per operation (native currency)",
     capBtn: "Set",
     sponsorBtn: "Add the UP to the allowlist",
@@ -1064,6 +1124,11 @@ function updateButtons() {
   $("vpmFundBtn").disabled = !vOwn;
   ["vpmSignerBtn", "vpmCapBtn", "vpmWithdrawBtn"].forEach(id => { $(id).disabled = !vOwn; });
   $("vpmStopBtn").disabled = !(vOwn && s.vpmSigner && s.vpmSigner !== ethers.ZeroAddress);
+  if ($("lifiQuoteBtn")) {
+    const tg = s && s.ok ? lifiTarget(s, lifiKind()) : null;
+    $("lifiQuoteBtn").disabled = !(ok && tg && tg.own && window.LifiTopup && window.OpCost);
+    $("lifiSendBtn").disabled = !(ok && lifiQuote && lifiQuote.chainId === s.chainId && lifiQuote.account === s.signer);
+  }
   $("sponsorBtn").disabled = !(own && s.upAddr && !s.sponsored);
   $("unsponsorBtn").disabled = !(own && s.upAddr && s.sponsored);
   $("publishExtBtn").disabled = !(ok && s.extState === "missing" && s.factoryOk);
@@ -1228,6 +1293,133 @@ $("vpmWithdrawBtn").addEventListener("click", () => guarded(async () => {
   if (!state || !(await withdrawTarget(to))) return;
   echoAmount("echoWithdraw", v, state.vpmDeposit);
   await vpmOwnerTx(vpmData("withdrawTo", [ethers.getAddress(to), v]));
+}));
+
+// ---- top-up from USDC on Base, through LI.FI (operator's page, section 3c; lifi-topup.js)
+// The quote is for this network, this paymaster and the connected cassa: any change discards it.
+let lifiQuote = null;
+const LIFI_ERC20 = new ethers.Interface(["function balanceOf(address) view returns (uint256)", "function allowance(address,address) view returns (uint256)", "function approve(address,uint256) returns (bool)"]);
+const fmtUsdc = (v) => ethers.formatUnits(v, 6);
+function lifiKind() { return $("lifiPm").value === "personal" ? "personal" : "public"; }
+function lifiTarget(s, kind) {
+  return kind === "personal" ? { own: s.pmState === "ok" && s.isOwner, pm: s.pmAddr, input: "fundAmount", sec: "3" }
+    : { own: s.vpmState === "ok" && s.vpmIsOwner, pm: s.vpmAddr, input: "vpmFundAmount", sec: "3b" };
+}
+function renderLifi() {
+  if (!$("lifiBox")) return;
+  const L = lifiQuote;
+  if (!L) { setStatus("lifiBox", t("lifiNone"), "empty"); return; }
+  const v = L.check.view, net = L.net.name, cur = L.cur;
+  const rows = [
+    ["kLifiIn", `${fmtUsdc(L.fromAmount)} USDC`, ""],
+    ["kLifiOut", ["lifiOut", { amt: fmt(v.toAmount, cur), min: fmt(v.toAmountMin, cur), net, ops: OpCost.ops(v.toAmountMin, L.chainId) }], v.toAmountMin >= L.need ? "ok" : "warn"],
+    ["kLifiTo", ["lifiToCassa", { addr: L.account }], "ok"],
+    ["kLifiTool", v.tool, ""],
+  ];
+  if (v.seconds) rows.push(["kLifiTime", `≈ ${Math.max(1, Math.round(v.seconds / 60))} min`, ""]);
+  if (v.feesUsd) rows.push(["kLifiFees", `≈ ${v.feesUsd.toFixed(2)} USD`, ""]);
+  renderKv("lifiBox", rows);
+}
+function lifiDrop() { if (lifiQuote) { lifiQuote = null; renderLifi(); } }
+if ($("lifiPm")) {
+  $("lifiPm").addEventListener("change", () => { lifiDrop(); updateButtons(); });
+  $("lifiOps").addEventListener("input", () => { lifiDrop(); updateButtons(); });
+}
+async function lifiAsk(s, kind, n) {
+  const per = OpCost.perOp(s.chainId);
+  if (!per) { log(t("lifiNoCost", { net: s.netInfo.name }), "line-err"); return null; }
+  if (!s.usd || s.usd.stale) { log(t("lifiNoPrice"), "line-err"); return null; }
+  const need = per * BigInt(n), fromAmount = LifiTopup.usdcFor(need, s.usd);
+  log(t("lifiAsk", { n, need: fmtUsd(need, s), usdc: fmtUsdc(fromAmount), margin: 3 }), "line-dim");
+  let q;
+  try { q = await LifiTopup.quote({ toChain: s.chainId, fromAmount, account: s.signer }); }
+  catch (e) { log(t("lifiQuoteFail", { err: oneLine(e.message || String(e)) }), "line-err"); return null; }
+  const check = LifiTopup.check(q, { toChain: s.chainId, fromAmount, account: s.signer });
+  if (check.problems.length) { log(t("lifiBad", { list: check.problems.join("; ") }), "line-err"); return null; }
+  return { q, check, need, n, fromAmount, kind, chainId: s.chainId, net: s.netInfo, cur: s.cur, account: s.signer, pm: lifiTarget(s, kind).pm };
+}
+const oneLine = (x) => String(x).replace(/[\u0000-\u001f\u007f]+/g, " ").slice(0, 300);
+if ($("lifiQuoteBtn")) $("lifiQuoteBtn").addEventListener("click", () => guarded(async () => {
+  lifiDrop();
+  const s = state; if (!s || !s.ok) return;
+  const kind = lifiKind(), tg = lifiTarget(s, kind);
+  if (!tg.own || !tg.pm) { log(t("notOwner"), "line-err"); return; }
+  const n = Number($("lifiOps").value.trim());
+  if (!Number.isInteger(n) || n < 1 || n > 100000) { log(t("lifiBadOps"), "line-err"); return; }
+  const L = await lifiAsk(s, kind, n);
+  if (!L) return;
+  lifiQuote = L;
+  log(t("lifiOk"), "line-ok");
+  if (L.check.view.toAmountMin < L.need) log(t("lifiShort", { ops: OpCost.ops(L.check.view.toAmountMin, L.chainId), n }), "line-warn");
+  renderLifi();
+}, false));
+async function switchWallet(chainId) {
+  try { await signerProvider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: ethers.toBeHex(chainId) }] }); } catch (e) { /* the user can switch by hand */ }
+  let id = -1;
+  try { id = parseInt(await signerProvider.request({ method: "eth_chainId" }), 16); } catch (e) { id = -1; }
+  return id;
+}
+if ($("lifiSendBtn")) $("lifiSendBtn").addEventListener("click", () => guarded(async () => {
+  const L = lifiQuote, s = state;
+  if (!L) return;
+  if (!s || s.chainId !== L.chainId || s.signer !== L.account || lifiTarget(s, L.kind).pm !== L.pm) { lifiDrop(); log(t("lifiStale"), "line-err"); return; }
+  const tg = lifiTarget(s, L.kind);
+  const baseNet = CHAINS.find((c) => c.chainId === LifiTopup.BASE);
+  const bp = new ethers.JsonRpcProvider(baseNet.rpc, LifiTopup.BASE, { staticNetwork: true, batchMaxCount: 1 });
+  try {
+    log(t("lifiSwitch"), "line-dim");
+    const id = await switchWallet(LifiTopup.BASE);
+    if (id !== LifiTopup.BASE) { log(t("lifiNotBase", { id }), "line-err"); return; }
+    const signer = await new ethers.BrowserProvider(signerProvider).getSigner();
+    if (signer.address !== L.account) { log(t("stale"), "line-err"); return; }
+    const usdc = new ethers.Contract(LifiTopup.USDC_BASE, LIFI_ERC20, bp);
+    const have = await usdc.balanceOf(L.account);
+    if (have < L.fromAmount) { log(t("lifiNoUsdc", { have: fmtUsdc(have), need: fmtUsdc(L.fromAmount) }), "line-err"); return; }
+    const sendBase = async (tx, what) => {
+      const gas = await bp.estimateGas({ ...tx, from: L.account });
+      const sent = await SignCheck.sendTransaction(signer, { ...tx, gasLimit: gas + gas / 4n, chainId: LifiTopup.BASE }, { what });
+      log(t("txSent", { hash: sent.hash }), "line-dim");
+      const url = getExplorerUrl(baseNet, EXPLORER_PATH, sent.hash);
+      if (url) log(url, "line-dim");
+      const rc = await waitReceipt(bp, sent.hash, signer.provider, 300000);
+      if (!rc || rc.status !== 1) throw new Error(rc ? "transaction failed" : "no receipt");
+      return sent.hash;
+    };
+    if ((await usdc.allowance(L.account, LifiTopup.DIAMOND)) < L.fromAmount) {
+      log(t("lifiApprove", { usdc: fmtUsdc(L.fromAmount) }), "line-dim");
+      await sendBase({ to: LifiTopup.USDC_BASE, data: LIFI_ERC20.encodeFunctionData("approve", [LifiTopup.DIAMOND, L.fromAmount]) },
+        { it: `Permesso a LI.FI per ${fmtUsdc(L.fromAmount)} USDC (ricarica del paymaster)`, en: `Approve LI.FI for ${fmtUsdc(L.fromAmount)} USDC (paymaster top-up)` });
+    }
+    // A quote lasts minutes: asked again now, checked again, and never for less than the one shown.
+    log(t("lifiRequote"), "line-dim");
+    const q = await LifiTopup.quote({ toChain: L.chainId, fromAmount: L.fromAmount, account: L.account });
+    const c = LifiTopup.check(q, { toChain: L.chainId, fromAmount: L.fromAmount, account: L.account });
+    if (c.problems.length) { log(t("lifiBad", { list: c.problems.join("; ") }), "line-err"); return; }
+    if (c.view.toAmountMin < L.check.view.toAmountMin * 98n / 100n) { log(t("lifiChanged", { min: fmt(L.check.view.toAmountMin, L.cur) }), "line-err"); return; }
+    const tx = { to: LifiTopup.DIAMOND, data: q.transactionRequest.data, value: 0n };
+    try { await bp.call({ ...tx, from: L.account }); } catch (e) { log(t("lifiSimFail", { err: revertReason(e) }), "line-err"); return; }
+    const hash = await sendBase(tx, { it: `Ricarica da USDC: ${fmtUsdc(L.fromAmount)} USDC da Base verso ${L.net.name} (LI.FI)`, en: `Top-up from USDC: ${fmtUsdc(L.fromAmount)} USDC from Base to ${L.net.name} (LI.FI)` });
+    log(t("lifiSent"), "line-ok");
+    lifiQuote = null; renderLifi();
+    let received = c.view.toAmountMin;
+    if (L.chainId !== LifiTopup.BASE) {
+      const until = Date.now() + 40 * 60 * 1000;
+      let done = false;
+      while (Date.now() < until) {
+        await new Promise((r) => setTimeout(r, 15000));
+        const st = await LifiTopup.status(hash, L.chainId);
+        if (st.status === "DONE") { if (st.received) received = st.received; done = true; break; }
+        if (st.status === "FAILED" || st.status === "INVALID") { log(t("lifiFailed", { st: `${st.status} ${st.substatus}`.trim(), hash }), "line-err"); return; }
+        log(t("lifiWait", { net: L.net.name, st: st.substatus || st.status }), "line-dim");
+      }
+      if (!done) { log(t("lifiTimeout", { hash, sec: tg.sec }), "line-warn"); return; }
+    }
+    const dep = received < L.need ? received : L.need;
+    $(tg.input).value = ethers.formatEther(dep);
+    log(t("lifiDone", { amt: fmt(received, L.cur), dep: fmt(dep, L.cur), ops: OpCost.ops(dep, L.chainId), sec: tg.sec, net: L.net.name }), "line-ok");
+    log(t("lifiBack", { net: L.net.name }), "line-dim");
+    await switchWallet(L.chainId);
+  } finally { bp.destroy(); }
 }));
 
 // The extension a setup replaced, per network and UP, so that revoking the setup can put it back (AUDIT I-3).
