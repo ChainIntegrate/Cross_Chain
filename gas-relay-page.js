@@ -266,7 +266,7 @@ const I18N = {
     kNetwork: "Rete", kRpc: "RPC", kWallet: "MetaMask", kEntryPoint: "EntryPoint v0.6",
     kPmAddress: "Indirizzo del paymaster", kOwnerCheck: "⚠️ Attenzione",
     ownerFromLink: (v) => `Il proprietario (${v.owner}) viene dal link che hai aperto e NON è quello salvato in questo browser (${v.saved}). I paymaster mostrati sono di quel proprietario: non ricaricarli se non sono tuoi.`,
-    ownerNotActive: (v) => `Il proprietario scritto (${v.owner}) NON è l'account attivo in MetaMask (${v.active}). Se stai per pubblicare o ricaricare, controlla che sia davvero il proprietario che vuoi: l'indirizzo del paymaster dipende da lui.`, kPmCode: "Codice", kPmOwner: "Proprietario", kPmDeposit: "Deposito", kPmCap: "Tetto per operazione", kPmUp: "UP in lista", kYou: "Account attivo",
+    ownerNotActive: (v) => `Il proprietario scritto (${v.owner}) NON è l'account attivo in MetaMask (${v.active}). Se stai per pubblicare o ricaricare, controlla che sia davvero il proprietario che vuoi: l'indirizzo del paymaster dipende da lui.`, kPmCode: "Codice", kPmOwner: "Proprietario", kPmDeposit: "Deposito", depOps: (v) => `≈ ${v.n} operazioni`, kPmCap: "Tetto per operazione", kPmUp: "UP in lista", kYou: "Account attivo",
     kUp: "UP", kKm: "Key Manager", kPerms: "Permessi dell'account attivo", kExt: "Extension4337", kExtKey: "Estensione registrata", kEpPerms: "Permessi dell'EntryPoint", kSigner4337: "Permesso 4337 dell'account", kReady: "Stato",
     rpcOk: (v) => `chainId ${v.id}`, rpcFail: (v) => `non risponde: ${v.err}`, rpcWrong: (v) => `chainId ${v.id}, atteso ${v.exp}`,
     walletMissing: "non connesso", walletWrong: (v) => `${v.addr} è sulla rete ${v.id}, non ${v.exp}: cambia rete in MetaMask${v.extra || ""}`, walletOk: (v) => `${v.addr} (chainId ${v.id})`,
@@ -527,7 +527,7 @@ const I18N = {
     kNetwork: "Network", kRpc: "RPC", kWallet: "MetaMask", kEntryPoint: "EntryPoint v0.6",
     kPmAddress: "Paymaster address", kOwnerCheck: "⚠️ Warning",
     ownerFromLink: (v) => `The owner (${v.owner}) comes from the link you opened and is NOT the one saved in this browser (${v.saved}). The paymasters shown are that owner's: do not top them up if they are not yours.`,
-    ownerNotActive: (v) => `The owner entered (${v.owner}) is NOT the account active in MetaMask (${v.active}). If you are about to publish or top up, check that it really is the owner you want: the paymaster's address depends on it.`, kPmCode: "Code", kPmOwner: "Owner", kPmDeposit: "Deposit", kPmCap: "Cap per operation", kPmUp: "UP on the allowlist", kYou: "Active account",
+    ownerNotActive: (v) => `The owner entered (${v.owner}) is NOT the account active in MetaMask (${v.active}). If you are about to publish or top up, check that it really is the owner you want: the paymaster's address depends on it.`, kPmCode: "Code", kPmOwner: "Owner", kPmDeposit: "Deposit", depOps: (v) => `≈ ${v.n} operations`, kPmCap: "Cap per operation", kPmUp: "UP on the allowlist", kYou: "Active account",
     kUp: "UP", kKm: "Key Manager", kPerms: "Active account's permissions", kExt: "Extension4337", kExtKey: "Extension registered", kEpPerms: "EntryPoint's permissions", kSigner4337: "Account's 4337 permission", kReady: "Status",
     rpcOk: (v) => `chainId ${v.id}`, rpcFail: (v) => `not answering: ${v.err}`, rpcWrong: (v) => `chainId ${v.id}, expected ${v.exp}`,
     walletMissing: "not connected", walletWrong: (v) => `${v.addr} is on chain ${v.id}, not ${v.exp}: switch network in MetaMask${v.extra || ""}`, walletOk: (v) => `${v.addr} (chainId ${v.id})`,
@@ -709,10 +709,21 @@ async function preVerificationGas(provider, op, maxFee) {
 const fmt = (wei, cur) => `${ethers.formatEther(wei)} ${cur || ""}`.trim();
 // With the USD value, when the page has a price for this chain (operator's page only).
 const fmtUsd = (wei, s) => fmt(wei, s.cur) + (s.usd && window.UsdPrice ? UsdPrice.suffix(wei, s.usd, LANG) : "");
-// A paymaster deposit worth less than this is flagged (the monitor e-mails below the same values): the
-// public paymaster (section 3b, the sponsor service) 10 USD, the personal one (section 3, allowlist) 1 USD.
+// Operator's page: a paymaster deposit is counted in operations (about, op-cost.js), with the amount and its
+// USD value as the detail. Flagged below these numbers of operations (the monitor e-mails below the same):
+// the public paymaster (section 3b, the sponsor service) 100, the personal one (section 3, allowlist) 20.
+// A chain without a cost per operation keeps the USD rule: 10 and 1 USD.
+const MIN_DEPOSIT_OPS = { public: 100, personal: 20 };
 const MIN_DEPOSIT_USD = { public: 10, personal: 1 };
-const depCls = (wei, s, kind) => { const v = s.usd && window.UsdPrice ? UsdPrice.usd(wei, s.usd) : null; return wei === 0n || (v != null && v < MIN_DEPOSIT_USD[kind]) ? "warn" : ""; };
+const depOps = (wei, s) => (ADMIN && s.chainId && window.OpCost ? OpCost.ops(wei, s.chainId) : null);
+const fmtDep = (wei, s) => { const n = depOps(wei, s); return n === null ? fmtUsd(wei, s) : `${t("depOps", { n: n.toLocaleString(LANG === "it" ? "it-IT" : "en-US") })} · ${fmtUsd(wei, s)}`; };
+const depCls = (wei, s, kind) => {
+  if (wei === 0n) return "warn";
+  const n = depOps(wei, s);
+  if (n !== null) return n < MIN_DEPOSIT_OPS[kind] ? "warn" : "";
+  const v = s.usd && window.UsdPrice ? UsdPrice.usd(wei, s.usd) : null;
+  return v != null && v < MIN_DEPOSIT_USD[kind] ? "warn" : "";
+};
 const b32 = (n) => ethers.zeroPadValue(ethers.toBeHex(n), 32);
 const enc = (types, vals) => ethers.AbiCoder.defaultAbiCoder().encode(types, vals);
 
@@ -933,7 +944,7 @@ async function computeState() {
       Object.assign(s, { pmOwner: onChainOwner, cap, deposit: dep });
       s.pm.push(["kPmOwner", onChainOwner === owner ? owner : ["ownerMismatch", { owner: onChainOwner }], onChainOwner === owner ? "" : "err"]);
       if (pmPending !== ethers.ZeroAddress) s.pm.push(["kVpmPending", pmPending, "warn"]);   // AUDIT I-4
-      s.pm.push(["kPmDeposit", fmtUsd(dep, s), depCls(dep, s, "personal")]);
+      s.pm.push(["kPmDeposit", fmtDep(dep, s), depCls(dep, s, "personal")]);
       s.pm.push(["kPmCap", cap > 0n ? fmt(cap, s.cur) : ["capZero"], cap > 0n ? "" : "warn"]);
       s.isOwner = onChainOwner === signerAddress;
       s.pm.push(["kYou", [s.isOwner ? "youOwner" : "youNotOwner", { addr: signerAddress }], s.isOwner ? "ok" : "warn"]);
@@ -958,7 +969,7 @@ async function computeState() {
       if (vPending !== ethers.ZeroAddress) s.vpm.push(["kVpmPending", vPending, "warn"]);
       s.vpm.push(["kVpmSigner", vSigner === ethers.ZeroAddress ? ["vpmNoSigner"] : vSigner, vSigner === ethers.ZeroAddress ? "warn" : ""]);
       s.vpm.push(["kPmCap", vCap > 0n ? fmt(vCap, s.cur) : ["capZero"], vCap > 0n ? "" : "warn"]);
-      s.vpm.push(["kPmDeposit", fmtUsd(vDep, s), depCls(vDep, s, "public")]);
+      s.vpm.push(["kPmDeposit", fmtDep(vDep, s), depCls(vDep, s, "public")]);
       s.vpm.push(["kYou", [s.vpmIsOwner ? "youOwner" : "youNotOwner", { addr: signerAddress }], s.vpmIsOwner ? "ok" : "warn"]);
       const sp = svc && svc.chains[String(chainId)] && svc.chains[String(chainId)].sponsorPaymaster;
       s.vpm.push(["kVpmSvc", !sp ? ["vpmSvcNo"] : sp.toLowerCase() === vpmAddr.toLowerCase() ? ["vpmSvcYes"] : ["vpmSvcOther", { addr: sp }], sp && sp.toLowerCase() === vpmAddr.toLowerCase() ? "ok" : "warn"]);
