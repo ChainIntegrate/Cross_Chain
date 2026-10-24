@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-zMZCTdo8Y8UjCMS2L16N/Vn9unmR6CBKsMozrkRd1yg='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-186vP/l5pJPAR4CraSncrWsPwkM/aK1IDq4SdxszDwI='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
@@ -143,6 +143,12 @@
   <input type="text" id="backupAddress" placeholder="0x...">
   <button id="addBackupBtn" disabled data-i18n="addBackupBtn">Aggiungi il controller di backup</button>
 
+  <div class="divider" data-i18n="phoneDivider">— oppure, per l'app UP Wallet (0.9) —</div>
+  <div class="note" data-i18n-html="phoneNote"></div>
+  <label data-i18n="phoneAddrLabel">Indirizzo della chiave del telefono (lo mostra l'app, pannello "Questo telefono")</label>
+  <input type="text" id="phoneAddress" placeholder="0x...">
+  <button id="addPhoneBtn" disabled data-i18n="addPhoneBtn">Autorizza il telefono su questa rete</button>
+
   <div class="divider" data-i18n="removeDivider">— oppure, dopo aver perso una chiave —</div>
   <label data-i18n="removeLabel">Controller da rimuovere</label>
   <select id="removeSelect"></select>
@@ -189,6 +195,13 @@ const I18N = {
     backupNote: "<b>Il problema non è il furto, è la perdita.</b> Su ogni rete dove rifai il deploy, la UP nasce controllata solo dalla <b>chiave di genesi</b>: la stringa che hai estratto dall'estensione Universal Profile. Se la perdi (computer rotto, stringa mai salvata, password dimenticata) e non c'è un altro controller con gli stessi permessi, resti fuori da questa UP su questa rete per sempre, con tutto quello che contiene. Nessuno può rimediare. Un <b>controller di backup</b> è un secondo account (per esempio un altro account MetaMask, con la sua seed custodita a parte) con <b>esattamente gli stessi permessi</b> del controller che firma qui. Se perdi una delle due chiavi, con l'altra continui a firmare, aggiungi un nuovo backup e rimuovi quella persa. Se perdi proprio la chiave di genesi, l'unica cosa che non potrai più fare è il deploy su reti nuove, perché lì la UP nasce solo con lei.",
     backupNotRead: "Controller non ancora letti.",
     addBackupBtn: "Aggiungi il controller di backup",
+    phoneDivider: "— oppure, per l'app UP Wallet (0.9) —",
+    phoneNote: "<b>Autorizza un telefono.</b> L'app UP Wallet (da 0.9.0) firma con una chiave creata e tenuta sul telefono. Qui la aggiungi alla UP come controller <b>con permessi limitati</b>: chiamate e invii (SUPER_CALL, SUPER_TRANSFERVALUE), firme (SIGN), gas pagato dal sito (4337) e scrittura del solo profilo (SETDATA, limitato alla chiave <code>LSP3Profile</code>). <b>Non</b> può aggiungere controller, cambiare permessi o estensioni. Firma il controller amministratore connesso qui, una volta per rete. Se perdi il telefono, rimuovi la sua chiave qui sotto, rete per rete.",
+    phoneAddrLabel: "Indirizzo della chiave del telefono (lo mostra l'app, pannello \"Questo telefono\")",
+    addPhoneBtn: "Autorizza il telefono su questa rete",
+    bkPlanPhone: (v) => `Piano (una transazione, firmata da ${v.signer} tramite il Key Manager ${v.km}):\n- AddressPermissions[] da ${v.len} a ${v.len1} voci, posizione ${v.len} → ${v.phone}\n- permessi del telefono → ${v.perms} (${v.names})\n- chiavi di dati ammesse → solo LSP3Profile (il profilo)`,
+    bkPhoneOk: (v) => `✅ Telefono autorizzato su questa rete: ${v.addr}, con permessi limitati. Ripeti su ogni rete dove usi la UP. Per revocarlo: "Rimuovi il controller selezionato".`,
+    bkPhoneAdmin: "Questo indirizzo è già un controller amministratore della UP: non serve autorizzarlo come telefono.",
     backupAddrLabel: "Indirizzo del controller di backup (un account MetaMask diverso, custodito a parte)",
     connectSigner5Btn: "Connetti il controller della UP (MetaMask)",
     signerPickHint: "Il wallet ti fa scegliere l'account a ogni connessione: puoi firmare con la chiave di genesi o con un backup. Per cambiare account ripremi il pulsante e scegline un altro.",
@@ -293,6 +306,13 @@ const I18N = {
     backupNote: "<b>The risk here is loss, not theft.</b> On every network where you redeploy, the UP is born controlled only by the <b>genesis key</b>: the key string you extracted from the Universal Profile extension. If you lose it (a broken computer, a key never saved, a forgotten password) and no other controller has the same permissions, you are locked out of this UP on this network for good, with everything it holds. No one can fix it. A <b>backup controller</b> is a second account (for example another MetaMask account, with its own seed phrase kept separately) with <b>exactly the same permissions</b> as the controller signing here. If you lose one of the two keys, the other one still signs: it adds a new backup and removes the lost key. If the one you lose is the genesis key, the only thing you can no longer do is deploy on new networks, because there the UP is born with that key only.",
     backupNotRead: "Controllers not read yet.",
     addBackupBtn: "Add the backup controller",
+    phoneDivider: "— or, for the UP Wallet app (0.9) —",
+    phoneNote: "<b>Authorize a phone.</b> The UP Wallet app (from 0.9.0) signs with a key created and kept on the phone. Here you add it to the UP as a controller <b>with limited permissions</b>: calls and sends (SUPER_CALL, SUPER_TRANSFERVALUE), signatures (SIGN), gas paid by the site (4337) and writing the profile only (SETDATA, limited to the <code>LSP3Profile</code> key). It <b>cannot</b> add controllers, change permissions or extensions. The admin controller connected here signs, once per network. If you lose the phone, remove its key below, network by network.",
+    phoneAddrLabel: "The phone key's address (the app shows it, \"This phone\" panel)",
+    addPhoneBtn: "Authorize the phone on this network",
+    bkPlanPhone: (v) => `Plan (one transaction, signed by ${v.signer} through the Key Manager ${v.km}):\n- AddressPermissions[] from ${v.len} to ${v.len1} entries, position ${v.len} → ${v.phone}\n- the phone's permissions → ${v.perms} (${v.names})\n- allowed data keys → LSP3Profile only (the profile)`,
+    bkPhoneOk: (v) => `✅ Phone authorized on this network: ${v.addr}, with limited permissions. Repeat on every network where you use the UP. To revoke it: "Remove the selected controller".`,
+    bkPhoneAdmin: "This address is already an admin controller of the UP: it does not need to be authorized as a phone.",
     backupAddrLabel: "Backup controller address (a different MetaMask account, kept separately)",
     connectSigner5Btn: "Connect the UP's controller (MetaMask)",
     signerPickHint: "The wallet lets you choose the account on every connection: you can sign with the genesis key or with a backup. To switch account, press the button again and pick another one.",
@@ -655,6 +675,7 @@ function signerState(b) {
 function updateBackupButtons() {
   const ok = !bkBusy && bk && signerState(bk) === "ok";
   $("addBackupBtn").disabled = !ok;
+  $("addPhoneBtn").disabled = !ok;
   $("removeBtn").disabled = !ok || !$("removeSelect").value;
   $("readCtrlBtn").disabled = bkBusy;
   $("connectSigner").disabled = bkBusy;
@@ -907,6 +928,59 @@ $("addBackupBtn").addEventListener("click", async () => {
   }
 });
 
+// The phone key of the UP Wallet app (0.9.0): a controller with limited permissions. SUPER_CALL and
+// SUPER_TRANSFERVALUE (plain CALL and TRANSFERVALUE would need a list of allowed contracts), SIGN, the 4337
+// permission (gas paid by the site) and SETDATA restricted by AllowedERC725YDataKeys to LSP3Profile. Never
+// ADDCONTROLLER, EDITPERMISSIONS or extensions. Revoked with "Remove the selected controller".
+const LSP3_PROFILE_KEY = "0x5ef83ad9559033e6e941db7d7c495acdce616347d28e90c7ce47cbfcfcad3bc5";
+const PHONE_PERMS = 0x100n | 0x400n | 0x40000n | 0x200000n | BK.ERC4337;   // SUPER_TRANSFERVALUE, SUPER_CALL, SETDATA, SIGN, ERC4337
+const PHONE_DATA_KEYS = ethers.concat(["0x0020", LSP3_PROFILE_KEY]);       // CompactBytesArray: one 32-byte key
+$("addPhoneBtn").addEventListener("click", async () => {
+  if (bkBusy) return;
+  bkSeparator();
+  setBusy(true);
+  try {
+    const b = await freshAdminState();
+    if (!b) return;
+    const rawAddr = $("phoneAddress").value.trim();
+    if (!ethers.isAddress(rawAddr) || BigInt(rawAddr) === 0n) { bkLog(t("bkBadAddr"), "line-err"); return; }
+    const phone = ethers.getAddress(rawAddr);
+    if (phone === b.signer) { bkLog(t("bkSameAsSigner"), "line-err"); return; }
+    if ([b.up, b.km, BK.ENTRY_POINT].map(x => x.toLowerCase()).includes(phone.toLowerCase()) || phone.toLowerCase() === b.r.urd || KNOWN_ADDRESSES[phone.toLowerCase()]) { bkLog(t("bkSystem"), "line-err"); return; }
+    const listed = b.r.controllers.find(c => c.address === phone);
+    if (listed && (listed.perms & BK.ADMIN) === BK.ADMIN) { bkLog(t("bkPhoneAdmin"), "line-err"); return; }
+    const upData = new ethers.Contract(b.up, UP_DATA_IFACE, b.provider);
+    const [existing] = await upData.getDataBatch([BK.permKey(phone)]);
+    if ((existing && existing !== "0x" && BigInt(existing) !== 0n) || listed) { bkLog(t("bkAlready"), "line-err"); return; }
+    // The phone key is a plain account: never a contract.
+    if ((await b.provider.getCode(phone)) !== "0x") { bkLog(t("bkContract"), "line-err"); return; }
+    const perms = ethers.zeroPadValue(ethers.toBeHex(PHONE_PERMS), 32);
+    const keys = [BK.ARRAY_KEY, BK.indexKey(b.r.len), BK.permKey(phone), BK.dataKeysKey(phone)];
+    const vals = [ethers.toBeHex(b.r.len + 1, 16), phone, perms, PHONE_DATA_KEYS];
+    bkLog(t("bkPlanPhone", { signer: b.signer, km: b.km, len: b.r.len, len1: b.r.len + 1, phone, perms: permHex(PHONE_PERMS), names: permNames(PHONE_PERMS) }), "line-dim");
+    const data = KM_EXEC_IFACE.encodeFunctionData("execute", [UP_DATA_IFACE.encodeFunctionData("setDataBatch", [keys, vals])]);
+    const what = { it: `Autorizza il telefono ${phone} sulla UP ${b.up}, con permessi limitati`, en: `Authorizes the phone ${phone} on the UP ${b.up}, with limited permissions` };
+    const problems = await sendBackupTx(b, data, async (at) => {
+      const [p, dk, lenRaw, item] = await upData.getDataBatch([BK.permKey(phone), BK.dataKeysKey(phone), BK.ARRAY_KEY, BK.indexKey(b.r.len)], at);
+      const out = [];
+      if (String(p).toLowerCase() !== perms.toLowerCase()) out.push(`permissions ${p}`);
+      if (String(dk).toLowerCase() !== PHONE_DATA_KEYS.toLowerCase()) out.push(`allowed data keys ${dk}`);
+      if (BigInt(lenRaw || "0x0") !== BigInt(b.r.len + 1)) out.push(`list length ${lenRaw}`);
+      if (String(item).toLowerCase() !== phone.toLowerCase()) out.push(`list entry ${item}`);
+      out.push(...await stillListed(b, at, null));
+      return out;
+    }, what);
+    if (problems === false) return;
+    bkLog(problems.length ? t("bkVerifyBad", { what: problems.join(", ") }) : t("bkPhoneOk", { addr: phone }), problems.length ? "line-warn" : "line-ok");
+    await readBackup();
+  } catch (e) {
+    if (e && (e.code === "ACTION_REJECTED" || e.code === 4001)) bkLog(t("bkCancelled"), "line-warn");
+    else bkLog(t("bkError", { err: e.shortMessage || e.message }), "line-err");
+  } finally {
+    setBusy(false);
+  }
+});
+
 $("removeBtn").addEventListener("click", async () => {
   if (bkBusy) return;
   bkSeparator();
@@ -974,6 +1048,9 @@ networkSelectEl.addEventListener("change", resetBackupView);
     $("customRpcWrap").style.display = presetNet === "custom" ? "block" : "none";
   }
   if (presetUp && ethers.isAddress(presetUp)) $("upAddress").value = ethers.getAddress(presetUp);
+  // From the UP Wallet app's "This phone" panel: ?phone=<the phone key's address>
+  const presetPhone = q.get("phone");
+  if (presetPhone && ethers.isAddress(presetPhone)) $("phoneAddress").value = ethers.getAddress(presetPhone);
 }
 
 applyI18n();
