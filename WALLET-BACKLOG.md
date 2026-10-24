@@ -12,7 +12,9 @@ pages", and go in the same batch (they need no app release). Remove an item when
    check, request window and gas relay stay the same; texts that name MetaMask in the app are adapted.
    On the site, the Backup page gets "Authorize a phone": add the phone's address as a controller with
    limited permissions (`SUPER_CALL`, `SUPER_TRANSFERVALUE`, `SIGN`, the 4337 permission, `SETDATA`
-   with `AllowedERC725YDataKeys` = `LSP3Profile` only), and "Revoke a phone". Asked on 2026-10-25. The batch of 2026-10-23 (CoW orders, refund parameters, contract names from the ABI,
+   with `AllowedERC725YDataKeys` = `LSP3Profile` only); revoking is the existing "Remove". Asked on
+   2026-10-25. Done in this PR: the Backup page, the page's texts for the phone key (`html.phone-key`),
+   the guide and the app's privacy policy; still open: the app's release 0.9.0 tested on the phone. The batch of 2026-10-23 (CoW orders, refund parameters, contract names from the ABI,
 token image in the Send panel, profile picture in the card, positions in "Every network", relayer
 limit 2,000,000 with the controller as fallback, sticky errors in the app; Identity link to the
 subscription page and the guide's recap) is in its PR.
