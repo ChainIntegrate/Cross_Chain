@@ -184,7 +184,7 @@ const I18N = {
     fundLabel: "Ricarica (valuta nativa della rete)",
     fundBtn: "Ricarica",
     lifiTitle: "3c · Ricarica da USDC su Base (con la cassa)",
-    lifiNote: "Compra la valuta di questa rete con gli <b>USDC della cassa su Base</b>, tramite LI.FI (swap e, se serve, bridge), per coprire un numero di operazioni. La pagina controlla la transazione di LI.FI prima di fartela firmare: su Base, verso il contratto di LI.FI, senza valore, con <b>la cassa come destinatario</b> e questa rete come arrivo, letti dai dati della transazione stessa. Firmi due volte su Base (il permesso per l'importo esatto di USDC, poi l'invio); all'arrivo l'importo è già scritto nella ricarica della sezione 3 o 3b: torna su questa rete e premi <b>Ricarica</b>. Serve un po' di ETH su Base per il gas, e un po' della valuta di questa rete per la ricarica.",
+    lifiNote: "Compra la valuta di questa rete con gli <b>USDC della cassa su Base</b>, tramite LI.FI (swap e, se serve, bridge), per coprire un numero di operazioni. La pagina controlla la transazione di LI.FI prima di fartela firmare: su Base, verso il contratto di LI.FI, senza valore, con <b>la cassa come destinatario</b> e questa rete come arrivo, letti dai dati della transazione stessa. Firmi due volte su Base (il permesso per l'importo esatto di USDC, poi l'invio); all'arrivo la pagina riporta MetaMask su questa rete e prepara la <b>ricarica del paymaster</b>, che firmi (terza firma). Se non parte, l'importo resta scritto nella sezione 3 o 3b. Serve un po' di ETH su Base per il gas, e un po' della valuta di questa rete per la ricarica.",
     lifiPmLabel: "Paymaster da ricaricare", lifiPmPublic: "pubblico, per i clienti (3b)", lifiPmPersonal: "personale (3)",
     lifiOpsLabel: "Operazioni da coprire", lifiQuoteBtn: "Chiedi il preventivo a LI.FI", lifiSendBtn: "Approva e invia da Base (irreversibile)",
     lifiNone: "Nessun preventivo.",
@@ -210,8 +210,10 @@ const I18N = {
     lifiWait: (v) => `In viaggio verso ${v.net} (${v.st})… controllo ogni 15 secondi.`,
     lifiFailed: (v) => `❌ LI.FI dice che il trasferimento è fallito (${v.st}): gli USDC tornano alla cassa secondo le regole del bridge. Controlla su https://scan.li.fi/tx/${v.hash}`,
     lifiTimeout: (v) => `Ancora non arrivato dopo 40 minuti: controlla su https://scan.li.fi/tx/${v.hash}, poi ricarica a mano nella sezione ${v.sec}.`,
-    lifiDone: (v) => `✅ Arrivati ${v.amt} sulla cassa. L'importo da ricaricare (${v.dep}, ≈ ${v.ops} operazioni) è scritto nella sezione ${v.sec}: torna su ${v.net} in MetaMask e premi Ricarica.`,
-    lifiBack: (v) => `Torna su ${v.net} in MetaMask…`,
+    lifiDone: (v) => `✅ Arrivati ${v.amt} sulla cassa. Da ricaricare: ${v.dep} (≈ ${v.ops} operazioni), sezione ${v.sec}.`,
+    lifiBack: (v) => `Torna su ${v.net} in MetaMask e prepara la ricarica…`,
+    lifiManual: (v) => `La ricarica non è partita: l'importo resta scritto nella sezione ${v.sec}. Con MetaMask su ${v.net}, premi Ricarica (se manca la valuta per il gas, abbassa un po' l'importo).`,
+    lifiToppedUp: (v) => `✅ Deposito ricaricato su ${v.net}: ≈ ${v.ops} operazioni in più.`,
     lifiStale: "Il preventivo è di prima di un cambio (rete, account o paymaster): chiedine un altro.",
     capLabel: "Tetto per operazione (valuta nativa)",
     capBtn: "Imposta",
@@ -476,7 +478,7 @@ const I18N = {
     fundLabel: "Top up (network native currency)",
     fundBtn: "Top up",
     lifiTitle: "3c · Top up from USDC on Base (with the cassa)",
-    lifiNote: "Buys this network's currency with the <b>cassa's USDC on Base</b>, through LI.FI (a swap and, when needed, a bridge), to cover a number of operations. The page checks LI.FI's transaction before you sign it: on Base, to LI.FI's contract, with no value, with <b>the cassa as receiver</b> and this network as destination, read from the transaction's own data. You sign twice on Base (the approval of the exact USDC amount, then the transaction); on arrival the amount is already written in the top-up of section 3 or 3b: switch back to this network and press <b>Top up</b>. It needs a little ETH on Base for gas, and a little of this network's currency for the top-up.",
+    lifiNote: "Buys this network's currency with the <b>cassa's USDC on Base</b>, through LI.FI (a swap and, when needed, a bridge), to cover a number of operations. The page checks LI.FI's transaction before you sign it: on Base, to LI.FI's contract, with no value, with <b>the cassa as receiver</b> and this network as destination, read from the transaction's own data. You sign twice on Base (the approval of the exact USDC amount, then the transaction); on arrival the page switches MetaMask back to this network and prepares the <b>paymaster top-up</b>, which you sign (third signature). If it does not start, the amount stays written in section 3 or 3b. It needs a little ETH on Base for gas, and a little of this network's currency for the top-up.",
     lifiPmLabel: "Paymaster to top up", lifiPmPublic: "public, for customers (3b)", lifiPmPersonal: "personal (3)",
     lifiOpsLabel: "Operations to cover", lifiQuoteBtn: "Ask LI.FI for a quote", lifiSendBtn: "Approve and send from Base (irreversible)",
     lifiNone: "No quote.",
@@ -502,8 +504,10 @@ const I18N = {
     lifiWait: (v) => `On its way to ${v.net} (${v.st})… checking every 15 seconds.`,
     lifiFailed: (v) => `❌ LI.FI says the transfer failed (${v.st}): the USDC goes back to the cassa as the bridge's rules say. Check on https://scan.li.fi/tx/${v.hash}`,
     lifiTimeout: (v) => `Not arrived yet after 40 minutes: check on https://scan.li.fi/tx/${v.hash}, then top up by hand in section ${v.sec}.`,
-    lifiDone: (v) => `✅ ${v.amt} arrived on the cassa. The amount to top up (${v.dep}, ≈ ${v.ops} operations) is written in section ${v.sec}: switch back to ${v.net} in MetaMask and press Top up.`,
-    lifiBack: (v) => `Switching MetaMask back to ${v.net}…`,
+    lifiDone: (v) => `✅ ${v.amt} arrived on the cassa. To top up: ${v.dep} (≈ ${v.ops} operations), section ${v.sec}.`,
+    lifiBack: (v) => `Switching MetaMask back to ${v.net} and preparing the top-up…`,
+    lifiManual: (v) => `The top-up did not start: the amount stays written in section ${v.sec}. With MetaMask on ${v.net}, press Top up (if there is not enough currency for gas, lower the amount a little).`,
+    lifiToppedUp: (v) => `✅ Deposit topped up on ${v.net}: ≈ ${v.ops} more operations.`,
     lifiStale: "The quote is from before a change (network, account or paymaster): ask for another one.",
     capLabel: "Cap per operation (native currency)",
     capBtn: "Set",
@@ -1417,8 +1421,16 @@ if ($("lifiSendBtn")) $("lifiSendBtn").addEventListener("click", () => guarded(a
     const dep = received < L.need ? received : L.need;
     $(tg.input).value = ethers.formatEther(dep);
     log(t("lifiDone", { amt: fmt(received, L.cur), dep: fmt(dep, L.cur), ops: OpCost.ops(dep, L.chainId), sec: tg.sec, net: L.net.name }), "line-ok");
+    // The deposit follows at once, as the usual top-up of 3 or 3b (same checks, signed by the cassa on the
+    // network); if the wallet does not come back to it, the amount stays written for a manual top-up.
     log(t("lifiBack", { net: L.net.name }), "line-dim");
-    await switchWallet(L.chainId);
+    if ((await switchWallet(L.chainId)) !== L.chainId) { log(t("lifiManual", { sec: tg.sec, net: L.net.name }), "line-warn"); return; }
+    const mine = (st) => (L.kind === "public" ? st.vpmIsOwner && st.vpmAddr === L.pm : st.isOwner && st.pmAddr === L.pm);
+    const r = await sendTx({ to: L.pm, value: dep }, L.kind === "public"
+      ? { it: "Ricarica il deposito del paymaster pubblico (servizio di sponsorizzazione)", en: "Top up the public paymaster's deposit (sponsor service)" }
+      : { it: "Ricarica il deposito del paymaster personale (allowlist)", en: "Top up the personal paymaster's deposit (allowlist)" }, mine);
+    if (r) { $(tg.input).value = ""; log(t("lifiToppedUp", { ops: OpCost.ops(dep, L.chainId), net: L.net.name }), "line-ok"); }
+    else log(t("lifiManual", { sec: tg.sec, net: L.net.name }), "line-warn");
   } finally { bp.destroy(); }
 }));
 
