@@ -4,7 +4,7 @@ Browser tools by [ChainIntegrate](https://chainintegrate.it) for redeploying an 
 
 What it contains, in short:
 - **Redeploy and check** the UP on another network (Deploy, Verify, Backup controller, Identity, NFT reception, Publish implementation): the guide walks through them.
-- **UP Wallet** (`up-wallet.html`, experimental): the UP's wallet on every network where it exists; it connects to dApps through WalletConnect, explains and simulates every request and signs through the controller's wallet (MetaMask). Also an Android app ([up-wallet-android](https://github.com/ChainIntegrate/up-wallet-android)).
+- **UP Wallet** (`up-wallet.html`, experimental): the UP's wallet on every network where it exists; it connects to dApps through WalletConnect, explains and simulates every request and signs through the controller's wallet (MetaMask; from app 0.9.0 the Android app signs with its own key, kept on the phone). Also an Android app ([up-wallet-android](https://github.com/ChainIntegrate/up-wallet-android)).
 - **Gas paid by the site** (experimental): an ERC-4337 relayer and two paymasters, so a UP's controller needs no gas on the networks the site serves; paid subscriptions are in beta.
 
 Non-custodial throughout: the pages and the app never hold a key, and every transaction is signed in the user's own wallet.
@@ -98,16 +98,31 @@ The pages are published at `https://crosschain-lukso.chainintegrate.it/`. Start 
 The UP Wallet page is also packaged as an Android app, in its own repository:
 [ChainIntegrate/up-wallet-android](https://github.com/ChainIntegrate/up-wallet-android). It runs the
 same page, taken from this repository at a pinned commit, and adds what a phone needs:
-- MetaMask mobile as the signing wallet, through MetaMask Connect: no browser extension needed;
+- MetaMask mobile as the signing wallet, through MetaMask Connect: no browser extension needed (up to
+  0.8.x; from 0.9.0 a key kept on the phone, see below);
 - WalletConnect links received from other apps, a Paste button, and a Scan QR button for a dApp shown on
   another screen (Google Play services' scanner: the app has no camera permission);
 - a notification when a dApp sends a request while the app is in the background, and a button back
   to the dApp;
 - a service that keeps the app running while a dApp session is active.
 
-The app holds no keys: signing stays in MetaMask, and permissions are enforced by the UP's Key
-Manager as on the site. The APKs are built and signed by that repository's CI and attached to its
-GitHub releases (0.8.1 today); there is no store release yet. It is a prototype (0.x), tested on one
+Up to 0.8.x the app holds no keys: signing stays in MetaMask, and permissions are enforced by the UP's
+Key Manager as on the site. The APKs are built and signed by that repository's CI and attached to its
+GitHub releases (0.8.2 today); there is no store release yet.
+
+**Next, 0.9.0 (in progress): the app becomes the wallet.** MetaMask leaves the app. On first start the
+app creates a new key on the phone, which never leaves it: encrypted with the Android Keystore (the
+phone's secure hardware where there is one), used only after fingerprint or PIN, for every signature,
+and signed with natively, so the page never sees it. Still non-custodial: no one else has the key, and
+there is no copy (a lost phone or an uninstalled app is handled by revoking it). The key is added to
+the UP once per network from this site's **Backup** page ("Authorize a phone"), signed by an admin
+controller in MetaMask on a computer, with **limited permissions**: `SUPER_CALL` and
+`SUPER_TRANSFERVALUE` (dApps and sends), `SIGN` (signatures for dApps), the 4337 permission (gas paid
+by the site) and `SETDATA` restricted to the `LSP3Profile` key (aligning the profile); never adding
+controllers, editing permissions or extensions. A lost phone is revoked from the same page. Then a dApp
+connects through WalletConnect and the app signs, with no other app in between. The app warns at start
+that this is the maintainer's experimental wallet, with a higher risk than signing in an external
+wallet, for people who know what they are doing, at their own risk. It is a prototype (0.x), tested on one
 Android phone; iPhone is not started. Version 1.0.0 is planned as the first public Google Play release,
 under an organization Play Console account for ChainIntegrate, which Google requires for crypto
 wallets (Google's developer verification: see
@@ -164,14 +179,14 @@ The headers are in `/etc/nginx/snippets/security-headers.conf`, included in the 
 
 ## Roadmap
 
-A direction, not a schedule. UP Wallet is growing towards a complete wallet for a Universal Profile on every network where it exists: open source, explaining every request in plain words, cross-chain first. The steps are ordered so that the app keeps no keys until the last ones: it stays a simple, non-custodial app that signs through an external wallet, which keeps the store listing simple (Google requires an organization developer account for crypto wallets, custodial or not).
+A direction, not a schedule. UP Wallet is growing towards a complete wallet for a Universal Profile on every network where it exists: open source, explaining every request in plain words, cross-chain first. Since 2026-10-25 the phone key comes first (it was step 6): the app signs by itself, with a key that stays on the phone, and MetaMask leaves the app. The website keeps signing through an external wallet.
 
-1. **The Android app on Google Play, as it is.** Signing stays in MetaMask and the app holds no keys. Before the listing: an organization developer account (registered business, D-U-N-S number), Google's developer verification, and the store's forms (financial features, data safety, with the existing privacy policy). Google Play's licensing rules for crypto apps cover custodial wallets and exchanges; non-custodial wallets are excluded.
-2. **Clearer requests.** Decode any call to a contract verified on the network's explorer, from its published ABI, besides the cases decoded today: done on Base, Arbitrum One and Arc (`abi-decode.js`, app 0.8.0), with contracts named as the explorer names them; more networks as their explorers allow it. Name smart-account recipients from what they declare (ERC-7579 `accountId()`), as a hint.
-3. **dApps without WalletConnect, in the app.** A dApp browser inside the Android app that offers the UP to web dApps as an injected wallet (EIP-1193, announced through EIP-6963), with bookmarks. Every request goes through the same checks, simulation and confirmation window, and is still signed in MetaMask. Native apps keep using WalletConnect.
-4. **Recovery from the identity itself.** A guided flow to add, rotate and revoke the UP's keys on every network where it exists, signed by an existing controller.
-5. **A professional audit** of the paymasters, the ERC-4337 flow and the app, before the next step and before the paid gas service holds significant funds.
-6. **A phone key, as an option next to MetaMask.** A key created on the phone, which never leaves it (still non-custodial), protected by the phone's secure hardware and unlocked with fingerprint or PIN. It is added to the UP as a controller with limited permissions: calls, transfers and signatures, not controller management. A lost phone is handled by revoking that key from another controller of the UP. The website keeps using an external wallet.
+1. **The phone key (app 0.9.0, in progress).** A new key created on the phone, which never leaves it (still non-custodial), encrypted with the Android Keystore and used only after fingerprint or PIN, for every signature. It is added to the UP once per network from the Backup page, signed by an admin controller, as a controller with limited permissions: calls, transfers, signatures, the gas relay and the profile data, never controller management. A lost phone is handled by revoking that key from another controller. MetaMask leaves the app; the website keeps it.
+2. **The Android app on Google Play.** Before the listing: an organization developer account (registered business, D-U-N-S number), Google's developer verification, and the store's forms (financial features, data safety for an app that keeps a key on the phone, with the privacy policy updated). Google Play's licensing rules for crypto apps cover custodial wallets and exchanges; non-custodial wallets are excluded.
+3. **Clearer requests.** Decode any call to a contract verified on the network's explorer, from its published ABI, besides the cases decoded today: done on Base, Arbitrum One and Arc (`abi-decode.js`, app 0.8.0), with contracts named as the explorer names them; more networks as their explorers allow it. Name smart-account recipients from what they declare (ERC-7579 `accountId()`), as a hint.
+4. **dApps without WalletConnect, in the app.** A dApp browser inside the Android app that offers the UP to web dApps as an injected wallet (EIP-1193, announced through EIP-6963), with bookmarks. Every request goes through the same checks, simulation and confirmation window, and is signed with the phone key. Native apps keep using WalletConnect.
+5. **Recovery from the identity itself.** A guided flow to add, rotate and revoke the UP's keys on every network where it exists, signed by an existing controller.
+6. **A professional audit** of the paymasters, the ERC-4337 flow and the app (its phone key included), before a store release and before the paid gas service holds significant funds.
 7. **Later.** Passkeys as UP signers (this needs a contract extension, since the Key Manager verifies Ethereum signatures only), and a browser extension for desktop.
 
 ## Requirements
