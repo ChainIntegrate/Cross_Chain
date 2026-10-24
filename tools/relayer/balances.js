@@ -13,6 +13,9 @@ let UsdPrice;
 try { UsdPrice = require(path.join(__dirname, "..", "..", "usd-price.js")); }
 catch (e) { console.error("usd-price.js is missing at the repository root. Add it once: cd /opt/crosschain-relayer && sudo git sparse-checkout add /usd-price.js"); process.exit(1); }
 
+// Deposits counted in operations (../../op-cost.js); without it, by their USD value only.
+let OpCost;
+try { OpCost = require(path.join(__dirname, "..", "..", "op-cost.js")); } catch (e) { OpCost = { ops: () => null }; }
 const PM_ABI = ["function maxCostPerOp() view returns (uint256)"];
 const EP_ABI = ["function balanceOf(address) view returns (uint256)"];
 
@@ -22,7 +25,8 @@ async function main(argv) {
   const relayer = readKey(config.keyFile).address;
   const mon = config.monitor || {};
   const minPublic = Number(mon.minSponsorDepositUsd ?? mon.minDepositUsd ?? 10), minPersonal = Number(mon.minAllowlistDepositUsd ?? 1);
-  console.log(`Site relayer ${relayer}. A deposit is marked LOW below ${minPublic} USD (public paymaster) or ${minPersonal} USD (personal paymaster).`);
+  const minOpsPublic = Number(mon.minSponsorDepositOps ?? 100), minOpsPersonal = Number(mon.minAllowlistDepositOps ?? 20);
+  console.log(`Site relayer ${relayer}. A deposit is marked LOW below ${minOpsPublic} operations (public paymaster) or ${minOpsPersonal} (personal paymaster); on a chain without a cost per operation, below ${minPublic} or ${minPersonal} USD.`);
   let total = 0, missing = 0;
   const line = (label, wei, sym, p, extra = "") => {
     const v = UsdPrice.usd(wei, p);
@@ -41,11 +45,12 @@ async function main(argv) {
       console.log(`${UsdPrice.name(id) || "chain " + id} (${id}), gas token ${sym || "?"}${p ? `, price ${p.pair}${p.stale ? " NOT UP TO DATE" : ""}` : ", no USD price"}`);
       line("site relayer", await provider.getBalance(relayer), sym, p);
       const ep = new ethers.Contract(ENTRY_POINT, EP_ABI, provider);
-      const pms = chain.paymasters.map((a) => ["personal paymaster", a, minPersonal]).concat(chain.sponsorPaymaster ? [["public paymaster", chain.sponsorPaymaster, minPublic]] : []);
-      for (const [name, a, minUsd] of pms) {
+      const pms = chain.paymasters.map((a) => ["personal paymaster", a, minPersonal, minOpsPersonal]).concat(chain.sponsorPaymaster ? [["public paymaster", chain.sponsorPaymaster, minPublic, minOpsPublic]] : []);
+      for (const [name, a, minUsd, minOps] of pms) {
         const [dep, cap] = await Promise.all([ep.balanceOf(a), new ethers.Contract(a, PM_ABI, provider).maxCostPerOp().catch(() => null)]);
-        const v = UsdPrice.usd(dep, p);
-        line(name, dep, sym, p, `${cap == null ? "" : `cap ${ethers.formatEther(cap)} ${sym}`}${v != null && v < minUsd ? `  LOW (below ${minUsd} USD)` : ""}`);
+        const v = UsdPrice.usd(dep, p), n = OpCost.ops(dep, id);
+        const low = n != null ? (n < minOps ? `  LOW (below ${minOps} operations)` : "") : v != null && v < minUsd ? `  LOW (below ${minUsd} USD)` : "";
+        line(name, dep, sym, p, `${n == null ? "" : `≈ ${n} operations  `}${cap == null ? "" : `cap ${ethers.formatEther(cap)} ${sym}`}${low}`);
       }
     } catch (e) { console.log(`chain ${id}: not readable (${e.shortMessage || e.message})`); }
   }

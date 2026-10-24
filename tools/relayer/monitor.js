@@ -24,6 +24,11 @@ catch (e) {
   usdMissing = true;
   UsdPrice = { FEEDS: {}, read: async () => null, usd: () => null, suffix: () => "", fmt: (n) => n.toFixed(2), symbol: () => "", name: () => "" };
 }
+// About how much one operation costs on each chain (../../op-cost.js, same root): deposits are counted in
+// operations. Missing (a sparse clone without /op-cost.js): the USD rule below, and the file is reported.
+let OpCost, opCostMissing = false;
+try { OpCost = require(path.join(__dirname, "..", "..", "op-cost.js")); }
+catch (e) { opCostMissing = true; OpCost = { ops: () => null, perOp: () => null }; }
 
 // Expected code: our UPPaymaster and LUKSO's Extension4337 as published by this project.
 const PAYMASTER_RUNTIME_HASH = "0x8754f54c34a8849f40e1156013a403e7308e0e1fbabd2c5a1a68f9ddeec6b25d";
@@ -32,9 +37,10 @@ const SPONSOR_RUNTIME_HASH = "0x95c0efe7fb362c4fa5193c2d01286c69aad1dd3e0e963379
 const EXTENSION_4337 = "0x6D375232863E179Ba1B3348C9087E30d5D5ed4B2";
 const EXTENSION_RUNTIME_HASH = "0x91968b95ee6f8e01a554060b775c13e8df3f0173d87a55a48ed54b8ff02c052d";
 const EP_PERMS = 0x500n; // SUPER_CALL | SUPER_TRANSFERVALUE: the invariant everything rests on
-// Deposits below these USD values are a warning: the public paymaster (the sponsor service, paying for
-// subscribers) needs more than the personal one (the allowlist of the operator's own UPs).
-const DEFAULTS = { drawdownCaps: 2, drawdownFraction: 0.5, minPaymasterDeposit: "0.0002", minSponsorDepositUsd: 10, minAllowlistDepositUsd: 1, relayerInfoUrl: "http://127.0.0.1:8787/relay/info", sponsorCheckUrl: "http://127.0.0.1:8788/relay/sponsor/check", reminderHours: 24 };
+// Deposits that pay for fewer operations than these are a warning: the public paymaster (the sponsor service,
+// paying for subscribers) needs more than the personal one (the allowlist of the operator's own UPs). On a
+// chain without a cost per operation, the USD values apply.
+const DEFAULTS = { drawdownCaps: 2, drawdownFraction: 0.5, minPaymasterDeposit: "0.0002", minSponsorDepositOps: 100, minAllowlistDepositOps: 20, minSponsorDepositUsd: 10, minAllowlistDepositUsd: 1, relayerInfoUrl: "http://127.0.0.1:8787/relay/info", sponsorCheckUrl: "http://127.0.0.1:8788/relay/sponsor/check", reminderHours: 24 };
 
 const ARRAY_KEY = "0xdf30dba06db6a30e65354d9a64c609861f089545ca58c6b4dbe31a5f338cb0e3";
 const idxKey = (i) => ARRAY_KEY.slice(0, 34) + ethers.toBeHex(i, 16).slice(2);
@@ -128,16 +134,29 @@ async function checkChain(id, chain, mon, info, out, deposits = {}, balances = {
   const minDeposit = ethers.parseEther(String(mon.minPaymasterDeposit || DEFAULTS.minPaymasterDeposit));
   const minUsdPublic = Number(mon.minSponsorDepositUsd ?? mon.minDepositUsd ?? DEFAULTS.minSponsorDepositUsd);
   const minUsdPersonal = Number(mon.minAllowlistDepositUsd ?? DEFAULTS.minAllowlistDepositUsd);
+  const minOpsPublic = Number(mon.minSponsorDepositOps ?? DEFAULTS.minSponsorDepositOps);
+  const minOpsPersonal = Number(mon.minAllowlistDepositOps ?? DEFAULTS.minAllowlistDepositOps);
+  // The cost per operation of op-cost.js, or the config's (monitor.opCost, per chain, in the gas token).
+  const opCostCfg = mon.opCost && mon.opCost[id] ? ethers.parseEther(String(mon.opCost[id])) : null;
+  const opsOf = (w) => (opCostCfg ? (w <= 0n ? 0 : Number(w / opCostCfg)) : OpCost.ops(w, id));
   const price = await UsdPrice.read(provider, id, ethers, mon.priceFeeds ? { feeds: { ...UsdPrice.FEEDS, ...mon.priceFeeds } } : {});
   const sym = (mon.priceFeeds && mon.priceFeeds[id] && mon.priceFeeds[id].symbol) || UsdPrice.symbol(id);
   const tok = (w) => `${nat(w)}${sym ? " " + sym : ""}`;
   const usdOf = (w) => { const v = UsdPrice.usd(w, price); return v == null ? null : `${UsdPrice.fmt(v)} USD${price.stale ? " (price not up to date)" : ""}`; };
-  const keep = (role, addr, w, min) => { const v = UsdPrice.usd(w, price); balances[`${id}:${role}`] = { chain: id, name: UsdPrice.name(id), role, addr, wei: w.toString(), symbol: sym, usd: v, stale: !!(price && price.stale), low: min != null && v != null && v < min, min }; };
-  // A deposit worth less than its minimum (public 10 USD, personal 1 USD by default) is a warning.
-  // Without a price for this chain, the old rule in the gas token applies (minPaymasterDeposit). The
+  // min: { ops, usd } for a paymaster's deposit; none for the relayer's balance.
+  const keep = (role, addr, w, min) => {
+    const v = UsdPrice.usd(w, price), n = min ? opsOf(w) : null;
+    const low = !!min && (n != null ? n < min.ops : v != null && v < min.usd);
+    balances[`${id}:${role}`] = { chain: id, name: UsdPrice.name(id), role, addr, wei: w.toString(), symbol: sym, usd: v, ops: n, stale: !!(price && price.stale), low, min: min ? (n != null ? `${min.ops} operations` : `${min.usd} USD`) : null };
+  };
+  // A deposit that pays for fewer operations than its minimum (public 100, personal 20 by default) is a
+  // warning. Without a cost per operation for this chain, its USD value is compared (public 10 USD, personal
+  // 1 USD); without a price either, the old rule in the gas token applies (minPaymasterDeposit). The
   // signature has no amounts, so a moving price does not send a new e-mail every hour.
-  const lowDeposit = (where, dep, minUsd, section) => {
-    const v = UsdPrice.usd(dep, price), fix = `top it up (up-gas-relay-admin.html, section ${section}, with the cassa)`;
+  const lowDeposit = (where, dep, min, section) => {
+    const v = UsdPrice.usd(dep, price), n = opsOf(dep), fix = `top it up (up-gas-relay-admin.html, section ${section}, with the cassa)`;
+    const minUsd = min.usd;
+    if (n != null) { if (n < min.ops) out.push({ level: "warning", where, msg: `deposit ≈ ${n} operations (${tok(dep)}${v != null ? ", " + usdOf(dep) : ""}), below the minimum of ${min.ops} operations: ${fix}`, sig: `deposit below ${min.ops} operations` }); return n < min.ops; }
     if (v != null) { if (v < minUsd) out.push({ level: "warning", where, msg: `deposit ${usdOf(dep)} (${tok(dep)}), below the minimum of ${minUsd} USD: ${fix}`, sig: `deposit below ${minUsd} USD` }); return v < minUsd; }
     if (dep < minDeposit) { out.push({ level: "warning", where, msg: `deposit ${eth(dep)}${sym ? " " + sym : ""} below ${eth(minDeposit)} (no USD price on this chain): ${fix}`, sig: "deposit below the minimum" }); return true; }
     return false;
@@ -150,10 +169,10 @@ async function checkChain(id, chain, mon, info, out, deposits = {}, balances = {
     const [owner, cap, dep, pending] = await Promise.all([c.owner(), c.maxCostPerOp(), c.deposit(), c.pendingOwner().catch(() => ethers.ZeroAddress)]);
     if (pending !== ethers.ZeroAddress) out.push({ level: "warning", where, msg: `ownership transfer pending to ${pending}` });
     deposits[`${id}:${pm}`] = { dep: dep.toString(), cap: cap.toString() };
-    keep("personal", pm, dep, minUsdPersonal);
+    keep("personal", pm, dep, { ops: minOpsPersonal, usd: minUsdPersonal });
     if (mon.paymasterOwner && ethers.getAddress(owner) !== ethers.getAddress(mon.paymasterOwner)) out.push({ level: "error", where, msg: `owner is ${owner}, expected ${mon.paymasterOwner}` });
     if (cap === 0n) out.push({ level: "error", where, msg: "cap is 0: it pays nothing" });
-    if (!lowDeposit(where, dep, minUsdPersonal, "3") && dep < cap) out.push({ level: "warning", where, msg: `deposit ${eth(dep)} below the cap ${eth(cap)}` });
+    if (!lowDeposit(where, dep, { ops: minOpsPersonal, usd: minUsdPersonal }, "3") && dep < cap) out.push({ level: "warning", where, msg: `deposit ${eth(dep)} below the cap ${eth(cap)}` });
   }
   if (chain.sponsorPaymaster) {
     const pm = chain.sponsorPaymaster, where = `${where0}, ${ROLE.public} ${short(pm)}`;
@@ -165,12 +184,12 @@ async function checkChain(id, chain, mon, info, out, deposits = {}, balances = {
       const pending = await c.pendingOwner().catch(() => ethers.ZeroAddress);
       if (pending !== ethers.ZeroAddress) out.push({ level: "warning", where, msg: `ownership transfer pending to ${pending}` });
       deposits[`${id}:${pm}`] = { dep: dep.toString(), cap: cap.toString(), sponsor: true };
-      keep("public", pm, dep, minUsdPublic);
+      keep("public", pm, dep, { ops: minOpsPublic, usd: minUsdPublic });
       if (mon.paymasterOwner && ethers.getAddress(owner) !== ethers.getAddress(mon.paymasterOwner)) out.push({ level: "error", where, msg: `owner is ${owner}, expected ${mon.paymasterOwner}` });
       if (signer === ethers.ZeroAddress) out.push({ level: "error", where, msg: "no signer: sponsoring is stopped" });
       else if (mon.sponsorSigner && ethers.getAddress(signer) !== ethers.getAddress(mon.sponsorSigner)) out.push({ level: "error", where, msg: `signer is ${signer}, expected ${mon.sponsorSigner}` });
       if (cap === 0n) out.push({ level: "error", where, msg: "cap is 0: it pays nothing" });
-      if (!lowDeposit(where, dep, minUsdPublic, "3b") && dep < cap) out.push({ level: "warning", where, msg: `deposit ${eth(dep)} below the cap ${eth(cap)}` });
+      if (!lowDeposit(where, dep, { ops: minOpsPublic, usd: minUsdPublic }, "3b") && dep < cap) out.push({ level: "warning", where, msg: `deposit ${eth(dep)} below the cap ${eth(cap)}` });
     }
   }
   // The relayer, as the running service reports it.
@@ -194,6 +213,7 @@ async function checkChain(id, chain, mon, info, out, deposits = {}, balances = {
 async function runChecks(config, deposits = {}, balances = {}) {
   const mon = config.monitor || {};
   const out = [];
+  if (opCostMissing) out.push({ level: "warning", where: "monitor", msg: "op-cost.js not found next to the repository root: deposits are checked by their USD value (cd /opt/crosschain-relayer && sudo git sparse-checkout add /op-cost.js)" });
   if (usdMissing) out.push({ level: "warning", where: "monitor", msg: "usd-price.js not found next to the repository root: deposits are checked in the gas token only (cd /opt/crosschain-relayer && sudo git sparse-checkout add /usd-price.js)" });
   let info = null;
   try {
@@ -232,7 +252,8 @@ function balanceLines(balances) {
       if (!r) continue;
       if (r.usd == null) missing++; else total += r.usd;
       const usd = r.usd == null ? "no USD price" : `${UsdPrice.fmt(r.usd)} USD`;
-      lines.push(`  - ${ROLE[role]}: ${usd} (${nat(BigInt(r.wei))}${r.symbol ? " " + r.symbol : ""})${r.low ? `  <- below ${r.min} USD` : ""}`);
+      const ops = r.ops == null ? "" : `≈ ${r.ops} operations, `;
+      lines.push(`  - ${ROLE[role]}: ${ops}${usd} (${nat(BigInt(r.wei))}${r.symbol ? " " + r.symbol : ""})${r.low ? `  <- below ${r.min}` : ""}`);
     }
   }
   const stale = rows.some((r) => r.stale);
