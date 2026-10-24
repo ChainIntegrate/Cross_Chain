@@ -18,6 +18,9 @@
   // LI.FI Diamond, the same address on every network it serves; also its approval address.
   const DIAMOND = "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE";
   const NATIVE = "0x0000000000000000000000000000000000000000";
+  // Networks whose currency also has an ERC-20 interface over the same balance, which LI.FI may name as the
+  // token out: Arc's USDC (18 decimals as the currency, 6 through the interface). Amounts are converted.
+  const TWIN = { 5042: { address: "0x3600000000000000000000000000000000000000", decimals: 6 } };
   const MARGIN_PCT = 3n;   // fees and price moves between the quote and the arrival
   const SWAP_DATA = "(address,address,address,address,uint256,bytes,bool)";
   // ILiFi.BridgeData, the first parameter of every bridge function of the Diamond:
@@ -88,7 +91,11 @@
     if (value !== 0n) p.push("the transaction sends value");
     if (Number(a.fromChainId) !== BASE || Number(a.toChainId) !== target) p.push("networks different from those asked");
     if (!eq(a.fromToken && a.fromToken.address, USDC_BASE)) p.push("the token in is not USDC on Base");
-    if (!eq(a.toToken && a.toToken.address, NATIVE)) p.push("the token out is not the network's currency");
+    const out = (a.toToken && a.toToken.address) || "?", twin = TWIN[target];
+    const viaTwin = !!twin && eq(out, twin.address);
+    if (!eq(out, NATIVE) && !viaTwin) p.push(`the token out (${out}) is not the network's currency`);
+    if (viaTwin && Number(a.toToken.decimals) !== twin.decimals) p.push(`the token out (${out}) does not have ${twin.decimals} decimals`);
+    const scale = viaTwin ? 10n ** BigInt(18 - twin.decimals) : 1n;
     if (String(a.fromAmount) !== BigInt(fromAmount).toString()) p.push("a USDC amount different from the one asked");
     if (!eq(a.fromAddress, account) || !eq(a.toAddress, account)) p.push("sender or receiver is not the cassa");
     if (e.approvalAddress && !eq(e.approvalAddress, DIAMOND)) p.push(`approval asked for ${e.approvalAddress}, not LI.FI's contract`);
@@ -102,7 +109,7 @@
       if (target === BASE && !eq(d.tokenOut, NATIVE)) p.push("the swap does not end in ETH");
     }
     let toAmount = 0n, toAmountMin = 0n;
-    try { toAmount = BigInt(e.toAmount || 0); toAmountMin = BigInt(e.toAmountMin || 0); } catch (err) { p.push("unreadable amounts"); }
+    try { toAmount = BigInt(e.toAmount || 0) * scale; toAmountMin = BigInt(e.toAmountMin || 0) * scale; } catch (err) { p.push("unreadable amounts"); }
     if (d && d.minOut !== null && toAmountMin > 0n && d.minOut < toAmountMin) toAmountMin = d.minOut;
     const fees = [...(e.feeCosts || []), ...(e.gasCosts || [])].reduce((s, f) => s + (Number(f && f.amountUSD) || 0), 0);
     return {
@@ -116,7 +123,13 @@
     let j;
     try { j = await getJson(`${API}/status?${q}`); } catch (e) { return { status: "UNKNOWN", error: e.message }; }
     let received = null;
-    try { if (j.receiving && j.receiving.amount) received = BigInt(j.receiving.amount); } catch (e) { received = null; }
+    // In the received token's decimals (6 for Arc's USDC interface): converted to the currency's 18.
+    try {
+      if (j.receiving && j.receiving.amount) {
+        const dec = Number(j.receiving.token && j.receiving.token.decimals);
+        received = BigInt(j.receiving.amount) * (Number.isInteger(dec) && dec >= 0 && dec < 18 ? 10n ** BigInt(18 - dec) : 1n);
+      }
+    } catch (e) { received = null; }
     return { status: String(j.status || "UNKNOWN"), substatus: String(j.substatus || ""), received, receivingTx: j.receiving && j.receiving.txHash || null };
   }
 
