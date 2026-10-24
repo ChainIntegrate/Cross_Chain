@@ -212,6 +212,8 @@ const I18N = {
     lifiTimeout: (v) => `Ancora non arrivato dopo 40 minuti: controlla su https://scan.li.fi/tx/${v.hash}, poi ricarica a mano nella sezione ${v.sec}.`,
     lifiDone: (v) => `✅ Arrivati ${v.amt} sulla cassa. Da ricaricare: ${v.dep} (≈ ${v.ops} operazioni), sezione ${v.sec}.`,
     lifiBack: (v) => `Torna su ${v.net} in MetaMask e prepara la ricarica…`,
+    feeReserve: (v) => `⚠️ Su ${v.net} dopo la ricarica resterebbero sulla cassa ${v.left}, meno di ${v.res}: MetaMask può prendere la commissione a parte, dallo stesso saldo, e la transazione fallirebbe (Panic 17). Lascia almeno ${v.res}.`,
+    feeReserveAuto: (v) => `Sulla cassa resta una riserva di ${v.res} per la commissione di MetaMask: si ricarica ${v.dep}.`,
     lifiManual: (v) => `La ricarica non è partita: l'importo resta scritto nella sezione ${v.sec}. Con MetaMask su ${v.net}, premi Ricarica (se manca la valuta per il gas, abbassa un po' l'importo).`,
     lifiToppedUp: (v) => `✅ Deposito ricaricato su ${v.net}: ≈ ${v.ops} operazioni in più.`,
     lifiStale: "Il preventivo è di prima di un cambio (rete, account o paymaster): chiedine un altro.",
@@ -506,6 +508,8 @@ const I18N = {
     lifiTimeout: (v) => `Not arrived yet after 40 minutes: check on https://scan.li.fi/tx/${v.hash}, then top up by hand in section ${v.sec}.`,
     lifiDone: (v) => `✅ ${v.amt} arrived on the cassa. To top up: ${v.dep} (≈ ${v.ops} operations), section ${v.sec}.`,
     lifiBack: (v) => `Switching MetaMask back to ${v.net} and preparing the top-up…`,
+    feeReserve: (v) => `⚠️ On ${v.net} the top-up would leave ${v.left} on the cassa, less than ${v.res}: MetaMask may take the fee apart, from the same balance, and the transaction would fail (Panic 17). Leave at least ${v.res}.`,
+    feeReserveAuto: (v) => `A reserve of ${v.res} stays on the cassa for MetaMask's fee: topping up ${v.dep}.`,
     lifiManual: (v) => `The top-up did not start: the amount stays written in section ${v.sec}. With MetaMask on ${v.net}, press Top up (if there is not enough currency for gas, lower the amount a little).`,
     lifiToppedUp: (v) => `✅ Deposit topped up on ${v.net}: ≈ ${v.ops} more operations.`,
     lifiStale: "The quote is from before a change (network, account or paymaster): ask for another one.",
@@ -1219,6 +1223,7 @@ $("fundBtn").addEventListener("click", () => guarded(async () => {
   const v = amountWei("fundAmount"); if (!v) { log(t("badAmount"), "line-err"); return; }
   if (!state || !state.isOwner) { log(t("notOwner"), "line-err"); return; }
   echoAmount("echoFund", v, state.deposit);
+  await feeReserveNote(state, v);
   await sendTx({ to: state.pmAddr, value: v }, { it: "Ricarica il deposito del paymaster personale (allowlist)", en: "Top up the personal paymaster's deposit (allowlist)" }, (s) => s.isOwner && s.pmAddr === state.pmAddr);
 }));
 const pmData = (fn, args) => new ethers.Interface(PM_ABI).encodeFunctionData(fn, args);
@@ -1271,6 +1276,7 @@ $("vpmFundBtn").addEventListener("click", () => guarded(async () => {
   const v = amountWei("vpmFundAmount"); if (!v) { log(t("badAmount"), "line-err"); return; }
   if (!state || !state.vpmIsOwner) { log(t("notOwner"), "line-err"); return; }
   echoAmount("echoFund", v, state.vpmDeposit);
+  await feeReserveNote(state, v);
   await sendTx({ to: state.vpmAddr, value: v }, { it: "Ricarica il deposito del paymaster pubblico (servizio di sponsorizzazione)", en: "Top up the public paymaster's deposit (sponsor service)" }, (s) => s.vpmIsOwner && s.vpmAddr === state.vpmAddr);
 }));
 const vpmData = (fn, args) => new ethers.Interface(VPM_ABI).encodeFunctionData(fn, args);
@@ -1298,6 +1304,18 @@ $("vpmWithdrawBtn").addEventListener("click", () => guarded(async () => {
   echoAmount("echoWithdraw", v, state.vpmDeposit);
   await vpmOwnerTx(vpmData("withdrawTo", [ethers.getAddress(to), v]));
 }));
+
+// On a network whose currency is also a token over the same balance (Arc's USDC), MetaMask can take the
+// network fee apart, in that token, after the value has left (its smart account, through its
+// DelegationManager): a deposit that leaves too little on the cassa then fails (Panic 0x11, seen on
+// 2026-10-25). A reserve stays on the cassa there.
+const FEE_RESERVE = { 5042: 5n * 10n ** 16n };   // 0.05 USDC on Arc
+async function feeReserveNote(s, value) {
+  const r = FEE_RESERVE[s.chainId];
+  if (!r) return;
+  const bal = await s.provider.getBalance(s.signer);
+  if (bal - value < r) log(t("feeReserve", { net: s.netInfo.name, res: fmt(r, s.cur), left: fmt(bal > value ? bal - value : 0n, s.cur) }), "line-warn");
+}
 
 // ---- top-up from USDC on Base, through LI.FI (operator's page, section 3c; lifi-topup.js)
 // The quote is for this network, this paymaster and the connected cassa: any change discards it.
@@ -1418,7 +1436,16 @@ if ($("lifiSendBtn")) $("lifiSendBtn").addEventListener("click", () => guarded(a
       }
       if (!done) { log(t("lifiTimeout", { hash, sec: tg.sec }), "line-warn"); return; }
     }
-    const dep = received < L.need ? received : L.need;
+    let dep = received < L.need ? received : L.need;
+    const reserve = FEE_RESERVE[L.chainId];
+    if (reserve) {
+      const tp = new ethers.JsonRpcProvider(L.net.rpc, L.chainId, { staticNetwork: true, batchMaxCount: 1 });
+      try {
+        const bal = await tp.getBalance(L.account);
+        if (bal - dep < reserve) { dep = bal > reserve ? bal - reserve : 0n; log(t("feeReserveAuto", { res: fmt(reserve, L.cur), dep: fmt(dep, L.cur) }), "line-warn"); }
+      } catch (e) { /* the usual checks of the top-up still apply */ } finally { tp.destroy(); }
+      if (dep === 0n) { log(t("lifiManual", { sec: tg.sec, net: L.net.name }), "line-warn"); return; }
+    }
     $(tg.input).value = ethers.formatEther(dep);
     log(t("lifiDone", { amt: fmt(received, L.cur), dep: fmt(dep, L.cur), ops: OpCost.ops(dep, L.chainId), sec: tg.sec, net: L.net.name }), "line-ok");
     // The deposit follows at once, as the usual top-up of 3 or 3b (same checks, signed by the cassa on the
