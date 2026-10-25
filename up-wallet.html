@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-9HAwmZ5lLJcGYZh3PpAOyG2nlon5zQPotwaQULwmSRg='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-B3LcARAeN21eEj/ScT8OXVz2N2t2SFOxPQxyE5sgiyk='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -146,6 +146,13 @@
   .ov-usd { margin-left: auto; color: var(--text-dim); white-space: nowrap; font-weight: 400; }
   .ov-sub { font-size: 11.5px; color: var(--text-dim); margin-top: 4px; }
   .ov-line { align-items: center; }
+  .ups-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line, rgba(127,127,127,.2)); }
+  .ups-row .ups-main { flex: 1; min-width: 0; }
+  .ups-row .ups-name { font-weight: 700; overflow-wrap: anywhere; }
+  .ups-row .ups-addr { font-family: monospace; font-size: 12px; color: var(--text-dim); overflow-wrap: anywhere; }
+  .ups-row button { width: auto; margin: 0; padding: 4px 10px; font-size: 12.5px; }
+  .ups-row .ov-thumb { border-radius: 50%; }
+  .ups-cur { font-size: 12px; font-weight: 700; color: var(--ok); }
   .ov-thumb { width: 28px; height: 28px; flex: none; border-radius: 6px; background: var(--field) center / cover no-repeat; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--text-dim); overflow: hidden; }
   .ov-thumb.has-img { color: transparent; }
   .ov-thumb.img-ask { cursor: pointer; outline: 1px dashed var(--accent); outline-offset: -1px; color: var(--accent); }
@@ -227,7 +234,7 @@
   <div class="up-card" id="upCard" role="button" tabindex="0">
     <span class="ov-thumb up-card-pic" id="upCardPic" hidden></span>
     <span class="net-logo" id="upCardLogo"></span>
-    <span class="up-card-main"><span class="up-card-addr" id="upCardAddr"></span><span class="up-card-sub" id="upCardSub"></span><span class="up-card-state" id="upCardState"><span id="upCardStateText"></span><button type="button" class="sim-chip" id="simChip"></button><button type="button" class="sim-chip" id="gasChip"></button></span></span>
+    <span class="up-card-main"><span class="up-card-addr" id="upCardAddr"></span><span class="up-card-sub" id="upCardSub"></span><span class="up-card-state" id="upCardState"><span id="upCardStateText"></span><button type="button" class="sim-chip" id="simChip"></button><button type="button" class="sim-chip" id="gasChip"></button><button type="button" class="sim-chip ctl" id="upChip" data-i18n="upChip">⇄ UP</button></span></span>
   </div>
   <div class="setup-banner" id="setupBanner" hidden><span data-i18n="setupBanner"></span><button type="button" class="small" data-go="settings" data-i18n="setupGoBtn">Configura</button></div>
   <div class="tiles">
@@ -389,6 +396,20 @@
       <div id="simWarn"></div>
     </div>
     <div class="modal-foot"><button id="simClose" type="button" data-i18n="simCloseBtn">Fatto</button></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="upsModal" hidden>
+  <div class="modal sim-modal" role="dialog" aria-modal="true" aria-labelledby="upsTitle">
+    <div class="modal-head"><div class="modal-title" id="upsTitle" data-i18n="upsTitle">Le tue UP</div></div>
+    <div class="modal-body">
+      <div id="upsList"></div>
+      <label for="upsAdd" data-i18n="upsAddLabel">Aggiungi una UP: indirizzo o nome</label>
+      <input type="text" id="upsAdd" placeholder="0x… / nome#abcd" autocomplete="off">
+      <div id="upsAddResults"></div>
+      <div class="note" style="margin-top:8px;" data-i18n="upsNote"></div>
+    </div>
+    <div class="modal-foot"><button id="upsClose" type="button" data-i18n="simCloseBtn">Fatto</button></div>
   </div>
 </div>
 
@@ -666,6 +687,11 @@ const I18N = {
     gasNoteNotReady: "La UP è sulla lista del relayer del sito, ma manca qualcosa: vedi la nota nelle Impostazioni (opzione del relayer). Finché non è pronta, il gas lo paga il controller.",
     gasNoteOff: "Opzione spenta: il gas lo paga il controller (l'account MetaMask che firma).",
     simTitle: "🧪 Modalità simulazione", simCloseBtn: "Fatto",
+    upChip: "⇄ UP", upsTitle: "⇄ Le tue UP", upsAddLabel: "Aggiungi una UP: indirizzo o nome", upsCurrent: "in uso", upsUse: "Usa", upsRemove: "Togli",
+    upsEmpty: "Nessuna UP salvata: aggiungine una qui sotto.", upsAddBtn: "Aggiungi", upsBad: "Indirizzo non valido.", upsSearching: "Ricerca…", upsNone: "Nessun profilo con questo nome.",
+    upsNote: "L'elenco resta su questo dispositivo: solo gli indirizzi, niente va al server. Per firmare per una UP, il controller che usi deve essere suo controller su quella rete: per ogni UP, autorizzalo dalla pagina Backup.",
+    upsSwitchAsk: (v) => `Passare a ${v.label}? ${v.n ? `Le ${v.n} sessioni WalletConnect aperte si chiudono: ogni dApp è collegata a una UP precisa.` : ""}${v.req ? " La richiesta in attesa viene rifiutata." : ""}`,
+    upsSwitched: (v) => `⇄ UP in uso: ${v.label}.`,
     simOffWarn: "Spunta tolta: dopo la tua conferma in MetaMask le transazioni partono davvero e sono irreversibili. Usa importi piccoli.",
     sendClearBtn: "Pulisci",
     fabMenu: "Torna al menù", fabTop: "Torna in cima",
@@ -1086,6 +1112,11 @@ const I18N = {
     gasNoteNotReady: "The UP is on the site relayer's list, but something is missing: see the note in Settings (relayer option). Until it is ready, the controller pays the gas.",
     gasNoteOff: "Option off: the controller (the signing MetaMask account) pays the gas.",
     simTitle: "🧪 Simulation mode", simCloseBtn: "Done",
+    upChip: "⇄ UP", upsTitle: "⇄ Your UPs", upsAddLabel: "Add a UP: address or name", upsCurrent: "in use", upsUse: "Use", upsRemove: "Remove",
+    upsEmpty: "No UP saved: add one below.", upsAddBtn: "Add", upsBad: "Invalid address.", upsSearching: "Searching…", upsNone: "No profile with this name.",
+    upsNote: "The list stays on this device: addresses only, nothing goes to the server. To sign for a UP, the controller you use must be one of its controllers on that network: for each UP, authorize it from the Backup page.",
+    upsSwitchAsk: (v) => `Switch to ${v.label}? ${v.n ? `The ${v.n} open WalletConnect session(s) close: each dApp is connected to one UP.` : ""}${v.req ? " The pending request is rejected." : ""}`,
+    upsSwitched: (v) => `⇄ UP in use: ${v.label}.`,
     simOffWarn: "Unticked: after your confirmation in MetaMask, transactions are really sent and cannot be undone. Use small amounts.",
     sendClearBtn: "Clear",
     fabMenu: "Back to the menu", fabTop: "Back to the top",
@@ -3874,11 +3905,11 @@ $("receiveShare").addEventListener("click", async () => {
   if (navigator.share) { try { await navigator.share({ title: "Universal Profile", text: t("receiveShareText"), url }); return; } catch (e) { if (e && e.name === "AbortError") return; } }
   copyText(url, $("receiveShare"));
 });
-$("upAddress").addEventListener("input", () => { updateNav(); clearTimeout(presenceTimer); presenceTimer = setTimeout(checkPresence, 800); });
+$("upAddress").addEventListener("input", () => { updateNav(); clearTimeout(presenceTimer); presenceTimer = setTimeout(() => { rememberUp($("upAddress").value.trim()); checkPresence(); }, 800); });
 networkSelectEl.addEventListener("change", updateNav);
 $("simulateOnly").addEventListener("change", updateNav);
 // The UP card opens Settings; its simulation chip opens the small simulation window instead.
-$("upCard").addEventListener("click", (e) => { if (!e.target.closest("#simChip") && !e.target.closest("#gasChip")) showView("settings", false); });
+$("upCard").addEventListener("click", (e) => { if (!e.target.closest("#simChip") && !e.target.closest("#gasChip") && !e.target.closest("#upChip")) showView("settings", false); });
 $("upCard").addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target === $("upCard")) { e.preventDefault(); showView("settings", false); } });
 function showSimWarn() {
   const w = $("simWarn"); w.textContent = "";
@@ -3913,6 +3944,91 @@ function renderGasModal() {
   $("gasToggle").disabled = st !== "ready";
   $("gasNote").textContent = st === "ready" ? (relayOption.enabled() ? relayOption.note() : t("gasNoteOff") + " " + relayOption.note()) : t(st === "notReady" ? "gasNoteNotReady" : "gasNoteNone");
 }
+// The UPs saved on this device (addresses only), to switch among them from the card. Any UP set in panel 2
+// is added. Switching sets panel 2's address as typing it does: the check runs again and WalletConnect
+// sessions close (each dApp is connected to one UP), after a confirmation when any is open.
+const UPS_KEY = "upwallet.ups";
+function savedUps() {
+  try { const v = JSON.parse(localStorage.getItem(UPS_KEY)); return Array.isArray(v) ? v.filter((a) => typeof a === "string" && ethers.isAddress(a)).map((a) => ethers.getAddress(a)) : []; }
+  catch (e) { return []; }
+}
+function storeUps(list) { try { localStorage.setItem(UPS_KEY, JSON.stringify([...new Set(list)].slice(0, 20))); } catch (e) { /* kept for this visit only */ } }
+function rememberUp(addr) {
+  if (!ethers.isAddress(addr)) return;
+  const a = ethers.getAddress(addr), list = savedUps();
+  if (!list.includes(a)) storeUps([a, ...list]);
+}
+const upLabel = (a) => (profileNames[a] ? `${profileNames[a]}#${tag(a)}` : shortAddr(a));
+function currentUp() { const v = $("upAddress").value.trim(); return ethers.isAddress(v) ? ethers.getAddress(v) : null; }
+function renderUps() {
+  const box = $("upsList");
+  box.textContent = "";
+  const list = savedUps(), cur = currentUp();
+  if (!list.length) { const e = document.createElement("div"); e.className = "note"; e.textContent = t("upsEmpty"); box.appendChild(e); return; }
+  for (const a of list) {
+    const row = document.createElement("div"); row.className = "ups-row";
+    const thumb = document.createElement("span"); thumb.className = "ov-thumb";
+    thumb.textContent = (profileNames[a] || "U").replace(/[^\p{L}\p{N}]/gu, "").slice(0, 1).toUpperCase() || "U";
+    if (profilePics[a]) TokenImage.show(thumb, { lsp3Profile: profilePics[a] }, t("ovImgAsk"));
+    const main = document.createElement("div"); main.className = "ups-main";
+    const n = document.createElement("div"); n.className = "ups-name"; n.textContent = profileNames[a] ? `${profileNames[a]}#${tag(a)}` : shortAddr(a);
+    const ad = document.createElement("div"); ad.className = "ups-addr"; ad.textContent = a;
+    main.append(n, ad);
+    row.append(thumb, main);
+    if (a === cur) { const c = document.createElement("span"); c.className = "ups-cur"; c.textContent = "✓ " + t("upsCurrent"); row.appendChild(c); }
+    else { const u = document.createElement("button"); u.type = "button"; u.textContent = t("upsUse"); u.addEventListener("click", () => switchUp(a)); row.appendChild(u); }
+    const x = document.createElement("button"); x.type = "button"; x.className = "secondary"; x.textContent = "✕"; x.title = t("upsRemove"); x.setAttribute("aria-label", t("upsRemove"));
+    x.addEventListener("click", () => { storeUps(savedUps().filter((b) => b !== a)); renderUps(); });
+    row.appendChild(x);
+    box.appendChild(row);
+    // Name and picture from the profile index and LUKSO, as for the card.
+    if (!(a in profileNames)) profileName(a).then((v) => { if (v) renderUps(); });
+    if (!(a in profilePics)) profilePicValue(a).then((v) => { if (v) renderUps(); });
+  }
+}
+function switchUp(a) {
+  const sessions = walletKit ? Object.keys(walletKit.getActiveSessions()).length : 0;
+  if ((sessions || pending) && !window.confirm(t("upsSwitchAsk", { label: upLabel(a), n: sessions, req: !!pending }))) return;
+  $("upAddress").value = a;
+  $("upAddress").dispatchEvent(new Event("input", { bubbles: true }));
+  openUps(false);
+  log(t("upsSwitched", { label: upLabel(a) }), "line-ok");
+}
+function openUps(open) {
+  $("upsModal").hidden = !open;
+  document.body.classList.toggle("modal-open", open || !$("requestModal").hidden || !$("riskModal").hidden);
+  if (open) { $("upsAdd").value = ""; $("upsAddResults").textContent = ""; renderUps(); }
+}
+$("upChip").addEventListener("click", (e) => { e.stopPropagation(); openUps(true); });
+$("upsClose").addEventListener("click", () => openUps(false));
+$("upsModal").addEventListener("click", (e) => { if (e.target === $("upsModal")) openUps(false); });
+// Add by address, or by name through LUKSO's profile index (as the Send panel's recipient).
+let upsTimer = null, upsRun = 0;
+$("upsAdd").addEventListener("input", () => {
+  clearTimeout(upsTimer);
+  const v = $("upsAdd").value.trim(), box = $("upsAddResults");
+  box.textContent = "";
+  const add = (a, label) => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "secondary"; b.style.cssText = "display:block; width:100%; text-align:left; margin:4px 0; padding:8px 10px;";
+    b.textContent = `${t("upsAddBtn")}: ${label}`;
+    b.addEventListener("click", () => { rememberUp(a); $("upsAdd").value = ""; box.textContent = ""; renderUps(); });
+    box.appendChild(b);
+  };
+  if (ethers.isAddress(v)) { add(ethers.getAddress(v), ethers.getAddress(v)); return; }
+  if (v.startsWith("0x")) { if (v.length >= 42) { const e = document.createElement("div"); e.className = "note line-warn"; e.textContent = t("upsBad"); box.appendChild(e); } return; }
+  if (v.split("#")[0].trim().length < 2) return;
+  upsTimer = setTimeout(async () => {
+    const run = ++upsRun;
+    const info = document.createElement("div"); info.className = "note line-dim"; info.textContent = t("upsSearching"); box.appendChild(info);
+    let list;
+    try { list = await searchProfiles(v); } catch (e) { if (run === upsRun) info.textContent = t("nameFail", { err: e.message }); return; }
+    if (run !== upsRun || $("upsAdd").value.trim() !== v) return;
+    box.textContent = "";
+    if (!list.length) { info.textContent = t("upsNone"); box.appendChild(info); return; }
+    for (const p of list) add(p.address, `${p.name || "?"}#${tag(p.address)} · ${shortAddr(p.address)}`);
+  }, 500);
+});
+
 function openGas(open) {
   $("gasModal").hidden = !open;
   document.body.classList.toggle("modal-open", open || !$("requestModal").hidden || !$("riskModal").hidden);
