@@ -25,6 +25,7 @@
 11. [Design decisions on paid subscriptions (2026-10-04)](#11-design-decisions-on-paid-subscriptions-2026-10-04)
 12. [Rev. 8–9 — Launch reviews of the whole system (2026-10-04 and 2026-10-05)](#12-rev-89--launch-reviews-of-the-whole-system-2026-10-04-and-2026-10-05)
 13. [Rev. 11 — Re-audit of the whole system (2026-10-12)](#13-rev-11--re-audit-of-the-whole-system-2026-10-12)
+14. [Scope of the next review: changes since 2026-10-19](#14-scope-of-the-next-review-changes-since-2026-10-19)
 
 ---
 
@@ -645,3 +646,53 @@ AI-assisted review of `Cross_Chain` @ `1eabad2`, the signing service @ `f423066`
 The items that were still open from section 12 (SP-C, GS-2, N-2, F2-2, N-3, W-tel, M-08) keep their rows there; SP-2 was fixed the same day. By 2026-10-19 all of them are fixed, M-08 verified on the live site (rev. 12).
 
 **Server follow-up the same day (operations, not a finding).** Free public RPCs throttled the server on Polygon (`polygon.drpc.org` refused about one log read in five, then `polygon-bor-rpc.publicnode.com` refused some too). The relayer and the signing service's approvals now use an Alchemy key made for the server: Node API only, no domain restriction, allowlisted to the server's IP, kept only in the two configuration files under `/etc` (mode 600), written without appearing on a command line. The signing service reads events through a separate public RPC (`logsRpc`), whose failures only delay charges, never lose them. The site keeps a public RPC (each visitor's browser makes its own requests). See `tools/relayer/README.md` and the service's `OPERATIONS.md`.
+
+---
+
+## 14. Scope of the next review: changes since 2026-10-19
+
+Brief for the next review, an external AI-assisted one. Not findings: what changed since the last review and what deserves a close look. Reviewed so far only by the maintainer, with local tests and live tests on the networks named.
+
+**Commits.** `Cross_Chain` from `7916adb` (2026-10-19) to the current `main`; `up-wallet-android` from `dd67424` (reviewed on 2026-10-12) to the current `main` (0.9.2); the private signing service from `f423066` (its changes are summarized below; its reviewer gets the repository separately).
+
+### 14.1 The phone key (Android app 0.9.0)
+
+The app no longer signs through MetaMask: it creates a secp256k1 key on the phone and signs with it, after the fingerprint or the PIN, for every signature.
+
+- **App** (`up-wallet-android`): `android/.../PhoneKeyPlugin.java` (the key encrypted with an AES-256-GCM Android Keystore key bound to user authentication for every use, StrongBox when available; the private key decrypted only to sign, then wiped; each signature checked against the stored address), `Secp256k1.java` (Bouncy Castle: RFC 6979, low s, v 27/28; JUnit vectors from ethers), `app/phone-key.js` (the EIP-1193 provider announced through EIP-6963: `personal_sign`, `eth_signTypedData_v4`, `eth_sendTransaction` built and sent raw; reads forwarded to the network's RPC).
+- **Site**: `up-backup.html`, "Authorize a phone": adds the phone's address as a controller with `0xa40500` (`SUPER_TRANSFERVALUE`, `SUPER_CALL`, `SETDATA`, `SIGN`, `ERC4337`) and `AllowedERC725YDataKeys` limited to `LSP3Profile`; revoked with the existing "Remove". The texts for the app (`PHONE_I18N` in `up-wallet.html`, `PHONE_TEXT` in `gas-relay-client.js`) apply only when the app marks the page (`html.phone-key`).
+- **Look at:**
+  - the provider signs whatever the page asks: the page's checks (the 32-byte refusal of H-2 / W-H1, the request window) are the only gate, and the vendored WalletConnect bundle runs in the same page (I-13). Is anything reachable that asks for a signature without the request window?
+  - whether `SUPER_CALL` lets the phone key reach admin actions anyway (a call to the UP itself or to its Key Manager, `setData` through `execute`, LSP17 extensions), so that "never controller management" holds;
+  - `ERC4337` on the phone key: a signature alone authorizes an operation of the UP, on every network where the key is a controller and the 4337 setup exists;
+  - the Keystore parameters (authentication for every use, API levels below 30, invalidation when biometrics change), what happens to the key on uninstall, backup or a new fingerprint, and that the key never reaches the WebView.
+
+### 14.2 The operator's top-up from USDC (`lifi-topup.js`, `up-gas-relay-admin.html` section 3c)
+
+The operator's page asks LI.FI's public API for a route from USDC on Base to a network's gas token and, after the operator signs in MetaMask, deposits the result on a paymaster.
+
+- **Checks in the page:** the transaction goes to LI.FI's Diamond (`0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE`) on Base; its BridgeData and swap calldata are decoded; the receiver is the operator's own account and the destination the chosen network; only routes without a call on arrival (`allowDestinationCall=false`); on Arc, the USDC interface (`0x3600…`, 6 decimals) is accepted as the gas token and scaled to 18 decimals; on arrival the paymaster deposit is prepared, still signed by the operator; on Arc 0.05 USDC stays on the account for MetaMask's fee.
+- **Look at:** whether a hostile or compromised API answer can pass the checks and send funds elsewhere (receiver, destination chain, token, amounts, approvals left behind), and the arrival detection.
+
+### 14.3 Deposits and limits counted in operations
+
+`op-cost.js` (cost of one operation per network), the operator's page, the relayer's monitor (`tools/relayer/monitor.js`, `balances.js`: minimum deposits of 100 operations for the public paymaster and 20 for the personal one) and, in the private service, a daily limit per network in operations (`dailyOps`, counting operations run plus open approvals). Look at: rounding, a missing or zero cost, and whether a limit can be passed with approvals that are never run.
+
+### 14.4 UP Wallet
+
+- `call-decode.js` (DeFi decoders: Universal Routers, KyberSwap, LI.FI, Across, Spark, Aave v3 and v4, CoW orders) and `abi-decode.js` (verified ABIs from Blockscout, kept 7 days in the browser): decoded text comes from untrusted calldata and from an explorer. Can it mislead (a wrong recipient or amount shown as safe), or inject?
+- `token-image.js` and the profile pictures: the N-1 rule (images load by themselves only inline, on IPFS or on Alchemy's CDN).
+- The UP switch (0.9.2): UP addresses saved in the browser, switching closes the WalletConnect sessions after a confirmation.
+- Network switch requests refused with 4001; the controller as fallback when the site relayer cannot take an operation; unrecognised calls offered for copy or e-mail (`mailto:`, sent only by the user).
+
+### 14.5 Relayer and signing service
+
+`callGasLimit` up to 2,000,000 in the relayer, the signing service and `gas-relay-client.js` (before: lower). The signing service also has the e-mail after the signature (F2-2) and the balance held at approval (SP-C), already listed as fixed in section 12.
+
+### 14.6 Known open items, not to report again
+
+- M-1 (section 9): an allowlisted UP's controller can extract paymaster gas up to the cap per operation; bounded by the caps, open by design.
+- L-07: the periodic check of the public RPC endpoints.
+- Section 13, Info: `up-subscribe.html`'s sign box does not decode the inner USDC transfer (optional).
+- `WALLET-BACKLOG.md`: two wording items of UP Wallet (the gas relay box when the signer is not a controller; the "admin permissions" note for a controller whose only privileged bit is ERC4337).
+- Decisions: D-1 (section 11, `/check` is public); no professional audit until the paid relay service has significant users or funds.

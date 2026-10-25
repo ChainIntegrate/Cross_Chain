@@ -7,7 +7,26 @@ What it contains, in short:
 - **UP Wallet** (`up-wallet.html`, experimental): the UP's wallet on every network where it exists; it connects to dApps through WalletConnect, explains and simulates every request and signs through the controller's wallet (MetaMask on a computer; the Android app, since 0.9.0, signs with its own key kept on the phone). Also an Android app ([up-wallet-android](https://github.com/ChainIntegrate/up-wallet-android)).
 - **Gas paid by the site** (experimental): an ERC-4337 relayer and two paymasters, so a UP's controller needs no gas on the networks the site serves; paid subscriptions are in beta.
 
-Non-custodial throughout: the pages and the app never hold a key, and every transaction is signed in the user's own wallet.
+Non-custodial throughout: the pages never hold a key, and every transaction is signed in the user's own wallet (in the Android app, with a key that stays on the phone and that only the user can unlock).
+
+## Where to use it
+
+| | |
+|---|---|
+| Website | https://crosschain-lukso.chainintegrate.it/ |
+| Start here: the step-by-step guide | [up-crosschain-guide.html](https://crosschain-lukso.chainintegrate.it/up-crosschain-guide.html) |
+| UP Wallet | [up-wallet.html](https://crosschain-lukso.chainintegrate.it/up-wallet.html) |
+| Backup controller, and authorizing the phone of the Android app | [up-backup.html](https://crosschain-lukso.chainintegrate.it/up-backup.html) |
+| Gas paid by the site: check a UP | [up-gas-relay.html](https://crosschain-lukso.chainintegrate.it/up-gas-relay.html) |
+| Android app (APK of each version) | [up-wallet-android releases](https://github.com/ChainIntegrate/up-wallet-android/releases) |
+| Source code | this repository; the app in [ChainIntegrate/up-wallet-android](https://github.com/ChainIntegrate/up-wallet-android) |
+
+## What this is, and what it is not
+
+- **Not an official LUKSO product.** It is an independent project by ChainIntegrate, built on LUKSO's public contracts and standards. LUKSO does not maintain, endorse or support it.
+- **Transparent by design.** All the code the user runs is here, open source: the pages, the Android app and the relayer. The only part that is not public is the sponsor service's signing server, which holds a key and its rules; its behaviour is described here and in [AUDIT.md](AUDIT.md). Before anything is signed, UP Wallet says in plain words what a request does, simulates it and shows what will change; after it, every operation links to the network's explorer. The reviews and their findings are published in [AUDIT.md](AUDIT.md), open items included.
+- **Free to use, at your own risk.** No account and no sign-up. The pages warn at their first opening, and before every irreversible step, about what can go wrong; read the warnings. The tools are experimental and not professionally audited (see "Audit trail"). Only the gas paid by the site is a service: for the UPs on its list, or with a paid subscription (beta).
+- **Help it get better.** When UP Wallet meets a call it cannot explain, it offers to copy the call's data or to e-mail it (your mail app opens; you decide whether to send). Sending it is the most useful help: the next version can decode that call for everyone. Bug reports are welcome too, as GitHub issues ([CONTRIBUTING.md](CONTRIBUTING.md)); security problems privately ([SECURITY.md](SECURITY.md)).
 
 ## How it works
 
@@ -106,8 +125,9 @@ same page, taken from this repository at a pinned commit, and adds what a phone 
   to the dApp;
 - a service that keeps the app running while a dApp session is active.
 
-The APKs are built and signed by that repository's CI and attached to its GitHub releases (0.9.x
-today); there is no store release yet.
+The APKs are built and signed by that repository's CI and attached to its GitHub releases (0.9.2
+today); there is no store release yet. Since 0.9.2 the app keeps several UPs and switches among them
+from the card; one phone key can be authorized on each of them.
 
 **Since 0.9.0 the app is the wallet.** MetaMask is no longer in the app (on the website it still is: the
 site's pages sign through MetaMask, and the phone is authorized from a computer). The app creates a new
@@ -123,7 +143,8 @@ controllers, editing permissions or extensions. A lost phone is revoked from the
 connects through WalletConnect and the app signs, with no other app in between. The app warns at start
 that this is the maintainer's experimental wallet, with a higher risk than signing in an external
 wallet, for people who know what they are doing, at their own risk. First tested on 2026-10-25: a
-hup.social post on Base, signed with the fingerprint and sent by the site relayer. It is a prototype (0.x), tested on one
+hup.social post on Base, signed with the fingerprint and sent by the site relayer; then signatures on
+Arc, and a post on LUKSO with the phone key paying the gas. It is a prototype (0.x), tested on one
 Android phone; iPhone is not started. Version 1.0.0 is planned as the first public Google Play release,
 under an organization Play Console account for ChainIntegrate, which Google requires for crypto
 wallets (Google's developer verification: see
@@ -187,13 +208,13 @@ A direction, not a schedule. UP Wallet is growing towards a complete wallet for 
 3. **Clearer requests.** Decode any call to a contract verified on the network's explorer, from its published ABI, besides the cases decoded today: done on Base, Arbitrum One and Arc (`abi-decode.js`, app 0.8.0), with contracts named as the explorer names them; more networks as their explorers allow it. Name smart-account recipients from what they declare (ERC-7579 `accountId()`), as a hint.
 4. **dApps without WalletConnect, in the app.** A dApp browser inside the Android app that offers the UP to web dApps as an injected wallet (EIP-1193, announced through EIP-6963), with bookmarks. Every request goes through the same checks, simulation and confirmation window, and is signed with the phone key. Native apps keep using WalletConnect.
 5. **Recovery from the identity itself.** A guided flow to add, rotate and revoke the UP's keys on every network where it exists, signed by an existing controller.
-6. **A professional audit** of the paymasters, the ERC-4337 flow and the app (its phone key included), before a store release and before the paid gas service holds significant funds.
+6. **Reviews.** Every change is reviewed in the open (AI-assisted reviews, published in `AUDIT.md`); an external review of everything changed since 2026-10-19 (the phone key, the operator's top-up, the decoders) is the next one. A **professional audit** is planned for the gas relay (the paymasters, `Extension4337` and the ERC-4337 flow) when the paid service has significant users or funds: that is where third parties' money would be. The rest is open source, used at one's own risk.
 7. **Later.** Passkeys as UP signers (this needs a contract extension, since the Key Manager verifies Ethereum signatures only), and a browser extension for desktop.
 
 ## Requirements
 
 - Your **UP address**: read from the **Universal Profile extension**, from LUKSO's **Universal Profiles app** through WalletConnect (on a phone, for example), or typed.
-- A **signing wallet** such as MetaMask, connected to the target chain: the browser extension on a computer, or MetaMask on the phone through WalletConnect when the browser has no wallet. For deploys it can be any funded account. For Test, UP Wallet and the pages that change the UP (backup controller, Identity section 6, NFT reception, gas relay setup) it must be one of the profile's controllers.
+- A **signing wallet** such as MetaMask, connected to the target chain (in the Android app, from 0.9.0, the phone key instead, once authorized from a computer): the browser extension on a computer, or MetaMask on the phone through WalletConnect when the browser has no wallet. For deploys it can be any funded account. For Test, UP Wallet and the pages that change the UP (backup controller, Identity section 6, NFT reception, gas relay setup) it must be one of the profile's controllers.
 - The original deployment calldata of your UP. The guide explains how to find it on the LUKSO explorer.
 
 ## Security and privacy notes
@@ -208,6 +229,8 @@ A direction, not a schedule. UP Wallet is growing towards a complete wallet for 
 ## Audit trail
 
 **Status: no professional audit yet.** All the reviews below are the maintainer's own or AI-assisted, with local tests. None is a professional security audit. The contracts the gas relay depends on have never had a professional audit: `UPPaymaster`, `UPVerifyingPaymaster` and LUKSO's `Extension4337`, which LUKSO describes as experimental. A professional audit of the paymasters and the 4337 flow is required before the paid relay service holds significant customer funds. Until then, keep balances small and use the service at your own risk.
+
+**Next review.** An external, AI-assisted review of everything changed since the last one (commit `7916adb`, 2026-10-19): the phone key of the Android app and the Backup page that authorizes it, the operator's top-up from USDC through LI.FI, deposits counted in operations, the new decoders and the UP switch. Its scope, with the files and what to look at, is in [AUDIT.md §14](AUDIT.md#14-scope-of-the-next-review-changes-since-2026-10-19).
 
 | Date | Scope | Result | Report |
 |---|---|---|---|
