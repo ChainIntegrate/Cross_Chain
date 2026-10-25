@@ -651,7 +651,7 @@ The items that were still open from section 12 (SP-C, GS-2, N-2, F2-2, N-3, W-te
 
 ## 14. Scope of the next review: changes since 2026-10-19
 
-Brief for the next review, an external AI-assisted one. Not findings: what changed since the last review and what deserves a close look. Reviewed so far only by the maintainer, with local tests and live tests on the networks named.
+Brief for the next review, an external AI-assisted one of the **whole project** (the three repositories, everything in them). Not findings: what changed since the last review, which deserves the closest look, and the items already known. Reviewed so far only by the maintainer, with local tests and live tests on the networks named.
 
 **Commits.** `Cross_Chain` from `7916adb` (2026-10-19) to the current `main`; `up-wallet-android` from `dd67424` (reviewed on 2026-10-12) to the current `main` (0.9.2); the private signing service from `f423066` (its changes are summarized below; its reviewer gets the repository separately).
 

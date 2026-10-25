@@ -230,7 +230,7 @@ A direction, not a schedule. UP Wallet is growing towards a complete wallet for 
 
 **Status: no professional audit yet.** All the reviews below are the maintainer's own or AI-assisted, with local tests. None is a professional security audit. The contracts the gas relay depends on have never had a professional audit: `UPPaymaster`, `UPVerifyingPaymaster` and LUKSO's `Extension4337`, which LUKSO describes as experimental. A professional audit of the paymasters and the 4337 flow is required before the paid relay service holds significant customer funds. Until then, keep balances small and use the service at your own risk.
 
-**Next review.** An external, AI-assisted review of everything changed since the last one (commit `7916adb`, 2026-10-19): the phone key of the Android app and the Backup page that authorizes it, the operator's top-up from USDC through LI.FI, deposits counted in operations, the new decoders and the UP switch. Its scope, with the files and what to look at, is in [AUDIT.md §14](AUDIT.md#14-scope-of-the-next-review-changes-since-2026-10-19).
+**Next review.** An external, AI-assisted review of the whole project, with a closer look at everything changed since the last one (commit `7916adb`, 2026-10-19): the phone key of the Android app and the Backup page that authorizes it, the operator's top-up from USDC through LI.FI, deposits counted in operations, the new decoders and the UP switch. Its scope, with the files and what to look at, is in [AUDIT.md §14](AUDIT.md#14-scope-of-the-next-review-changes-since-2026-10-19).
 
 | Date | Scope | Result | Report |
 |---|---|---|---|
