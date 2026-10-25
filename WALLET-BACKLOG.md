@@ -13,6 +13,11 @@ pages", and go in the same batch (they need no app release). Remove an item when
    but redundant, and it points to the wrong fix: "Authorize a phone" also grants the 4337 permission.
    When the signer has no permissions on the UP, the box should say nothing more than the check (or
    "authorize the controller first"), and in phone mode point to the Backup page, not the Gas relay page.
+2. **"Admin permissions" note for a controller whose only privileged bit is ERC4337** (seen 2026-10-25,
+   phone key with 0xa40500). ERC4337 is in `PRIVILEGED` on purpose (AUDIT 2026-10-02 H-2: a signature
+   alone authorizes an operation of the UP), but the note says "admin permissions (controllers and
+   permissions)", which this controller does not have. When ERC4337 is the only privileged bit, say what
+   it allows instead: its signature alone authorizes operations of the UP, so protect its key well.
 
 ## Other pages
 
