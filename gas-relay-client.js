@@ -191,7 +191,28 @@
     },
   };
   const lang = () => (document.documentElement.lang === "en" ? "en" : "it");
-  function text(key, vars) { const v = TEXT[lang()][key]; return typeof v === "function" ? v(vars || {}) : v; }
+  // In the UP Wallet Android app from 0.9.0 (html.phone-key) the controller is the phone key, not MetaMask:
+  // these texts replace the ones that name MetaMask. The site's pages keep MetaMask.
+  const PHONE_TEXT = {
+    it: {
+      optionNote: (v) => `Il controller (la chiave del telefono) firma un messaggio con l'impronta, senza gas; il relayer del sito invia e ${v.pm} paga. Solo chiamate e invii di valore.`,
+      optionNoteSponsor: (v) => `Il controller (la chiave del telefono) firma un messaggio con l'impronta, senza gas; il servizio di sponsorizzazione del sito approva l'operazione, il relayer la invia e ${v.pm} paga. Solo chiamate e invii di valore.`,
+      noSigner: "usa la chiave del telefono (il controller)",
+      signAsk: (v) => `La chiave del telefono firma il messaggio ${v.hash} (nessun gas): conferma con l'impronta.`,
+    },
+    en: {
+      optionNote: (v) => `The controller (the phone key) signs a message with your fingerprint, no gas; the site relayer sends it and ${v.pm} pays. Calls and value transfers only.`,
+      optionNoteSponsor: (v) => `The controller (the phone key) signs a message with your fingerprint, no gas; the site's sponsor service approves the operation, the relayer sends it and ${v.pm} pays. Calls and value transfers only.`,
+      noSigner: "use the phone key (the controller)",
+      signAsk: (v) => `The phone key signs the message ${v.hash} (no gas): confirm with your fingerprint.`,
+    },
+  };
+  const phoneKey = () => typeof document !== "undefined" && document.documentElement.classList.contains("phone-key");
+  function text(key, vars) {
+    const o = phoneKey() ? PHONE_TEXT[lang()][key] : undefined;
+    const v = o !== undefined ? o : TEXT[lang()][key];
+    return typeof v === "function" ? v(vars || {}) : v;
+  }
 
   // Words for a revert, when it is one of the UP's or the Key Manager's errors.
   function errorWords(e) {
@@ -501,9 +522,10 @@
     if (prep.sponsor) await getApproval(prep, log);
     log(text("signAsk", { hash: prep.hash }), "line-warn");
     const s = await new ethers.BrowserProvider(signerProvider).getSigner();
-    const box = showSignBox({ hash: prep.hash, signer, view: prep.view });
+    // The box compares the hash with MetaMask's message; the phone key signs exactly this hash (no box).
+    const box = phoneKey() ? null : showSignBox({ hash: prep.hash, signer, view: prep.view });
     try { prep.op.signature = await s.signMessage(ethers.getBytes(prep.hash)); }
-    finally { box.remove(); }
+    finally { if (box) box.remove(); }
     const who = ethers.verifyMessage(ethers.getBytes(prep.hash), prep.op.signature);
     if (who.toLowerCase() !== signer.toLowerCase()) throw new Error(text("wrongSigner", { who, exp: signer }));
     log(text("signed", { who, hash: prep.hash }), "line-ok");
