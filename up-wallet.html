@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-EfObyfe+Ct/wEf3csgYjkUnxVxKjNx3QNT5RWfycsj0='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-9HAwmZ5lLJcGYZh3PpAOyG2nlon5zQPotwaQULwmSRg='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -1412,9 +1412,84 @@ const I18N = {
   },
 };
 
+// In the Android app from 0.9.0 the controller is the phone key, not MetaMask: the app marks the page
+// (html.phone-key) and the texts that name MetaMask are replaced by these (the others are unchanged; the
+// disclaimer keeps "no affiliation with MetaMask"). Two MetaMask-only notes are not shown (siweWalletAlert,
+// signCompare). Each function gets the site's text and the same values.
+const phoneKey = () => document.documentElement.classList.contains("phone-key");
+const PHONE_I18N = {
+  it: {
+    subtitle: (x) => x.replace("Firmi con MetaMask.", "Firmi con la chiave del telefono (impronta o PIN)."),
+    panel0Note: (x) => x.replace("<b>MetaMask con il controller della UP</b> (la chiave che firma per la UP: la guida spiega come importarla)", "<b>la chiave del telefono autorizzata sulla UP</b> (dal sito, pagina Backup, \"Autorizza un telefono\")")
+      .replace("Sul telefono c'è l'app Android, con MetaMask mobile.", "Questa è l'app Android: firma con una chiave tenuta sul telefono.")
+      .replace("Firmi in MetaMask invece che nell'estensione.", "Firmi con la chiave del telefono, con l'impronta o il PIN, invece che nell'estensione.")
+      .replace("firmata dal tuo controller in MetaMask", "firmata dalla chiave del telefono").replace("la tua conferma in MetaMask", "la tua conferma con l'impronta"),
+    setupBanner: "Per iniziare imposta rete, UP e chiave del telefono: tre passi.",
+    tileSettingsSub: "Rete, UP, chiave del telefono, gas",
+    gasNoteNone: "Su questa rete, per questa UP, il relayer del sito non è disponibile: il gas lo paga il controller (la chiave del telefono, con la valuta della rete).",
+    gasNoteOff: "Opzione spenta: il gas lo paga il controller (la chiave del telefono, con la valuta della rete).",
+    simOffWarn: "Spunta tolta: dopo la tua conferma con l'impronta le transazioni partono davvero e sono irreversibili. Usa importi piccoli.",
+    panel3Title: "3 · Controller (chiave del telefono) e verifica",
+    panel3Note: "La chiave del telefono, autorizzata sulla UP su questa rete (sito, pagina Backup, \"Autorizza un telefono\"). Quando il gas non lo paga il sito, lo paga lei: deve avere un po' della moneta della rete. La verifica di compatibilità tra UP e controller parte da sola e si ripete se cambi rete o UP.",
+    connectSignerBtn: "Usa la chiave del telefono",
+    complianceIdle: "La verifica parte da sola quando rete, UP e chiave del telefono sono impostate.",
+    panelSendNote: (x) => x.replace("e firmi in MetaMask", "e firmi con l'impronta"),
+    modalSub: (x) => x.replace("la conferma in MetaMask", "la conferma con l'impronta"),
+    cWallet: "Chiave del telefono",
+    walletWrong: (x, v) => `❌ ${v.addr} è sulla rete con chainId ${v.id}, la pagina su ${v.exp}: riapri la pagina.`,
+    switchWalletBtn: (x, v) => `Usa ${v.name}`,
+    switchWalletFail: (x, v) => `❌ Cambio di rete non riuscito: ${v.err}. Scegli la rete nella pagina.`,
+    walletUnknown: "❌ impossibile leggere la rete della chiave del telefono",
+    permsNone: "❌ nessuno: la chiave del telefono non è un controller di questa UP su questa rete. Autorizzala dal sito: pagina Backup, \"Autorizza un telefono\".",
+    noSignerFound: "Chiave del telefono non disponibile.",
+    kContent: "Contenuto da firmare",
+    chainsOk: "✅ RPC sulla rete scelta; chiave del telefono verificata come controller.",
+    readyToSendRelay: "Pronto. Controlla i dati sopra, poi premi \"Firma e invia\" e conferma con l'impronta: la chiave del telefono firma un messaggio (nessun gas) e il relayer del sito invia. Alla dApp torna l'hash solo quando l'operazione della UP è riuscita.",
+    readyToSend: "Pronto. Controlla i dati sopra, poi premi \"Firma e invia\" e conferma con l'impronta. La transazione va al Key Manager della UP, senza valore: è corretto, è l'incapsulamento (il valore esce dalla UP).",
+    signerChanged: "❌ La chiave del telefono non è quella verificata: rifiutata.",
+    sending: "Invio della transazione incapsulata (conferma con l'impronta)...",
+    signReady: "Pronto. Leggi il contenuto sopra: se non capisci cosa stai firmando, premi \"Rifiuta\". Altrimenti premi \"Firma il messaggio\" e conferma con l'impronta.",
+    signing: "Firma in corso con la chiave del telefono (conferma con l'impronta)...",
+  },
+  en: {
+    subtitle: (x) => x.replace("You sign with MetaMask.", "You sign with the phone key (fingerprint or PIN)."),
+    panel0Note: (x) => x.replace("<b>MetaMask with the UP's controller</b> (the key that signs for the UP: the guide explains how to import it)", "<b>the phone key, authorized on the UP</b> (on the site, Backup page, \"Authorize a phone\")")
+      .replace("On the phone there is the Android app, with MetaMask mobile.", "This is the Android app: it signs with a key kept on the phone.")
+      .replace("You sign in MetaMask instead of the extension.", "You sign with the phone key, with your fingerprint or PIN, instead of the extension.")
+      .replace("signed by your controller in MetaMask", "signed by the phone key").replace("your confirmation in MetaMask", "your confirmation with your fingerprint"),
+    setupBanner: "To start, set the network, the UP and the phone key: three steps.",
+    tileSettingsSub: "Network, UP, phone key, gas",
+    gasNoteNone: "On this network, for this UP, the site relayer is not available: the controller (the phone key, with the network's currency) pays the gas.",
+    gasNoteOff: "Option off: the controller (the phone key, with the network's currency) pays the gas.",
+    simOffWarn: "Unticked: after your confirmation with your fingerprint, transactions are really sent and cannot be undone. Use small amounts.",
+    panel3Title: "3 · Controller (phone key) and check",
+    panel3Note: "The phone key, authorized on the UP on this network (site, Backup page, \"Authorize a phone\"). When the site does not pay the gas, it does: it needs some of the network's coin. The compatibility check between UP and controller starts by itself and runs again if you change network or UP.",
+    connectSignerBtn: "Use the phone key",
+    complianceIdle: "The check starts by itself once network, UP and phone key are set.",
+    panelSendNote: (x) => x.replace("and you sign in MetaMask", "and you sign with your fingerprint"),
+    modalSub: (x) => x.replace("your confirmation in MetaMask", "your confirmation with your fingerprint"),
+    cWallet: "Phone key",
+    walletWrong: (x, v) => `❌ ${v.addr} is on chainId ${v.id}, the page on ${v.exp}: open the page again.`,
+    switchWalletBtn: (x, v) => `Use ${v.name}`,
+    switchWalletFail: (x, v) => `❌ Network switch failed: ${v.err}. Choose the network in the page.`,
+    walletUnknown: "❌ could not read the phone key's network",
+    permsNone: "❌ none: the phone key is not a controller of this UP on this network. Authorize it from the site: Backup page, \"Authorize a phone\".",
+    noSignerFound: "Phone key not available.",
+    kContent: "Content to sign",
+    chainsOk: "✅ RPC on the chosen network; phone key verified as a controller.",
+    readyToSendRelay: "Ready. Check the data above, then press \"Sign and send\" and confirm with your fingerprint: the phone key signs a message (no gas) and the site relayer sends it. The dApp gets the hash only once the UP's operation has succeeded.",
+    readyToSend: "Ready. Check the data above, then press \"Sign and send\" and confirm with your fingerprint. The transaction goes to the UP's Key Manager, with no value: that is correct, it is the wrapping (the value comes from the UP).",
+    signerChanged: "❌ The phone key is not the verified one: rejected.",
+    sending: "Sending the wrapped transaction (confirm with your fingerprint)...",
+    signReady: "Ready. Read the content above: if you do not understand what you are signing, press \"Reject\". Otherwise press \"Sign the message\" and confirm with your fingerprint.",
+    signing: "Signing with the phone key (confirm with your fingerprint)...",
+  },
+};
 function t(key, vars) {
   const entry = I18N[LANG][key];
-  return typeof entry === "function" ? entry(vars || {}) : entry;
+  const s = typeof entry === "function" ? entry(vars || {}) : entry;
+  const o = phoneKey() ? PHONE_I18N[LANG][key] : undefined;
+  return o === undefined ? s : typeof o === "function" ? o(s, vars || {}) : o;
 }
 function applyI18n() {
   document.documentElement.lang = LANG;
@@ -2832,8 +2907,9 @@ function checkSiwe(text, topic, c, warnings) {
   if (host && m[1].toLowerCase() !== host) warnings.push([t("siweDomainMismatch", { d: m[1], site: host }), "line-danger"]);
   else if (host) {
     warnings.push([t("siweDomainOk", { d: m[1] }), "line-ok"]);
-    // MetaMask sees a sign-in for this domain requested by another site (this page) and warns about it.
-    warnings.push([t("siweWalletAlert", { d: m[1] }), "line-warn"]);
+    // MetaMask sees a sign-in for this domain requested by another site (this page) and warns about it
+    // (not the phone key: it shows no such warning).
+    if (!phoneKey()) warnings.push([t("siweWalletAlert", { d: m[1] }), "line-warn"]);
   }
   const ch = text.match(/^Chain ID: (\d+)$/m);
   if (ch && Number(ch[1]) !== c.chainId) warnings.push([t("siweChainMismatch", { id: ch[1] }), "line-warn"]);
@@ -2947,7 +3023,8 @@ async function handleSignRequest(topic, id, c, request, validation, reject) {
   renderKv("requestBox", allRows);
   for (const [w, cls] of warnings) log(w, cls);
   log(t("signReplay"), "line-dim");
-  log(t("signCompare", { c: compare }), "line-compare");
+  // MetaMask shows the message again: compare. The phone key signs exactly what this window shows.
+  if (!phoneKey()) log(t("signCompare", { c: compare }), "line-compare");
 
   pending = { kind: "sign", topic, id, method: request.method, walletParams, hash, c };
   log(t("signReady"), "line-warn");

@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-RnCZBs5LHFU10Cc6xI20gHPnHzS0JdCuWqEY+n20USA='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-gDMK6wwfpKMur2+eypGDsWfBauOmudtryzY/2WKDTD0='">
 <script src="theme.js"></script>
 <script src="site-ui.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -106,12 +106,12 @@ const I18N = {
   it: {
     pageTitle: "UP Wallet per Android — Privacy — ChainIntegrate",
     h1: "UP Wallet per Android — Informativa sulla privacy",
-    subtitle: "Ultimo aggiornamento: 18 ottobre 2026. Riguarda l'app Android UP Wallet (it.chainintegrate.upwallet), in prova.",
+    subtitle: "Ultimo aggiornamento: 25 ottobre 2026 (versione 0.9.0). Riguarda l'app Android UP Wallet (it.chainintegrate.upwallet), in prova.",
     langToggleBtn: "English",
     s1t: "1 · In breve",
     s1: `<ul>
-      <li><b>Nessun account e nessuna chiave.</b> L'app non chiede registrazioni e non conserva chiavi private o seed phrase: le firme le fa il tuo wallet (MetaMask), i permessi li applica il Key Manager della tua Universal Profile.</li>
-      <li><b>Nessuna pubblicità, nessun tracciamento, nessuna statistica d'uso.</b> Le statistiche di MetaMask Connect sono disattivate e la telemetria di WalletConnect non è attiva.</li>
+      <li><b>Nessun account. Una chiave che resta sul telefono.</b> L'app non chiede registrazioni. Dalla versione 0.9.0 crea sul telefono una chiave di firma (la "chiave del telefono"), cifrata con il Keystore di Android e usata solo dopo impronta o PIN: non esce mai dal telefono, non ha copie e ChainIntegrate non la vede. Non c'è seed phrase. I permessi li applica il Key Manager della tua Universal Profile. Fino alla 0.8.x l'app non conservava chiavi e firmava con MetaMask.</li>
+      <li><b>Nessuna pubblicità, nessun tracciamento, nessuna statistica d'uso.</b> La telemetria di WalletConnect non è attiva.</li>
       <li><b>Quello che l'app ricorda resta sul telefono</b> e non entra nei backup di Android.</li>
       <li><b>Le blockchain sono pubbliche:</b> le operazioni che invii sono visibili a chiunque e non si possono cancellare.</li>
     </ul>`,
@@ -120,29 +120,30 @@ const I18N = {
     s3t: "3 · Cosa resta sul telefono",
     s3: `<ul>
       <li>l'indirizzo della UP e la rete scelti, per ritrovarli alla prossima apertura;</li>
-      <li>i dati del collegamento con MetaMask e delle sessioni WalletConnect con le dApp (chiavi temporanee del canale cifrato, indirizzo e rete presentati alla dApp);</li>
+      <li>la chiave del telefono, solo cifrata (la chiave che la decifra è nel Keystore di Android, nell'hardware sicuro dove il telefono lo ha, e si usa solo dopo impronta o PIN), e il suo indirizzo pubblico;</li>
+      <li>i dati delle sessioni WalletConnect con le dApp (chiavi temporanee del canale cifrato, indirizzo e rete presentati alla dApp);</li>
       <li>un registro diagnostico (al massimo 300 righe): orari, apertura e chiusura dell'app, nomi delle richieste (per esempio "eth_sendTransaction"), il loro esito e il nome della dApp. Non contiene messaggi, importi, firme né indirizzi. Lo vedi e lo svuoti in fondo alla pagina dell'app ("Registro diagnostico"); esce dal telefono solo se lo copi tu.</li>
     </ul>
     Questi dati non vengono inviati a ChainIntegrate, non entrano nei backup di Android e si cancellano disinstallando l'app o cancellandone i dati dalle impostazioni del telefono.`,
     s4t: "4 · Con chi parla l'app, e cosa vede",
     s4: `<ul>
-      <li><b>MetaMask</b> (ConsenSys Software Inc.): l'app parla con l'app MetaMask del tuo telefono attraverso il server di inoltro di MetaMask. I messaggi sono cifrati tra le due app; il server vede l'indirizzo IP e i tempi del collegamento.</li>
       <li><b>WalletConnect</b> (Reown, Inc.): il collegamento con le dApp passa dai server di Reown, che vedono i metadati della sessione (indirizzo della UP, rete, nome e indirizzo della dApp) e l'indirizzo IP; il contenuto delle richieste è cifrato tra l'app e la dApp. Reown verifica anche il dominio della dApp.</li>
-      <li><b>Nodi RPC pubblici</b> della rete scelta (l'elenco è nel codice del sito, <code>chains.js</code>): per leggere saldi, contratti e permessi e per simulare le operazioni. Vedono l'indirizzo IP e gli indirizzi consultati.</li>
+      <li><b>Nodi RPC pubblici</b> della rete scelta (l'elenco è nel codice del sito, <code>chains.js</code>): per leggere saldi, contratti e permessi, per simulare le operazioni e, dalla 0.9.0, per inviare le transazioni firmate dalla chiave del telefono. Vedono l'indirizzo IP, gli indirizzi consultati e le transazioni inviate.</li>
       <li><b>L'indice dei token</b> della rete scelta (Alchemy, Inc. sulle reti che copre; altrimenti Blockscout, l'explorer pubblico della rete; su LUKSO l'explorer di LUKSO): quando la verifica è verde, per mostrare nel pannello "Invia dalla UP" i token e gli NFT che la UP possiede. Vede l'indirizzo IP e l'indirizzo della UP.</li>
       <li><b>L'indice dei profili di LUKSO</b> (envio.lukso-mainnet.universal.tech, gestito per LUKSO): solo se nel campo Destinatario scrivi un nome invece di un indirizzo, per cercare le Universal Profile con quel nome. Vede il nome cercato e l'indirizzo IP.</li>
       <li><b>Google Play services</b> (Google LLC), solo se usi "Scansiona QR": il lettore QR di Google Play services usa la fotocamera e legge il codice sul telefono. L'app riceve solo il testo del codice, mai le immagini. Google lo tratta secondo la sua informativa.</li>
       <li><b>Le dApp</b> che colleghi: vedono l'indirizzo della UP e la rete, e ricevono le risposte che approvi.</li>
       <li><b>Il relayer del sito</b> (ChainIntegrate), solo se scegli "paga il gas con il relayer del sito": riceve l'operazione firmata (indirizzo della UP, rete, chiamata) e la invia alla blockchain. Vedi il punto 5. Per inviarla e per leggere la blockchain, il relayer e il servizio che approva le operazioni usano a loro volta dei nodi RPC: su alcune reti quelli di Alchemy, Inc., sulle altre nodi pubblici. Questi vedono l'operazione e l'indirizzo IP del server, non il tuo.</li>
     </ul>
-    Le notifiche delle richieste sono create dall'app sul telefono: non c'è un server di notifiche. MetaMask, Reown e i gestori dei nodi trattano questi dati secondo le loro informative.`,
+    Le notifiche delle richieste sono create dall'app sul telefono: non c'è un server di notifiche. Reown e i gestori dei nodi trattano questi dati secondo le loro informative.`,
     s5t: "5 · Cosa conserva ChainIntegrate",
     s5: `Solo quando usi il relayer del sito, il server registra: data e ora, rete, indirizzo della UP, identificativo della transazione, esito; per le richieste rifiutate anche l'indirizzo IP. Il server web registra a sua volta l'indirizzo IP di chi apre il sito. Questi registri servono al funzionamento e alla sicurezza del servizio e sono conservati <b>al massimo 30 giorni</b>.<br>
     Quando il gas lo paga il paymaster sponsor, il servizio che approva le operazioni tiene anche un elenco delle approvazioni e dei rifiuti (data e ora, rete, indirizzo della UP, numero dell'operazione; nessun indirizzo IP), che serve per i conteggi del servizio e, per gli abbonati, per scalare il saldo: questo elenco resta finché serve al servizio e agli obblighi contabili. Le operazioni inviate restano comunque sulla blockchain, pubblica e permanente.<br>
     Per il servizio di gas a pagamento (abbonamento, pagina <code>up-subscribe.html</code> del sito) vale quanto scritto in quella pagina: l'e-mail che inserisci lì serve solo per l'attivazione e gli avvisi di saldo basso. L'app non chiede e-mail.`,
     s6t: "6 · Permessi dell'app",
     s6: `<ul>
-      <li><b>Internet</b>: per parlare con MetaMask, con le dApp e con la blockchain;</li>
+      <li><b>Internet</b>: per parlare con le dApp e con la blockchain;</li>
+      <li><b>Impronta o blocco schermo</b> (dalla 0.9.0): per sbloccare la chiave del telefono a ogni firma. L'impronta la verifica Android: l'app riceve solo l'esito;</li>
       <li><b>Notifiche</b>: per avvisarti quando una dApp manda una richiesta mentre l'app è in secondo piano;</li>
       <li><b>Servizio in primo piano</b>: tiene attiva l'app mentre una dApp è collegata, con una notifica fissa che lo dice; si ferma quando la sessione finisce;</li>
       <li><b>Elenco dei browser</b>: solo per il pulsante "Torna alla dApp", che riapre il tuo browser.</li>
@@ -158,12 +159,12 @@ const I18N = {
   en: {
     pageTitle: "UP Wallet for Android — Privacy — ChainIntegrate",
     h1: "UP Wallet for Android — Privacy policy",
-    subtitle: "Last updated: 18 October 2026. Covers the UP Wallet Android app (it.chainintegrate.upwallet), in testing.",
+    subtitle: "Last updated: 25 October 2026 (version 0.9.0). Covers the UP Wallet Android app (it.chainintegrate.upwallet), in testing.",
     langToggleBtn: "Italiano",
     s1t: "1 · In short",
     s1: `<ul>
-      <li><b>No account and no keys.</b> The app asks for no sign-up and keeps no private keys or seed phrases: your wallet (MetaMask) signs, and your Universal Profile's Key Manager enforces the permissions.</li>
-      <li><b>No ads, no tracking, no usage statistics.</b> MetaMask Connect's analytics are turned off and WalletConnect's telemetry is not enabled.</li>
+      <li><b>No account. A key that stays on the phone.</b> The app asks for no sign-up. From version 0.9.0 it creates a signing key on the phone (the "phone key"), encrypted with the Android Keystore and used only after fingerprint or PIN: it never leaves the phone, has no copy, and ChainIntegrate never sees it. There is no seed phrase. Your Universal Profile's Key Manager enforces the permissions. Up to 0.8.x the app kept no keys and signed with MetaMask.</li>
+      <li><b>No ads, no tracking, no usage statistics.</b> WalletConnect's telemetry is not enabled.</li>
       <li><b>What the app remembers stays on the phone</b> and is not included in Android backups.</li>
       <li><b>Blockchains are public:</b> the operations you send are visible to anyone and cannot be deleted.</li>
     </ul>`,
@@ -172,29 +173,30 @@ const I18N = {
     s3t: "3 · What stays on the phone",
     s3: `<ul>
       <li>the UP address and the network you chose, to find them again next time;</li>
-      <li>the data of the connection with MetaMask and of the WalletConnect sessions with dApps (temporary keys of the encrypted channel, address and network presented to the dApp);</li>
+      <li>the phone key, only encrypted (the key that decrypts it is in the Android Keystore, in the secure hardware where the phone has it, and is used only after fingerprint or PIN), and its public address;</li>
+      <li>the data of the WalletConnect sessions with dApps (temporary keys of the encrypted channel, address and network presented to the dApp);</li>
       <li>a diagnostic log (at most 300 lines): times, app opened and closed, names of the requests (for example "eth_sendTransaction"), their outcome and the dApp's name. It holds no messages, amounts, signatures or addresses. You see and clear it at the bottom of the app's page ("Diagnostic log"); it leaves the phone only if you copy it.</li>
     </ul>
     This data is not sent to ChainIntegrate, is not included in Android backups, and is deleted when you uninstall the app or clear its data in the phone's settings.`,
     s4t: "4 · Who the app talks to, and what they see",
     s4: `<ul>
-      <li><b>MetaMask</b> (ConsenSys Software Inc.): the app talks to the MetaMask app on your phone through MetaMask's relay server. Messages are encrypted between the two apps; the server sees the IP address and the timing of the connection.</li>
       <li><b>WalletConnect</b> (Reown, Inc.): the connection with dApps goes through Reown's servers, which see the session metadata (UP address, network, the dApp's name and address) and the IP address; the content of requests is encrypted between the app and the dApp. Reown also verifies the dApp's domain.</li>
-      <li><b>Public RPC nodes</b> of the chosen network (the list is in the site's code, <code>chains.js</code>): to read balances, contracts and permissions and to simulate operations. They see the IP address and the addresses looked up.</li>
+      <li><b>Public RPC nodes</b> of the chosen network (the list is in the site's code, <code>chains.js</code>): to read balances, contracts and permissions, to simulate operations and, from 0.9.0, to send the transactions signed by the phone key. They see the IP address, the addresses looked up and the transactions sent.</li>
       <li><b>The token index</b> of the chosen network (Alchemy, Inc. on the networks it covers; otherwise Blockscout, the network's public explorer; on LUKSO, LUKSO's explorer): once the check is green, to show in the "Send from the UP" panel the tokens and NFTs the UP holds. It sees the IP address and the UP address.</li>
       <li><b>LUKSO's profile index</b> (envio.lukso-mainnet.universal.tech, run for LUKSO): only if you write a name instead of an address in the Recipient field, to find the Universal Profiles with that name. It sees the name searched and the IP address.</li>
       <li><b>Google Play services</b> (Google LLC), only if you use "Scan QR": Google Play services' QR scanner uses the camera and reads the code on the phone. The app receives only the text of the code, never the images. Google handles it under its own privacy policy.</li>
       <li><b>The dApps</b> you connect: they see the UP address and the network, and receive the answers you approve.</li>
       <li><b>The site's relayer</b> (ChainIntegrate), only if you choose "pay the gas with the site relayer": it receives the signed operation (UP address, network, call) and sends it to the blockchain. See section 5. To send it and to read the blockchain, the relayer and the service that approves operations use RPC nodes in turn: Alchemy, Inc.'s on some networks, public nodes on the others. They see the operation and the server's IP address, not yours.</li>
     </ul>
-    Request notifications are created by the app on the phone: there is no notification server. MetaMask, Reown and the node operators handle this data under their own policies.`,
+    Request notifications are created by the app on the phone: there is no notification server. Reown and the node operators handle this data under their own policies.`,
     s5t: "5 · What ChainIntegrate keeps",
     s5: `Only when you use the site's relayer, the server records: date and time, network, UP address, transaction identifier, outcome; for refused requests, the IP address too. The web server also records the IP address of whoever opens the site. These logs serve the operation and security of the service and are kept <b>for at most 30 days</b>.<br>
     When the gas is paid by the sponsor paymaster, the service that approves operations also keeps a list of approvals and refusals (date and time, network, UP address, operation number; no IP address), used for the service's counts and, for subscribers, to charge the balance: this list is kept as long as the service and accounting obligations need it. The operations sent stay on the blockchain anyway, which is public and permanent.<br>
     For the paid gas service (subscription, the site's <code>up-subscribe.html</code> page), what that page says applies: the e-mail you enter there is used only for activation and low-balance alerts. The app asks for no e-mail.`,
     s6t: "6 · App permissions",
     s6: `<ul>
-      <li><b>Internet</b>: to talk to MetaMask, to dApps and to the blockchain;</li>
+      <li><b>Internet</b>: to talk to dApps and to the blockchain;</li>
+      <li><b>Fingerprint or screen lock</b> (from 0.9.0): to unlock the phone key for each signature. Android checks the fingerprint: the app only gets the outcome;</li>
       <li><b>Notifications</b>: to tell you when a dApp sends a request while the app is in the background;</li>
       <li><b>Foreground service</b>: keeps the app running while a dApp is connected, with a persistent notification saying so; it stops when the session ends;</li>
       <li><b>List of browsers</b>: only for the "Back to the dApp" button, which reopens your browser.</li>
