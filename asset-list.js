@@ -36,7 +36,7 @@
 
   // Blockscout instances with the v2 API, by chains.js key (LUKSO's explorer is a Blockscout too).
   const BLOCKSCOUT = {
-    "lukso": "https://explorer.execution.mainnet.lukso.network",
+    "lukso": "https://explorer.execution.mainnet.lukso.network", "lukso-testnet": "https://explorer.execution.testnet.lukso.network",
     "ethereum": "https://eth.blockscout.com", "base": "https://base.blockscout.com",
     "optimism": "https://optimism.blockscout.com", "arbitrum-one": "https://arbitrum.blockscout.com",
     "polygon": "https://polygon.blockscout.com", "gnosis": "https://gnosis.blockscout.com",

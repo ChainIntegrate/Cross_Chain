@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-tpvPPeM4tFN+Inc3EWn8uLFHkpiE9xc+r2Il0zSa6cM='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-SRv6C9bcgpF2gaTjURTbOM9q8hZtaxGrYd4i1y5f7I0='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
@@ -466,7 +466,7 @@ function chainDisplayName(chainId) {
 
 // --- Network: every redeploy network and LUKSO, where the UP was born (it has its own controller list) ---
 const networkSelectEl = $("network");
-const NETWORKS = [LUKSO_CHAIN, ...CHAINS];
+const NETWORKS = [LUKSO_CHAIN, LUKSO_TESTNET_CHAIN, ...CHAINS];
 function renderNetworkOptions(filter) {
   const f = (filter || "").toLowerCase();
   networkSelectEl.innerHTML = "";
