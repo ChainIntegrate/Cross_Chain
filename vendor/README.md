@@ -60,3 +60,17 @@ openssl dgst -sha384 -binary signclient-2.25.0.min.js | openssl base64 -A   # th
 The package list with licenses is in `signclient-2.25.0.THIRD-PARTY.txt`; the license terms are the same as for walletkit (below).
 
 **License.** The Reown / WalletConnect packages are under the WalletConnect Community License Agreement (not open source): a copy is in `walletkit-1.6.0.LICENSE.md`, and pages that load the bundle show "Portions © 2025 Reown, Inc. All Rights Reserved" in the footer. The other packages in the bundle and their license files are listed in `walletkit-1.6.0.THIRD-PARTY.txt`, generated from esbuild's metafile (add `--metafile=meta.json` to the command above). When the version changes, regenerate both files and check the license again. See also `THIRD_PARTY_NOTICES.md`.
+
+## `qrcode-generator-1.4.4.js`
+
+QR codes for UP Wallet's Receive panel and for the connection window of `site-ui.js`. `qrcode-generator` 1.4.4 by Kazuhiko Arase (MIT), the npm package's `qrcode.js`, unchanged. Loaded with Subresource Integrity: the `integrity` attribute in `up-wallet.html` and `QR_SRI` in `site-ui.js` (AUDIT 2026-10-26 SUP-1).
+
+- Package: `qrcode-generator@1.4.4`
+- SHA-256: `18ae399f81182bc9de916e9c77b195df20cc58d6f2d55a62b085a299f1bf1780`
+
+```bash
+npm pack qrcode-generator@1.4.4 && tar xzf qrcode-generator-1.4.4.tgz
+cp package/qrcode.js qrcode-generator-1.4.4.js
+sha256sum qrcode-generator-1.4.4.js
+openssl dgst -sha384 -binary qrcode-generator-1.4.4.js | openssl base64 -A   # the integrity value in up-wallet.html and site-ui.js
+```

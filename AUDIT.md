@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| **Audit date** | 2026-09-27 (rev. 1–3); 2026-09-29 (rev. 4); 2026-10-01 (rev. 5); 2026-10-02 (rev. 6); 2026-10-04 (rev. 7, rev. 8); 2026-10-05 (rev. 9, rev. 10); 2026-10-12 (rev. 11); 2026-10-19 (rev. 12) |
-| **Commit audited** | `f56dd29` (rev. 1–3); `47642bc` (rev. 4); `40f0bc0` (rev. 6); `1eabad2` (rev. 11), all on branch `main`. Rev. 5 covered deployed contracts and the relayer (section 8) |
+| **Audit date** | 2026-09-27 (rev. 1–3); 2026-09-29 (rev. 4); 2026-10-01 (rev. 5); 2026-10-02 (rev. 6); 2026-10-04 (rev. 7, rev. 8); 2026-10-05 (rev. 9, rev. 10); 2026-10-12 (rev. 11); 2026-10-19 (rev. 12); 2026-10-26 (rev. 13) |
+| **Commit audited** | `f56dd29` (rev. 1–3); `47642bc` (rev. 4); `40f0bc0` (rev. 6); `1eabad2` (rev. 11); `61b50e1` (rev. 13), all on branch `main`. Rev. 5 covered deployed contracts and the relayer (section 8) |
 | **Revision** | 3 — rev. 2 reclassified H-03, M-05, I-01 and I-02 after the maintainer's feedback (salt/IV are public format values; all profiles and addresses shown belong to the maintainer and are public by choice); rev. 3 adds L-09, found while testing the new implementation-publishing page, and M-08, after the maintainer described how the site is deployed; M-08 was fixed and verified on the live site the same day; rev. 4 adds the two WalletConnect pages (section 7); rev. 5 the gas relay (section 8); rev. 6 a review of the whole repository with the system live (section 9); rev. 7 the sponsor paymaster `UPVerifyingPaymaster` (section 10). Section 11 records the design decisions of the paid subscriptions; rev. 8 and 9 are the launch reviews of the whole system, toolkit and signing service (section 12); rev. 10 records the fixes of SP-A and SP-B in the signing service; rev. 11 is the re-audit of the whole system with the Android app (section 13); rev. 12 (2026-10-19) records the fixes of every item still open: SP-C, GS-2, N-2, F2-2, N-3 (full Content-Security-Policy), W-tel and M-08 (verified on the live site) in sections 12–13, and L-8 and I-1 to I-7 in section 9 |
 | **Scope** | Rev. 1–3: every file in the repository at the time: 6 HTML tools, `decrypt.js`, README, images in `guide-assets/`, and the full git history. Rev. 4: the WalletConnect pages `up-wallet.html` and `up-walletconnect-basenames.html`, the vendored `vendor/walletkit-1.6.0.min.js` and `config.example.js`. Rev. 5: `Extension4337`, `contracts/UPPaymaster.sol`, the relayer and the gas-relay setup batches. Rev. 6: the whole repository, pages, shared scripts, contracts and relayer. Rev. 11: the whole system again, with the signing service and the Android app `up-wallet-android` |
 | **Method** | Manual code review, cross-check against the LUKSO reference contracts (`@lukso/lsp6-contracts` 0.16.3, `@lukso/lsp23-contracts` 0.16.3; for rev. 4 also `@lukso/lsp-smart-contracts` 0.14.0 for LSP0, LSP6 `isValidSignature` and LSP17), browser end-to-end tests with mocked wallets/RPCs/WalletConnect (Playwright + Chromium), a git history review for secrets and personal data, and, for rev. 4, live tests by the maintainer on Base and Polygon mainnet |
@@ -26,6 +26,7 @@
 12. [Rev. 8–9 — Launch reviews of the whole system (2026-10-04 and 2026-10-05)](#12-rev-89--launch-reviews-of-the-whole-system-2026-10-04-and-2026-10-05)
 13. [Rev. 11 — Re-audit of the whole system (2026-10-12)](#13-rev-11--re-audit-of-the-whole-system-2026-10-12)
 14. [Scope of the next review: changes since 2026-10-19](#14-scope-of-the-next-review-changes-since-2026-10-19)
+15. [Rev. 13 — External review of the whole system (2026-10-26)](#15-rev-13--external-review-of-the-whole-system-2026-10-26)
 
 ---
 
@@ -696,3 +697,28 @@ The operator's page asks LI.FI's public API for a route from USDC on Base to a n
 - Section 13, Info: `up-subscribe.html`'s sign box does not decode the inner USDC transfer (optional).
 - `WALLET-BACKLOG.md`: two wording items of UP Wallet (the gas relay box when the signer is not a controller; the "admin permissions" note for a controller whose only privileged bit is ERC4337).
 - Decisions: D-1 (section 11, `/check` is public); no professional audit until the paid relay service has significant users or funds.
+
+---
+
+## 15. Rev. 13 — External review of the whole system (2026-10-26)
+
+External AI-assisted review of the three repositories: `Cross_Chain` @ `61b50e1`, the signing service @ `d7b36c0`, `up-wallet-android` @ `51a8b38` (0.9.2), with the brief of section 14; it supersedes the review of section 13. The full report is in the service's private repository. Not a professional audit.
+
+**Verdict.** No Critical or High. The contracts are byte-identical and unchanged; H-1, H-2 (section 9), W-H1 (section 13), GS-1, N-1, L-6 and the service's SP-2, SP-C and F2-2 were checked again and are fixed. The phone key is "well engineered": generated on the phone, encrypted under a Keystore key that needs the user for every use, wiped after signing, never reaching the page; signing through Bouncy Castle, checked against ethers vectors in CI; permissions with no governance bit and a clean revocation. XSS clean across the new decoders; the LI.FI top-up "funds-safe"; supply chain solid.
+
+| # | Severity | Finding | Status |
+|---|---|---|---|
+| PK-1 | Medium | `up-backup.html` filled the phone's address from the link (`?phone=`): a link made by someone else could have an admin authorize the attacker's key, which can move the UP's funds | **Fixed** (2026-10-26): an address from the link needs a confirmation that it is the one the app shows ("This phone" panel); without it, nothing is sent and the page says why. An address typed by hand needs none |
+| WEB-1 | Medium | The response headers against framing (`X-Frame-Options`, `frame-ancestors`) and the rest of the CSP were only described in the README; the committed `.htaccess` set none | **Fixed** (2026-10-26): the nginx snippets of the live server are committed (`tools/nginx/security-headers.conf`, `tools/nginx/crosschain-deny.conf`) and `.htaccess` sets the same headers for Apache. The live site sends them since 2026-10-12 (R-02) |
+| PK-2 | Low | The refusal of opaque 32-byte messages (H-2) was only in the page; the phone key signed any 32-byte digest | **Fixed** (2026-10-26, app 0.9.3): `app/phone-key.js` refuses a 32-byte `personal_sign` itself. The gas relay signs through `upwallet_signUserOperation`: the key gets the operation, checks the EntryPoint, the chain and that the sender is the page's UP, and computes the hash itself |
+| PK-3 | Low | "Limited permissions" meant limited governance, not limited assets: the phone key can move all the UP's funds | **Fixed** (wording, 2026-10-26): the Backup page, the guide and the READMEs say "no admin permissions, but access to all the UP's funds". Narrower permissions (`CALL` and `TRANSFERVALUE` with AllowedCalls) are not used: they would need a list of every contract the user calls |
+| PK-4 | Low | The fingerprint prompt said only "Sign a message" | **Fixed** (2026-10-26, app 0.9.3): the prompt says what is signed, built from the signed data: the message's text (or its size), the typed data's domain, the transaction's function, the operation's recipient, value and function |
+| SP-A, SP-B, SP-C2 | Low | Signing service: an e-mail could be bound with the public signature of a payment already on chain; the old e-mail path on `/sign`; an operation read twice counted twice in the day's budget | **Fixed** (2026-10-26), see the service's `audits/README.md` |
+| SUP-1 | Low | `vendor/qrcode-generator-1.4.4.js` loaded without Subresource Integrity or a documented hash | **Fixed** (2026-10-26): `integrity` on both loads; SHA-256 and how to rebuild it in `vendor/README.md` (identical to the npm package) |
+| — | Info | `phone-key.js` forwarded any unknown method to the network's RPC | **Fixed** (2026-10-26): only read methods are forwarded; anything else is refused (4200) |
+| — | Info | `dailyOps` bounds the number of operations, not their cost | Noted in the service's `OPERATIONS.md` |
+| — | Info | `personal_sign` accepts either parameter order (heuristic) | Accepted: the account must be the phone key's in either case |
+| — | Info | LI.FI bridge calldata decoded heuristically (first tuple) | Accepted: bounded by the exact-amount approval and the receiver and token checks |
+| — | Info | The service trusts `logsRpc` for complete logs; the report dates operations by record time | Accepted: a missed log pauses customers (fails safe); the report is for the operator |
+
+The two wording items of `WALLET-BACKLOG.md` were closed in the same change: the gas relay box points to the Backup page when the signer is not a controller at all, and a controller whose only privileged bit is ERC4337 gets its own note.
