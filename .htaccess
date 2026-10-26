@@ -5,3 +5,11 @@ RedirectMatch 404 "/\.git(/|$)"
 RedirectMatch 404 "/\.(gitignore|htaccess)$"
 RedirectMatch 404 "/tools(/|$)"
 RedirectMatch 404 "\.md$"
+# Response headers (mod_headers), the same as the nginx snippet tools/nginx/security-headers.conf:
+# the pages must never be framed, since several of them sign transactions (AUDIT 2026-10-26 WEB-1).
+<IfModule mod_headers.c>
+Header always set X-Frame-Options "DENY"
+Header always set X-Content-Type-Options "nosniff"
+Header always set Referrer-Policy "no-referrer"
+Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss://relay.walletconnect.org wss://relay.walletconnect.com; frame-src https://verify.walletconnect.org https://verify.walletconnect.com; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+</IfModule>

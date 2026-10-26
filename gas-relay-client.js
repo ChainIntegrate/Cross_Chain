@@ -95,6 +95,8 @@
       noExtension: "la UP non ha l'Extension4337 per validateUserOp, o l'estensione non ha codice su questa rete",
       epPerms: (v) => `i permessi dell'EntryPoint sono ${v.p}, non esattamente 0x500`,
       no4337: "il controller collegato non ha il permesso 4337",
+      notController: "l'account collegato non è un controller di questa UP su questa rete: prima va autorizzato",
+      fixBackup: "→ Autorizzalo nella pagina Backup controller (un controller amministratore firma)",
       simFail: (v) => `La simulazione (EntryPoint → UP) fallisce: ${v.err}. Niente è stato firmato.`,
       tooHeavy: (v) => `L'operazione richiede troppo gas per il relayer (${v.gas}, massimo 2.000.000).`,
       overCap: "Questa operazione supera il limite per operazione del paymaster del sito: invia senza il relayer (il gas lo paga il controller).",
@@ -154,6 +156,8 @@
       noExtension: "the UP has no Extension4337 for validateUserOp, or the extension has no code on this network",
       epPerms: (v) => `the EntryPoint's permissions are ${v.p}, not exactly 0x500`,
       no4337: "the connected controller lacks the 4337 permission",
+      notController: "the connected account is not a controller of this UP on this network: it must be authorized first",
+      fixBackup: "→ Authorize it on the Backup controller page (an admin controller signs)",
       simFail: (v) => `The simulation (EntryPoint → UP) fails: ${v.err}. Nothing was signed.`,
       tooHeavy: (v) => `The operation needs too much gas for the relayer (${v.gas}, at most 2,000,000).`,
       overCap: "This operation is above the site paymaster's limit per operation: send without the relayer (the controller pays the gas).",
@@ -198,12 +202,16 @@
       optionNote: (v) => `Il controller (la chiave del telefono) firma un messaggio con l'impronta, senza gas; il relayer del sito invia e ${v.pm} paga. Solo chiamate e invii di valore.`,
       optionNoteSponsor: (v) => `Il controller (la chiave del telefono) firma un messaggio con l'impronta, senza gas; il servizio di sponsorizzazione del sito approva l'operazione, il relayer la invia e ${v.pm} paga. Solo chiamate e invii di valore.`,
       noSigner: "usa la chiave del telefono (il controller)",
+      notController: "la chiave del telefono non è un controller di questa UP su questa rete: prima va autorizzata",
+      fixBackup: "→ Autorizza il telefono dalla pagina Backup del sito (\"Autorizza un telefono\"), firmando con un controller amministratore: dà anche il permesso 4337",
       signAsk: (v) => `La chiave del telefono firma il messaggio ${v.hash} (nessun gas): conferma con l'impronta.`,
     },
     en: {
       optionNote: (v) => `The controller (the phone key) signs a message with your fingerprint, no gas; the site relayer sends it and ${v.pm} pays. Calls and value transfers only.`,
       optionNoteSponsor: (v) => `The controller (the phone key) signs a message with your fingerprint, no gas; the site's sponsor service approves the operation, the relayer sends it and ${v.pm} pays. Calls and value transfers only.`,
       noSigner: "use the phone key (the controller)",
+      notController: "the phone key is not a controller of this UP on this network: it must be authorized first",
+      fixBackup: "→ Authorize the phone on the site's Backup page (\"Authorize a phone\"), signed by an admin controller: it also grants the 4337 permission",
       signAsk: (v) => `The phone key signs the message ${v.hash} (no gas): confirm with your fingerprint.`,
     },
   };
@@ -294,7 +302,11 @@
     if (!ext || ethers.dataLength(ext) !== 20 || ethers.getAddress(ext) !== EXTENSION_4337 || extCode === "0x" || ethers.keccak256(extCode) !== EXTENSION_RUNTIME_HASH) reasons.push(["noExtension"]);
     const epPerms = data[1] && data[1] !== "0x" ? BigInt(data[1]) : 0n;
     if (epPerms !== EP_PERMS) reasons.push(["epPerms", { p: "0x" + epPerms.toString(16) }]);
-    if (signer && !((data[2] && data[2] !== "0x" ? BigInt(data[2]) : 0n) & ERC4337)) reasons.push(["no4337"]);
+    // A signer with no permission at all is not a controller: the fix is to authorize it (Backup page), which the
+    // page's own check already says; "lacks the 4337 permission" would point to the wrong page.
+    const signerPerms = signer && data[2] && data[2] !== "0x" ? BigInt(data[2]) : 0n;
+    if (signer && signerPerms === 0n) reasons.push(["notController"]);
+    else if (signer && !(signerPerms & ERC4337)) reasons.push(["no4337"]);
     return reasons.length ? { state: "notReady", pm, reasons, sponsor } : { state: "ready", pm, cap, deposit, sponsor };
   }
 
@@ -524,8 +536,13 @@
     const s = await new ethers.BrowserProvider(signerProvider).getSigner();
     // The box compares the hash with MetaMask's message; the phone key signs exactly this hash (no box).
     const box = phoneKey() ? null : showSignBox({ hash: prep.hash, signer, view: prep.view });
-    try { prep.op.signature = await s.signMessage(ethers.getBytes(prep.hash)); }
-    finally { if (box) box.remove(); }
+    try {
+      // The phone key of the Android app refuses opaque 32-byte messages (AUDIT 2026-10-26 PK-2): it gets the
+      // operation itself, computes the same hash and shows what the operation does in its fingerprint prompt.
+      prep.op.signature = signerProvider && signerProvider.isPhoneKey
+        ? await signerProvider.request({ method: "upwallet_signUserOperation", params: [{ op: opJson(prep.op), entryPoint: ENTRY_POINT, chainId }] })
+        : await s.signMessage(ethers.getBytes(prep.hash));
+    } finally { if (box) box.remove(); }
     const who = ethers.verifyMessage(ethers.getBytes(prep.hash), prep.op.signature);
     if (who.toLowerCase() !== signer.toLowerCase()) throw new Error(text("wrongSigner", { who, exp: signer }));
     log(text("signed", { who, hash: prep.hash }), "line-ok");
@@ -643,8 +660,9 @@
         const p = document.createElement("div"); p.textContent = text(state.sponsor ? "notReadySponsor" : "notReady");
         const ul = document.createElement("ul"); ul.style.margin = "4px 0 0"; ul.style.paddingLeft = "20px";
         state.reasons.forEach(([k, v]) => { const li = document.createElement("li"); li.textContent = text(k, v); ul.appendChild(li); });
-        const a = document.createElement("a"); a.href = "up-gas-relay.html"; a.target = "_blank"; a.rel = "noopener";
-        a.textContent = text("fix"); a.style.cssText = "color:var(--warn); font-weight:600; text-decoration:none;";
+        const toBackup = state.reasons.some(([k]) => k === "notController");
+        const a = document.createElement("a"); a.href = toBackup ? "up-backup.html" : "up-gas-relay.html"; a.target = "_blank"; a.rel = "noopener";
+        a.textContent = text(toBackup ? "fixBackup" : "fix"); a.style.cssText = "color:var(--warn); font-weight:600; text-decoration:none;";
         note.append(p, ul, a);
       }
       if (onState) onState();

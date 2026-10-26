@@ -304,6 +304,7 @@ a.sui-open-app.sui-alt { background: var(--chip); font-weight: 600; font-size: 1
   const WC_SRC = "vendor/signclient-2.25.0.min.js";
   const WC_SRI = "sha384-c7w3byL5Bai+XyQvcREtZ7kvdwoPYwG+Rp5DN/jAW59Jy0osp0u/gsgdp4YOsVUJ";
   const QR_SRC = "vendor/qrcode-generator-1.4.4.js";
+  const QR_SRI = "sha384-8FWZA6BGMXhsfO+BLtrJK0We6gg5o1JyO8xQm6peWDEUs17ACA5ziE/NIAkl9z2k";
   // The app's own link for a WalletConnect pairing, as LUKSO's up-modal builds it (@lukso/up-modal 0.21.11).
   const APP_LINK = "io.universaleverything.universalprofiles://wallet-connect/";
   const appLink = (uri) => { const u = new URL(uri); return APP_LINK + u.pathname + u.search; };
@@ -418,7 +419,7 @@ a.sui-open-app.sui-alt { background: var(--chip); font-weight: 600; font-size: 1
           copyText = links(uri)[0].href;
           $q(".sui-copy").disabled = false;
           try {
-            if (!window.qrcode) await loadScript(QR_SRC);
+            if (!window.qrcode) await loadScript(QR_SRC, QR_SRI);
             const q = window.qrcode(0, "M"); q.addData(qr(uri)); q.make();
             $q(".sui-qr").innerHTML = q.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
           } catch (e) { /* the link still works */ }

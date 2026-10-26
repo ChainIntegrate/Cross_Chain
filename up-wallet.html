@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-B3LcARAeN21eEj/ScT8OXVz2N2t2SFOxPQxyE5sgiyk='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-FSMvHbHysu5rtMYpc2n120TF+23w+0DNVuPyitcsxOY='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -24,7 +24,7 @@
 <script src="call-decode.js"></script>
 <script src="abi-decode.js"></script>
 <script src="vendor/walletkit-1.6.0.min.js" integrity="sha384-o1OPho4aXup6dZTxTsaL+hXbLbZ9dmbU0j/hlmpw5t0P/k91PxXHqIdLkQWag92X"></script>
-<script src="vendor/qrcode-generator-1.4.4.js"></script>
+<script src="vendor/qrcode-generator-1.4.4.js" integrity="sha384-8FWZA6BGMXhsfO+BLtrJK0We6gg5o1JyO8xQm6peWDEUs17ACA5ziE/NIAkl9z2k"></script>
 <!-- Site configuration, created on the server from config.example.js (not in the repository). -->
 <script src="config.js"></script>
 <style>
@@ -820,6 +820,7 @@ const I18N = {
     gasLow: (v) => `⚠️ ${v.bal}: senza moneta della rete il controller non può pagare il gas`,
     verdictOk: "✅ UP e controller compatibili su questa rete: puoi collegare una dApp.",
     verdictPrivileged: "ℹ️ Questo controller ha anche permessi di amministrazione della UP (controller e permessi): proteggi bene la sua chiave.",
+    verdict4337Only: "ℹ️ Questo controller ha il permesso 4337: una sua firma basta ad autorizzare operazioni della UP (con il gas pagato dal sito). Non può gestire controller o permessi, ma può muovere i fondi: proteggi bene la sua chiave.",
     verdictNoUse: "❌ Il controller non ha permessi utili per le dApp (né chiamate, né invio di valore, né firme).",
     verdictFail: "❌ Verifica non superata: correggi il punto in rosso qui sopra. Il collegamento a una dApp resta disattivato.",
     verdictMissing: "Completa i campi mancanti: la verifica ripartirà da sola.",
@@ -1244,6 +1245,7 @@ const I18N = {
     gasLow: (v) => `⚠️ ${v.bal}: without the network's coin the controller cannot pay for gas`,
     verdictOk: "✅ UP and controller are compatible on this network: you can connect a dApp.",
     verdictPrivileged: "ℹ️ This controller also has admin permissions on the UP (controllers and permissions): protect its key well.",
+    verdict4337Only: "ℹ️ This controller has the 4337 permission: its signature alone authorizes operations of the UP (with the gas paid by the site). It cannot manage controllers or permissions, but it can move the funds: protect its key well.",
     verdictNoUse: "❌ The controller has no permission useful for dApps (no calls, no value transfers, no signatures).",
     verdictFail: "❌ Check failed: fix the item in red above. Connecting a dApp stays disabled.",
     verdictMissing: "Fill in the missing fields: the check will start again by itself.",
@@ -1894,7 +1896,10 @@ async function computeCompliance() {
     if (canCall === "none" && canValue === "none" && canSign === "none") { res.verdict.push([["verdictNoUse"], "line-err"]); return res; }
     Object.assign(res, { ok: true, net, chainId, caip: `eip155:${chainId}`, provider, up, km, signer: signerAddress, perms });
     res.verdict.push([["verdictOk"], "line-ok"]);
-    if (perms & PRIVILEGED) res.verdict.push([["verdictPrivileged"], "line-dim"]);
+    // ERC4337 is privileged because a signature alone authorizes an operation (H-2), not because it manages
+    // controllers: say so when it is the only privileged bit (the phone key of the Android app).
+    if ((perms & PRIVILEGED) === P.ERC4337) res.verdict.push([["verdict4337Only"], "line-dim"]);
+    else if (perms & PRIVILEGED) res.verdict.push([["verdictPrivileged"], "line-dim"]);
   } catch (e) {
     step("cUp", ["genericError", { err: e.shortMessage || e.message }], "err");
   }
