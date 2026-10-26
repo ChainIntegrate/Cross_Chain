@@ -71,6 +71,8 @@ const CHAINS = [
 // LUKSO itself: not in CHAINS, which lists the networks a UP can be redeployed to. Pages that act on
 // the UP where it already lives (UP Wallet) add it to their own list.
 const LUKSO_CHAIN = { key: "lukso", name: "LUKSO", chainId: 42, rpc: "https://rpc.mainnet.lukso.network", explorerBase: "https://explorer.execution.mainnet.lukso.network", currency: "LYX" };
+// LUKSO's testnet, for UPs and dApps being tested there (UP Wallet, Backup page): like LUKSO, not a redeploy target.
+const LUKSO_TESTNET_CHAIN = { key: "lukso-testnet", name: "LUKSO Testnet", chainId: 4201, rpc: "https://rpc.testnet.lukso.network", explorerBase: "https://explorer.execution.testnet.lukso.network", currency: "LYXt" };
 
 // The parameters of wallet_addEthereumChain for a network of these lists, for a wallet that does not
 // know it yet. Native currencies are taken as 18 decimals, as on every network listed here.

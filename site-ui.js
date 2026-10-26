@@ -181,7 +181,7 @@ a.sui-open-app.sui-alt { background: var(--chip); font-weight: 600; font-size: 1
     else { let h = 0; for (const c of key || "?") h = (h * 31 + c.charCodeAt(0)) % 360; el.style.background = `hsl(${h}, 45%, 38%)`; el.textContent = (name || key || "?").charAt(0).toUpperCase(); }
     return el;
   }
-  const allNets = () => [...(typeof LUKSO_CHAIN !== "undefined" ? [LUKSO_CHAIN] : []), ...(typeof CHAINS !== "undefined" ? CHAINS : [])];
+  const allNets = () => [...(typeof LUKSO_CHAIN !== "undefined" ? [LUKSO_CHAIN] : []), ...(typeof LUKSO_TESTNET_CHAIN !== "undefined" ? [LUKSO_TESTNET_CHAIN] : []), ...(typeof CHAINS !== "undefined" ? CHAINS : [])];
   // select: the page's network list; filter: its search field (kept, under the buttons, with the list);
   // upInput: the field with the UP's address, for the green dots (optional).
   function netPicker({ select, filter = null, upInput = null }) {

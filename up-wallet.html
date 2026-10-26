@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-FSMvHbHysu5rtMYpc2n120TF+23w+0DNVuPyitcsxOY='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-DMpxCCjxEpzbWnNLHArhAkDyxGOW+//DLz2ypEzE5Js='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -1696,7 +1696,7 @@ async function estimateMaxGasPrice(provider) {
 // ==================== 1. Network ====================
 const networkSelectEl = $("network");
 // The networks of this page: LUKSO first (where the UP was created), then every redeploy network.
-const NETWORKS = [LUKSO_CHAIN, ...CHAINS];
+const NETWORKS = [LUKSO_CHAIN, LUKSO_TESTNET_CHAIN, ...CHAINS];
 function renderNetworkOptions(filter) {
   const f = (filter || "").toLowerCase();
   networkSelectEl.innerHTML = "";
@@ -3530,7 +3530,7 @@ $("rejectBtn").addEventListener("click", async () => {
 const VIEW_KEY = "upwallet.view";
 const MAIN_NETS = ["lukso", "base", "arbitrum-one", "polygon", "avalanche-c-chain", "arc", "ethereum", "optimism", "bnb-smart-chain"];
 const LOGO_FILES = new Set(["lukso", "arc", "arbitrum-one", "avalanche-c-chain", "base", "blast", "bnb-smart-chain", "celo", "ethereum", "gnosis", "linea", "mantle", "optimism", "polygon", "scroll", "sonic", "zksync"]);
-const LOGO_COLORS = { lukso: "#fe005b", arc: "#1f2a44", custom: "#3a3f4b" };
+const LOGO_COLORS = { lukso: "#fe005b", "lukso-testnet": "#fe005b", arc: "#1f2a44", custom: "#3a3f4b" };
 function netLogo(key, name) {
   const el = document.createElement("span");
   el.className = "net-logo";

@@ -73,6 +73,7 @@
 
   function chainInfo(id) {
     if (id === 42) return { name: "LUKSO", currency: "LYX" };
+    if (id === 4201) return { name: "LUKSO Testnet", currency: "LYXt" };
     const list = typeof CHAINS !== "undefined" ? CHAINS : [];
     const c = list.find((x) => x.chainId === id);
     return c ? { name: c.name, currency: c.currency && c.currency !== "?" ? c.currency : "" } : { name: "", currency: "" };
