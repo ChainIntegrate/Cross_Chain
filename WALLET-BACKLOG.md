@@ -24,6 +24,15 @@ pages", and go in the same batch (they need no app release). Remove an item when
    true, but noise. When the network chosen in the page is a testnet, check only the testnets, with LUKSO
    Testnet in place of LUKSO; on a main network, only the main networks, as today.
 
+3. **A visible version, on the site and in the app** (asked 2026-10-26). A short line in the page (footer, or
+   the Settings panel) that says which version is running:
+   - on the site, a version of the page set in `up-wallet.html` and moved forward with each batch (the site
+     has no build step, so it cannot read its own commit);
+   - in the app, the app's own version (`versionName`, from Capacitor's App plugin) and the page's Cross_Chain
+     commit from `UPSTREAM.json`, written in by `scripts/build-web.js`, for example "App 0.9.5 · page 0f427bf".
+
+   It also helps support: the version shows in a screenshot.
+
 ## Other pages
 
 Nothing open.
