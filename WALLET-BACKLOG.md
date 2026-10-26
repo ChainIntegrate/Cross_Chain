@@ -19,6 +19,11 @@ pages", and go in the same batch (they need no app release). Remove an item when
 
    The rest of the window stays the same: the full text and the hash the UP verifies.
 
+2. **"Every network" view on a testnet** (seen 2026-10-26, a UP on LUKSO Testnet). The view checks the UP on
+   LUKSO and the main networks, so for a testnet UP it ends with "The UP does not exist on: Base, LUKSO, ...":
+   true, but noise. When the network chosen in the page is a testnet, check only the testnets, with LUKSO
+   Testnet in place of LUKSO; on a main network, only the main networks, as today.
+
 ## Other pages
 
 Nothing open.
