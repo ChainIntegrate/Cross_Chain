@@ -53,6 +53,17 @@ pages", and go in the same batch (they need no app release). Remove an item when
 
    It also helps support: the version shows in a screenshot.
 
+4. **App only: the "stays active" notification on the lock screen** (seen 2026-10-27). While a dApp is
+   connected, the keep-alive service's notification ("Connected to hup.social: UP Wallet stays active to
+   receive its requests") is always on the lock screen, all night. It must stay (Android requires a
+   notification for a foreground service) but should be silent and out of the way:
+   - `KeepAliveService.java`: a channel with `IMPORTANCE_MIN` (no status bar icon, collapsed in the shade)
+     and lock-screen visibility `VISIBILITY_SECRET`, and the notification with `VISIBILITY_SECRET` and
+     `PRIORITY_MIN`. A channel's importance cannot change once created, so this needs a new channel id, and
+     the old `keepalive` channel deleted;
+   - the notifications of dApp requests (another channel) stay as they are: they must show;
+   - check on the phone that the service keeps running with the quieter notification (ColorOS).
+
 ## Other pages
 
 Nothing open.
