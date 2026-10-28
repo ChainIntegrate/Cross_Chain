@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-SRv6C9bcgpF2gaTjURTbOM9q8hZtaxGrYd4i1y5f7I0='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-xv7/8bjDr+d2igAEaj0+vETd7RyCtAzOqDdMUp/O1GM='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
@@ -143,12 +143,12 @@
   <input type="text" id="backupAddress" placeholder="0x...">
   <button id="addBackupBtn" disabled data-i18n="addBackupBtn">Aggiungi il controller di backup</button>
 
-  <div class="divider" data-i18n="phoneDivider">— oppure, per l'app UP Wallet (0.9) —</div>
+  <div class="divider" data-i18n="phoneDivider">— oppure, per UP Wallet: app Android o estensione del browser —</div>
   <div class="note" data-i18n-html="phoneNote"></div>
-  <label data-i18n="phoneAddrLabel">Indirizzo della chiave del telefono (lo mostra l'app, pannello "Questo telefono")</label>
+  <label data-i18n="phoneAddrLabel">Indirizzo della chiave del dispositivo (lo mostra l'app, pannello "Questo telefono", o l'estensione, pannello "Questo computer")</label>
   <input type="text" id="phoneAddress" placeholder="0x...">
   <label class="check-row" id="phoneLinkRow" hidden><input type="checkbox" id="phoneLinkAck"> <span data-i18n="phoneLinkAck"></span></label>
-  <button id="addPhoneBtn" disabled data-i18n="addPhoneBtn">Autorizza il telefono su questa rete</button>
+  <button id="addPhoneBtn" disabled data-i18n="addPhoneBtn">Autorizza il dispositivo su questa rete</button>
 
   <div class="divider" data-i18n="removeDivider">— oppure, dopo aver perso una chiave —</div>
   <label data-i18n="removeLabel">Controller da rimuovere</label>
@@ -196,15 +196,15 @@ const I18N = {
     backupNote: "<b>Il problema non è il furto, è la perdita.</b> Su ogni rete dove rifai il deploy, la UP nasce controllata solo dalla <b>chiave di genesi</b>: la stringa che hai estratto dall'estensione Universal Profile. Se la perdi (computer rotto, stringa mai salvata, password dimenticata) e non c'è un altro controller con gli stessi permessi, resti fuori da questa UP su questa rete per sempre, con tutto quello che contiene. Nessuno può rimediare. Un <b>controller di backup</b> è un secondo account (per esempio un altro account MetaMask, con la sua seed custodita a parte) con <b>esattamente gli stessi permessi</b> del controller che firma qui. Se perdi una delle due chiavi, con l'altra continui a firmare, aggiungi un nuovo backup e rimuovi quella persa. Se perdi proprio la chiave di genesi, l'unica cosa che non potrai più fare è il deploy su reti nuove, perché lì la UP nasce solo con lei.",
     backupNotRead: "Controller non ancora letti.",
     addBackupBtn: "Aggiungi il controller di backup",
-    phoneDivider: "— oppure, per l'app UP Wallet (0.9) —",
-    phoneNote: "<b>Autorizza un telefono.</b> L'app UP Wallet (da 0.9.0) firma con una chiave creata e tenuta sul telefono. Qui la aggiungi alla UP come controller <b>senza permessi di amministrazione</b>: <b>non</b> può aggiungere controller, cambiare permessi o estensioni. Può però <b>usare tutti i fondi della UP</b>: chiamate e invii verso qualsiasi indirizzo (SUPER_CALL, SUPER_TRANSFERVALUE), firme (SIGN), gas pagato dal sito (4337) e scrittura del solo profilo (SETDATA, limitato alla chiave <code>LSP3Profile</code>). Chi sblocca il telefono e passa impronta o PIN può muovere i fondi: autorizza solo un telefono tuo. Firma il controller amministratore connesso qui, una volta per rete. Se perdi il telefono, rimuovi la sua chiave qui sotto, rete per rete.",
-    phoneAddrLabel: "Indirizzo della chiave del telefono (lo mostra l'app, pannello \"Questo telefono\")",
-    phoneLinkAck: "Questo indirizzo viene dal link che hai aperto. Ho controllato che sia lo stesso che la mia app mostra nel pannello \"Questo telefono\" (almeno i primi e gli ultimi 6 caratteri).",
-    bkPhoneLinkAck: "L'indirizzo del telefono viene dal link: prima confrontalo con quello che mostra la tua app e spunta la conferma. Un link di qualcun altro potrebbe darti il suo indirizzo, e con questa autorizzazione potrebbe muovere i fondi della UP.",
-    addPhoneBtn: "Autorizza il telefono su questa rete",
-    bkPlanPhone: (v) => `Piano (una transazione, firmata da ${v.signer} tramite il Key Manager ${v.km}):\n- AddressPermissions[] da ${v.len} a ${v.len1} voci, posizione ${v.len} → ${v.phone}\n- permessi del telefono → ${v.perms} (${v.names})\n- chiavi di dati ammesse → solo LSP3Profile (il profilo)`,
-    bkPhoneOk: (v) => `✅ Telefono autorizzato su questa rete: ${v.addr}, senza permessi di amministrazione. Ripeti su ogni rete dove usi la UP. Per revocarlo: "Rimuovi il controller selezionato".`,
-    bkPhoneAdmin: "Questo indirizzo è già un controller amministratore della UP: non serve autorizzarlo come telefono.",
+    phoneDivider: "— oppure, per UP Wallet: app Android o estensione del browser —",
+    phoneNote: "<b>Autorizza un dispositivo.</b> L'app UP Wallet per Android (da 0.9.0) firma con una chiave creata e tenuta sul telefono; l'estensione UP Wallet per il browser con una chiave tenuta sul computer. Qui la aggiungi alla UP come controller <b>senza permessi di amministrazione</b>: <b>non</b> può aggiungere controller, cambiare permessi o estensioni. Può però <b>usare tutti i fondi della UP</b>: chiamate e invii verso qualsiasi indirizzo (SUPER_CALL, SUPER_TRANSFERVALUE), firme (SIGN), gas pagato dal sito (4337) e scrittura del solo profilo (SETDATA, limitato alla chiave <code>LSP3Profile</code>). Chi sblocca il dispositivo e passa impronta, PIN, passkey o password può muovere i fondi: autorizza solo un dispositivo tuo. Firma il controller amministratore connesso qui, una volta per rete. Se perdi il dispositivo o togli l'app o l'estensione, rimuovi la sua chiave qui sotto, rete per rete.",
+    phoneAddrLabel: "Indirizzo della chiave del dispositivo (lo mostra l'app, pannello \"Questo telefono\", o l'estensione, pannello \"Questo computer\")",
+    phoneLinkAck: "Questo indirizzo viene dal link che hai aperto. Ho controllato che sia lo stesso che mostra la mia app (pannello \"Questo telefono\") o la mia estensione (pannello \"Questo computer\"), almeno i primi e gli ultimi 6 caratteri.",
+    bkPhoneLinkAck: "L'indirizzo del dispositivo viene dal link: prima confrontalo con quello che mostra la tua app o la tua estensione e spunta la conferma. Un link di qualcun altro potrebbe darti il suo indirizzo, e con questa autorizzazione potrebbe muovere i fondi della UP.",
+    addPhoneBtn: "Autorizza il dispositivo su questa rete",
+    bkPlanPhone: (v) => `Piano (una transazione, firmata da ${v.signer} tramite il Key Manager ${v.km}):\n- AddressPermissions[] da ${v.len} a ${v.len1} voci, posizione ${v.len} → ${v.phone}\n- permessi del dispositivo → ${v.perms} (${v.names})\n- chiavi di dati ammesse → solo LSP3Profile (il profilo)`,
+    bkPhoneOk: (v) => `✅ Dispositivo autorizzato su questa rete: ${v.addr}, senza permessi di amministrazione. Ripeti su ogni rete dove usi la UP. Per revocarlo: "Rimuovi il controller selezionato".`,
+    bkPhoneAdmin: "Questo indirizzo è già un controller amministratore della UP: non serve autorizzarlo come dispositivo.",
     backupAddrLabel: "Indirizzo del controller di backup (un account MetaMask diverso, custodito a parte)",
     connectSigner5Btn: "Connetti il controller della UP (MetaMask)",
     signerPickHint: "Il wallet ti fa scegliere l'account a ogni connessione: puoi firmare con la chiave di genesi o con un backup. Per cambiare account ripremi il pulsante e scegline un altro.",
@@ -309,15 +309,15 @@ const I18N = {
     backupNote: "<b>The risk here is loss, not theft.</b> On every network where you redeploy, the UP is born controlled only by the <b>genesis key</b>: the key string you extracted from the Universal Profile extension. If you lose it (a broken computer, a key never saved, a forgotten password) and no other controller has the same permissions, you are locked out of this UP on this network for good, with everything it holds. No one can fix it. A <b>backup controller</b> is a second account (for example another MetaMask account, with its own seed phrase kept separately) with <b>exactly the same permissions</b> as the controller signing here. If you lose one of the two keys, the other one still signs: it adds a new backup and removes the lost key. If the one you lose is the genesis key, the only thing you can no longer do is deploy on new networks, because there the UP is born with that key only.",
     backupNotRead: "Controllers not read yet.",
     addBackupBtn: "Add the backup controller",
-    phoneDivider: "— or, for the UP Wallet app (0.9) —",
-    phoneNote: "<b>Authorize a phone.</b> The UP Wallet app (from 0.9.0) signs with a key created and kept on the phone. Here you add it to the UP as a controller <b>with no admin permissions</b>: it <b>cannot</b> add controllers, change permissions or extensions. It <b>can use all the UP's funds</b>, though: calls and sends to any address (SUPER_CALL, SUPER_TRANSFERVALUE), signatures (SIGN), gas paid by the site (4337) and writing the profile only (SETDATA, limited to the <code>LSP3Profile</code> key). Whoever unlocks the phone and passes the fingerprint or PIN can move the funds: authorize only a phone of yours. The admin controller connected here signs, once per network. If you lose the phone, remove its key below, network by network.",
-    phoneAddrLabel: "The phone key's address (the app shows it, \"This phone\" panel)",
-    phoneLinkAck: "This address comes from the link you opened. I checked that it is the same one my app shows in the \"This phone\" panel (at least the first and last 6 characters).",
-    bkPhoneLinkAck: "The phone's address comes from the link: first compare it with the one your app shows and tick the confirmation. Someone else's link could give you their address, and with this authorization they could move the UP's funds.",
-    addPhoneBtn: "Authorize the phone on this network",
-    bkPlanPhone: (v) => `Plan (one transaction, signed by ${v.signer} through the Key Manager ${v.km}):\n- AddressPermissions[] from ${v.len} to ${v.len1} entries, position ${v.len} → ${v.phone}\n- the phone's permissions → ${v.perms} (${v.names})\n- allowed data keys → LSP3Profile only (the profile)`,
-    bkPhoneOk: (v) => `✅ Phone authorized on this network: ${v.addr}, with no admin permissions. Repeat on every network where you use the UP. To revoke it: "Remove the selected controller".`,
-    bkPhoneAdmin: "This address is already an admin controller of the UP: it does not need to be authorized as a phone.",
+    phoneDivider: "— or, for UP Wallet: Android app or browser extension —",
+    phoneNote: "<b>Authorize a device.</b> The UP Wallet app for Android (from 0.9.0) signs with a key created and kept on the phone; the UP Wallet browser extension with a key kept on the computer. Here you add it to the UP as a controller <b>with no admin permissions</b>: it <b>cannot</b> add controllers, change permissions or extensions. It <b>can use all the UP's funds</b>, though: calls and sends to any address (SUPER_CALL, SUPER_TRANSFERVALUE), signatures (SIGN), gas paid by the site (4337) and writing the profile only (SETDATA, limited to the <code>LSP3Profile</code> key). Whoever unlocks the device and passes the fingerprint, PIN, passkey or password can move the funds: authorize only a device of yours. The admin controller connected here signs, once per network. If you lose the device or remove the app or the extension, remove its key below, network by network.",
+    phoneAddrLabel: "The device key's address (the app shows it, \"This phone\" panel, or the extension, \"This computer\" panel)",
+    phoneLinkAck: "This address comes from the link you opened. I checked that it is the same one my app (\"This phone\" panel) or my extension (\"This computer\" panel) shows, at least the first and last 6 characters.",
+    bkPhoneLinkAck: "The device's address comes from the link: first compare it with the one your app or your extension shows and tick the confirmation. Someone else's link could give you their address, and with this authorization they could move the UP's funds.",
+    addPhoneBtn: "Authorize the device on this network",
+    bkPlanPhone: (v) => `Plan (one transaction, signed by ${v.signer} through the Key Manager ${v.km}):\n- AddressPermissions[] from ${v.len} to ${v.len1} entries, position ${v.len} → ${v.phone}\n- the device's permissions → ${v.perms} (${v.names})\n- allowed data keys → LSP3Profile only (the profile)`,
+    bkPhoneOk: (v) => `✅ Device authorized on this network: ${v.addr}, with no admin permissions. Repeat on every network where you use the UP. To revoke it: "Remove the selected controller".`,
+    bkPhoneAdmin: "This address is already an admin controller of the UP: it does not need to be authorized as a device.",
     backupAddrLabel: "Backup controller address (a different MetaMask account, kept separately)",
     connectSigner5Btn: "Connect the UP's controller (MetaMask)",
     signerPickHint: "The wallet lets you choose the account on every connection: you can sign with the genesis key or with a backup. To switch account, press the button again and pick another one.",
@@ -967,7 +967,7 @@ $("addPhoneBtn").addEventListener("click", async () => {
     const vals = [ethers.toBeHex(b.r.len + 1, 16), phone, perms, PHONE_DATA_KEYS];
     bkLog(t("bkPlanPhone", { signer: b.signer, km: b.km, len: b.r.len, len1: b.r.len + 1, phone, perms: permHex(PHONE_PERMS), names: permNames(PHONE_PERMS) }), "line-dim");
     const data = KM_EXEC_IFACE.encodeFunctionData("execute", [UP_DATA_IFACE.encodeFunctionData("setDataBatch", [keys, vals])]);
-    const what = { it: `Autorizza il telefono ${phone} sulla UP ${b.up}: nessun permesso di amministrazione, ma accesso ai fondi della UP`, en: `Authorizes the phone ${phone} on the UP ${b.up}: no admin permissions, but access to the UP's funds` };
+    const what = { it: `Autorizza il dispositivo ${phone} sulla UP ${b.up}: nessun permesso di amministrazione, ma accesso ai fondi della UP`, en: `Authorizes the device ${phone} on the UP ${b.up}: no admin permissions, but access to the UP's funds` };
     const problems = await sendBackupTx(b, data, async (at) => {
       const [p, dk, lenRaw, item] = await upData.getDataBatch([BK.permKey(phone), BK.dataKeysKey(phone), BK.ARRAY_KEY, BK.indexKey(b.r.len)], at);
       const out = [];

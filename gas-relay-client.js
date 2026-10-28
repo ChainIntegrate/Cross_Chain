@@ -203,7 +203,7 @@
       optionNoteSponsor: (v) => `Il controller (la chiave del telefono) firma un messaggio con l'impronta, senza gas; il servizio di sponsorizzazione del sito approva l'operazione, il relayer la invia e ${v.pm} paga. Solo chiamate e invii di valore.`,
       noSigner: "usa la chiave del telefono (il controller)",
       notController: "la chiave del telefono non è un controller di questa UP su questa rete: prima va autorizzata",
-      fixBackup: "→ Autorizza il telefono dalla pagina Backup del sito (\"Autorizza un telefono\"), firmando con un controller amministratore: dà anche il permesso 4337",
+      fixBackup: "→ Autorizza il telefono dalla pagina Backup del sito (\"Autorizza un dispositivo\"), firmando con un controller amministratore: dà anche il permesso 4337",
       signAsk: (v) => `La chiave del telefono firma il messaggio ${v.hash} (nessun gas): conferma con l'impronta.`,
     },
     en: {
@@ -211,15 +211,23 @@
       optionNoteSponsor: (v) => `The controller (the phone key) signs a message with your fingerprint, no gas; the site's sponsor service approves the operation, the relayer sends it and ${v.pm} pays. Calls and value transfers only.`,
       noSigner: "use the phone key (the controller)",
       notController: "the phone key is not a controller of this UP on this network: it must be authorized first",
-      fixBackup: "→ Authorize the phone on the site's Backup page (\"Authorize a phone\"), signed by an admin controller: it also grants the 4337 permission",
+      fixBackup: "→ Authorize the phone on the site's Backup page (\"Authorize a device\"), signed by an admin controller: it also grants the 4337 permission",
       signAsk: (v) => `The phone key signs the message ${v.hash} (no gas): confirm with your fingerprint.`,
     },
   };
-  const phoneKey = () => typeof document !== "undefined" && document.documentElement.classList.contains("phone-key");
+  // The browser extension (html.computer-key): the same texts for the computer's key, opened in its signing
+  // window with a passkey or a password.
+  const COMPUTER_PHRASES = {
+    it: [["Autorizza il telefono", "Autorizza il computer"], ["con l'impronta", "nella finestra di firma"], ["chiave del telefono", "chiave del computer"]],
+    en: [["Authorize the phone", "Authorize the computer"], ["with your fingerprint", "in the signing window"], ["phone key", "computer key"]],
+  };
+  const hasClass = (c) => typeof document !== "undefined" && document.documentElement.classList.contains(c);
+  const phoneKey = () => hasClass("phone-key") || hasClass("computer-key");
   function text(key, vars) {
     const o = phoneKey() ? PHONE_TEXT[lang()][key] : undefined;
     const v = o !== undefined ? o : TEXT[lang()][key];
-    return typeof v === "function" ? v(vars || {}) : v;
+    const out = typeof v === "function" ? v(vars || {}) : v;
+    return o !== undefined && hasClass("computer-key") ? COMPUTER_PHRASES[lang()].reduce((x, [a, b]) => x.split(a).join(b), out) : out;
   }
 
   // Words for a revert, when it is one of the UP's or the Key Manager's errors.
