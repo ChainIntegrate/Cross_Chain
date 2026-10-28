@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-DMpxCCjxEpzbWnNLHArhAkDyxGOW+//DLz2ypEzE5Js='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-Yqg+dkmMf9GN1eLwaJEh4U02lVcmusEqKv0DYT4azNo='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -66,6 +66,7 @@
   .footer-logo { height: 48px; width: auto; flex-shrink: 0; }
   .footer-text { font-size: 13px; line-height: 1.6; }
   .footer-li { display: inline-flex; vertical-align: middle; margin: 0 2px; }
+  .footer-version { margin-top: 10px; font-size: 12px; color: #6b7080; font-family: ui-monospace, Menlo, Consolas, monospace; }
   .site-footer a { color: #2563eb; text-decoration: none; font-weight: 600; }
   .site-footer a:hover { text-decoration: underline; }
   .kv { display: grid; grid-template-columns: 190px 1fr; gap: 6px 12px; font-size: 13px; margin-top: 10px; }
@@ -452,6 +453,7 @@
     <img src="logo.png" alt="ChainIntegrate" class="footer-logo">
     <div class="footer-text" data-i18n-html="footerHtml"></div>
   </div>
+  <div class="footer-version" id="pageVersion"></div>
 </div>
 
 <script>
@@ -1033,6 +1035,21 @@ const I18N = {
     hupChatOtherWallet: (v) => `🛑 Il messaggio di accesso nomina ${v.who}, non la tua UP: se non sai perché, rifiuta.`,
     hupChatOld: "⚠️ L'orario scritto nel messaggio di accesso non è di adesso (più di 10 minuti di differenza): se non hai appena aperto la chat, rifiuta.",
     hupChatOtherSite: (v) => `🛑 Questo è il messaggio di accesso alla chat di hup.social, ma lo chiede ${v.site}: firmandolo, quel sito potrebbe entrare nella tua chat di hup. Rifiuta.`,
+    cieLink: (v) => `🪪 UP CIE Link: dichiarazione che collega questa UP alla tua CIE (carta d'identità elettronica), su ${v.net}. ${v.mode} Dopo la firma della UP, il sito ti chiede la firma con la CIE.`,
+    cieModeLink: "Modalità link: la tua prima UP, o il rinnovo del bollino.",
+    cieModeMigrate: "Modalità migrate: questa UP diventa la tua UP principale e il bollino della UP precedente viene annullato.",
+    cieModeAdditional: "Modalità additional: una UP in più, solo con un'eccezione approvata.",
+    cieModeOther: (v) => `⚠️ Modalità "${v.mode}" sconosciuta a UP Wallet: se non sai cosa fa, rifiuta.`,
+    cieContract: (v) => `Contratto: ${v.name} (${v.addr}).`,
+    cieContractOld: (v) => `⚠️ Il contratto ${v.addr} è una vecchia installazione di prova di UP CIE Link, sostituita: se non sai perché, rifiuta.`,
+    cieContractUnknown: (v) => `⚠️ Il contratto ${v.addr} non è tra quelli di UP CIE Link che UP Wallet conosce su questa rete: se non sai perché, rifiuta.`,
+    cieOtherSite: (v) => `🛑 La dichiarazione è per ${v.origin}, ma la chiede ${v.site}: firmandola, quel sito potrebbe collegare la tua UP a una CIE. Rifiuta.`,
+    cieOtherChain: (v) => `🛑 La dichiarazione è per la rete ${v.id}, ma la pagina è su ${v.net} (${v.chain}): rifiuta.`,
+    cieOtherUp: (v) => `🛑 La dichiarazione nomina la UP ${v.who}, non la tua: non firmarla mai per altri. Rifiuta.`,
+    cieLate: "⚠️ Sono passati più di 5 minuti dall'emissione (Issued-At): il servizio non accetta più la firma della UP. Rifiuta e ripeti la richiesta dal sito.",
+    cieFuture: "⚠️ L'ora di emissione (Issued-At) è nel futuro: l'orologio del telefono o del sito non è giusto. Se non sai perché, rifiuta.",
+    cieExpired: "⚠️ La dichiarazione è scaduta (Expires-At): rifiuta e ripeti la richiesta dal sito.",
+    cieUnknown: "⚠️ Sembra una dichiarazione di UP CIE Link, ma non nel formato che UP Wallet conosce (versione v2): è mostrata come testo. Leggila tutta prima di firmare.",
     siweWalletAlert: (v) => `ℹ️ MetaMask mostrerà \"Suspicious sign-in request\" e chiederà due conferme: vede un accesso a ${v.d} chiesto da un'altra app o sito (questa pagina). Qui è normale, perché firmi per conto della UP; procedi solo se il controllo qui sopra è verde.`,
     signReplay: "ℹ️ Se questo controller governa anche altre UP, la firma vale anche per quelle.",
     signCompare: (v) => `👉 DA CONTROLLARE IN METAMASK: il messaggio che MetaMask ti chiede di firmare deve essere esattamente questo: ${v.c}\nSe è diverso, rifiuta in MetaMask.`,
@@ -1045,6 +1062,8 @@ const I18N = {
     signInvalid: (v) => `❌ La UP NON riconosce la firma (risposta ${v.r}): non viene inviata alla dApp.`,
     ctText: "testo leggibile", ctOpaque: "dati non leggibili (hash o binario)", ctTyped: "dati strutturati EIP-712",
 
+    versionSite: (v) => `UP Wallet · versione della pagina ${v.v}`,
+    versionApp: (v) => `UP Wallet · app ${v.app} · pagina ${v.v} (commit ${v.commit})`,
     footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Codice sorgente su GitHub</a> · <a href="https://github.com/ChainIntegrate/up-wallet-android" target="_blank" rel="noopener">App Android (in prova)</a><br><span style="font-size:11.5px;">WalletConnect: Portions © 2025 Reown, Inc. All Rights Reserved. <a href="vendor/walletkit-1.6.0.LICENSE.md" target="_blank" rel="noopener">Licenza</a> · <a href="vendor/walletkit-1.6.0.THIRD-PARTY.txt" target="_blank" rel="noopener">componenti di terzi</a></span>`,
   },
   en: {
@@ -1429,6 +1448,21 @@ const I18N = {
     hupChatOtherWallet: (v) => `🛑 The sign-in message names ${v.who}, not your UP: unless you know why, reject it.`,
     hupChatOld: "⚠️ The time written in the sign-in message is not now (more than 10 minutes apart): unless you just opened the chat, reject it.",
     hupChatOtherSite: (v) => `🛑 This is the sign-in message of hup.social's chat, but ${v.site} asks for it: if you sign it, that site could get into your hup chat. Reject it.`,
+    cieLink: (v) => `🪪 UP CIE Link: a statement that links this UP to your CIE (Italian electronic identity card), on ${v.net}. ${v.mode} After the UP's signature, the site asks for the signature with the CIE.`,
+    cieModeLink: "Mode link: your first UP, or the renewal of the badge.",
+    cieModeMigrate: "Mode migrate: this UP becomes your main UP and the previous UP's badge is cancelled.",
+    cieModeAdditional: "Mode additional: one more UP, only with an approved exception.",
+    cieModeOther: (v) => `⚠️ Mode "${v.mode}" is unknown to UP Wallet: if you do not know what it does, reject it.`,
+    cieContract: (v) => `Contract: ${v.name} (${v.addr}).`,
+    cieContractOld: (v) => `⚠️ The contract ${v.addr} is an old test deployment of UP CIE Link, replaced: if you do not know why, reject it.`,
+    cieContractUnknown: (v) => `⚠️ The contract ${v.addr} is not one of the UP CIE Link contracts UP Wallet knows on this network: if you do not know why, reject it.`,
+    cieOtherSite: (v) => `🛑 The statement is for ${v.origin}, but ${v.site} asks for it: if you sign it, that site could link your UP to a CIE. Reject it.`,
+    cieOtherChain: (v) => `🛑 The statement is for network ${v.id}, but the page is on ${v.net} (${v.chain}): reject it.`,
+    cieOtherUp: (v) => `🛑 The statement names the UP ${v.who}, not yours: never sign it for someone else. Reject it.`,
+    cieLate: "⚠️ More than 5 minutes have passed since it was issued (Issued-At): the service no longer accepts the UP's signature. Reject it and ask again from the site.",
+    cieFuture: "⚠️ The issue time (Issued-At) is in the future: the clock of the phone or of the site is wrong. If you do not know why, reject it.",
+    cieExpired: "⚠️ The statement has expired (Expires-At): reject it and ask again from the site.",
+    cieUnknown: "⚠️ It looks like a UP CIE Link statement, but not in the format UP Wallet knows (version v2): it is shown as text. Read it all before signing.",
     siweWalletAlert: (v) => `ℹ️ MetaMask will show \"Suspicious sign-in request\" and ask for two confirmations: it sees a sign-in to ${v.d} requested by another app or site (this page). Here that is expected, because you sign on behalf of the UP; proceed only if the check above is green.`,
     signReplay: "ℹ️ If this controller also governs other UPs, the signature is valid for them too.",
     signCompare: (v) => `👉 CHECK IN METAMASK: the message MetaMask asks you to sign must be exactly this: ${v.c}\nIf it is different, reject it in MetaMask.`,
@@ -1441,6 +1475,8 @@ const I18N = {
     signInvalid: (v) => `❌ The UP does NOT recognise the signature (answer ${v.r}): it is not sent to the dApp.`,
     ctText: "readable text", ctOpaque: "unreadable data (hash or binary)", ctTyped: "EIP-712 structured data",
 
+    versionSite: (v) => `UP Wallet · page version ${v.v}`,
+    versionApp: (v) => `UP Wallet · app ${v.app} · page ${v.v} (commit ${v.commit})`,
     footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Source code on GitHub</a> · <a href="https://github.com/ChainIntegrate/up-wallet-android" target="_blank" rel="noopener">Android app (in testing)</a><br><span style="font-size:11.5px;">WalletConnect: Portions © 2025 Reown, Inc. All Rights Reserved. <a href="vendor/walletkit-1.6.0.LICENSE.md" target="_blank" rel="noopener">License</a> · <a href="vendor/walletkit-1.6.0.THIRD-PARTY.txt" target="_blank" rel="noopener">third-party components</a></span>`,
   },
 };
@@ -1524,6 +1560,16 @@ function t(key, vars) {
   const o = phoneKey() ? PHONE_I18N[LANG][key] : undefined;
   return o === undefined ? s : typeof o === "function" ? o(s, vars || {}) : o;
 }
+// The version shown at the bottom of the page: moved forward with each batch of WALLET-BACKLOG.md. The
+// Android app's build writes the Cross_Chain commit in PAGE_COMMIT, and the app its own version
+// (window.__upwalletAppVersion, then the "upwallet:version" event).
+const PAGE_VERSION = "2026-10-28";
+const PAGE_COMMIT = null;
+function renderVersion() {
+  const el = $("pageVersion"), app = window.__upwalletAppVersion;
+  if (el) el.textContent = app ? t("versionApp", { app: oneLine(app, 20), v: PAGE_VERSION, commit: PAGE_COMMIT || "?" }) : t("versionSite", { v: PAGE_VERSION });
+}
+window.addEventListener("upwallet:version", renderVersion);
 function applyI18n() {
   document.documentElement.lang = LANG;
   document.title = t("pageTitle");
@@ -1533,6 +1579,7 @@ function applyI18n() {
   if (lastCompliance) renderCompliance(lastCompliance);
   if ($("riskState").textContent) { showRiskState(); logToggleText(); }
   if ($("upCardAddr").textContent) { updateNav(); $("viewTitle").textContent = t("viewTitle_" + document.body.dataset.view); if (document.body.dataset.view === "receive") renderReceive(); if (presenceFor) $("netPresenceNote").textContent = t("netPresenceNote"); }
+  renderVersion();
 }
 function switchLang() {
   LANG = LANG === "it" ? "en" : "it";
@@ -2967,6 +3014,47 @@ function checkHupChat(text, topic, c, warnings) {
   if (age > 10) warnings.push([t("hupChatOld"), "line-warn"]);
 }
 
+// UP CIE Link (https://github.com/ChainIntegrate/up-cie-link, backend/src/statements.js): the statement a UP
+// signs to be linked to a CIE. v2: 13 lines in a fixed order, ASCII, LF. Its fields are checked against the
+// request; anything else that starts like one is shown as text, with a note.
+const CIE_CONTRACTS = {
+  "4201:0x6a525b5662ef905f3dd90f7139dc3a702b1371ba": { name: "UP CIE Link badge" },
+  "4201:0x056a7e721fbd727862d767cc44c48bf2a7177892": { old: true },
+  "4201:0x329df2f4fe3585757bafb549e465a4215fb64c2f": { old: true },
+};
+const CIE_UP_WINDOW_MS = 5 * 60 * 1000;   // the service's UP_SIGNATURE_WINDOW_SEC
+const CIE_DECLARATION = [
+  "I declare that I control this Universal Profile and that I hold the CIE used to sign this statement.",
+  "Dichiaro di controllare questo Universal Profile e di essere titolare della CIE con cui firmo questo enunciato.",
+];
+function checkCieLink(text, topic, c, warnings, now = Date.now()) {
+  if (!/^up-cie-link statement /.test(text)) return;
+  const lines = text.split("\n");
+  const keys = ["Origin", "Chain-Id", "Contract", "Universal-Profile", "Mode", "Nonce", "Issued-At", "Expires-At"];
+  const f = {};
+  const shapeOk = lines.length === 13 && lines[0] === "up-cie-link statement v2" && /^[\x0a\x20-\x7e]*$/.test(text)
+    && keys.every((k, i) => { const m = lines[i + 1].match(new RegExp(`^${k}: (\\S+)$`)); if (m) f[k] = m[1]; return !!m; })
+    && lines[9] === CIE_DECLARATION[0] && lines[10] === CIE_DECLARATION[1]
+    && /^https:\/\/[a-z0-9.-]+$/i.test(f.Origin) && /^\d+$/.test(f["Chain-Id"]) && ethers.isAddress(f.Contract) && ethers.isAddress(f["Universal-Profile"])
+    && lines[11] === `WARNING: sign only if you started this request yourself on ${f.Origin} to link YOUR OWN Universal Profile ${f["Universal-Profile"]}. Never sign it for someone else.`
+    && lines[12] === `ATTENZIONE: firma solo se hai avviato tu questa richiesta su ${f.Origin} per collegare la TUA Universal Profile ${f["Universal-Profile"]}. Non firmarlo mai per conto di altri.`;
+  const issued = shapeOk ? Date.parse(f["Issued-At"]) : NaN, expires = shapeOk ? Date.parse(f["Expires-At"]) : NaN;
+  if (!shapeOk || !/Z$/.test(f["Issued-At"]) || !/Z$/.test(f["Expires-At"]) || isNaN(issued) || isNaN(expires)) { warnings.push([t("cieUnknown"), "line-warn"]); return; }
+  const mode = { link: "cieModeLink", migrate: "cieModeMigrate", additional: "cieModeAdditional" }[f.Mode];
+  warnings.push([t("cieLink", { net: c.net.name, mode: mode ? t(mode) : "" }), "line-ok"]);
+  if (!mode) warnings.push([t("cieModeOther", { mode: oneLine(f.Mode, 40) }), "line-warn"]);
+  const host = sessionHost(topic).replace(/^www\./, ""), origin = new URL(f.Origin).host.toLowerCase();
+  if (topic !== LOCAL_TOPIC && host !== origin) warnings.push([t("cieOtherSite", { origin: f.Origin, site: host || "?" }), "line-danger"]);
+  if (Number(f["Chain-Id"]) !== c.chainId) warnings.push([t("cieOtherChain", { id: f["Chain-Id"], net: c.net.name, chain: c.chainId }), "line-danger"]);
+  if (ethers.getAddress(f["Universal-Profile"]) !== ethers.getAddress(c.up)) warnings.push([t("cieOtherUp", { who: ethers.getAddress(f["Universal-Profile"]) }), "line-danger"]);
+  const known = CIE_CONTRACTS[`${c.chainId}:${f.Contract.toLowerCase()}`], addr = ethers.getAddress(f.Contract);
+  if (known && known.name) warnings.push([t("cieContract", { name: known.name, addr }), "line-dim"]);
+  else warnings.push([t(known ? "cieContractOld" : "cieContractUnknown", { addr }), "line-warn"]);
+  if (issued - now > 2 * 60 * 1000) warnings.push([t("cieFuture"), "line-warn"]);
+  else if (now > expires) warnings.push([t("cieExpired"), "line-warn"]);
+  else if (now - issued > CIE_UP_WINDOW_MS) warnings.push([t("cieLate"), "line-warn"]);
+}
+
 async function handleSignRequest(topic, id, c, request, validation, reject) {
   setDecodeHelp(null);
   if (!(c.perms & P.SIGN)) return reject(t("signNoPermission"));
@@ -2995,7 +3083,7 @@ async function handleSignRequest(topic, id, c, request, validation, reject) {
       rows.push([t("kContentType"), text !== null ? t("ctText") : t("ctOpaque"), { cls: text !== null ? "" : "warn" }]);
       rows.push([t("kContent"), compare, { block: true }]);
       if (text === null) warnings.push([t("signOpaque"), "line-warn"]);
-      else { checkSiwe(text, topic, c, warnings); checkHupChat(text, topic, c, warnings); }
+      else { checkSiwe(text, topic, c, warnings); checkHupChat(text, topic, c, warnings); checkCieLink(text, topic, c, warnings); }
     } else {
       account = p[0];
       const raw = p[1];
@@ -3529,6 +3617,9 @@ $("rejectBtn").addEventListener("click", async () => {
 // back. "Full view" (Settings) shows every panel at once, as the classic page; it is remembered here.
 const VIEW_KEY = "upwallet.view";
 const MAIN_NETS = ["lukso", "base", "arbitrum-one", "polygon", "avalanche-c-chain", "arc", "ethereum", "optimism", "bnb-smart-chain"];
+// A UP on a testnet lives only on testnets: the "Every network" view then reads these instead.
+const TEST_NETS = ["lukso-testnet", "base-sepolia", "arbitrum-sepolia", "ethereum-sepolia", "polygon-amoy"];
+const isTestnet = (n) => !!n && (n.key === LUKSO_TESTNET_CHAIN.key || /\(testnet\)/i.test(n.name || ""));
 const LOGO_FILES = new Set(["lukso", "arc", "arbitrum-one", "avalanche-c-chain", "base", "blast", "bnb-smart-chain", "celo", "ethereum", "gnosis", "linea", "mantle", "optimism", "polygon", "scroll", "sonic", "zksync"]);
 const LOGO_COLORS = { lukso: "#fe005b", "lukso-testnet": "#fe005b", arc: "#1f2a44", custom: "#3a3f4b" };
 function netLogo(key, name) {
@@ -3631,7 +3722,8 @@ async function profilePicValue(up) {
   if (up in profilePics) return profilePics[up];
   profilePics[up] = null;
   const net = getNetwork();
-  const nets = [LUKSO_CHAIN].concat(net && net.rpc && net.key !== LUKSO_CHAIN.key ? [net] : []);
+  const home = isTestnet(net) ? LUKSO_TESTNET_CHAIN : LUKSO_CHAIN;
+  const nets = [home].concat(net && net.rpc && net.key !== home.key ? [net] : []);
   const iface = new ethers.Interface(["function getData(bytes32) view returns (bytes)"]);
   for (const n of nets) {
     const pv = new ethers.JsonRpcProvider(n.rpc, n.chainId || undefined, { staticNetwork: !!n.chainId, batchMaxCount: 1 });
@@ -3744,16 +3836,16 @@ let ovState = null, ovRun = 0;
 function openOverview() {
   const raw = $("upAddress").value.trim();
   if (!ethers.isAddress(raw)) { ovState = null; renderOverview(); return; }
-  if (!ovState || ovState.up !== ethers.getAddress(raw)) readOverview(); else renderOverview();
+  if (!ovState || ovState.up !== ethers.getAddress(raw) || ovState.test !== isTestnet(getNetwork())) readOverview(); else renderOverview();
 }
 async function readOverview() {
   const raw = $("upAddress").value.trim();
   if (!ethers.isAddress(raw)) { ovState = null; renderOverview(); return; }
   const up = ethers.getAddress(raw), run = ++ovRun;
   const cur = getNetwork();
-  const nets = MAIN_NETS.map((k) => NETWORKS.find((x) => x.key === k)).filter((n) => n && n.rpc);
+  const nets = (isTestnet(cur) ? TEST_NETS : MAIN_NETS).map((k) => NETWORKS.find((x) => x.key === k)).filter((n) => n && n.rpc);
   if (cur && cur.rpc && !nets.some((n) => n.key === cur.key)) nets.push(cur);
-  ovState = { up, total: nets.length, results: [], at: null };
+  ovState = { up, test: isTestnet(cur), total: nets.length, results: [], at: null };
   renderOverview();
   const timeout = (p, ms) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error("timeout")), ms))]);
   const one = async (n) => {
