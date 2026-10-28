@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-xv7/8bjDr+d2igAEaj0+vETd7RyCtAzOqDdMUp/O1GM='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-odIRuGFKa640FriSOI+ATfgBXVND2RLmLaYYPjNHbkQ='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
@@ -148,7 +148,17 @@
   <label data-i18n="phoneAddrLabel">Indirizzo della chiave del dispositivo (lo mostra l'app, pannello "Questo telefono", o l'estensione, pannello "Questo computer")</label>
   <input type="text" id="phoneAddress" placeholder="0x...">
   <label class="check-row" id="phoneLinkRow" hidden><input type="checkbox" id="phoneLinkAck"> <span data-i18n="phoneLinkAck"></span></label>
+  <label for="phoneName" data-i18n="phoneNameLabel">Nome del dispositivo (facoltativo)</label>
+  <input type="text" id="phoneName" maxlength="64" autocomplete="off" data-i18n-placeholder="phoneNamePh">
   <button id="addPhoneBtn" disabled data-i18n="addPhoneBtn">Autorizza il dispositivo su questa rete</button>
+
+  <div class="divider" data-i18n="nameDivider">— oppure, il nome di un controller —</div>
+  <div class="note" data-i18n-html="nameNote"></div>
+  <label for="nameSelect" data-i18n="nameSelectLabel">Controller</label>
+  <select id="nameSelect"></select>
+  <label for="nameInput" data-i18n="nameInputLabel">Nome</label>
+  <input type="text" id="nameInput" maxlength="64" autocomplete="off">
+  <button id="nameBtn" disabled data-i18n="nameBtn">Salva il nome su questa rete</button>
 
   <div class="divider" data-i18n="removeDivider">— oppure, dopo aver perso una chiave —</div>
   <label data-i18n="removeLabel">Controller da rimuovere</label>
@@ -202,6 +212,23 @@ const I18N = {
     phoneLinkAck: "Questo indirizzo viene dal link che hai aperto. Ho controllato che sia lo stesso che mostra la mia app (pannello \"Questo telefono\") o la mia estensione (pannello \"Questo computer\"), almeno i primi e gli ultimi 6 caratteri.",
     bkPhoneLinkAck: "L'indirizzo del dispositivo viene dal link: prima confrontalo con quello che mostra la tua app o la tua estensione e spunta la conferma. Un link di qualcun altro potrebbe darti il suo indirizzo, e con questa autorizzazione potrebbe muovere i fondi della UP.",
     addPhoneBtn: "Autorizza il dispositivo su questa rete",
+    phoneNameLabel: "Nome del dispositivo (facoltativo): salvato sulla UP con l'autorizzazione, per riconoscerlo nella lista. Pubblico, come gli indirizzi dei controller: niente dati personali",
+    phoneNamePh: "es. PC ufficio · estensione",
+    deviceComputer: "Computer · estensione UP Wallet",
+    devicePhone: "Telefono · app UP Wallet",
+    nameDivider: "— oppure, il nome di un controller —",
+    nameNote: "<b>Un nome per ogni controller</b> (\"PC ufficio · estensione\", \"MetaMask backup\"), salvato sulla UP: lo vedono questa pagina e UP Wallet da ogni dispositivo. Come i controller, vale <b>per questa rete</b>: ripetilo su ogni rete. È pubblico come gli indirizzi dei controller: niente dati personali. Al massimo 64 caratteri; lascia vuoto per toglierlo. Lo firma il controller amministratore connesso qui, con una transazione su questa rete. È solo un'etichetta: non cambia nessun permesso.",
+    nameSelectLabel: "Controller",
+    nameInputLabel: "Nome (vuoto per toglierlo)",
+    nameBtn: "Salva il nome su questa rete",
+    nameNone: "Nessun controller letto.",
+    bkName: (v) => `Nome: ${v.name}`,
+    bkPlanName: (v) => `Piano (una transazione, firmata da ${v.signer} tramite il Key Manager ${v.km}):\n- nome di ${v.addr} → ${v.name}`,
+    bkPlanNameLine: (v) => `- nome → ${v.name}`,
+    bkPlanNameClear: "\n- nome → cancellato",
+    bkNameCleared: "nessuno (tolto)",
+    bkNameSame: "Il controller ha già questo nome su questa rete.",
+    bkNameOk: (v) => `✅ Nome di ${v.addr} su questa rete: ${v.name}.`,
     bkPlanPhone: (v) => `Piano (una transazione, firmata da ${v.signer} tramite il Key Manager ${v.km}):\n- AddressPermissions[] da ${v.len} a ${v.len1} voci, posizione ${v.len} → ${v.phone}\n- permessi del dispositivo → ${v.perms} (${v.names})\n- chiavi di dati ammesse → solo LSP3Profile (il profilo)`,
     bkPhoneOk: (v) => `✅ Dispositivo autorizzato su questa rete: ${v.addr}, senza permessi di amministrazione. Ripeti su ogni rete dove usi la UP. Per revocarlo: "Rimuovi il controller selezionato".`,
     bkPhoneAdmin: "Questo indirizzo è già un controller amministratore della UP: non serve autorizzarlo come dispositivo.",
@@ -315,6 +342,23 @@ const I18N = {
     phoneLinkAck: "This address comes from the link you opened. I checked that it is the same one my app (\"This phone\" panel) or my extension (\"This computer\" panel) shows, at least the first and last 6 characters.",
     bkPhoneLinkAck: "The device's address comes from the link: first compare it with the one your app or your extension shows and tick the confirmation. Someone else's link could give you their address, and with this authorization they could move the UP's funds.",
     addPhoneBtn: "Authorize the device on this network",
+    phoneNameLabel: "The device's name (optional): saved on the UP with the authorization, to recognize it in the list. Public, as the controllers' addresses are: no personal data",
+    phoneNamePh: "e.g. Office PC · extension",
+    deviceComputer: "Computer · UP Wallet extension",
+    devicePhone: "Phone · UP Wallet app",
+    nameDivider: "— or, a controller's name —",
+    nameNote: "<b>A name for each controller</b> (\"Office PC · extension\", \"MetaMask backup\"), saved on the UP: this page and UP Wallet show it on every device. Like the controllers, it is <b>per network</b>: repeat it on every network. It is public, as the controllers' addresses are: no personal data. At most 64 characters; leave it empty to remove it. The admin controller connected here signs it, with one transaction on this network. A label only: no permission changes.",
+    nameSelectLabel: "Controller",
+    nameInputLabel: "Name (empty to remove it)",
+    nameBtn: "Save the name on this network",
+    nameNone: "No controllers read.",
+    bkName: (v) => `Name: ${v.name}`,
+    bkPlanName: (v) => `Plan (one transaction, signed by ${v.signer} through the Key Manager ${v.km}):\n- name of ${v.addr} → ${v.name}`,
+    bkPlanNameLine: (v) => `- name → ${v.name}`,
+    bkPlanNameClear: "\n- name → cleared",
+    bkNameCleared: "none (removed)",
+    bkNameSame: "The controller already has this name on this network.",
+    bkNameOk: (v) => `✅ Name of ${v.addr} on this network: ${v.name}.`,
     bkPlanPhone: (v) => `Plan (one transaction, signed by ${v.signer} through the Key Manager ${v.km}):\n- AddressPermissions[] from ${v.len} to ${v.len1} entries, position ${v.len} → ${v.phone}\n- the device's permissions → ${v.perms} (${v.names})\n- allowed data keys → LSP3Profile only (the profile)`,
     bkPhoneOk: (v) => `✅ Device authorized on this network: ${v.addr}, with no admin permissions. Repeat on every network where you use the UP. To revoke it: "Remove the selected controller".`,
     bkPhoneAdmin: "This address is already an admin controller of the UP: it does not need to be authorized as a device.",
@@ -624,7 +668,7 @@ const BK = window.BackupCheck;
 const KM_EXEC_IFACE = new ethers.Interface(["function execute(bytes) payable returns (bytes)"]);
 const UP_DATA_IFACE = new ethers.Interface(["function setDataBatch(bytes32[] dataKeys, bytes[] dataValues)", "function getDataBatch(bytes32[]) view returns (bytes[])"]);
 const LUKSO_CHAIN_IDS = [42, 4201];
-let bk = null;      // last read: { up, rpc, chainId, netName, provider, r, signer, signerCtrl, genesis }
+let bk = null;      // last read: { up, rpc, chainId, netName, provider, r, signer, signerCtrl, genesis, names }
 let bkBusy = false;
 
 const permNames = (p) => { const f = []; for (let i = 0; i < 24; i++) if ((p >> BigInt(i)) & 1n) f.push(i === 23 ? "ERC4337" : PERMISSION_BITS[i]); return f.join(", ") || "—"; };
@@ -681,6 +725,7 @@ function updateBackupButtons() {
   const ok = !bkBusy && bk && signerState(bk) === "ok";
   $("addBackupBtn").disabled = !ok;
   $("addPhoneBtn").disabled = !ok;
+  $("nameBtn").disabled = !ok || !$("nameSelect").value;
   $("removeBtn").disabled = !ok || !$("removeSelect").value;
   $("readCtrlBtn").disabled = bkBusy;
   $("connectSigner").disabled = bkBusy;
@@ -702,6 +747,9 @@ function renderBackup() {
     const a = document.createElement("div");
     a.className = "addr";
     a.textContent = `[${c.index}] ${c.address || "?"}`;
+    const name = c.address && bk.names[c.address.toLowerCase()];
+    let nameEl = null;
+    if (name) { nameEl = document.createElement("div"); nameEl.style.cssText = "font-weight:600; margin-top:2px; overflow-wrap:anywhere;"; nameEl.textContent = t("bkName", { name }); }
     const role = document.createElement("div");
     role.style.marginTop = "4px";
     const badges = [];
@@ -734,7 +782,7 @@ function renderBackup() {
     const flags = document.createElement("div");
     flags.className = "flags";
     flags.textContent = `${permHex(c.perms)} — ${permNames(c.perms)}`;
-    card.append(a, role, whyEl, flags);
+    card.append(a, ...(nameEl ? [nameEl] : []), role, whyEl, flags);
     box.appendChild(card);
   });
   const sel = $("removeSelect");
@@ -749,11 +797,27 @@ function renderBackup() {
       o.value = c.address;
       const tags = [(c.perms & BK.ADMIN) === BK.ADMIN ? t("bkAdmin") : t("bkRoleCtrl")];
       if (bk.genesis.includes(c.address.toLowerCase())) tags.push(t("bkGenesis"));
-      o.textContent = `${c.address} — ${permHex(c.perms)} · ${tags.join(", ")}`;
+      const nm = bk.names[c.address.toLowerCase()];
+      o.textContent = `${nm ? nm + " · " : ""}${c.address} — ${permHex(c.perms)} · ${tags.join(", ")}`;
       sel.appendChild(o);
     });
     if (removable.some(c => c.address === prev)) sel.value = prev;
   }
+  // Any controller can get a name, the connected one included.
+  const nsel = $("nameSelect");
+  const nprev = nsel.value;
+  nsel.innerHTML = "";
+  const nameable = r.controllers.filter(c => c.role === "controller");
+  if (!nameable.length) { const o = document.createElement("option"); o.value = ""; o.textContent = t("nameNone"); nsel.appendChild(o); }
+  nameable.forEach(c => {
+    const o = document.createElement("option");
+    o.value = c.address;
+    const nm = bk.names[c.address.toLowerCase()];
+    o.textContent = `${nm ? nm + " · " : ""}${c.address}${bk.signer && c.address.toLowerCase() === bk.signer.toLowerCase() ? " · " + t("bkRoleYou") : ""}`;
+    nsel.appendChild(o);
+  });
+  if (nameable.some(c => c.address === nprev)) nsel.value = nprev;
+  else $("nameInput").value = (nsel.value && bk.names[nsel.value.toLowerCase()]) || "";
   updateBackupButtons();
 }
 
@@ -790,8 +854,10 @@ async function readBackup() {
     const signerCtrl = signer ? r.controllers.find(c => c.role === "controller" && c.address === signer) || null : null;
     // The genesis controllers, from the UP's creation transaction on LUKSO (empty when not found).
     const genesis = await genesisOf(up);
+    // The controllers' names kept on the UP (labels only).
+    const names = await BK.readNames(provider, up, r.controllers.map(c => c.address), at).catch(() => ({}));
     const netName = net.chainId ? net.name : `${t("customNetName")} (chainId ${chainId})`;
-    bk = { up, rpc: net.rpc, chainId, netName, provider, r, signer, signerCtrl, genesis };
+    bk = { up, rpc: net.rpc, chainId, netName, provider, r, signer, signerCtrl, genesis, names };
     renderBackup();
     return bk;
   } catch (e) {
@@ -814,6 +880,7 @@ $("connectSigner").addEventListener("click", async () => {
   try { await readBackup(); } finally { setBusy(false); }
 });
 $("removeSelect").addEventListener("change", updateBackupButtons);
+$("nameSelect").addEventListener("change", () => { $("nameInput").value = (bk && $("nameSelect").value && bk.names[$("nameSelect").value.toLowerCase()]) || ""; updateBackupButtons(); });
 $("copyBackupLog").addEventListener("click", async () => {
   try { await navigator.clipboard.writeText($("backupLog").innerText); $("copyBackupLog").textContent = t("copiedLog"); }
   catch (e) { /* clipboard not allowed: the log can still be selected by hand */ }
@@ -965,12 +1032,16 @@ $("addPhoneBtn").addEventListener("click", async () => {
     const perms = ethers.zeroPadValue(ethers.toBeHex(PHONE_PERMS), 32);
     const keys = [BK.ARRAY_KEY, BK.indexKey(b.r.len), BK.permKey(phone), BK.dataKeysKey(phone)];
     const vals = [ethers.toBeHex(b.r.len + 1, 16), phone, perms, PHONE_DATA_KEYS];
-    bkLog(t("bkPlanPhone", { signer: b.signer, km: b.km, len: b.r.len, len1: b.r.len + 1, phone, perms: permHex(PHONE_PERMS), names: permNames(PHONE_PERMS) }), "line-dim");
+    // Its name, if given, in the same transaction.
+    const name = BK.cleanName($("phoneName").value), nameVal = BK.nameValue(name);
+    if (name) { keys.push(BK.nameKey(phone)); vals.push(nameVal); }
+    bkLog(t("bkPlanPhone", { signer: b.signer, km: b.km, len: b.r.len, len1: b.r.len + 1, phone, perms: permHex(PHONE_PERMS), names: permNames(PHONE_PERMS) }) + (name ? "\n" + t("bkPlanNameLine", { name }) : ""), "line-dim");
     const data = KM_EXEC_IFACE.encodeFunctionData("execute", [UP_DATA_IFACE.encodeFunctionData("setDataBatch", [keys, vals])]);
     const what = { it: `Autorizza il dispositivo ${phone} sulla UP ${b.up}: nessun permesso di amministrazione, ma accesso ai fondi della UP`, en: `Authorizes the device ${phone} on the UP ${b.up}: no admin permissions, but access to the UP's funds` };
     const problems = await sendBackupTx(b, data, async (at) => {
-      const [p, dk, lenRaw, item] = await upData.getDataBatch([BK.permKey(phone), BK.dataKeysKey(phone), BK.ARRAY_KEY, BK.indexKey(b.r.len)], at);
+      const [p, dk, lenRaw, item, nm] = await upData.getDataBatch([BK.permKey(phone), BK.dataKeysKey(phone), BK.ARRAY_KEY, BK.indexKey(b.r.len), BK.nameKey(phone)], at);
       const out = [];
+      if (name && String(nm).toLowerCase() !== nameVal.toLowerCase()) out.push(`name ${nm}`);
       if (String(p).toLowerCase() !== perms.toLowerCase()) out.push(`permissions ${p}`);
       if (String(dk).toLowerCase() !== PHONE_DATA_KEYS.toLowerCase()) out.push(`allowed data keys ${dk}`);
       if (BigInt(lenRaw || "0x0") !== BigInt(b.r.len + 1)) out.push(`list length ${lenRaw}`);
@@ -980,6 +1051,42 @@ $("addPhoneBtn").addEventListener("click", async () => {
     }, what);
     if (problems === false) return;
     bkLog(problems.length ? t("bkVerifyBad", { what: problems.join(", ") }) : t("bkPhoneOk", { addr: phone }), problems.length ? "line-warn" : "line-ok");
+    if (!problems.length) $("phoneName").value = "";
+    await readBackup();
+  } catch (e) {
+    if (e && (e.code === "ACTION_REJECTED" || e.code === 4001)) bkLog(t("bkCancelled"), "line-warn");
+    else bkLog(t("bkError", { err: e.shortMessage || e.message }), "line-err");
+  } finally {
+    setBusy(false);
+  }
+});
+
+// A controller's name on this network: one setData of its name key, signed by the admin controller.
+$("nameBtn").addEventListener("click", async () => {
+  if (bkBusy) return;
+  bkSeparator();
+  const chosen = $("nameSelect").value;
+  if (!chosen) return;
+  setBusy(true);
+  try {
+    const b = await freshAdminState();
+    if (!b) return;
+    const target = b.r.controllers.find(c => c.role === "controller" && c.address === chosen);
+    if (!target) { bkLog(t("bkChangedRead"), "line-err"); return; }
+    const name = BK.cleanName($("nameInput").value), val = BK.nameValue(name);
+    const upData = new ethers.Contract(b.up, UP_DATA_IFACE, b.provider);
+    const [cur] = await upData.getDataBatch([BK.nameKey(target.address)]);
+    if (String(cur || "0x").toLowerCase() === val.toLowerCase()) { bkLog(t("bkNameSame"), "line-warn"); return; }
+    const shown = name || t("bkNameCleared");
+    bkLog(t("bkPlanName", { signer: b.signer, km: b.km, addr: target.address, name: shown }), "line-dim");
+    const data = KM_EXEC_IFACE.encodeFunctionData("execute", [UP_DATA_IFACE.encodeFunctionData("setDataBatch", [[BK.nameKey(target.address)], [val]])]);
+    const what = { it: `Dà il nome "${shown}" al controller ${target.address} della UP ${b.up}: solo un'etichetta, nessun permesso cambia`, en: `Names the controller ${target.address} of the UP ${b.up} "${shown}": a label only, no permission changes` };
+    const problems = await sendBackupTx(b, data, async (at) => {
+      const [nm] = await upData.getDataBatch([BK.nameKey(target.address)], at);
+      return String(nm || "0x").toLowerCase() === val.toLowerCase() ? [] : [`name ${nm}`];
+    }, what);
+    if (problems === false) return;
+    bkLog(problems.length ? t("bkVerifyBad", { what: problems.join(", ") }) : t("bkNameOk", { addr: target.address, name: shown }), problems.length ? "line-warn" : "line-ok");
     await readBackup();
   } catch (e) {
     if (e && (e.code === "ACTION_REJECTED" || e.code === 4001)) bkLog(t("bkCancelled"), "line-warn");
@@ -1005,7 +1112,7 @@ $("removeBtn").addEventListener("click", async () => {
     const lastEntry = b.r.controllers[last];
     if (!lastEntry || !lastEntry.address) { bkLog(t("bkRoleBad"), "line-err"); return; }
     const upData = new ethers.Contract(b.up, UP_DATA_IFACE, b.provider);
-    const [calls, dataKeys] = await upData.getDataBatch([BK.callsKey(target.address), BK.dataKeysKey(target.address)]);
+    const [calls, dataKeys, nameRaw] = await upData.getDataBatch([BK.callsKey(target.address), BK.dataKeysKey(target.address), BK.nameKey(target.address)]);
     // Remove from AddressPermissions[]: move the last entry into the removed slot, shorten the list.
     const keys = [], vals = [];
     if (target.index !== last) { keys.push(BK.indexKey(target.index)); vals.push(lastEntry.address); }
@@ -1014,18 +1121,22 @@ $("removeBtn").addEventListener("click", async () => {
     let cleared = false;
     if (calls && calls !== "0x") { keys.push(BK.callsKey(target.address)); vals.push("0x"); cleared = true; }
     if (dataKeys && dataKeys !== "0x") { keys.push(BK.dataKeysKey(target.address)); vals.push("0x"); cleared = true; }
+    // Its name goes with it.
+    const hadName = !!(nameRaw && nameRaw !== "0x");
+    if (hadName) { keys.push(BK.nameKey(target.address)); vals.push("0x"); }
     bkLog(t("bkPlanRemove", { signer: b.signer, km: b.km, target: target.address, index: target.index, len: b.r.len, len1: last,
-      moved: target.index !== last ? t("bkPlanMoved", { addr: lastEntry.address }) : "", extra: cleared ? t("bkPlanClear") : "" }), "line-dim");
+      moved: target.index !== last ? t("bkPlanMoved", { addr: lastEntry.address }) : "", extra: (cleared ? t("bkPlanClear") : "") + (hadName ? t("bkPlanNameClear") : "") }), "line-dim");
     if (b.genesis.includes(target.address.toLowerCase())) bkLog(t("bkGenesisWarn"), "line-warn");
     if (!backupAmong(b.r.controllers.filter(c => c !== target))) bkLog(t("bkNoBackupAfter"), "line-warn");
     const data = KM_EXEC_IFACE.encodeFunctionData("execute", [UP_DATA_IFACE.encodeFunctionData("setDataBatch", [keys, vals])]);
     const what = { it: `Toglie il controller ${target.address} dalla UP ${b.up}`, en: `Removes the controller ${target.address} from the UP ${b.up}` };
     const problems = await sendBackupTx(b, data, async (at) => {
-      const [p, lenRaw] = await upData.getDataBatch([BK.permKey(target.address), BK.ARRAY_KEY], at);
+      const [p, lenRaw, nm] = await upData.getDataBatch([BK.permKey(target.address), BK.ARRAY_KEY, BK.nameKey(target.address)], at);
       const len = Number(BigInt(lenRaw || "0x0"));
       const list = len > 0 && len <= 50 ? await upData.getDataBatch(Array.from({ length: len }, (_, k) => BK.indexKey(k)), at) : [];
       const out = [];
       if (p && p !== "0x") out.push(`permissions ${p}`);
+      if (hadName && nm && nm !== "0x") out.push(`name ${nm}`);
       if (len !== last) out.push(`list length ${len}`);
       if (list.some(v => v && v.toLowerCase() === target.address.toLowerCase())) out.push("still listed");
       out.push(...await stillListed(b, at, target.address));
@@ -1075,6 +1186,9 @@ $("phoneAddress").addEventListener("input", syncPhoneLink);
   if (presetPhone && ethers.isAddress(presetPhone)) {
     phoneLinkAddr = ethers.getAddress(presetPhone);
     $("phoneAddress").value = phoneLinkAddr;
+    // The kind of device, from UP Wallet's link (?device=computer or phone): a starting point for its name.
+    const kind = q.get("device");
+    if (kind === "computer" || kind === "phone") $("phoneName").value = t(kind === "computer" ? "deviceComputer" : "devicePhone");
   }
   syncPhoneLink();
 }
