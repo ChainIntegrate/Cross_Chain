@@ -24,6 +24,31 @@
   const dataKeysKey = (a) => "0x4b80742de2bf866c29110000" + a.slice(2).toLowerCase();
   const toBig = (v) => (v && v !== "0x" ? BigInt(v) : 0n);
 
+  // A name for each controller, kept on the UP ("Office PC, extension"), so that every device and the site show
+  // it: an LSP2 mapping key, bytes10(keccak256("UPWalletControllerName")) + 0000 + the controller's address,
+  // whose value is the name in UTF-8. Written by an admin controller (the Backup page); public, as the
+  // controllers' addresses are; a label only, never trusted for anything.
+  const NAME_MAX = 64;
+  const nameKey = (a) => "0x344e172b69e28979f8df0000" + a.slice(2).toLowerCase();
+  // One line, no control or bidi characters, at most NAME_MAX characters.
+  const cleanName = (v) => [...String(v || "").replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]/g, " ")
+    .replace(/\s+/g, " ").trim()].slice(0, NAME_MAX).join("").trim();
+  const nameValue = (v) => { const n = cleanName(v); return n ? ethers.hexlify(ethers.toUtf8Bytes(n)) : "0x"; };
+  function nameOf(raw) {
+    if (!raw || raw === "0x" || ethers.dataLength(raw) > 4 * NAME_MAX) return null;
+    try { return cleanName(ethers.toUtf8String(raw)) || null; } catch (e) { return null; }
+  }
+  // The names of these controllers on this UP: { lowercase address: name }, only those that have one.
+  async function readNames(provider, upAddress, addresses, at) {
+    const list = [...new Set(addresses.filter(Boolean).map((a) => a.toLowerCase()))];
+    if (!list.length) return {};
+    const up = new ethers.Contract(upAddress, UP_ABI, provider);
+    const vals = await up.getDataBatch(list.map(nameKey), at || {});
+    const out = {};
+    list.forEach((a, i) => { const n = nameOf(vals[i]); if (n) out[a] = n; });
+    return out;
+  }
+
   // Reads AddressPermissions[] and each listed controller's permissions.
   // Returns { len, controllers: [{ address, index, perms, raw, role }], hasBackup, admins, km, urd }.
   // role: "entrypoint", "urd" or "controller". Throws when the list is too long to read here.
@@ -144,5 +169,5 @@
     return { refresh, render };
   }
 
-  window.BackupCheck = { read, attach, indexKey, permKey, callsKey, dataKeysKey, ARRAY_KEY, ENTRY_POINT, ADDCONTROLLER, EDITPERMISSIONS, ADMIN, ERC4337 };
+  window.BackupCheck = { read, attach, indexKey, permKey, callsKey, dataKeysKey, nameKey, nameValue, nameOf, cleanName, readNames, NAME_MAX, ARRAY_KEY, ENTRY_POINT, ADDCONTROLLER, EDITPERMISSIONS, ADMIN, ERC4337 };
 })();
