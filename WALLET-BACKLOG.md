@@ -34,11 +34,18 @@ item when its PR (or, for the app, its release) is done.
    200). The wallet should notice it (`chrome.permissions.contains` on the site) and say so in the gas box,
    with a button that asks for it (`chrome.permissions.request`, on the click); the install steps (release
    notes, README, guide) should say to check "Site access" on the extension's details.
-5. **App only: the phone key's confirmation names what the UP does** (asked 2026-10-28). As in extension
+5. **Extension only: a compact header in the side panel** (seen 2026-10-28, extension 0.1.5, Chrome 156).
+   In the side panel (about 400 pixels wide) the page's header takes the whole first screen: the banner,
+   the title "UP Wallet (experimental)" on two lines with the theme and language buttons beside it, and
+   the introduction ("Your Universal Profile's wallet on LUKSO…"); the UP's card starts only at the bottom.
+   In the extension (`html.in-extension`, `ext/ext.css`, as the app does for the phone): no banner, or a
+   thin one; the title on one line with the theme and language buttons in the same row; the introduction
+   left to panel 0 ("What it is") or shown as one line that opens. The UP's card in the first screen.
+6. **App only: the phone key's confirmation names what the UP does** (asked 2026-10-28). As in extension
    0.1.3: for a transaction through the Key Manager (`execute(bytes)`, selector 0x09c5eabe) the confirmation
    shows only the outer call to the Key Manager. It should decode the payload: the UP's `execute` (or
    `executeBatch`) inside, with each call's recipient, value and function. Its size on the phone is fine.
-6. **App only: the phone key's name** (as in extension 0.1.4). The "This phone" panel shows the key's name
+7. **App only: the phone key's name** (as in extension 0.1.4). The "This phone" panel shows the key's name
    kept on the UP on the page's network (`BackupCheck.readNames`, the Backup page's controller names), and
    its link to the Backup page adds `device=phone`, so that the name starts as "Phone · UP Wallet app".
 
