@@ -14,6 +14,19 @@ item when its PR (or, for the app, its release) is done.
    side, with "Cancel", is cut off. The signing window must be wide enough for it (about 520 x 640), still at
    the top right of the browser window.
 
+2. **Extension only: WalletConnect from the extension** (seen 2026-10-28, extension 0.1.2, hup.social).
+   Pairing fails after a while with "Subscribing to <topic> failed, please try again": the extension does not
+   get its subscription on WalletConnect's relay. Most likely the Reown project's allowed domains: the
+   extension shares the site's and the app's project id, and its origin is `chrome-extension://<id>`. To
+   check in Reown's dashboard (add the extension's origin, or give the extension its own project, without an
+   allowlist, in `ext-config.json`), then pair again.
+3. **Extension only: WalletConnect alive with the panel closed** (asked 2026-10-28). Today WalletKit runs in
+   the wallet page: closing the side panel ends it, and a dApp's requests wait until it is open again. Move
+   the WalletConnect sessions to an offscreen document of the extension, which stays while the browser runs:
+   the dApp stays connected until the user disconnects it, and a request opens the wallet (or the signing
+   window, at the top right) by itself, as browser wallets do. The page keeps showing and checking every
+   request.
+
 ## Other pages
 
 Nothing open.
