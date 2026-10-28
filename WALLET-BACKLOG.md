@@ -38,14 +38,22 @@ item when its PR (or, for the app, its release) is done.
    In the side panel (about 400 pixels wide) the page's header takes the whole first screen: the banner,
    the title "UP Wallet (experimental)" on two lines with the theme and language buttons beside it, and
    the introduction ("Your Universal Profile's wallet on LUKSO…"); the UP's card starts only at the bottom.
-   In the extension (`html.in-extension`, `ext/ext.css`, as the app does for the phone): no banner, or a
-   thin one; the title on one line with the theme and language buttons in the same row; the introduction
+   In the extension (`html.in-extension`, `ext/ext.css`, as the app does for the phone): the banner stays,
+   smaller but visible; the title on one line with the theme and language buttons in the same row; the introduction
    left to panel 0 ("What it is") or shown as one line that opens. The UP's card in the first screen.
-6. **App only: the phone key's confirmation names what the UP does** (asked 2026-10-28). As in extension
+6. **"Pay the gas with the site relayer" on by default, where allowed** (asked 2026-10-28). Today the box
+   (`gas-relay-client.js`, `attach`) starts unticked and is ticked by hand at each visit. When the relayer
+   can take the UP's operations on that network (state "ready": the UP set up for the gas relay, a
+   subscription or the operator's list, the controller with the 4337 permission), the box starts ticked,
+   and comes back ticked when the network, the UP or the controller change and the relayer is ready again;
+   it can still be unticked for an operation. Where the relayer cannot be used, nothing changes (the
+   controller pays, as today). In UP Wallet on the site, the app and the extension; the other pages that
+   use `GasRelayClient.attach` keep their behaviour unless chosen otherwise.
+7. **App only: the phone key's confirmation names what the UP does** (asked 2026-10-28). As in extension
    0.1.3: for a transaction through the Key Manager (`execute(bytes)`, selector 0x09c5eabe) the confirmation
    shows only the outer call to the Key Manager. It should decode the payload: the UP's `execute` (or
    `executeBatch`) inside, with each call's recipient, value and function. Its size on the phone is fine.
-7. **App only: the phone key's name** (as in extension 0.1.4). The "This phone" panel shows the key's name
+8. **App only: the phone key's name** (as in extension 0.1.4). The "This phone" panel shows the key's name
    kept on the UP on the page's network (`BackupCheck.readNames`, the Backup page's controller names), and
    its link to the Backup page adds `device=phone`, so that the name starts as "Phone · UP Wallet app".
 
