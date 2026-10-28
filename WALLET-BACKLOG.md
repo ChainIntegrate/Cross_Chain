@@ -8,7 +8,11 @@ item when its PR (or, for the app, its release) is done.
 
 ## Open
 
-Nothing open.
+1. **App only: the phone key's confirmation names what the UP does** (asked 2026-10-28). As in extension
+   0.1.3: for a transaction through the Key Manager (`execute(bytes)`, selector 0x09c5eabe) the confirmation
+   shows only the outer call to the Key Manager. It should decode the payload: the UP's `execute` (or
+   `executeBatch`) inside, with each call's recipient, value and function. To check also the confirmation's
+   size on the phone.
 
 ## Other pages
 
