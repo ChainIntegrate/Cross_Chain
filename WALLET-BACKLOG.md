@@ -57,11 +57,20 @@ item when its PR (or, for the app, its release) is done.
    (extension, app), connects it by itself (no signature: it only reads the key's address) and runs the
    check, as with a session. On the site, with MetaMask, the UP comes back but connecting MetaMask stays a
    click (it opens MetaMask). A session, when there is one, still decides the UP and the network.
-8. **App only: the phone key's confirmation names what the UP does** (asked 2026-10-28). As in extension
+8. **Extension only: a click on the request notification does not bring the wallet back** (seen
+   2026-10-28, extension 0.1.5, Chrome 156, Windows 11). While the user works in another window or tab,
+   a dApp's request shows the browser notification ("UP Wallet", `attention()` in `up-wallet.html`); a click
+   on it does nothing visible. Its handler calls `window.focus()`, which a side panel (or a tab in the
+   background) cannot use to come to the front. In the extension the click should bring the wallet back:
+   the browser window that holds the side panel focused (the panel stays open in it), or the wallet's tab
+   made active and its window focused, or the wallet's popup window focused (`chrome.windows.update`,
+   `chrome.tabs.update`, through the service worker); if the wallet was closed meanwhile, open it as for a
+   request with the wallet closed. To check also on the site (a tab in another window).
+9. **App only: the phone key's confirmation names what the UP does** (asked 2026-10-28). As in extension
    0.1.3: for a transaction through the Key Manager (`execute(bytes)`, selector 0x09c5eabe) the confirmation
    shows only the outer call to the Key Manager. It should decode the payload: the UP's `execute` (or
    `executeBatch`) inside, with each call's recipient, value and function. Its size on the phone is fine.
-9. **App only: the phone key's name** (as in extension 0.1.4). The "This phone" panel shows the key's name
+10. **App only: the phone key's name** (as in extension 0.1.4). The "This phone" panel shows the key's name
    kept on the UP on the page's network (`BackupCheck.readNames`, the Backup page's controller names), and
    its link to the Backup page adds `device=phone`, so that the name starts as "Phone · UP Wallet app".
 
