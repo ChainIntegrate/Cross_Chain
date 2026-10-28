@@ -21,6 +21,13 @@ item when its PR (or, for the app, its release) is done.
    UP can be set without copying its address. The index covers LUKSO mainnet profiles: a UP on a testnet is
    still entered by address.
 
+4. **The extension's version in the version line** (asked 2026-10-28). In the browser extension the line at
+   the bottom shows only the page's date ("UP Wallet · page version 2026-10-28"); it should name the
+   extension's own version, as the app does: "UP Wallet · extension 0.1.1 · page 2026-10-28 (commit …)".
+   The page: in `html.in-extension`, "extension" instead of "app"; the extension gives its version
+   (`chrome.runtime.getManifest().version`) through `window.__upwalletAppVersion` and the
+   `upwallet:version` event, and its build writes `PAGE_COMMIT`, as the app's does.
+
 ## Other pages
 
 Nothing open.
