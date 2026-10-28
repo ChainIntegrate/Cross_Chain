@@ -27,11 +27,18 @@ item when its PR (or, for the app, its release) is done.
    at the top right) also reaches the window's own "Sign". To fix: the window's buttons ignore clicks for
    about a second after the request is shown (as browsers do in their permission prompts), and a click
    must start and end inside the window; check the position against the side panel too.
-4. **App only: the phone key's confirmation names what the UP does** (asked 2026-10-28). As in extension
+4. **Extension only: the site access withheld by Chrome** (seen 2026-10-28, extension 0.1.5, Chrome 156).
+   The extension's "Site access" was limited in Chrome's settings: its host permission on the site was not
+   applied, and the relay calls failed with a CORS error ("No 'Access-Control-Allow-Origin' header",
+   `relay/info`); turning the site access on fixed it (the relayer answers the extension's origin with
+   200). The wallet should notice it (`chrome.permissions.contains` on the site) and say so in the gas box,
+   with a button that asks for it (`chrome.permissions.request`, on the click); the install steps (release
+   notes, README, guide) should say to check "Site access" on the extension's details.
+5. **App only: the phone key's confirmation names what the UP does** (asked 2026-10-28). As in extension
    0.1.3: for a transaction through the Key Manager (`execute(bytes)`, selector 0x09c5eabe) the confirmation
    shows only the outer call to the Key Manager. It should decode the payload: the UP's `execute` (or
    `executeBatch`) inside, with each call's recipient, value and function. Its size on the phone is fine.
-5. **App only: the phone key's name** (as in extension 0.1.4). The "This phone" panel shows the key's name
+6. **App only: the phone key's name** (as in extension 0.1.4). The "This phone" panel shows the key's name
    kept on the UP on the page's network (`BackupCheck.readNames`, the Backup page's controller names), and
    its link to the Backup page adds `device=phone`, so that the name starts as "Phone · UP Wallet app".
 
