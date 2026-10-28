@@ -66,11 +66,27 @@ item when its PR (or, for the app, its release) is done.
    made active and its window focused, or the wallet's popup window focused (`chrome.windows.update`,
    `chrome.tabs.update`, through the service worker); if the wallet was closed meanwhile, open it as for a
    request with the wallet closed. To check also on the site (a tab in another window).
-9. **App only: the phone key's confirmation names what the UP does** (asked 2026-10-28). As in extension
+9. **The same data everywhere: site, app and extension** (asked 2026-10-28). The pages already read the
+   UP's assets with the same code (`asset-list.js`: the chain's LSP5 list, then an indexer, Alchemy where
+   there is a key, else Blockscout), but not from the same indexer: the site has an Alchemy key
+   (`config.js` on the server); the extension has none (its `config.js` in 0.1.5 has `alchemyApiKey: ""`:
+   no `ALCHEMY_KEY` secret in its repository), so it reads Blockscout only; the app has the secret, but its
+   origin (`https://upwallet.chainintegrate.it`) must be allowed by the key, or Alchemy refuses and the page
+   falls back to Blockscout without saying so. Seen: EURe on Arbitrum shown by Identity on the site, not
+   by the extension.
+   - Maintainer: the `ALCHEMY_KEY` secret in up-wallet-extension; the extension's origin
+     (`chrome-extension://bjndlbdefcelfamapgpimaiaboehehek`) and the app's (`upwallet.chainintegrate.it`) in
+     the key's allowed origins on Alchemy.
+   - `asset-list.js`: say which indexer was read and when it fell back ("read from Blockscout: Alchemy
+     refused …"), in UP Wallet's assets and "Every network" and in Identity, so a difference is never
+     silent; Blockscout's spam only when the token is marked scam (`is_scam`, reputation "scam"), not for
+     any reputation other than "ok".
+   - `usd-price.js`: euro stablecoins (EURe, EURC) priced with Chainlink's EUR/USD feed, in the totals.
+10. **App only: the phone key's confirmation names what the UP does** (asked 2026-10-28). As in extension
    0.1.3: for a transaction through the Key Manager (`execute(bytes)`, selector 0x09c5eabe) the confirmation
    shows only the outer call to the Key Manager. It should decode the payload: the UP's `execute` (or
    `executeBatch`) inside, with each call's recipient, value and function. Its size on the phone is fine.
-10. **App only: the phone key's name** (as in extension 0.1.4). The "This phone" panel shows the key's name
+11. **App only: the phone key's name** (as in extension 0.1.4). The "This phone" panel shows the key's name
    kept on the UP on the page's network (`BackupCheck.readNames`, the Backup page's controller names), and
    its link to the Backup page adds `device=phone`, so that the name starts as "Phone · UP Wallet app".
 
