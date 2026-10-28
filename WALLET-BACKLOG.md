@@ -15,4 +15,16 @@ item when its PR (or, for the app, its release) is done.
 
 ## Other pages
 
-Nothing open.
+1. **Backup page: a name for each controller, kept on the UP** (asked 2026-10-28). With a key per device
+   (one key, one device, by choice), the controllers grow: each should carry a name ("Office PC, extension",
+   "Pixel, app"), seen from every device and from the site.
+   - Stored on the UP itself (ERC725Y), one data key per controller: a mapping key (bytes10 of
+     keccak256 of a name of ours, 0000, the controller's address) whose value is the name in UTF-8, short
+     (at most 64 characters). Public, as the controllers' addresses already are: no personal data in it.
+   - Written in the same transaction as "Authorize a device" (an optional name field, filled in with the
+     kind of device: extension or app), signed by the admin controller as today; cleared in the same
+     transaction as the revoke. A name can be added or changed later for any controller, MetaMask included
+     (one setData, by an admin controller). Permissions unchanged: the device keys keep only LSP3Profile.
+   - Shown wherever the page lists controllers (Backup page; the wallet's "This computer" / "This phone"
+     panel for its own key), with the address. Per network, as the controllers are: the page says when a
+     name exists on one network and not on another.
