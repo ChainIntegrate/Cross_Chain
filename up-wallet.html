@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-7cCVoYkxzYxEl4RcGTnrI7XyL1SAx/F3Q+EmzFhBdwU='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-BT/NT16tnNm5b/FxnF1+oFAGRpAppcBy1P4BRhKwcrk='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -277,8 +277,9 @@
 <div class="panel" data-view="settings">
   <h2 data-i18n="panel2Title">2 · La tua UP</h2>
   <button id="connectUp" class="secondary" data-i18n="connectUpBtn">Leggi l'indirizzo dall'estensione UP</button>
-  <label for="upAddress" data-i18n="upAddressLabel">Indirizzo della UP</label>
-  <input type="text" id="upAddress" placeholder="0x...">
+  <label for="upAddress" data-i18n="upAddressLabel">Indirizzo o nome della UP</label>
+  <input type="text" id="upAddress" placeholder="0x… / nome#abcd" autocomplete="off">
+  <div id="upAddressResults"></div>
   <div id="backupAlert"></div>
 </div>
 
@@ -715,7 +716,7 @@ const I18N = {
     customNetName: "Rete custom",
     panel2Title: "2 · La tua UP",
     connectUpBtn: "Leggi l'indirizzo dall'estensione UP",
-    upAddressLabel: "Indirizzo della UP",
+    upAddressLabel: "Indirizzo o nome della UP",
     panel3Title: "3 · Controller (MetaMask) e verifica",
     panel3Note: "MetaMask con la chiave del controller della UP, sulla rete scelta. Paga il gas: deve avere un po' della moneta della rete. La verifica di compatibilità tra UP e controller parte da sola e si ripete se cambi rete, UP, account o rete in MetaMask.",
     connectSignerBtn: "Connetti MetaMask (controller)",
@@ -1062,8 +1063,9 @@ const I18N = {
     signInvalid: (v) => `❌ La UP NON riconosce la firma (risposta ${v.r}): non viene inviata alla dApp.`,
     ctText: "testo leggibile", ctOpaque: "dati non leggibili (hash o binario)", ctTyped: "dati strutturati EIP-712",
 
-    versionSite: (v) => `UP Wallet · versione della pagina ${v.v}`,
+    versionSite: (v) => `UP Wallet · pagina ${v.v}`,
     versionApp: (v) => `UP Wallet · app ${v.app} · pagina ${v.v} (commit ${v.commit})`,
+    versionExt: (v) => `UP Wallet · estensione ${v.app} · pagina ${v.v} (commit ${v.commit})`,
     footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Codice sorgente su GitHub</a> · <a href="https://github.com/ChainIntegrate/up-wallet-android" target="_blank" rel="noopener">App Android (in prova)</a><br><span style="font-size:11.5px;">WalletConnect: Portions © 2025 Reown, Inc. All Rights Reserved. <a href="vendor/walletkit-1.6.0.LICENSE.md" target="_blank" rel="noopener">Licenza</a> · <a href="vendor/walletkit-1.6.0.THIRD-PARTY.txt" target="_blank" rel="noopener">componenti di terzi</a></span>`,
   },
   en: {
@@ -1158,7 +1160,7 @@ const I18N = {
     customNetName: "Custom network",
     panel2Title: "2 · Your UP",
     connectUpBtn: "Read the address from the UP extension",
-    upAddressLabel: "UP address",
+    upAddressLabel: "The UP's address or name",
     panel3Title: "3 · Controller (MetaMask) and check",
     panel3Note: "MetaMask with the UP controller's key, on the chosen network. It pays the gas: it needs some of the network's coin. The compatibility check between UP and controller starts by itself and runs again if you change network, UP, account or MetaMask's network.",
     connectSignerBtn: "Connect MetaMask (controller)",
@@ -1475,8 +1477,9 @@ const I18N = {
     signInvalid: (v) => `❌ The UP does NOT recognise the signature (answer ${v.r}): it is not sent to the dApp.`,
     ctText: "readable text", ctOpaque: "unreadable data (hash or binary)", ctTyped: "EIP-712 structured data",
 
-    versionSite: (v) => `UP Wallet · page version ${v.v}`,
+    versionSite: (v) => `UP Wallet · page ${v.v}`,
     versionApp: (v) => `UP Wallet · app ${v.app} · page ${v.v} (commit ${v.commit})`,
+    versionExt: (v) => `UP Wallet · extension ${v.app} · page ${v.v} (commit ${v.commit})`,
     footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Source code on GitHub</a> · <a href="https://github.com/ChainIntegrate/up-wallet-android" target="_blank" rel="noopener">Android app (in testing)</a><br><span style="font-size:11.5px;">WalletConnect: Portions © 2025 Reown, Inc. All Rights Reserved. <a href="vendor/walletkit-1.6.0.LICENSE.md" target="_blank" rel="noopener">License</a> · <a href="vendor/walletkit-1.6.0.THIRD-PARTY.txt" target="_blank" rel="noopener">third-party components</a></span>`,
   },
 };
@@ -1591,14 +1594,16 @@ function t(key, vars) {
   const out = typeof o === "function" ? o(s, vars || {}) : o;
   return computerKey() ? toComputer(out) : out;
 }
-// The version shown at the bottom of the page: moved forward with each batch of WALLET-BACKLOG.md. The
-// Android app's build writes the Cross_Chain commit in PAGE_COMMIT, and the app its own version
+// The page's version, shown at the bottom: major.minor.patch, the minor moved forward with each batch of
+// WALLET-BACKLOG.md and the patch with a fix (0.x: experimental). The Android app's and the browser
+// extension's builds write the Cross_Chain commit in PAGE_COMMIT, and they give their own version
 // (window.__upwalletAppVersion, then the "upwallet:version" event).
-const PAGE_VERSION = "2026-10-28";
+const PAGE_VERSION = "0.10.0";
 const PAGE_COMMIT = null;
 function renderVersion() {
   const el = $("pageVersion"), app = window.__upwalletAppVersion;
-  if (el) el.textContent = app ? t("versionApp", { app: oneLine(app, 20), v: PAGE_VERSION, commit: PAGE_COMMIT || "?" }) : t("versionSite", { v: PAGE_VERSION });
+  const kind = document.documentElement.classList.contains("in-extension") ? "versionExt" : "versionApp";
+  if (el) el.textContent = app ? t(kind, { app: oneLine(app, 20), v: PAGE_VERSION, commit: PAGE_COMMIT || "?" }) : t("versionSite", { v: PAGE_VERSION });
 }
 window.addEventListener("upwallet:version", renderVersion);
 function applyI18n() {
@@ -1788,11 +1793,11 @@ function renderNetworkOptions(filter) {
 renderNetworkOptions("");
 const presetNetworkKey = new URLSearchParams(location.search).get("network");
 if (presetNetworkKey && NETWORKS.some(c => c.key === presetNetworkKey)) networkSelectEl.value = presetNetworkKey;
-// Otherwise the last network chosen on this site (shared with the tool pages and kept by the app), else Arc.
+// Otherwise the last network chosen on this site (shared with the tool pages and kept by the app), else LUKSO.
 else {
   let last = null;
   try { last = localStorage.getItem("upwallet.network"); } catch (e) { /* none */ }
-  const pick = [last, "arc"].find((k) => k && NETWORKS.some((c) => c.key === k));
+  const pick = [last, "lukso"].find((k) => k && NETWORKS.some((c) => c.key === k));
   if (pick) networkSelectEl.value = pick;
 }
 networkSelectEl.addEventListener("change", () => { try { if (networkSelectEl.value !== "custom") localStorage.setItem("upwallet.network", networkSelectEl.value); } catch (e) { /* not kept */ } });
@@ -4130,6 +4135,30 @@ function openUps(open) {
 $("upChip").addEventListener("click", (e) => { e.stopPropagation(); openUps(true); });
 $("upsClose").addEventListener("click", () => openUps(false));
 $("upsModal").addEventListener("click", (e) => { if (e.target === $("upsModal")) openUps(false); });
+// Panel 2: the UP by address, or by name through LUKSO's profile index, as in the "⇄ UP" window.
+let upNameTimer = null, upNameRun = 0;
+$("upAddress").addEventListener("input", () => {
+  clearTimeout(upNameTimer);
+  const v = $("upAddress").value.trim(), box = $("upAddressResults");
+  box.textContent = "";
+  if (!v || ethers.isAddress(v) || v.startsWith("0x") || v.split("#")[0].trim().length < 2) return;
+  upNameTimer = setTimeout(async () => {
+    const run = ++upNameRun;
+    const info = document.createElement("div"); info.className = "note line-dim"; info.textContent = t("upsSearching"); box.appendChild(info);
+    let list;
+    try { list = await searchProfiles(v); } catch (e) { if (run === upNameRun) info.textContent = t("nameFail", { err: e.message }); return; }
+    if (run !== upNameRun || $("upAddress").value.trim() !== v) return;
+    box.textContent = "";
+    if (!list.length) { info.textContent = t("upsNone"); box.appendChild(info); return; }
+    for (const p of list) {
+      const b = document.createElement("button"); b.type = "button"; b.className = "secondary"; b.style.cssText = "display:block; width:100%; text-align:left; margin:4px 0; padding:8px 10px;";
+      b.textContent = `${t("upsUse")}: ${p.name || "?"}#${tag(p.address)} · ${shortAddr(p.address)}`;
+      b.title = p.address;
+      b.addEventListener("click", () => { box.textContent = ""; $("upAddress").value = p.address; $("upAddress").dispatchEvent(new Event("input")); });
+      box.appendChild(b);
+    }
+  }, 500);
+});
 // Add by address, or by name through LUKSO's profile index (as the Send panel's recipient).
 let upsTimer = null, upsRun = 0;
 $("upsAdd").addEventListener("input", () => {

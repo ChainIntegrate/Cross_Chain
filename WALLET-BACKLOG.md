@@ -8,25 +8,10 @@ item when its PR (or, for the app, its release) is done.
 
 ## Open
 
-1. **Extension only: no "Read the address from the UP extension" button** (seen 2026-10-28, extension
-   0.1.1). The Universal Profile browser extension does not reach an extension's own page
-   (`chrome-extension://…`), so in UP Wallet for the browser the button only says "not found". The Android
-   app already hides it (`app/app.css`, `html.in-app #connectUp`); the extension does the same
-   (`html.in-extension`). The site keeps it.
-2. **LUKSO as the starting network** (asked 2026-10-28). With no network chosen before, the page starts on
-   LUKSO instead of Arc (`up-wallet.html`, the fallback after `upwallet.network`). The last network chosen
-   is still remembered.
-3. **Search by name in panel 2 (the UP)** (asked 2026-10-28). The UP field takes an address or a name, with
-   the same search as the "⇄ UP" window (LUKSO's profile index: name, picture, address to pick), so a new
-   UP can be set without copying its address. The index covers LUKSO mainnet profiles: a UP on a testnet is
-   still entered by address.
-
-4. **The extension's version in the version line** (asked 2026-10-28). In the browser extension the line at
-   the bottom shows only the page's date ("UP Wallet · page version 2026-10-28"); it should name the
-   extension's own version, as the app does: "UP Wallet · extension 0.1.1 · page 2026-10-28 (commit …)".
-   The page: in `html.in-extension`, "extension" instead of "app"; the extension gives its version
-   (`chrome.runtime.getManifest().version`) through `window.__upwalletAppVersion` and the
-   `upwallet:version` event, and its build writes `PAGE_COMMIT`, as the app's does.
+Nothing open. The four items of 2026-10-28 (the UP extension button hidden in the browser extension, LUKSO
+as the starting network, search by name in panel 2, the extension's version in the version line) were made
+in the batch of 2026-10-28 (page 0.10.0, the first numbered version of the page), released in extension
+0.1.2 and app 0.9.6.
 
 ## Other pages
 
