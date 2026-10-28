@@ -90,7 +90,9 @@ item when its PR (or, for the app, its release) is done.
    other one). To do: add Arbitrum's VaultBundlesV1 to the page's list (`up-wallet.html`, the
    `"<chainId>:<address>"` table near `MORPHO_BUNDLES_IFACE`), and the other networks where Morpho has it,
    each checked against Morpho's own published addresses (Morpho's documentation or its deployments
-   repository), not against the explorer's name, which anyone can give a contract they verify.
+   repository), not against the explorer's name, which anyone can give a contract they verify. Already
+   seen: the deposit went through and the shares show in the UP's portfolio in Morpho's app, with the
+   others (the maintainer, 2026-10-28).
 11. **App only: the phone key's confirmation names what the UP does** (asked 2026-10-28). As in extension
    0.1.3: for a transaction through the Key Manager (`execute(bytes)`, selector 0x09c5eabe) the confirmation
    shows only the outer call to the Key Manager. It should decode the payload: the UP's `execute` (or
