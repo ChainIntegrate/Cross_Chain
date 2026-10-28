@@ -81,11 +81,21 @@ item when its PR (or, for the app, its release) is done.
      silent; Blockscout's spam only when the token is marked scam (`is_scam`, reputation "scam"), not for
      any reputation other than "ok".
    - `usd-price.js`: euro stablecoins (EURe, EURC) priced with Chainlink's EUR/USD feed, in the totals.
-10. **App only: the phone key's confirmation names what the UP does** (asked 2026-10-28). As in extension
+10. **Morpho's VaultBundlesV1 on Arbitrum not known to the page** (seen 2026-10-28, extension 0.1.5, Morpho's
+   app on Arbitrum One: a deposit of 10 EURe into the vault "KPK EURe Yield", `0x7bfdE3A7bd346Da92521D384563F89BB45dE1f60`).
+   The request went to `0x5afAb0B2414E30c92a708234ea1b383Ce6317ED5` ("VaultBundlesV1" by its verified source
+   name on the explorer), with the call shape of Morpho's VaultBundlesV1; the page knows that contract only on
+   Base (`0x2b08…ea7b`) and Arc (`0x76c1…0b68`), so it showed the ⛔ "could be imitating it" line. Decoding,
+   simulation and the gas relay were fine. That address is Morpho's bundling contract (the vault is the
+   other one). To do: add Arbitrum's VaultBundlesV1 to the page's list (`up-wallet.html`, the
+   `"<chainId>:<address>"` table near `MORPHO_BUNDLES_IFACE`), and the other networks where Morpho has it,
+   each checked against Morpho's own published addresses (Morpho's documentation or its deployments
+   repository), not against the explorer's name, which anyone can give a contract they verify.
+11. **App only: the phone key's confirmation names what the UP does** (asked 2026-10-28). As in extension
    0.1.3: for a transaction through the Key Manager (`execute(bytes)`, selector 0x09c5eabe) the confirmation
    shows only the outer call to the Key Manager. It should decode the payload: the UP's `execute` (or
    `executeBatch`) inside, with each call's recipient, value and function. Its size on the phone is fine.
-11. **App only: the phone key's name** (as in extension 0.1.4). The "This phone" panel shows the key's name
+12. **App only: the phone key's name** (as in extension 0.1.4). The "This phone" panel shows the key's name
    kept on the UP on the page's network (`BackupCheck.readNames`, the Backup page's controller names), and
    its link to the Backup page adds `device=phone`, so that the name starts as "Phone · UP Wallet app".
 
