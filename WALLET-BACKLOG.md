@@ -27,6 +27,12 @@ item when its PR (or, for the app, its release) is done.
    window, at the top right) by itself, as browser wallets do. The page keeps showing and checking every
    request.
 
+4. **Extension only: the signing window names what the UP does** (seen 2026-10-28, a like on hup.social on
+   LUKSO). For a transaction through the Key Manager the window shows its outer call: "To" the Key Manager,
+   "Function 0x09c5eabe" (`execute(bytes)`). It should decode the payload as it does for gas-relay
+   operations: the UP's `execute` (or `executeBatch`) inside, with the recipient, the value and the function,
+   so the window says what the UP does, not only that it goes through its Key Manager.
+
 ## Other pages
 
 Nothing open.
