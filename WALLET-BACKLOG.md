@@ -8,11 +8,30 @@ item when its PR (or, for the app, its release) is done.
 
 ## Open
 
-1. **App only: the phone key's confirmation names what the UP does** (asked 2026-10-28). As in extension
+1. **Remember the "Only simulation" choice** (asked 2026-10-28, extension 0.1.5). The box "Only
+   simulation (send nothing)" starts ticked at every load of the page (`#simulateOnly`, checked in the
+   HTML): in the extension, closing the side panel and opening it again puts the wallet back in simulation,
+   and the user has to turn it off each time. Keep the choice in the browser (`localStorage`, as the
+   network and the UPs), per device; the first visit still starts in simulation. The same for the site
+   and the app (the same page).
+2. **Stale sentence in the page's introduction** (seen 2026-10-28). Panel 0 ("What it is") still says "On
+   the phone there is the Android app, with MetaMask mobile" (IT: "Sul telefono c'è l'app Android, con
+   MetaMask mobile"): since 0.9.0 the app signs with the phone key, and the computer has the browser
+   extension. Say so, in the site's texts and in the texts of the phone key and of the computer key.
+3. **Extension only: the passkey asked before the decoded request can be read** (seen 2026-10-28,
+   extension 0.1.5, Windows 11, Chrome 156, a hup.social like on LUKSO). After "Sign" in the page's
+   request window, the signing window opens with the decoded request (Key Manager, the UP's call,
+   recipient, value, function, maximum gas), but Windows Hello's PIN prompt comes up at once over it, so
+   the decoded request cannot be read before the PIN. The window does not start the passkey by itself:
+   most likely the click on "Sign" in the page (the side panel is on the right, under the window that opens
+   at the top right) also reaches the window's own "Sign". To fix: the window's buttons ignore clicks for
+   about a second after the request is shown (as browsers do in their permission prompts), and a click
+   must start and end inside the window; check the position against the side panel too.
+4. **App only: the phone key's confirmation names what the UP does** (asked 2026-10-28). As in extension
    0.1.3: for a transaction through the Key Manager (`execute(bytes)`, selector 0x09c5eabe) the confirmation
    shows only the outer call to the Key Manager. It should decode the payload: the UP's `execute` (or
    `executeBatch`) inside, with each call's recipient, value and function. Its size on the phone is fine.
-2. **App only: the phone key's name** (as in extension 0.1.4). The "This phone" panel shows the key's name
+5. **App only: the phone key's name** (as in extension 0.1.4). The "This phone" panel shows the key's name
    kept on the UP on the page's network (`BackupCheck.readNames`, the Backup page's controller names), and
    its link to the Backup page adds `device=phone`, so that the name starts as "Phone · UP Wallet app".
 
