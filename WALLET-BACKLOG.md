@@ -49,11 +49,19 @@ item when its PR (or, for the app, its release) is done.
    it can still be unticked for an operation. Where the relayer cannot be used, nothing changes (the
    controller pays, as today). In UP Wallet on the site, the app and the extension; the other pages that
    use `GasRelayClient.attach` keep their behaviour unless chosen otherwise.
-7. **App only: the phone key's confirmation names what the UP does** (asked 2026-10-28). As in extension
+7. **Take back the last setup at every opening** (asked 2026-10-28, extension 0.1.5). With a WalletConnect
+   session the extension takes back the session's network, UP and computer key by itself (`ext/wc-remote.js`);
+   without one, every opening of the side panel starts empty: the network is remembered, but the UP must be
+   chosen again and the key connected again. At every opening, the page takes back the last UP used on
+   this device (kept with the saved UPs, `upwallet.ups`) and, where the signer is the device's own key
+   (extension, app), connects it by itself (no signature: it only reads the key's address) and runs the
+   check, as with a session. On the site, with MetaMask, the UP comes back but connecting MetaMask stays a
+   click (it opens MetaMask). A session, when there is one, still decides the UP and the network.
+8. **App only: the phone key's confirmation names what the UP does** (asked 2026-10-28). As in extension
    0.1.3: for a transaction through the Key Manager (`execute(bytes)`, selector 0x09c5eabe) the confirmation
    shows only the outer call to the Key Manager. It should decode the payload: the UP's `execute` (or
    `executeBatch`) inside, with each call's recipient, value and function. Its size on the phone is fine.
-8. **App only: the phone key's name** (as in extension 0.1.4). The "This phone" panel shows the key's name
+9. **App only: the phone key's name** (as in extension 0.1.4). The "This phone" panel shows the key's name
    kept on the UP on the page's network (`BackupCheck.readNames`, the Backup page's controller names), and
    its link to the Backup page adds `device=phone`, so that the name starts as "Phone · UP Wallet app".
 
