@@ -8,9 +8,10 @@ item when its PR (or, for the app, its release) is done.
 
 ## Open
 
-Nothing open. The four items of 2026-10-26 and 2026-10-27 (UP CIE Link statements, the "Every network"
-view on a testnet, the visible version, the keep-alive notification off the lock screen) were made in
-the batch of 2026-10-28, released in app 0.9.5.
+Nothing open. The four items of 2026-10-28 (the UP extension button hidden in the browser extension, LUKSO
+as the starting network, search by name in panel 2, the extension's version in the version line) were made
+in the batch of 2026-10-28 (page 0.10.0, the first numbered version of the page), released in extension
+0.1.2 and app 0.9.6.
 
 ## Other pages
 
