@@ -11,8 +11,9 @@ item when its PR (or, for the app, its release) is done.
 1. **Extension only: the passkey dialog cut off in the signing window** (seen 2026-10-28, extension 0.1.2,
    Windows 11, Chrome 156). Chrome draws its passkey dialog ("Create a passkey…", "Save another way",
    "Create", "Cancel") inside the signing window, which at 400 pixels is narrower than the dialog: its right
-   side, with "Cancel", is cut off. The signing window must be wide enough for it (about 520 x 640), still at
-   the top right of the browser window.
+   side, with "Cancel", is cut off. The same at each signature, after Windows Hello's PIN (Chrome's own
+   confirmation inside the window). The signing window must be wide and tall enough for Chrome's dialogs
+   (about 520 x 680), still at the top right of the browser window.
 
 2. **Extension only: WalletConnect from the extension** (seen 2026-10-28, extension 0.1.2, hup.social).
    Pairing fails after a while with "Subscribing to <topic> failed, please try again": the extension does not
