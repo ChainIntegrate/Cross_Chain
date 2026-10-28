@@ -70,13 +70,12 @@ item when its PR (or, for the app, its release) is done.
    UP's assets with the same code (`asset-list.js`: the chain's LSP5 list, then an indexer, Alchemy where
    there is a key, else Blockscout), but not from the same indexer: the site has an Alchemy key
    (`config.js` on the server); the extension has none (its `config.js` in 0.1.5 has `alchemyApiKey: ""`:
-   no `ALCHEMY_KEY` secret in its repository), so it reads Blockscout only; the app has the secret, but its
-   origin (`https://upwallet.chainintegrate.it`) must be allowed by the key, or Alchemy refuses and the page
-   falls back to Blockscout without saying so. Seen: EURe on Arbitrum shown by Identity on the site, not
-   by the extension.
-   - Maintainer: the `ALCHEMY_KEY` secret in up-wallet-extension; the extension's origin
-     (`chrome-extension://bjndlbdefcelfamapgpimaiaboehehek`) and the app's (`upwallet.chainintegrate.it`) in
-     the key's allowed origins on Alchemy.
+   no `ALCHEMY_KEY` secret in its repository), so it reads Blockscout only; the app has the secret and its origin
+   (`https://upwallet.chainintegrate.it`) is allowed by the key (EURe on Arbitrum shown in the app). Seen:
+   EURe on Arbitrum shown by Identity on the site and by the app, not by the extension.
+   - Maintainer: the `ALCHEMY_KEY` secret in up-wallet-extension, and the extension's origin
+     (`chrome-extension://bjndlbdefcelfamapgpimaiaboehehek`) in the key's allowed origins on Alchemy; then
+     an extension release, checked on Arbitrum (EURe listed, "read from Alchemy").
    - `asset-list.js`: say which indexer was read and when it fell back ("read from Blockscout: Alchemy
      refused …"), in UP Wallet's assets and "Every network" and in Identity, so a difference is never
      silent; Blockscout's spam only when the token is marked scam (`is_scam`, reputation "scam"), not for
