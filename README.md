@@ -125,7 +125,7 @@ same page, taken from this repository at a pinned commit, and adds what a phone 
   to the dApp;
 - a service that keeps the app running while a dApp session is active.
 
-The APKs are built and signed by that repository's CI and attached to its GitHub releases (0.9.2
+The APKs are built and signed by that repository's CI and attached to its GitHub releases (0.9.6
 today); there is no store release yet. Since 0.9.2 the app keeps several UPs and switches among them
 from the card; one phone key can be authorized on each of them.
 
@@ -151,6 +151,28 @@ under an organization Play Console account for ChainIntegrate, which Google requ
 wallets (Google's developer verification: see
 [docs/developer-verification.md](https://github.com/ChainIntegrate/up-wallet-android/blob/main/docs/developer-verification.md)
 in the app's repository). Privacy policy: [up-wallet-app-privacy.html](https://crosschain-lukso.chainintegrate.it/up-wallet-app-privacy.html).
+
+### Browser extension (experimental)
+
+The same UP Wallet page as a desktop browser extension for Chrome, Edge and Brave, in its own repository:
+[ChainIntegrate/up-wallet-extension](https://github.com/ChainIntegrate/up-wallet-extension) (0.1.4
+today, on its GitHub releases, loaded in developer mode). It is to the computer what the app is to the
+phone: the computer needs no MetaMask to use dApps.
+- **Its own key**, created in the extension, stored only encrypted (AES-256-GCM) and opened for every
+  signature with a passkey through WebAuthn's PRF extension (Windows Hello, Google Password Manager, a
+  phone, a security key) or with a password, in a small signing window that computes and shows what is
+  signed. Authorized on the UP once per network from the **Backup** page ("Authorize a device"), as the
+  phone key: no admin permissions, but access to all the UP's funds.
+- **WalletConnect in the extension**, not in the page: dApps stay connected with the wallet closed, while
+  the browser runs; a request opens the wallet by itself, which checks it as always.
+- **The page is the site's**, taken from this repository at a pinned commit, with ethers checked against
+  the page's SRI hash and the extension's own Content-Security-Policy. The relayer and the signing
+  service accept the extension's origin.
+
+**One key per device, by choice.** Every phone and every computer has its own key, never exported,
+imported or synced: a new device gets a new key and one "Authorize a device" (signed once per network by
+an admin controller, MetaMask), a lost one is revoked alone, and the others keep working. The Backup page
+keeps a name for each controller on the UP ("Office PC · extension"), so the list stays readable.
 
 ### Advanced: `tools/decrypt.js` (offline only)
 
@@ -205,18 +227,18 @@ The headers are in `/etc/nginx/snippets/security-headers.conf` (the same file is
 A direction, not a schedule. UP Wallet is growing towards a complete wallet for a Universal Profile on every network where it exists: open source, explaining every request in plain words, cross-chain first. Since 2026-10-25 the phone key comes first (it was step 6): the app signs by itself, with a key that stays on the phone, and MetaMask leaves the app. The website keeps signing through an external wallet.
 
 1. **The phone key (app 0.9.0, done).** A new key created on the phone, which never leaves it (still non-custodial), encrypted with the Android Keystore and used only after fingerprint or PIN, for every signature. It is added to the UP once per network from the Backup page, signed by an admin controller, as a controller with no admin permissions: calls, transfers, signatures, the gas relay and the profile data (so it can use all the UP's funds), never controller management. A lost phone is handled by revoking that key from another controller. MetaMask leaves the app; the website keeps it.
-2. **The wallet on the computer: a browser extension (in progress, [up-wallet-extension](https://github.com/ChainIntegrate/up-wallet-extension)).** The same UP Wallet page packaged as a desktop browser extension, as the Android app packages it for the phone, so that the computer needs no MetaMask either. An extension is installed code, versioned and updated only when the user chooses, unlike a web page, whose code comes from the server at every visit: that is why a page must not hold a key, and an extension can. Its own secp256k1 key, created in the extension, encrypted, and unlocked with a passkey (fingerprint, Windows Hello, Touch ID) through WebAuthn's PRF extension, for every signature; authorized on the UP from the Backup page with no admin permissions, as the phone key. No new contract. Distribution as for the APK, at one's own risk: on GitHub releases, loaded in developer mode in Chrome, Edge and Brave (no automatic updates), and as an `.xpi` signed by Mozilla as an unlisted add-on for Firefox (installed with one click, updates included); the extension stores later, after checking their rules for crypto wallets.
+2. **The wallet on the computer: a browser extension (phase 1 done, 0.1.4, [up-wallet-extension](https://github.com/ChainIntegrate/up-wallet-extension)).** The same UP Wallet page packaged as a desktop browser extension, as the Android app packages it for the phone, so that the computer needs no MetaMask either. An extension is installed code, versioned and updated only when the user chooses, unlike a web page, whose code comes from the server at every visit: that is why a page must not hold a key, and an extension can. Its own secp256k1 key, created in the extension, encrypted, and unlocked with a passkey (fingerprint, Windows Hello, Touch ID) through WebAuthn's PRF extension, or a password where no passkey gives a PRF value, for every signature; authorized on the UP from the Backup page with no admin permissions, as the phone key. No new contract. Done for Chrome, Edge and Brave (on GitHub releases, loaded in developer mode, no automatic updates), with WalletConnect kept alive in the extension. Next: Firefox, as an `.xpi` signed by Mozilla as an unlisted add-on (installed with one click, updates included); then the UP offered to dApps in the browser's tabs without WalletConnect (EIP-1193, announced through EIP-6963), through the same checks and signing window; the extension stores later, after checking their rules for crypto wallets.
 3. **The Android app on Google Play.** Before the listing: an organization developer account (registered business, D-U-N-S number), Google's developer verification, and the store's forms (financial features, data safety for an app that keeps a key on the phone, with the privacy policy updated). Google Play's licensing rules for crypto apps cover custodial wallets and exchanges; non-custodial wallets are excluded.
 4. **Clearer requests.** Decode any call to a contract verified on the network's explorer, from its published ABI, besides the cases decoded today: done on Base, Arbitrum One and Arc (`abi-decode.js`, app 0.8.0), with contracts named as the explorer names them; more networks as their explorers allow it. Name smart-account recipients from what they declare (ERC-7579 `accountId()`), as a hint.
 5. **dApps without WalletConnect, in the app.** A dApp browser inside the Android app that offers the UP to web dApps as an injected wallet (EIP-1193, announced through EIP-6963), with bookmarks. Every request goes through the same checks, simulation and confirmation window, and is signed with the phone key. Native apps keep using WalletConnect.
 6. **Recovery from the identity itself.** A guided flow to add, rotate and revoke the UP's keys on every network where it exists, signed by an existing controller.
-7. **Reviews.** Every change is reviewed in the open (AI-assisted reviews, published in `AUDIT.md`); the external review of 2026-10-26 covered the whole project, the phone key included. A **professional audit** is planned for the gas relay (the paymasters, `Extension4337` and the ERC-4337 flow) when the paid service has significant users or funds: that is where third parties' money would be. The rest is open source, used at one's own risk.
+7. **Reviews.** Every change is reviewed in the open (AI-assisted reviews, published in `AUDIT.md`); the external review of 2026-10-26 covered the whole project, the phone key included; the next one ([AUDIT.md §16](AUDIT.md#16-scope-of-the-next-review-changes-since-2026-10-26)) adds the browser extension. A **professional audit** is planned for the gas relay (the paymasters, `Extension4337` and the ERC-4337 flow) when the paid service has significant users or funds: that is where third parties' money would be. The rest is open source, used at one's own risk.
 8. **Later.** Passkeys as UP signers, so that the key never leaves the device's secure hardware, not even to sign: this needs a contract extension (a 4337 validator for P-256 signatures, since the Key Manager verifies Ethereum signatures only) and a serious audit, since it touches the control of the UP.
 
 ## Requirements
 
 - Your **UP address**: read from the **Universal Profile extension**, from LUKSO's **Universal Profiles app** through WalletConnect (on a phone, for example), or typed.
-- A **signing wallet** such as MetaMask, connected to the target chain (in the Android app, from 0.9.0, the phone key instead, once authorized from a computer): the browser extension on a computer, or MetaMask on the phone through WalletConnect when the browser has no wallet. For deploys it can be any funded account. For Test, UP Wallet and the pages that change the UP (backup controller, Identity section 6, NFT reception, gas relay setup) it must be one of the profile's controllers.
+- A **signing wallet** such as MetaMask, connected to the target chain (in the Android app, from 0.9.0, the phone key instead, and in the browser extension the computer key, once authorized from the Backup page): the browser extension on a computer, or MetaMask on the phone through WalletConnect when the browser has no wallet. For deploys it can be any funded account. For Test, UP Wallet and the pages that change the UP (backup controller, Identity section 6, NFT reception, gas relay setup) it must be one of the profile's controllers.
 - The original deployment calldata of your UP. The guide explains how to find it on the LUKSO explorer.
 
 ## Security and privacy notes
@@ -225,7 +247,7 @@ A direction, not a schedule. UP Wallet is growing towards a complete wallet for 
 - **Chain checks.** Every transaction requires the signing wallet, the RPC and the selected network to be on the same chain. A check is invalidated as soon as any input, the network or the wallet account changes.
 - **Private key handling.** Operating the profile on another chain needs the original controller key (guide, steps 1 and 6). Import it into a dedicated wallet, and treat it as the key that also controls your profile on LUKSO.
 - **Scripts.** The only script loaded from another site is `ethers 6.13.4` from cdnjs, pinned with Subresource Integrity; the WalletConnect bundles are served from this site (`vendor/`), with Subresource Integrity too. A Content-Security-Policy in every page lets only these files and the page's own inline scripts (by their hash) run.
-- **Third parties.** WalletConnect's telemetry is turned off. There are no analytics or trackers. Checks are made through public RPCs, which can see your IP address and the addresses you query; you can use the "Custom RPC" option to choose your own provider. Some pages also call, only when used: Blockscout or Alchemy (lists of tokens and NFTs), IPFS gateways (profile images), the WalletConnect relay (UP Wallet, and the tool pages when you take the UP's address from the Universal Profiles app or connect MetaMask on a phone), the site's own relayer and signing service (gas paid by the site, subscriptions), and LI.FI's public API (the operator's top-up from USDC, section 3c of the operator's page).
+- **Third parties.** WalletConnect's telemetry is turned off. There are no analytics or trackers. Checks are made through public RPCs, which can see your IP address and the addresses you query; you can use the "Custom RPC" option to choose your own provider. Some pages also call, only when used: Blockscout or Alchemy (lists of tokens and NFTs), IPFS gateways (profile images), the WalletConnect relay (UP Wallet, and the tool pages when you take the UP's address from the Universal Profiles app or connect MetaMask on a phone), the site's own relayer and signing service (gas paid by the site, subscriptions), LI.FI's public API (the operator's top-up from USDC, section 3c of the operator's page), and LUKSO's profile index (`envio.lukso-mainnet.universal.tech`, a UP or a recipient searched by name).
 - **Support.** Support will never ask for a private key, seed phrase or backup password.
 
 ## Audit trail
@@ -233,6 +255,8 @@ A direction, not a schedule. UP Wallet is growing towards a complete wallet for 
 **Status: no professional audit yet.** All the reviews below are the maintainer's own or AI-assisted, with local tests. None is a professional security audit. The contracts the gas relay depends on have never had a professional audit: `UPPaymaster`, `UPVerifyingPaymaster` and LUKSO's `Extension4337`, which LUKSO describes as experimental. A professional audit of the paymasters and the 4337 flow is required before the paid relay service holds significant customer funds. Until then, keep balances small and use the service at your own risk.
 
 **Last review (2026-10-26).** An external, AI-assisted review of the whole project: no Critical or High; its two Medium findings (the phone's address from a link on the Backup page, the response headers only documented) and its Low items are fixed. Summary and status in [AUDIT.md §15](AUDIT.md#15-rev-13--external-review-of-the-whole-system-2026-10-26); its brief in [§14](AUDIT.md#14-scope-of-the-next-review-changes-since-2026-10-19).
+
+**Next review.** Its brief is [AUDIT.md §16](AUDIT.md#16-scope-of-the-next-review-changes-since-2026-10-26): the new browser extension (its key, signing window, provider and WalletConnect in an offscreen document), the controller names on the Backup page, and the changes to UP Wallet and to the Android app (0.9.3 to 0.9.6) since 2026-10-26.
 
 | Date | Scope | Result | Report |
 |---|---|---|---|

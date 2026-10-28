@@ -27,6 +27,7 @@
 13. [Rev. 11 — Re-audit of the whole system (2026-10-12)](#13-rev-11--re-audit-of-the-whole-system-2026-10-12)
 14. [Scope of the next review: changes since 2026-10-19](#14-scope-of-the-next-review-changes-since-2026-10-19)
 15. [Rev. 13 — External review of the whole system (2026-10-26)](#15-rev-13--external-review-of-the-whole-system-2026-10-26)
+16. [Scope of the next review: changes since 2026-10-26](#16-scope-of-the-next-review-changes-since-2026-10-26)
 
 ---
 
@@ -722,3 +723,46 @@ External AI-assisted review of the three repositories: `Cross_Chain` @ `61b50e1`
 | — | Info | The service trusts `logsRpc` for complete logs; the report dates operations by record time | Accepted: a missed log pauses customers (fails safe); the report is for the operator |
 
 The two wording items of `WALLET-BACKLOG.md` were closed in the same change: the gas relay box points to the Backup page when the signer is not a controller at all, and a controller whose only privileged bit is ERC4337 gets its own note.
+
+---
+
+## 16. Scope of the next review: changes since 2026-10-26
+
+Brief for the next review of the **whole project**, now four repositories: `Cross_Chain`, `up-wallet-android`, the new `up-wallet-extension` and the private signing service. Not findings: what changed since rev. 13 (section 15), what deserves the closest look, and what is already known. Reviewed so far only by the maintainer, with local tests and live tests (the extension on Windows 11 with Chrome: a key with Windows Hello, authorized from the Backup page, a hup.social like on LUKSO signed through WalletConnect).
+
+**Commits.** `Cross_Chain` from `61b50e1` to the current `main`; `up-wallet-android` from `51a8b38` (0.9.2) to the current `main` (0.9.6); `up-wallet-extension` entire (new, 0.1.4 at `5d5d703`); the signing service from `d7b36c0` (only the fixes of SP-A, SP-B and SP-C2, already listed in section 15).
+
+### 16.1 The browser extension (`up-wallet-extension`, new)
+
+The UP Wallet page packaged as a Manifest V3 extension for Chrome, Edge and Brave (Chromium 121 or later), with a key of its own: the computer needs no MetaMask to use dApps. Its id is fixed (`bjndlbdefcelfamapgpimaiaboehehek`, by the manifest's `key`), because the passkey belongs to it.
+
+- **The page** (`scripts/build.js`): the same `up-wallet.html` and scripts, taken from `Cross_Chain` at the commit pinned in `UPSTREAM.json`; ethers from npm, checked against the page's own SRI hash; the inline scripts moved to files; the page's meta CSP replaced by the manifest's (`script-src 'self'; object-src 'self'; base-uri 'none'; frame-ancestors 'none'`). `ext/ext-shim.js` sends the relay's relative calls to the site and opens the site's other pages there. Permissions: `storage`, `sidePanel`, `contextMenus`, `offscreen`; host permissions: the site only; no content scripts, no `externally_connectable`.
+- **The key** (`ext/signer.html`, `ext/signer.js`, the signing window): the only place where the key is opened. A secp256k1 key created there, stored in `chrome.storage.local` only encrypted with AES-256-GCM; the AES key from a passkey through WebAuthn's PRF extension (HKDF-SHA256 of the PRF value, the credential bound to the extension's id), or from a password (at least 12 characters, PBKDF2-SHA256 with 600,000 rounds). For each request the window computes the digest from the request itself (message, typed data, transaction, ERC-4337 operation), shows it, asks for the passkey or the password, signs, checks the signature against the stored address and answers with the signature only. It refuses opaque 32-byte messages, another account, another UP's operation and EntryPoints other than v0.6. It decodes a transaction to the Key Manager (`execute(bytes)`): the UP's `execute` or `executeBatch` inside, each call's recipient, value and function.
+- **The provider** (`ext/device-key.js`): announced to the page through EIP-6963 as "Computer key (UP Wallet)", with the phone key's protocol (`upwallet_signUserOperation` for the gas relay). It prepares transactions (nonce, gas, fees from the network's RPC), has them signed by the window, checks the signed transaction (sender, chain) and sends it raw. Only read methods reach the RPC. Requests reach the window through `chrome.storage.session` (`req:<id>`) and the answers come back as runtime messages.
+- **WalletConnect** (`ext/wc-host.html`, `ext/wc-host.js`, `ext/wc-remote.js`): the WalletKit client runs in an offscreen document, so that sessions stay while the browser runs; the page uses it through a port, with the same calls as its own client, and its own checks and request window. A request with no wallet page open opens the wallet in a popup window; the page takes back the session's network, UP and computer key, and receives the request once its checks are green. A wallet closed with a proposal or a request not answered rejects it.
+- **Server side**: the relayer and the signing service accept the extension's origin (`chrome-extension://bjndlbdefcelfamapgpimaiaboehehek`) in `allowedOrigins`, in their configuration files on the server; the WalletConnect project allows it in its domain list.
+- **Look at:**
+  - whether any extension context other than the signing window (the page, the WalletKit bundle in the offscreen document, the service worker) can obtain a signature without the window showing what is signed, or forge a `signer-result` message that the provider accepts;
+  - the key's storage: the encryption, the PRF and PBKDF2 parameters, the salt and IV handling, the key wiped after signing, what an attacker with the browser profile's files (no passkey, no password) can do offline, and the password's strength floor;
+  - whether the digest the window computes is always the one it shows (typed data with odd types or domains, transactions of every type, operations), and the Key Manager decoding for malformed or nested payloads;
+  - the WalletConnect bridge: who can connect the `wc` port, the message validation, a popup opened by a dApp's request (repeated requests, a request while another waits), sessions resumed for another UP or network;
+  - the build: what is copied from `Cross_Chain`, the SRI checks, the CSP; and that `tools/` and other private files never reach the package.
+
+### 16.2 Controller names (`backup-check.js`, `up-backup.html`)
+
+A name for each controller ("Office PC · extension"), kept on the UP on each network: an LSP2 mapping key, `bytes10(keccak256("UPWalletControllerName"))` + `0000` + the controller's address, the value the name in UTF-8 (one line, no control or bidi characters, at most 64 characters). Written by an admin controller with "Authorize a device" (same transaction) or alone (one `setData`); cleared with "Remove" (same transaction); shown on the Backup page and in the extension's panel "This computer". One key per device by choice: keys are never exported, imported or synced (documented in the READMEs). **Look at:** the names as untrusted text (injection, look-alike names, a name that misleads about who a controller is), the plans and re-reads after confirmation, and that a name never affects a permission or a check.
+
+### 16.3 UP Wallet page and the Android app (0.9.3 to 0.9.6)
+
+- `up-wallet.html`: UP CIE Link statements (`personal_sign` of the "up-cie-link statement v2" format, recognized only in that exact format and checked against the request: origin, chain, UP, contract, times); LUKSO Testnet (4201) and the "Every network" view on testnets; a numbered page version (0.10.0) with the extension's or the app's version; LUKSO as the starting network; the UP searched by name in LUKSO's profile index (`envio.lukso-mainnet.universal.tech`); the texts of the computer key (`html.computer-key`).
+- The app: the fixes of section 15 (PK-2, PK-4) in 0.9.3; the phone key with a custom RPC (0.9.4); a quiet keep-alive notification channel (0.9.5); the version line and "Authorize a device" (0.9.6).
+- **Look at:** the CIE Link checks (can a statement for another dApp, chain or UP pass as matching?), the name search (a name that resolves to a look-alike address), and that the fixes of PK-2 and PK-4 hold.
+
+### 16.4 Known open items, not to report again
+
+- M-1 (section 9), L-07, D-1 (section 11), as in section 14.6.
+- `up-subscribe.html`'s sign box does not decode the inner USDC transfer (optional, section 13).
+- `WALLET-BACKLOG.md`: the app's confirmation does not decode the Key Manager's `execute(bytes)` yet, and its panel "This phone" does not show the key's name yet (both done in the extension).
+- The extension's id is fixed by a key in its repository (`ext-config.json`): anyone can build a package with the same id. Chrome installs only what the user loads, and the passkey and the stored key belong to the installed copy; a future store version will have the store's id.
+- No professional audit until the paid relay service has significant users or funds (section 15, README).
+
