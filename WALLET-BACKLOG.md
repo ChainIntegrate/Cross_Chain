@@ -15,6 +15,15 @@ item when its PR (or, for the app, its release) is done.
    currency and USDC)" (IT: "valuta delle reti e USDC"), while the total now includes the euro stablecoins:
    say "networks' currency, USDC and euro stablecoins" (`ovTotalLabel`).
 
+3. **A request that opens the wallet: the site relayer may not be checked yet** (to verify, 2026-10-29).
+   Opening and closing the side panel works as expected: the last UP, the key and the site relayer come
+   back, the relayer a few seconds later (`gas-relay-client.js` waits 2.5 s after a change, so public RPCs
+   do not answer 429). When a dApp's request opens the wallet (extension, `ext/wc-remote.js`), the request
+   is delivered as soon as the check of panel 3 is green, possibly before the relayer's check: the
+   transaction would then be prepared with the controller paying the gas although the site could. To
+   check live; the fix: before preparing a transaction, wait for the relayer's check of the current
+   network, UP and controller when it is still running (`relayOption.refresh()`), a few seconds at most.
+
 ## Other pages
 
 Nothing open.
