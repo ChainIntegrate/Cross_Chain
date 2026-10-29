@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-ThJpPia0HTE0mIIoPbAtgqpgZ5fXHXZzrj6fBE0vW7g='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-imE7ZOGFNCSMFLPdVu4UkZ69ZFw+r98Do/oS8xnRZiI='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
@@ -320,6 +320,7 @@ const I18N = {
     srcLsp5Fail: (v) => `LSP5 non letto: ${v.err}`,
     srcIndexer: (v) => `${v.name} (indicizzatore): ${v.n} voci.${v.gone ? ` ${v.gone} NFT che l'indice elenca ancora ma che la UP non possiede più (verificato sulla blockchain) sono stati tolti.` : ""}`,
     srcIndexerFail: (v) => `${v.name} non raggiungibile: ${v.err}. Si vedono solo valuta e LSP5.`,
+    srcFallback: (v) => `Alchemy non ha risposto (${v.err}): gli altri token sono letti da Blockscout, che può elencarne meno.`,
     srcNoIndexer: "Nessun indicizzatore per questa rete: si vedono solo valuta e LSP5 (token LUKSO). Per ERC-20 e NFT serve una rete coperta da Alchemy o Blockscout.",
     footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Codice sorgente su GitHub</a>`,
   },
@@ -455,6 +456,7 @@ const I18N = {
     srcLsp5Fail: (v) => `LSP5 not read: ${v.err}`,
     srcIndexer: (v) => `${v.name} (indexer): ${v.n} entries.${v.gone ? ` ${v.gone} NFTs the index still lists but the UP no longer holds (checked on the blockchain) were left out.` : ""}`,
     srcIndexerFail: (v) => `${v.name} not reachable: ${v.err}. Only the currency and LSP5 are shown.`,
+    srcFallback: (v) => `Alchemy did not answer (${v.err}): the other tokens are read from Blockscout, which may list fewer.`,
     srcNoIndexer: "No indexer for this network: only the currency and LSP5 (LUKSO tokens) are shown. ERC-20 and NFTs need a network covered by Alchemy or Blockscout.",
     footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Source code on GitHub</a>`,
   },
@@ -707,6 +709,7 @@ function renderAssets(box, where, net, a) {
   if (!a.indexer) src.push([t("srcNoIndexer"), "line-dim"]);
   else if (a.indexer.err) src.push([t("srcIndexerFail", { name: ixName, err: a.indexer.err }), "line-warn"]);
   else src.push([t("srcIndexer", { name: ixName, n: a.indexer.rows.length, gone: a.indexer.gone || 0 }), "line-dim"]);
+  if (a.indexer && a.indexer.fallback) src.push([t("srcFallback", { err: a.indexer.fallback }), "line-warn"]);
   src.forEach(([txt, cls]) => { const m = el("div", "meta " + cls, txt); m.style.cssText = "font-size:11.5px; margin-top:8px;"; box.append(m); });
 }
 function renderCtrl(c) {

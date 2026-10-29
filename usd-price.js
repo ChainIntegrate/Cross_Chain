@@ -22,6 +22,14 @@
     56: { name: "BNB Smart Chain", symbol: "BNB", feed: "0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE", pairs: ["BNB / USD"] }, // BNB Smart Chain
     5042: { name: "Arc", symbol: "USDC", stable: true },                                                               // Arc: gas is USDC
   };
+  // EUR / USD, for the euro stablecoins UP Wallet recognises by address (EURe, EURC): read with
+  // read(provider, chainId, ethers, { feeds: EUR_FEEDS }), the same checks as above.
+  const EUR_FEEDS = {
+    1: { feed: "0xb49f677943BC038e9857d61E7d053CaA2C1734C1", pairs: ["EUR / USD"] },      // Ethereum
+    137: { feed: "0x73366Fe0AA0Ded304479862808e02506FE556a98", pairs: ["EUR / USD"] },    // Polygon
+    8453: { feed: "0xc91D87E81faB8f93699ECf7Ee9B44D11e1D53F0F", pairs: ["EUR / USD"] },   // Base
+    42161: { feed: "0xA14d53bC1F1c0F31B4aA3BD109344E5009051a84", pairs: ["EUR / USD"] },  // Arbitrum One
+  };
   const ABI = ["function description() view returns (string)", "function decimals() view returns (uint8)",
     "function latestRoundData() view returns (uint80, int256, uint256, uint256, uint80)"];
 
@@ -51,7 +59,13 @@
     if (v == null) return "";
     return ` (≈ ${fmt(v)} USD${p.stale ? (lang === "en" ? ", price not up to date" : ", prezzo non aggiornato") : ""})`;
   }
-  const api = { FEEDS, read, usd, suffix, fmt, symbol: (id) => (FEEDS[Number(id)] || {}).symbol || "", name: (id) => (FEEDS[Number(id)] || {}).name || "" };
+  // A token amount (a decimal string or number) in USD at a feed's price: number or null.
+  function tokenUsd(amount, p) {
+    if (!p) return null;
+    const v = Number(amount) * (Number(p.price) / 10 ** p.decimals);
+    return Number.isFinite(v) ? v : null;
+  }
+  const api = { FEEDS, EUR_FEEDS, read, tokenUsd, usd, suffix, fmt, symbol: (id) => (FEEDS[Number(id)] || {}).symbol || "", name: (id) => (FEEDS[Number(id)] || {}).name || "" };
   if (typeof module === "object" && module.exports) module.exports = api;
   else root.UsdPrice = api;
 })(typeof window !== "undefined" ? window : globalThis);

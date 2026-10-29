@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-BT/NT16tnNm5b/FxnF1+oFAGRpAppcBy1P4BRhKwcrk='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-Ny8fFFjYAkOah+Tsr2l3acGkeX0lzjIwArXaqTkiDn0='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -515,6 +515,9 @@ const DAPP_CONTRACTS = {
   // its vaults (source verified on the explorer). On Arc it is the address the app asks to approve.
   "8453:0x2b08a911f48de25a7e305d910afb5597abe8ea7b": "Morpho VaultBundlesV1", // Base
   "5042:0x76c1deefae48523e14903085081bda2999450b68": "Morpho VaultBundlesV1", // Arc
+  // Arbitrum One: the address Morpho's app sent a deposit to, the shares then in Morpho's portfolio
+  // (2026-10-28); source verified on Arbiscan as VaultBundlesV1.
+  "42161:0x5afab0b2414e30c92a708234ea1b383ce6317ed5": "Morpho VaultBundlesV1",
   "43114:0x5c0401e81bc07ca70fad469b451682c0d747ef1c": "BENQI qiAVAX", // Avalanche: lending market (Compound-style)
   "43114:0x2b2c81e08f1af8835a78bb2a90ae924ace0ea4be": "BENQI sAVAX", // Avalanche: liquid staking
   "43114:0x435272ceff93a1e657e8abfdf0a13e95900a3a56": "Aave Spoke", // Avalanche, pro.aave.com: the market (user positions)
@@ -630,7 +633,7 @@ const I18N = {
     subtitle: "Il wallet della tua Universal Profile su LUKSO e su ogni rete dove l'hai rideployata, con lo stesso indirizzo: vedi e invii i tuoi asset, usi le dApp con WalletConnect. Firmi con MetaMask.",
     langToggleBtn: "English",
     panel0Title: "0 · Cos'è e come funziona",
-    panel0Note: "<b>Cos'è.</b> UP Wallet è il portafoglio della tua Universal Profile su <b>tutte le reti dove la UP esiste</b>: LUKSO e le reti dove l'hai rideployata con questo sito (Base, Polygon, Arbitrum, Avalanche, Arc…), con lo <b>stesso indirizzo</b> ovunque. Fa quello che su LUKSO fanno l'estensione e l'app UP, anche sulle altre reti, dove quelle non arrivano.<ul style=\"margin:8px 0; padding-left:20px;\"><li><b>Vedi cosa possiede la UP</b> e <b>invii</b> valuta, token e NFT (pannello 6), anche a una UP cercata per nome.</li><li><b>Usi le dApp</b> che si collegano con WalletConnect (OpenSea, Uniswap, hup.social…): la dApp vede la tua UP come account, e quello che compri o ricevi arriva alla UP. Quasi tutte funzionano; qualcuna non accetta un account smart contract come la UP.</li><li><b>Il gas</b> lo paga il tuo controller, oppure il sito, sulle reti e per i profili dove il gas pagato dal sito è attivo.</li></ul><b>Cosa ti serve.</b> L'indirizzo della UP, <b>MetaMask con il controller della UP</b> (la chiave che firma per la UP: la guida spiega come importarla) e la UP già presente sulla rete scelta. Si lavora su una rete alla volta. Sul telefono c'è l'app Android, con MetaMask mobile.<br><b>Rispetto all'estensione UP.</b> Firmi in MetaMask invece che nell'estensione. Prima di ogni firma la pagina ti mostra in chiaro cosa stai facendo, controlla e simula. È sperimentale: parti con la modalità simulazione e con importi piccoli.<details style=\"margin-top:8px;\"><summary>Come funziona sotto</summary>Questa pagina fa da <b>ponte WalletConnect</b> tra una dApp e la tua UP. La dApp vede come account l'indirizzo della UP. Ogni <b>transazione</b> viene incapsulata in <code>KeyManager.execute(UP.execute(...))</code> e firmata dal tuo controller in MetaMask: la chiamata parte dalla UP e il valore esce dal saldo della UP, il gas lo paga il controller. Ogni <b>firma di messaggio</b> la fa il controller e la UP la riconosce come propria (ERC-1271). Prima di tutto la pagina verifica che UP e controller siano compatibili sulla rete scelta. Ogni richiesta viene mostrata per intero, controllata e (per le transazioni) simulata; niente parte senza il tuo clic e la tua conferma in MetaMask.</details>",
+    panel0Note: "<b>Cos'è.</b> UP Wallet è il portafoglio della tua Universal Profile su <b>tutte le reti dove la UP esiste</b>: LUKSO e le reti dove l'hai rideployata con questo sito (Base, Polygon, Arbitrum, Avalanche, Arc…), con lo <b>stesso indirizzo</b> ovunque. Fa quello che su LUKSO fanno l'estensione e l'app UP, anche sulle altre reti, dove quelle non arrivano.<ul style=\"margin:8px 0; padding-left:20px;\"><li><b>Vedi cosa possiede la UP</b> e <b>invii</b> valuta, token e NFT (pannello 6), anche a una UP cercata per nome.</li><li><b>Usi le dApp</b> che si collegano con WalletConnect (OpenSea, Uniswap, hup.social…): la dApp vede la tua UP come account, e quello che compri o ricevi arriva alla UP. Quasi tutte funzionano; qualcuna non accetta un account smart contract come la UP.</li><li><b>Il gas</b> lo paga il tuo controller, oppure il sito, sulle reti e per i profili dove il gas pagato dal sito è attivo.</li></ul><b>Cosa ti serve.</b> L'indirizzo della UP, <b>MetaMask con il controller della UP</b> (la chiave che firma per la UP: la guida spiega come importarla) e la UP già presente sulla rete scelta. Si lavora su una rete alla volta. Sul telefono c'è l'app Android, sul computer l'estensione del browser: firmano con una chiave propria, senza MetaMask.<br><b>Rispetto all'estensione UP.</b> Firmi in MetaMask invece che nell'estensione. Prima di ogni firma la pagina ti mostra in chiaro cosa stai facendo, controlla e simula. È sperimentale: parti con la modalità simulazione e con importi piccoli.<details style=\"margin-top:8px;\"><summary>Come funziona sotto</summary>Questa pagina fa da <b>ponte WalletConnect</b> tra una dApp e la tua UP. La dApp vede come account l'indirizzo della UP. Ogni <b>transazione</b> viene incapsulata in <code>KeyManager.execute(UP.execute(...))</code> e firmata dal tuo controller in MetaMask: la chiamata parte dalla UP e il valore esce dal saldo della UP, il gas lo paga il controller. Ogni <b>firma di messaggio</b> la fa il controller e la UP la riconosce come propria (ERC-1271). Prima di tutto la pagina verifica che UP e controller siano compatibili sulla rete scelta. Ogni richiesta viene mostrata per intero, controllata e (per le transazioni) simulata; niente parte senza il tuo clic e la tua conferma in MetaMask.</details>",
     disclaimer: "<b>⚠️ Leggi prima di usare questa pagina</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Strumento sperimentale, non sottoposto ad audit.</b> Può contenere errori.</li><li><b>Transazioni reali e irreversibili.</b> Nessuno può annullare una transazione confermata. Usa importi minimi e parti sempre in modalità simulazione.</li><li><b>La pagina non conosce le dApp.</b> Decodifica solo una parte delle chiamate (token standard e casi comuni); per il resto ti mostra i dati grezzi. Se non capisci cosa fa una richiesta, <b>rifiutala</b>.</li><li><b>Firme di messaggi.</b> Una firma può autorizzare azioni anche senza transazione: accessi, ordini, permessi a spendere token. La pagina mostra il contenuto e l'esito dei controlli, ma non può sapere a cosa servirà la firma.</li><li><b>Le approvazioni di token restano valide</b> anche dopo aver chiuso la pagina: chi le riceve può spostare i token della UP finché non le revochi.</li><li><b>Responsabilità.</b> ChainIntegrate non si assume alcuna responsabilità per firme o transazioni approvate su contenuto poco chiaro, né per l'uso che le dApp ne fanno. Il software è fornito \"così com'è\" (licenza MIT), senza garanzie: lo usi a tuo rischio.</li><li><b>Da cosa dipende la sicurezza:</b> dall'architettura (firmi sempre tu nel tuo wallet, i permessi li applica il Key Manager della UP) e dai servizi usati (la verifica del dominio di WalletConnect/Reown, gli RPC della rete). La pagina mostra l'esito di queste verifiche ma non può garantirle.</li><li><b>Un controller per ogni UP.</b> Se lo stesso controller governa più UP, una firma valida per questa UP vale anche per le altre.</li><li><b>Questa pagina non chiede mai chiavi private</b> né seed phrase.</li><li><b>Privacy:</b> la connessione WalletConnect passa dai server di Reown, che vedono i metadati della sessione (indirizzi, rete). Le verifiche usano l'RPC pubblico della rete scelta.</li><li><b>Nessuna affiliazione</b> con LUKSO, WalletConnect/Reown, MetaMask o le dApp che colleghi. Non è una consulenza finanziaria.</li></ul><div style=\"margin-top:8px;\">Sempre rifiutati: <code>eth_sign</code> e i formati di firma vecchi, la creazione di contratti, le transazioni della UP verso se stessa o verso il proprio Key Manager (potrebbero cambiarne controller e permessi), le richieste su una rete diversa da quella scelta.</div>",
     ackLabel: "Ho letto e accetto: uso questo strumento a mio rischio.",
     setupBanner: "Per iniziare imposta rete, UP e MetaMask: tre passi.",
@@ -638,7 +641,7 @@ const I18N = {
     tileSend: "Invia", tileSendSub: "Valuta, token e NFT dalla UP",
     tileOverview: "Tutte le reti", tileOverviewSub: "Cosa possiede la UP su ogni rete",
     panelOverviewTitle: "Tutte le reti",
-    overviewNote: "Cosa possiede la UP su ogni rete principale dove esiste, letto dalle reti e dagli indici (Alchemy o Blockscout), in sola lettura. Il valore in dollari è una stima: c'è solo per la valuta della rete (prezzo Chainlink) e per l'USDC nativo di Circle; gli altri token sono elencati senza prezzo e non entrano nel totale. I token segnalati come spam non sono contati.",
+    overviewNote: "Cosa possiede la UP su ogni rete principale dove esiste, letto dalle reti e dagli indici (Alchemy o Blockscout), in sola lettura. Il valore in dollari è una stima: c'è solo per la valuta della rete (prezzo Chainlink), per l'USDC nativo di Circle e per gli euro digitali EURe ed EURC (cambio EUR/USD di Chainlink); gli altri token sono elencati senza prezzo e non entrano nel totale. I token segnalati come spam non sono contati.",
     ovRefresh: "Aggiorna", ovNoUp: "Imposta la UP nelle Impostazioni.",
     ovReading: (v) => `Lettura delle reti: ${v.done} di ${v.total}…`,
     ovTotal: (v) => `≈ ${v.usd} USD`, ovTotalLabel: "Totale stimato (valuta delle reti e USDC)",
@@ -646,6 +649,8 @@ const I18N = {
     ovNoPrice: "senza prezzo", ovNftCount: (v) => `${v.count} NFT`, ovNative: "valuta della rete",
     ovSpam: (v) => `${v.n} segnalati come spam, non contati`,
     ovIxFail: (v) => `Indice ${v.ix} non disponibile (${v.err}): mancano i token che solo lui elenca.`,
+    ovIxSrc: (v) => `Altri token letti da ${v.ix}.`,
+    ixFallback: (v) => `Alchemy non ha risposto (${v.err}): gli altri token sono letti da Blockscout, che può elencarne meno.`,
     ovNothing: (v) => `Niente su: ${v.list}.`, ovAbsent: (v) => `La UP non esiste su: ${v.list}.`,
     ovFailed: (v) => `Non lette (rete non raggiungibile): ${v.list}. Riprova con Aggiorna.`,
     ovUnpriced: "contiene anche token senza prezzo",
@@ -1074,7 +1079,7 @@ const I18N = {
     subtitle: "Your Universal Profile's wallet on LUKSO and on every network where you redeployed it, with the same address: see and send your assets, use dApps with WalletConnect. You sign with MetaMask.",
     langToggleBtn: "Italiano",
     panel0Title: "0 · What it is and how it works",
-    panel0Note: "<b>What it is.</b> UP Wallet is your Universal Profile's wallet on <b>every network where the UP exists</b>: LUKSO and the networks where you redeployed it with this site (Base, Polygon, Arbitrum, Avalanche, Arc…), with the <b>same address</b> everywhere. It does what the UP extension and app do on LUKSO, on the other networks too, where they do not reach.<ul style=\"margin:8px 0; padding-left:20px;\"><li><b>See what the UP holds</b> and <b>send</b> currency, tokens and NFTs (panel 6), also to a UP found by name.</li><li><b>Use dApps</b> that connect with WalletConnect (OpenSea, Uniswap, hup.social…): the dApp sees your UP as the account, and what you buy or receive goes to the UP. Almost all work; a few do not accept a smart contract account such as the UP.</li><li><b>Gas</b> is paid by your controller, or by the site, on the networks and for the profiles where gas paid by the site is active.</li></ul><b>What you need.</b> The UP's address, <b>MetaMask with the UP's controller</b> (the key that signs for the UP: the guide explains how to import it) and the UP already on the chosen network. You work on one network at a time. On the phone there is the Android app, with MetaMask mobile.<br><b>Compared with the UP extension.</b> You sign in MetaMask instead of the extension. Before every signature the page shows you in plain words what you are doing, checks and simulates it. It is experimental: start in simulation mode and with small amounts.<details style=\"margin-top:8px;\"><summary>How it works underneath</summary>This page is a <b>WalletConnect bridge</b> between a dApp and your UP. The dApp sees the UP address as the account. Every <b>transaction</b> is wrapped into <code>KeyManager.execute(UP.execute(...))</code> and signed by your controller in MetaMask: the call comes from the UP and any value is paid from the UP's balance, while the controller pays the gas. Every <b>message signature</b> is made by the controller and the UP recognises it as its own (ERC-1271). First of all, the page checks that the UP and the controller are compatible on the chosen network. Every request is shown in full, checked and (for transactions) simulated; nothing happens without your click and your confirmation in MetaMask.</details>",
+    panel0Note: "<b>What it is.</b> UP Wallet is your Universal Profile's wallet on <b>every network where the UP exists</b>: LUKSO and the networks where you redeployed it with this site (Base, Polygon, Arbitrum, Avalanche, Arc…), with the <b>same address</b> everywhere. It does what the UP extension and app do on LUKSO, on the other networks too, where they do not reach.<ul style=\"margin:8px 0; padding-left:20px;\"><li><b>See what the UP holds</b> and <b>send</b> currency, tokens and NFTs (panel 6), also to a UP found by name.</li><li><b>Use dApps</b> that connect with WalletConnect (OpenSea, Uniswap, hup.social…): the dApp sees your UP as the account, and what you buy or receive goes to the UP. Almost all work; a few do not accept a smart contract account such as the UP.</li><li><b>Gas</b> is paid by your controller, or by the site, on the networks and for the profiles where gas paid by the site is active.</li></ul><b>What you need.</b> The UP's address, <b>MetaMask with the UP's controller</b> (the key that signs for the UP: the guide explains how to import it) and the UP already on the chosen network. You work on one network at a time. On the phone there is the Android app, on the computer the browser extension: they sign with a key of their own, without MetaMask.<br><b>Compared with the UP extension.</b> You sign in MetaMask instead of the extension. Before every signature the page shows you in plain words what you are doing, checks and simulates it. It is experimental: start in simulation mode and with small amounts.<details style=\"margin-top:8px;\"><summary>How it works underneath</summary>This page is a <b>WalletConnect bridge</b> between a dApp and your UP. The dApp sees the UP address as the account. Every <b>transaction</b> is wrapped into <code>KeyManager.execute(UP.execute(...))</code> and signed by your controller in MetaMask: the call comes from the UP and any value is paid from the UP's balance, while the controller pays the gas. Every <b>message signature</b> is made by the controller and the UP recognises it as its own (ERC-1271). First of all, the page checks that the UP and the controller are compatible on the chosen network. Every request is shown in full, checked and (for transactions) simulated; nothing happens without your click and your confirmation in MetaMask.</details>",
     disclaimer: "<b>⚠️ Read before using this page</b><ul style=\"margin:8px 0 0; padding-left:20px;\"><li><b>Experimental tool, not audited.</b> It may contain bugs.</li><li><b>Real, irreversible transactions.</b> Nobody can undo a confirmed transaction. Use minimal amounts and always start in simulation mode.</li><li><b>The page does not know the dApps.</b> It decodes only part of the calls (standard tokens and common cases); for the rest it shows you the raw data. If you do not understand what a request does, <b>reject it</b>.</li><li><b>Message signatures.</b> A signature can authorise actions even without a transaction: logins, orders, permissions to spend tokens. The page shows the content and the result of the checks, but cannot know what the signature will be used for.</li><li><b>Token approvals stay valid</b> after you close the page: whoever receives them can move the UP's tokens until you revoke them.</li><li><b>Responsibility.</b> ChainIntegrate takes no responsibility for signatures or transactions approved on unclear content, nor for what dApps do with them. The software is provided \"as is\" (MIT license), without warranty: you use it at your own risk.</li><li><b>What security relies on:</b> the architecture (you always sign in your own wallet, permissions are enforced by the UP's Key Manager) and the services used (WalletConnect/Reown domain verification, the network's RPCs). The page shows the result of these checks but cannot guarantee them.</li><li><b>One controller per UP.</b> If the same controller governs several UPs, a signature valid for this UP is valid for the others too.</li><li><b>This page never asks for private keys</b> or seed phrases.</li><li><b>Privacy:</b> the WalletConnect connection goes through Reown's servers, which see the session metadata (addresses, network). Checks use the chosen network's public RPC.</li><li><b>No affiliation</b> with LUKSO, WalletConnect/Reown, MetaMask or the dApps you connect. This is not financial advice.</li></ul><div style=\"margin-top:8px;\">Always rejected: <code>eth_sign</code> and legacy signature formats, contract creation, transactions from the UP to itself or to its own Key Manager (they could change its controllers and permissions), requests on a network other than the chosen one.</div>",
     ackLabel: "I have read and accept: I use this tool at my own risk.",
     setupBanner: "To start, set the network, the UP and MetaMask: three steps.",
@@ -1082,7 +1087,7 @@ const I18N = {
     tileSend: "Send", tileSendSub: "Currency, tokens and NFTs from the UP",
     tileOverview: "Every network", tileOverviewSub: "What the UP holds on each network",
     panelOverviewTitle: "Every network",
-    overviewNote: "What the UP holds on every main network where it exists, read from the networks and from the indexes (Alchemy or Blockscout), read only. The dollar value is an estimate: only for the network's currency (Chainlink price) and Circle's native USDC; other tokens are listed without a price and are not in the total. Tokens flagged as spam are not counted.",
+    overviewNote: "What the UP holds on every main network where it exists, read from the networks and from the indexes (Alchemy or Blockscout), read only. The dollar value is an estimate: only for the network's currency (Chainlink price), Circle's native USDC and the euro stablecoins EURe and EURC (Chainlink's EUR/USD rate); other tokens are listed without a price and are not in the total. Tokens flagged as spam are not counted.",
     ovRefresh: "Refresh", ovNoUp: "Set the UP in Settings.",
     ovReading: (v) => `Reading the networks: ${v.done} of ${v.total}…`,
     ovTotal: (v) => `≈ ${v.usd} USD`, ovTotalLabel: "Estimated total (networks' currency and USDC)",
@@ -1090,6 +1095,8 @@ const I18N = {
     ovNoPrice: "no price", ovNftCount: (v) => `${v.count} NFT`, ovNative: "network currency",
     ovSpam: (v) => `${v.n} flagged as spam, not counted`,
     ovIxFail: (v) => `${v.ix} index not available (${v.err}): tokens only it lists are missing.`,
+    ovIxSrc: (v) => `Other tokens read from ${v.ix}.`,
+    ixFallback: (v) => `Alchemy did not answer (${v.err}): the other tokens are read from Blockscout, which may list fewer.`,
     ovNothing: (v) => `Nothing on: ${v.list}.`, ovAbsent: (v) => `The UP does not exist on: ${v.list}.`,
     ovFailed: (v) => `Not read (network not reachable): ${v.list}. Try again with Refresh.`,
     ovUnpriced: "also holds tokens without a price",
@@ -1522,7 +1529,7 @@ const PHONE_I18N = {
   it: {
     subtitle: (x) => x.replace("Firmi con MetaMask.", "Firmi con la chiave del telefono (impronta o PIN)."),
     panel0Note: (x) => x.replace("<b>MetaMask con il controller della UP</b> (la chiave che firma per la UP: la guida spiega come importarla)", "<b>la chiave del telefono autorizzata sulla UP</b> (dal sito, pagina Backup, \"Autorizza un dispositivo\")")
-      .replace("Sul telefono c'è l'app Android, con MetaMask mobile.", "Questa è l'app Android: firma con una chiave tenuta sul telefono.")
+      .replace("Sul telefono c'è l'app Android, sul computer l'estensione del browser: firmano con una chiave propria, senza MetaMask.", "Questa è l'app Android: firma con una chiave tenuta sul telefono.")
       .replace("Firmi in MetaMask invece che nell'estensione.", "Firmi con la chiave del telefono, con l'impronta o il PIN, invece che nell'estensione.")
       .replace("firmata dal tuo controller in MetaMask", "firmata dalla chiave del telefono").replace("la tua conferma in MetaMask", "la tua conferma con l'impronta"),
     setupBanner: "Per iniziare imposta rete, UP e chiave del telefono: tre passi.",
@@ -1555,7 +1562,7 @@ const PHONE_I18N = {
   en: {
     subtitle: (x) => x.replace("You sign with MetaMask.", "You sign with the phone key (fingerprint or PIN)."),
     panel0Note: (x) => x.replace("<b>MetaMask with the UP's controller</b> (the key that signs for the UP: the guide explains how to import it)", "<b>the phone key, authorized on the UP</b> (on the site, Backup page, \"Authorize a device\")")
-      .replace("On the phone there is the Android app, with MetaMask mobile.", "This is the Android app: it signs with a key kept on the phone.")
+      .replace("On the phone there is the Android app, on the computer the browser extension: they sign with a key of their own, without MetaMask.", "This is the Android app: it signs with a key kept on the phone.")
       .replace("You sign in MetaMask instead of the extension.", "You sign with the phone key, with your fingerprint or PIN, instead of the extension.")
       .replace("signed by your controller in MetaMask", "signed by the phone key").replace("your confirmation in MetaMask", "your confirmation with your fingerprint"),
     setupBanner: "To start, set the network, the UP and the phone key: three steps.",
@@ -1598,7 +1605,7 @@ function t(key, vars) {
 // WALLET-BACKLOG.md and the patch with a fix (0.x: experimental). The Android app's and the browser
 // extension's builds write the Cross_Chain commit in PAGE_COMMIT, and they give their own version
 // (window.__upwalletAppVersion, then the "upwallet:version" event).
-const PAGE_VERSION = "0.10.0";
+const PAGE_VERSION = "0.11.0";
 const PAGE_COMMIT = null;
 function renderVersion() {
   const el = $("pageVersion"), app = window.__upwalletAppVersion;
@@ -1679,7 +1686,9 @@ function attention(text) {
   try {
     if (attentionNote) attentionNote.close();
     const n = new Notification("UP Wallet", { body: text, tag: "up-wallet-request", icon: "favicon.ico" });
-    n.onclick = () => { window.focus(); n.close(); };
+    // The browser extension brings back its side panel, tab or window (window.__upwalletFocus, ext-shim.js),
+    // which window.focus() cannot do.
+    n.onclick = () => { if (typeof window.__upwalletFocus === "function") window.__upwalletFocus(); else window.focus(); n.close(); };
     attentionNote = n;
   } catch (e) { /* notifications not available here */ }
 }
@@ -1866,7 +1875,7 @@ $("recheckBtn").addEventListener("click", () => scheduleCompliance(0));
 let compliance = null, lastCompliance = null, complianceRun = 0, complianceTimer = null;
 // "Pay the gas with the site relayer": shown only when the relayer can be used for this UP, network and
 // controller (gas-relay-client.js). Applies to transactions; message signatures are unchanged.
-const relayOption = GasRelayClient.attach({ box: $("relayBox"), getNetwork, getUp: () => $("upAddress").value, getSigner: () => signerAddress, onChange: () => {}, onState: () => { try { renderGasChip(); } catch (e) { /* the first render runs before relayOption exists */ } } });
+const relayOption = GasRelayClient.attach({ box: $("relayBox"), getNetwork, getUp: () => $("upAddress").value, getSigner: () => signerAddress, defaultOn: true, onChange: () => {}, onState: () => { try { renderGasChip(); } catch (e) { /* the first render runs before relayOption exists */ } } });
 
 function scheduleCompliance(delay = 500) {
   compliance = null;
@@ -3387,6 +3396,7 @@ async function loadHoldings(c) {
   const ix = a.indexer && (a.indexer.kind === "alchemy" ? "Alchemy" : "Blockscout");
   if (a.indexer && a.indexer.err) note(t("holdIxFail", { ix, err: a.indexer.err }), "line-warn");
   else note(t("holdSrc", { ix }), "line-dim");
+  if (a.indexer && a.indexer.fallback) note(t("ixFallback", { err: oneLine(a.indexer.fallback, 120) }), "line-warn");
   if (a.indexer && a.indexer.gone) note(t("holdGone", { n: a.indexer.gone, ix }), "line-dim");
 }
 $("holdRefresh").addEventListener("click", () => { if (compliance) loadHoldings(compliance); });
@@ -3803,8 +3813,9 @@ function updateNav() {
 }
 // Overview: what the UP holds on every main network where it exists (and on the chosen network, if it is
 // another one), read only. Two networks at a time, so public RPCs do not answer "too many requests".
-// Dollar values only where the price is known: the network's currency (Chainlink, usd-price.js) and
-// Circle's native USDC, recognised by its contract address (a symbol can be copied by anyone).
+// Dollar values only where the price is known: the network's currency (Chainlink, usd-price.js),
+// Circle's native USDC, recognised by its contract address (a symbol can be copied by anyone), and the euro
+// stablecoins EURe and EURC (address and symbol, at Chainlink's EUR / USD price).
 const OV_USDC = {
   1: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", 10: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
   137: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359", 8453: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
@@ -3821,6 +3832,15 @@ const POS_IFACE = new ethers.Interface([
   "function getReserveCount() view returns (uint256)", "function getUserSuppliedAssets(uint256,address) view returns (uint256)",
   "function getReserve(uint256)",
 ]);
+// Euro stablecoins, by contract address and symbol (both must match), priced with Chainlink's EUR / USD feed
+// (usd-price.js, EUR_FEEDS) on the same network.
+const OV_EUR = {
+  1: { "0x39b8b6385416f4ca36a20319f70d28621895279d": "EURe", "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c": "EURC" },
+  137: { "0xe0aea583266584dafbb3f9c3211d5588c73fea8d": "EURe" },
+  8453: { "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42": "EURC" },
+  42161: { "0x0c06ccf38114ddfc35e07427b9424adcca9f44f8": "EURe" },
+};
+const eurToken = (chainId, address, symbol) => { const m = OV_EUR[chainId]; const s = m && m[String(address).toLowerCase()]; return !!s && (symbol === undefined || symbol === s); };
 // Arc's USDC is also the network's currency, with an ERC-20 interface at this address.
 const OV_USDC_EXTRA = { 5042: "0x3600000000000000000000000000000000000000" };
 async function readPositions(pv, up, n, a) {
@@ -3863,10 +3883,13 @@ async function readPositions(pv, up, n, a) {
   }
   return pos;
 }
-// Dollar value of an amount of an underlying asset: only USDC, as for the tokens held.
-function posUsd(n, asset, amount) {
-  const usdc = [OV_USDC[n.chainId], OV_USDC_EXTRA[n.chainId]].filter(Boolean).map((x) => x.toLowerCase());
-  return usdc.includes(String(asset).toLowerCase()) ? Number(amount) : null;
+// Dollar value of an amount of an underlying asset: USDC, or a euro stablecoin at the EUR / USD price,
+// as for the tokens held.
+function posUsd(r, asset, amount, symbol) {
+  const usdc = [OV_USDC[r.n.chainId], OV_USDC_EXTRA[r.n.chainId]].filter(Boolean).map((x) => x.toLowerCase());
+  if (usdc.includes(String(asset).toLowerCase())) return Number(amount);
+  if (r.eur && window.UsdPrice && eurToken(r.n.chainId, asset, symbol)) return UsdPrice.tokenUsd(amount, r.eur);
+  return null;
 }
 let ovState = null, ovRun = 0;
 function openOverview() {
@@ -3891,8 +3914,10 @@ async function readOverview() {
       const a = await timeout(AssetList.list(pv, up, n.key), 60000);
       let price = null;
       if (window.UsdPrice && n.chainId) price = await timeout(UsdPrice.read(pv, n.chainId, ethers), 10000).catch(() => null);
+      let eur = null;
+      if (window.UsdPrice && OV_EUR[n.chainId] && UsdPrice.EUR_FEEDS) eur = await timeout(UsdPrice.read(pv, n.chainId, ethers, { feeds: UsdPrice.EUR_FEEDS }), 10000).catch(() => null);
       const pos = await timeout(readPositions(pv, up, n, a), 30000).catch(() => null);
-      return { n, a, price, pos };
+      return { n, a, price, eur, pos };
     } catch (e) { return { n, err: e.shortMessage || e.message }; }
     finally { pv.destroy(); }
   };
@@ -3931,11 +3956,11 @@ function ovLines(r) {
     const at = r.pos && r.pos.atoken[x.address], vt = r.pos && r.pos.vault[x.address];
     if (x.amount !== undefined && (at || vt)) {
       const amount = at ? x.amount : vt.amount, p = at || vt;
-      const v = posUsd(r.n, p.asset, amount);
+      const v = posUsd(r, p.asset, amount, p.symbol);
       if (v === null) unpriced = true; else usd += v;
       lines.push([`${shortAmount(x.amount)} ${label}`, `${t(at ? "ovAToken" : "ovVault", { amount: shortAmount(amount), sym: p.symbol })} · ${shortAddr(x.address)}`, v, x.address, { row: x, letter: label }]);
     } else if (x.amount !== undefined) {
-      const v = usdc && x.address === usdc ? Number(x.amount) : null;
+      const v = usdc && x.address === usdc ? Number(x.amount) : r.eur && window.UsdPrice && eurToken(r.n.chainId, x.address, x.symbol) ? UsdPrice.tokenUsd(x.amount, r.eur) : null;
       if (v === null) unpriced = true; else usd += v;
       lines.push([`${shortAmount(x.amount)} ${label}`, `${x.type} · ${shortAddr(x.address)}`, v, x.address, { row: x, letter: label }]);
     } else {
@@ -3944,7 +3969,7 @@ function ovLines(r) {
     }
   }
   for (const p of (r.pos && r.pos.spoke) || []) {
-    const v = posUsd(r.n, p.asset, p.amount);
+    const v = posUsd(r, p.asset, p.amount, p.symbol);
     if (v === null) unpriced = true; else usd += v;
     lines.push([`${shortAmount(p.amount)} ${p.symbol}`, `${t("ovSpoke")} · ${shortAddr(p.spoke)}`, v, p.spoke, { row: {}, letter: p.symbol }]);
   }
@@ -3994,6 +4019,8 @@ function renderOverview() {
     if (h.spam) add("div", "ov-sub", t("ovSpam", { n: h.spam }), card);
     const ix = h.r.a.indexer;
     if (ix && ix.err) add("div", "ov-sub line-warn", t("ovIxFail", { ix: ix.kind === "alchemy" ? "Alchemy" : "Blockscout", err: oneLine(ix.err, 120) }), card);
+    else if (ix && ix.fallback) add("div", "ov-sub line-warn", t("ixFallback", { err: oneLine(ix.fallback, 120) }), card);
+    else if (ix) add("div", "ov-sub", t("ovIxSrc", { ix: ix.kind === "alchemy" ? "Alchemy" : "Blockscout" }), card);
   }
   if (empty.length) add("div", "ov-sub", t("ovNothing", { list: empty.join(", ") }));
   if (absent.length) add("div", "ov-sub", t("ovAbsent", { list: absent.join(", ") }));
@@ -4038,8 +4065,15 @@ $("receiveShare").addEventListener("click", async () => {
   if (navigator.share) { try { await navigator.share({ title: "Universal Profile", text: t("receiveShareText"), url }); return; } catch (e) { if (e && e.name === "AbortError") return; } }
   copyText(url, $("receiveShare"));
 });
-$("upAddress").addEventListener("input", () => { updateNav(); clearTimeout(presenceTimer); presenceTimer = setTimeout(() => { rememberUp($("upAddress").value.trim()); checkPresence(); }, 800); });
+// The last UP used on this device comes back at every opening (below, before the first check).
+const LAST_UP_KEY = "upwallet.lastUp";
+function rememberLastUp(v) { try { if (ethers.isAddress(v)) localStorage.setItem(LAST_UP_KEY, ethers.getAddress(v)); } catch (e) { /* not kept */ } }
+$("upAddress").addEventListener("input", () => { updateNav(); clearTimeout(presenceTimer); presenceTimer = setTimeout(() => { rememberUp($("upAddress").value.trim()); rememberLastUp($("upAddress").value.trim()); checkPresence(); }, 800); });
 networkSelectEl.addEventListener("change", updateNav);
+// "Only simulation": the choice is kept in this browser (the first visit starts in simulation).
+const SIM_KEY = "upwallet.simulate";
+try { const v = localStorage.getItem(SIM_KEY); if (v === "0" || v === "1") $("simulateOnly").checked = v === "1"; } catch (e) { /* the default: simulation */ }
+$("simulateOnly").addEventListener("change", () => { try { localStorage.setItem(SIM_KEY, $("simulateOnly").checked ? "1" : "0"); } catch (e) { /* kept for this visit only */ } });
 $("simulateOnly").addEventListener("change", updateNav);
 // The UP card opens Settings; its simulation chip opens the small simulation window instead.
 $("upCard").addEventListener("click", (e) => { if (!e.target.closest("#simChip") && !e.target.closest("#gasChip") && !e.target.closest("#upChip")) showView("settings", false); });
@@ -4215,6 +4249,9 @@ window.addEventListener("scroll", fabState, { passive: true });
 $("fabMenu").addEventListener("click", () => { if (document.body.dataset.view !== "all") showView("home", false); window.scrollTo(0, 0); fabState(); });
 let startView = "home";
 try { if (localStorage.getItem(VIEW_KEY) === "all") startView = "all"; } catch (e) { /* default */ }
+
+// A WalletConnect session kept by the browser extension, when there is one, sets its own UP afterwards.
+try { const v = localStorage.getItem(LAST_UP_KEY); if (!$("upAddress").value.trim() && v && ethers.isAddress(v)) $("upAddress").value = ethers.getAddress(v); } catch (e) { /* none */ }
 
 applyI18n();
 onNetworkChanged();
