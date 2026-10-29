@@ -8,15 +8,12 @@ item when its PR (or, for the app, its release) is done.
 
 ## Open
 
-1. **Maintainer: the Alchemy key for the extension** (from the batch of 2026-10-29). The extension reads
-   Blockscout only until its build has the key: the `ALCHEMY_KEY` secret in up-wallet-extension (GitHub,
-   Settings, Secrets and variables, Actions), and the extension's origin
-   (`chrome-extension://bjndlbdefcelfamapgpimaiaboehehek`) in the key's allowed origins on Alchemy; then an
-   extension release, checked on Arbitrum (EURe listed, "Other tokens read from Alchemy").
-2. **Maintainer: the EUR / USD feeds** (`usd-price.js`, `EUR_FEEDS`). Their addresses could not be checked
-   against Chainlink's directory from this session: compare them with data.chain.link (EUR / USD on
-   Ethereum, Polygon, Base, Arbitrum One). A wrong one only gives no price ("Every network" shows EURe or
-   EURC with "—").
+1. **Maintainer: the EUR / USD feeds** (`usd-price.js`, `EUR_FEEDS`). Arbitrum One's is right (seen live
+   2026-10-29, extension 0.1.7: 5 EURe ≈ 5.59 USD, the KPK EURe vault priced); Ethereum's, Polygon's and
+   Base's are still to compare with data.chain.link (EUR / USD). A wrong one only gives no price ("—").
+2. **"Every network": the total's label** (seen 2026-10-29). It still says "Estimated total (networks'
+   currency and USDC)" (IT: "valuta delle reti e USDC"), while the total now includes the euro stablecoins:
+   say "networks' currency, USDC and euro stablecoins" (`ovTotalLabel`).
 
 ## Other pages
 
