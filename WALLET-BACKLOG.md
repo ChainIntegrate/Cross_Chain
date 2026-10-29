@@ -44,6 +44,16 @@ item when its PR (or, for the app, its release) is done.
    - *Signing service (private):* the items of its review file marked "To do" (small changes with their
      tests, procedures in `OPERATIONS.md`, Nodemailer, the queue's bound, `.gitignore`).
 
+5. **Contacts for sends** (asked 2026-10-29; site, app and extension: the same page). Sending to an address
+   that is not a UP (for example the maintainer's Bleap address, for EURe) means pasting it every time; the
+   name search finds only Universal Profiles. A small address book in the Send panel: a name, the address
+   and optionally the networks it is meant for; chosen in the recipient field, the full address always shown
+   with its name. Kept on the device (`localStorage`, as the saved UPs), never synced, never filled from a
+   dApp. Edits and deletions ask for a confirmation. Against address poisoning: a recipient that looks like
+   a saved contact (same first and last characters) but is a different address gets a red warning, and a
+   pasted address that matches a contact shows the contact's name. Export and import of the list as a file,
+   to move it to another device by hand.
+
 ## Other pages
 
 Nothing open.
