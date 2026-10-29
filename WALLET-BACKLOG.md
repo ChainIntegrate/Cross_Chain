@@ -24,6 +24,26 @@ item when its PR (or, for the app, its release) is done.
    check live; the fix: before preparing a transaction, wait for the relayer's check of the current
    network, UP and controller when it is still running (`relayOption.refresh()`), a few seconds at most.
 
+4. **From the review of 2026-10-29 by a second provider (decided, to do in the next batch).** The findings,
+   the checks and the maintainer's decisions are in the signing service's private repository
+   (`audits/2026-10-29-codex-review.md`); `AUDIT.md` gets the public summary when they are done.
+   - *Site and page:* WalletKit's license also as `.txt` and linked from the footer (nginx answers 404 for
+     every `.md`, so `vendor/walletkit-1.6.0.LICENSE.md` is not served); the README's claims per platform
+     (device keys, "all code is open source" told apart from third-party licenses, the CREATE2
+     explanation), the contracts' status metadata; `.gitattributes` (LF).
+   - *Relayer (`tools/relayer`):* a cache of a few seconds on `relay/info`; Nodemailer 10.1.4 or later in
+     the monitor, checked with a test e-mail.
+   - *Server (maintainer):* the HSTS header in nginx, without `includeSubDomains`.
+   - *Extension:* the license and notice files in the zip; the README's "an encrypted copy cannot be
+     attacked offline" corrected (the password way, EXT-1); a privacy section; the build tolerant to
+     line endings; the tests made robust (wait instead of reading at once).
+   - *App:* the license and notice files in the APK; explicit `dataExtractionRules` (checked by installing
+     over 0.9.7: same key, a signature works); the README: the fingerprint prompt's text comes from the
+     app's JavaScript, the diagnostic log's claim; the release text without "MetaMask mobile"
+     (`.github/workflows/android.yml`); the build tolerant to line endings.
+   - *Signing service (private):* the items of its review file marked "To do" (small changes with their
+     tests, procedures in `OPERATIONS.md`, Nodemailer, the queue's bound, `.gitignore`).
+
 ## Other pages
 
 Nothing open.
