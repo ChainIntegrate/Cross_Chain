@@ -4,10 +4,27 @@ Browser tools by [ChainIntegrate](https://chainintegrate.it) for redeploying an 
 
 What it contains, in short:
 - **Redeploy and check** the UP on another network (Deploy, Verify, Backup controller, Identity, NFT reception, Publish implementation): the guide walks through them.
-- **UP Wallet** (`up-wallet.html`, experimental): the UP's wallet on every network where it exists; it connects to dApps through WalletConnect, explains and simulates every request and signs through the controller's wallet (MetaMask on a computer; the Android app, since 0.9.0, signs with its own key kept on the phone). Also an Android app ([up-wallet-android](https://github.com/ChainIntegrate/up-wallet-android)).
+- **UP Wallet** (`up-wallet.html`, experimental): the UP's wallet on every network where it exists; it connects to dApps through WalletConnect, explains and simulates every request, and signs through the controller's wallet (MetaMask, on the website). Also an Android app and a browser extension, each signing with a key of its own kept on the device.
 - **Gas paid by the site** (experimental): an ERC-4337 relayer and two paymasters, so a UP's controller needs no gas on the networks the site serves; paid subscriptions are in beta.
 
-Non-custodial throughout: the pages never hold a key, and every transaction is signed in the user's own wallet (in the Android app, with a key that stays on the phone and that only the user can unlock).
+Non-custodial throughout: the pages never hold a key, and every transaction is signed in the user's own wallet (in the Android app and the browser extension, with a key that stays on the device and that only the user can unlock).
+
+## The system
+
+Four parts. This README describes the whole system; each repository's own README describes its part in detail.
+
+| Part | What it is | Where |
+|---|---|---|
+| **The website** | The toolkit (deploy, verify, backup controller, identity, NFT reception), UP Wallet, the gas relay's pages; the relayer (`tools/relayer`) and the contracts (`contracts/`) | this repository, public |
+| **UP Wallet for Android** | UP Wallet on the phone, signing with the phone key (Android Keystore, fingerprint or PIN) | [up-wallet-android](https://github.com/ChainIntegrate/up-wallet-android), public |
+| **UP Wallet for the browser** | UP Wallet on the computer (Chrome, Edge, Brave), signing with the computer key (passkey or password), with WalletConnect kept alive in the extension | [up-wallet-extension](https://github.com/ChainIntegrate/up-wallet-extension), public |
+| **The signing service** | The approvals of the paid paymaster and the subscriptions (gas paid by the site, beta) | private: it holds a key and its rules; described here and in [AUDIT.md](AUDIT.md) |
+
+How they fit together:
+- **One page, three places.** The app and the extension package UP Wallet's page from this repository at a pinned commit (their `UPSTREAM.json`): the same checks, decoders and request window on the site, the phone and the computer. Changes to the page are collected in [WALLET-BACKLOG.md](WALLET-BACKLOG.md) and made in batches, then an app and an extension release.
+- **One key per device.** The phone and the computer each have their own key, never exported or copied, authorized on the UP from the website's Backup page ("Authorize a device", once per network, by an admin controller), with no admin permissions; each controller can have a name kept on the UP.
+- **The server** runs the website, the relayer and the signing service; the relayer and the signing service accept the website's and the extension's origins.
+- **One register of the reviews**, for the whole system: [AUDIT.md](AUDIT.md) (summary under "Audit trail").
 
 ## Where to use it
 
@@ -16,15 +33,16 @@ Non-custodial throughout: the pages never hold a key, and every transaction is s
 | Website | https://crosschain-lukso.chainintegrate.it/ |
 | Start here: the step-by-step guide | [up-crosschain-guide.html](https://crosschain-lukso.chainintegrate.it/up-crosschain-guide.html) |
 | UP Wallet | [up-wallet.html](https://crosschain-lukso.chainintegrate.it/up-wallet.html) |
-| Backup controller, and authorizing the phone of the Android app | [up-backup.html](https://crosschain-lukso.chainintegrate.it/up-backup.html) |
+| Backup controller, and authorizing a device (the app's phone key, the extension's computer key) | [up-backup.html](https://crosschain-lukso.chainintegrate.it/up-backup.html) |
 | Gas paid by the site: check a UP | [up-gas-relay.html](https://crosschain-lukso.chainintegrate.it/up-gas-relay.html) |
 | Android app (APK of each version) | [up-wallet-android releases](https://github.com/ChainIntegrate/up-wallet-android/releases) |
-| Source code | this repository; the app in [ChainIntegrate/up-wallet-android](https://github.com/ChainIntegrate/up-wallet-android) |
+| Browser extension (zip of each version) | [up-wallet-extension releases](https://github.com/ChainIntegrate/up-wallet-extension/releases) |
+| Source code | this repository; the app in [ChainIntegrate/up-wallet-android](https://github.com/ChainIntegrate/up-wallet-android), the extension in [ChainIntegrate/up-wallet-extension](https://github.com/ChainIntegrate/up-wallet-extension) |
 
 ## What this is, and what it is not
 
 - **Not an official LUKSO product.** It is an independent project by ChainIntegrate, built on LUKSO's public contracts and standards. LUKSO does not maintain, endorse or support it.
-- **Transparent by design.** All the code the user runs is here, open source: the pages, the Android app and the relayer. The only part that is not public is the sponsor service's signing server, which holds a key and its rules; its behaviour is described here and in [AUDIT.md](AUDIT.md). Before anything is signed, UP Wallet says in plain words what a request does, simulates it and shows what will change; after it, every operation links to the network's explorer. The reviews and their findings are published in [AUDIT.md](AUDIT.md), open items included.
+- **Transparent by design.** All the code the user runs is open source: the pages and the relayer here, the Android app and the browser extension in their repositories. The only part that is not public is the sponsor service's signing server, which holds a key and its rules; its behaviour is described here and in [AUDIT.md](AUDIT.md). Before anything is signed, UP Wallet says in plain words what a request does, simulates it and shows what will change; after it, every operation links to the network's explorer. The reviews and their findings are published in [AUDIT.md](AUDIT.md), open items included.
 - **Free to use, at your own risk.** No account and no sign-up. The pages warn at their first opening, and before every irreversible step, about what can go wrong; read the warnings. The tools are experimental and not professionally audited (see "Audit trail"). Only the gas paid by the site is a service: for the UPs on its list, or with a paid subscription (beta).
 - **Help it get better.** When UP Wallet meets a call it cannot explain, it offers to copy the call's data or to e-mail it (your mail app opens; you decide whether to send). Sending it is the most useful help: the next version can decode that call for everyone. Bug reports are welcome too, as GitHub issues ([CONTRIBUTING.md](CONTRIBUTING.md)); security problems privately ([SECURITY.md](SECURITY.md)).
 
@@ -114,68 +132,29 @@ The pages are published at `https://crosschain-lukso.chainintegrate.it/`. Start 
 
 ### Android app (experimental)
 
-The UP Wallet page is also packaged as an Android app, in its own repository:
-[ChainIntegrate/up-wallet-android](https://github.com/ChainIntegrate/up-wallet-android). It runs the
-same page, taken from this repository at a pinned commit, and adds what a phone needs:
-- since 0.9.0, its own signing key, kept on the phone (see below); up to 0.8.x it signed through
-  MetaMask mobile;
-- WalletConnect links received from other apps, a Paste button, and a Scan QR button for a dApp shown on
-  another screen (Google Play services' scanner: the app has no camera permission);
-- a notification when a dApp sends a request while the app is in the background, and a button back
-  to the dApp;
-- a service that keeps the app running while a dApp session is active.
-
-The APKs are built and signed by that repository's CI and attached to its GitHub releases (0.9.7
-today); there is no store release yet. Since 0.9.2 the app keeps several UPs and switches among them
-from the card; one phone key can be authorized on each of them.
-
-**Since 0.9.0 the app is the wallet.** MetaMask is no longer in the app (on the website it still is: the
-site's pages sign through MetaMask, and the phone is authorized from a computer). The app creates a new
-key on the phone, which never leaves it: encrypted with the Android Keystore (the
-phone's secure hardware where there is one), used only after fingerprint or PIN, for every signature,
-and signed with natively, so the page never sees it. Still non-custodial: no one else has the key, and
-there is no copy (a lost phone or an uninstalled app is handled by revoking it). The key is added to
-the UP once per network from this site's **Backup** page ("Authorize a device"), signed by an admin
-controller in MetaMask on a computer, with **no admin permissions** (it can still use all the UP's
-funds, so whoever unlocks the phone can move them): `SUPER_CALL` and
-`SUPER_TRANSFERVALUE` (dApps and sends), `SIGN` (signatures for dApps), the 4337 permission (gas paid
-by the site) and `SETDATA` restricted to the `LSP3Profile` key (aligning the profile); never adding
-controllers, editing permissions or extensions. A lost phone is revoked from the same page. Then a dApp
-connects through WalletConnect and the app signs, with no other app in between. The app warns at start
-that this is the maintainer's experimental wallet, with a higher risk than signing in an external
-wallet, for people who know what they are doing, at their own risk. First tested on 2026-10-25: a
-hup.social post on Base, signed with the fingerprint and sent by the site relayer; then signatures on
-Arc, and a post on LUKSO with the phone key paying the gas. It is a prototype (0.x), tested on one
-Android phone; iPhone is not started. Version 1.0.0 is planned as the first public Google Play release,
-under an organization Play Console account for ChainIntegrate, which Google requires for crypto
-wallets (Google's developer verification: see
-[docs/developer-verification.md](https://github.com/ChainIntegrate/up-wallet-android/blob/main/docs/developer-verification.md)
-in the app's repository). Privacy policy: [up-wallet-app-privacy.html](https://crosschain-lukso.chainintegrate.it/up-wallet-app-privacy.html).
+UP Wallet on the phone ([up-wallet-android](https://github.com/ChainIntegrate/up-wallet-android), 0.9.7
+today, APKs on its GitHub releases, not on the Play Store yet). Since 0.9.0 the app is the wallet: it
+signs with a key created and kept on the phone (Android Keystore, fingerprint or PIN for every
+signature), with no MetaMask. dApps connect through WalletConnect (a link pasted or shared, or a QR code
+scanned), and a notification says when a request arrives. Experimental: the maintainer's own wallet,
+small amounts, at your own risk. Details (the key, the permissions, versions, the Play Store plan): its
+[README](https://github.com/ChainIntegrate/up-wallet-android#readme). Privacy policy:
+[up-wallet-app-privacy.html](https://crosschain-lukso.chainintegrate.it/up-wallet-app-privacy.html).
 
 ### Browser extension (experimental)
 
-The same UP Wallet page as a desktop browser extension for Chrome, Edge and Brave, in its own repository:
-[ChainIntegrate/up-wallet-extension](https://github.com/ChainIntegrate/up-wallet-extension) (0.1.7
-today, on its GitHub releases, loaded in developer mode). It is to the computer what the app is to the
-phone: the computer needs no MetaMask to use dApps.
-- **Its own key**, created in the extension, stored only encrypted (AES-256-GCM) and opened for every
-  signature with a passkey through WebAuthn's PRF extension (Windows Hello, Google Password Manager, a
-  phone, a security key) or with a password, in a small signing window that computes and shows what is
-  signed. Authorized on the UP once per network from the **Backup** page ("Authorize a device"), as the
-  phone key: no admin permissions, but access to all the UP's funds.
-- **The panel "This computer"** (as "This phone" in the app): the key's name kept on the UP, its own balance
-  (what it pays gas with) and "Send the key's balance to the UP", before a key is revoked or deleted. At
-  every opening the key connects by itself, with the last UP used.
-- **WalletConnect in the extension**, not in the page: dApps stay connected with the wallet closed, while
-  the browser runs; a request opens the wallet by itself, which checks it as always.
-- **The page is the site's**, taken from this repository at a pinned commit, with ethers checked against
-  the page's SRI hash and the extension's own Content-Security-Policy. The relayer and the signing
-  service accept the extension's origin.
+UP Wallet on the computer ([up-wallet-extension](https://github.com/ChainIntegrate/up-wallet-extension),
+0.1.7 today, zips on its GitHub releases, loaded in developer mode in Chrome, Edge or Brave). It is to the
+computer what the app is to the phone: it signs with a key kept in the extension, opened with a passkey
+(Windows Hello, Google Password Manager) or a password, in a small signing window that shows what is
+signed; WalletConnect lives in the extension, so dApps stay connected with the wallet closed. Experimental:
+the maintainer's own wallet, small amounts, at your own risk. Details (install and update, the key, the
+signing window): its [README](https://github.com/ChainIntegrate/up-wallet-extension#readme).
 
-**One key per device, by choice.** Every phone and every computer has its own key, never exported,
-imported or synced: a new device gets a new key and one "Authorize a device" (signed once per network by
-an admin controller, MetaMask), a lost one is revoked alone, and the others keep working. The Backup page
-keeps a name for each controller on the UP ("Office PC · extension"), so the list stays readable.
+**For both: one key per device, by choice.** Each key is authorized once per network from the Backup page
+("Authorize a device", signed by an admin controller such as MetaMask), with **no admin permissions but
+access to all the UP's funds**; a lost device is revoked alone, and the others keep working. Before a
+revoke, the device's panel ("This phone", "This computer") sends the key's own balance to the UP.
 
 ### Advanced: `tools/decrypt.js` (offline only)
 
