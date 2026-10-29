@@ -641,8 +641,10 @@
   // a short note with what is missing when the UP is listed but not ready; nothing otherwise.
   // onChange() is called when the option is turned on or off, or stops being available; onState() after
   // every change of what is shown (state or checkbox), so a page can mirror it elsewhere (UP Wallet's gas chip).
-  function attach({ box, getNetwork, getUp, getSigner, onChange, onState }) {
-    let state = { state: "none" }, seq = 0, sig = "", timer = null;
+  // defaultOn: the option is ticked by itself when it becomes available for a network, UP and controller
+  // (UP Wallet); unticked by the user, it stays so until one of them changes.
+  function attach({ box, getNetwork, getUp, getSigner, onChange, onState, defaultOn = false }) {
+    let state = { state: "none" }, seq = 0, sig = "", timer = null, autoKey = "";
     // Starts a moment after a change, after the page's own reads and the backup check: public RPCs answer
     // 429 "too many requests" to bursts.
     const later = () => { clearTimeout(timer); timer = setTimeout(refresh, 2500); };
@@ -678,7 +680,7 @@
     async function refresh() {
       const my = ++seq;
       const net = getNetwork(), raw = (getUp() || "").trim(), signer = getSigner();
-      let next = { state: "none" };
+      let next = { state: "none" }, key = "";
       if (net && net.rpc && ethers.isAddress(raw)) {
         try {
           const provider = new ethers.JsonRpcProvider(net.rpc, undefined, { batchMaxCount: 1 });
@@ -687,6 +689,7 @@
             const up = ethers.getAddress(raw);
             if ((await provider.getCode(up)) !== "0x") {
               next = await check(provider, { chainId, up, signer: signer ? ethers.getAddress(signer) : null });
+              key = `${chainId}:${up}:${String(signer || "").toLowerCase()}`;
               if (next.state === "ready") next.capText = `${ethers.formatEther(next.cap)} ${net.currency || ""}`.trim();
             }
           }
@@ -696,8 +699,10 @@
       const wasOn = state.state === "ready" && cb.checked;
       state = next;
       if (state.state !== "ready") cb.checked = false;
+      let autoOn = false;
+      if (defaultOn && state.state === "ready" && key !== autoKey) { autoKey = key; autoOn = !cb.checked; cb.checked = true; }
       render();
-      if (wasOn && !(state.state === "ready" && cb.checked) && onChange) onChange();
+      if (onChange && (autoOn || (wasOn && !(state.state === "ready" && cb.checked)))) onChange();
     }
     function poll() {
       const net = getNetwork();

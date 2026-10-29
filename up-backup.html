@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-odIRuGFKa640FriSOI+ATfgBXVND2RLmLaYYPjNHbkQ='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-dUwEVaqJT4MeyAjKAvrdI5n1Tz23VL8iZxte1FJcISs='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
@@ -238,7 +238,7 @@ const I18N = {
     readCtrlBtn: "Leggi i controller della UP su questa rete",
     removeDivider: "— oppure, dopo aver perso una chiave —",
     removeLabel: "Controller da rimuovere",
-    removeHint: "L'elenco mostra tutti i controller tranne quello connesso nel wallet: chi firma non può rimuovere se stesso. Per rimuovere la chiave connessa, connetti un altro amministratore (per esempio il backup).",
+    removeHint: "L'elenco mostra tutti i controller tranne quello connesso nel wallet: chi firma non può rimuovere se stesso. Per rimuovere la chiave connessa, connetti un altro amministratore (per esempio il backup). Per la chiave di un dispositivo (app o estensione), se ce l'hai ancora, prima manda alla UP il suo saldo (pannello \"Questo telefono\" o \"Questo computer\", \"Manda il saldo della chiave alla UP\"): dopo la revoca la chiave può ancora spostarlo, ma una chiave persa non ha copie.",
     removeAck: "Confermo: questa chiave è persa o non mi serve più. Il controller connesso nel wallet resta e continua a gestire la UP.",
     removeBtn: "Rimuovi il controller selezionato",
     removeNone: "(nessun controller rimovibile)",
@@ -368,7 +368,7 @@ const I18N = {
     readCtrlBtn: "Read the UP's controllers on this network",
     removeDivider: "— or, after losing a key —",
     removeLabel: "Controller to remove",
-    removeHint: "The list shows every controller except the one connected in the wallet: the signer cannot remove itself. To remove the connected key, connect another admin (for example the backup).",
+    removeHint: "The list shows every controller except the one connected in the wallet: the signer cannot remove itself. To remove the connected key, connect another admin (for example the backup). For a device key (app or extension) you still have, first send its balance to the UP (panel \"This phone\" or \"This computer\", \"Send the key's balance to the UP\"): after the revoke the key can still move it, but a lost key has no copy.",
     removeAck: "I confirm: this key is lost or no longer needed. The controller connected in the wallet stays and keeps managing the UP.",
     removeBtn: "Remove the selected controller",
     removeNone: "(no removable controller)",

@@ -137,7 +137,9 @@
     return r.json();
   }
   const bsAddr = (tok) => (tok && (tok.address_hash || tok.address)) || null;
-  const bsSpam = (tok) => !!(tok && ((tok.reputation && tok.reputation !== "ok") || tok.is_scam === true));
+  // Spam only when Blockscout marks the token as a scam: a reputation that is merely not "ok" (not rated
+  // yet, as for a new stablecoin) is not enough to hide a token.
+  const bsSpam = (tok) => !!(tok && (tok.is_scam === true || tok.reputation === "scam"));
   const NFT_TYPES = ["ERC-721", "ERC-1155", "ERC-404", "LSP8"];
 
   async function fromBlockscout(base, up) {
