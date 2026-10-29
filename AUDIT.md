@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| **Audit date** | 2026-09-27 (rev. 1–3); 2026-09-29 (rev. 4); 2026-10-01 (rev. 5); 2026-10-02 (rev. 6); 2026-10-04 (rev. 7, rev. 8); 2026-10-05 (rev. 9, rev. 10); 2026-10-12 (rev. 11); 2026-10-19 (rev. 12); 2026-10-26 (rev. 13) |
-| **Commit audited** | `f56dd29` (rev. 1–3); `47642bc` (rev. 4); `40f0bc0` (rev. 6); `1eabad2` (rev. 11); `61b50e1` (rev. 13), all on branch `main`. Rev. 5 covered deployed contracts and the relayer (section 8) |
+| **Audit date** | 2026-09-27 (rev. 1–3); 2026-09-29 (rev. 4); 2026-10-01 (rev. 5); 2026-10-02 (rev. 6); 2026-10-04 (rev. 7, rev. 8); 2026-10-05 (rev. 9, rev. 10); 2026-10-12 (rev. 11); 2026-10-19 (rev. 12); 2026-10-26 (rev. 13); 2026-10-29 (rev. 14) |
+| **Commit audited** | `f56dd29` (rev. 1–3); `47642bc` (rev. 4); `40f0bc0` (rev. 6); `1eabad2` (rev. 11); `61b50e1` (rev. 13); `3c1e147` (rev. 14), all on branch `main`. Rev. 5 covered deployed contracts and the relayer (section 8) |
 | **Revision** | 3 — rev. 2 reclassified H-03, M-05, I-01 and I-02 after the maintainer's feedback (salt/IV are public format values; all profiles and addresses shown belong to the maintainer and are public by choice); rev. 3 adds L-09, found while testing the new implementation-publishing page, and M-08, after the maintainer described how the site is deployed; M-08 was fixed and verified on the live site the same day; rev. 4 adds the two WalletConnect pages (section 7); rev. 5 the gas relay (section 8); rev. 6 a review of the whole repository with the system live (section 9); rev. 7 the sponsor paymaster `UPVerifyingPaymaster` (section 10). Section 11 records the design decisions of the paid subscriptions; rev. 8 and 9 are the launch reviews of the whole system, toolkit and signing service (section 12); rev. 10 records the fixes of SP-A and SP-B in the signing service; rev. 11 is the re-audit of the whole system with the Android app (section 13); rev. 12 (2026-10-19) records the fixes of every item still open: SP-C, GS-2, N-2, F2-2, N-3 (full Content-Security-Policy), W-tel and M-08 (verified on the live site) in sections 12–13, and L-8 and I-1 to I-7 in section 9 |
 | **Scope** | Rev. 1–3: every file in the repository at the time: 6 HTML tools, `decrypt.js`, README, images in `guide-assets/`, and the full git history. Rev. 4: the WalletConnect pages `up-wallet.html` and `up-walletconnect-basenames.html`, the vendored `vendor/walletkit-1.6.0.min.js` and `config.example.js`. Rev. 5: `Extension4337`, `contracts/UPPaymaster.sol`, the relayer and the gas-relay setup batches. Rev. 6: the whole repository, pages, shared scripts, contracts and relayer. Rev. 11: the whole system again, with the signing service and the Android app `up-wallet-android` |
 | **Method** | Manual code review, cross-check against the LUKSO reference contracts (`@lukso/lsp6-contracts` 0.16.3, `@lukso/lsp23-contracts` 0.16.3; for rev. 4 also `@lukso/lsp-smart-contracts` 0.14.0 for LSP0, LSP6 `isValidSignature` and LSP17), browser end-to-end tests with mocked wallets/RPCs/WalletConnect (Playwright + Chromium), a git history review for secrets and personal data, and, for rev. 4, live tests by the maintainer on Base and Polygon mainnet |
@@ -28,6 +28,7 @@
 14. [Scope of the next review: changes since 2026-10-19](#14-scope-of-the-next-review-changes-since-2026-10-19)
 15. [Rev. 13 — External review of the whole system (2026-10-26)](#15-rev-13--external-review-of-the-whole-system-2026-10-26)
 16. [Scope of the next review: changes since 2026-10-26](#16-scope-of-the-next-review-changes-since-2026-10-26)
+17. [Rev. 14 — External review of the whole system, with the browser extension (2026-10-29)](#17-rev-14--external-review-of-the-whole-system-with-the-browser-extension-2026-10-29)
 
 ---
 
@@ -767,4 +768,32 @@ A name for each controller ("Office PC · extension"), kept on the UP on each ne
 - The EUR / USD feed addresses in `usd-price.js` were not checked against Chainlink's directory from the maintainer's session: a wrong one gives no price (its `description()` must be "EUR / USD"), never a wrong one.
 - The extension's id is fixed by a key in its repository (`ext-config.json`): anyone can build a package with the same id. Chrome installs only what the user loads, and the passkey and the stored key belong to the installed copy; a future store version will have the store's id.
 - No professional audit until the paid relay service has significant users or funds (section 15, README).
+
+---
+
+## 17. Rev. 14 — External review of the whole system, with the browser extension (2026-10-29)
+
+External AI-assisted review of the four repositories, with the brief of section 16: `Cross_Chain` @ `3c1e147` (page 0.11.0), the signing service @ `65b4441`, `up-wallet-android` @ `8d3f363` (0.9.7), `up-wallet-extension` @ `e6f06a7` (0.1.7, new). It supersedes the review of section 15. The full report is in the service's private repository. **Not a professional audit, but an in-depth one:** the full diff of every repository since 2026-10-26, the new extension read from scratch (its key handling traced in the code, line by line), every earlier finding's fix checked again in the code, each "look at" item of section 16 worked through. Not verified from the reviewer's environment: the live site's response headers and the on-chain state (RPCs and explorers blocked by its network); the maintainer verified both live.
+
+**Verdict.** No Critical, High or Medium. Every earlier finding is fixed, checked in the code: PK-1 and WEB-1 (Medium), PK-2, SP-A2, SP-B2, SP-C2. The contracts are unchanged (no diff in `contracts/`). The browser extension is "well engineered", held to the same standard as the phone key:
+- the key encrypted with AES-256-GCM, its AES key from a passkey (PRF, user verification at every signature) or a password;
+- decrypted only in the signing window, for one signature, then wiped, and the signature checked against the stored address;
+- what is signed computed by the window from the request itself, the Key Manager's `execute(bytes)` decoded, the buttons armed after a moment;
+- the 32-byte, other account, other UP and EntryPoint refusals in the key's own path;
+- no content scripts, no `externally_connectable`, host permissions on the site only, `script-src 'self'`;
+- the build pinned to a Cross_Chain commit, ethers checked against the page's SRI hash.
+
+| # | Severity | Finding | Status |
+|---|---|---|---|
+| EXT-1 | Low | The extension's password fallback: the encrypted key and the PBKDF2 salt are in the browser profile, so whoever copies the profile can try passwords offline (600,000 rounds and 12 characters raise the cost; PBKDF2 is GPU-friendly) | **Accepted** (2026-10-29): the password is the fallback for a computer whose passkeys give no PRF value; the passkey is the default and the recommended way (Windows Hello on an up-to-date Windows, or Google Password Manager), and its secret never leaves the authenticator. Documented in the extension's README and in the warning; a memory-hard function (scrypt) is not planned for the fallback |
+| REL-1 | Low | The site relayer is ticked by default where it is available (`GasRelayClient.attach({ defaultOn })`), the paid paymaster included: an operation can use the subscription without the user choosing that payer each time | **Accepted** (2026-10-29), by design: UP Wallet is meant to work with the site relayer almost by default, and today its main user is the maintainer. Every operation is still signed by the user, the payer is shown in the request window and on the card's gas chip, and once unticked it stays so for that network, UP and controller. To be revisited if other users ask for it |
+| CSP-1 | Low | The server's Content-Security-Policy header keeps `'unsafe-inline'` in `script-src` | **Kept, by design**: the browser applies the header's policy and each page's own `<meta>` policy together, and a script must pass both. The `<meta>` policy allows inline scripts only by their SHA-256 hash (`tools/csp.js`), so it is the one that blocks injected scripts. A header without `'unsafe-inline'` would also need every page's hashes, kept in the server's configuration and changed on the server at every script change; without them it would block the site's own scripts. `'unsafe-inline'` in the header leaves the decision to the page's policy |
+| EXT-2 | Info | The extension's id is fixed by a public key in its repository: anyone can build a package with the same id | Accepted (section 16.4): Chrome installs only what the user loads; the passkey and the stored key belong to the installed copy; a store version will have the store's id |
+| ORIG-1 | Info | `allowedOrigins` (relayer, signing service) is a browser-side check: a non-browser client can send any `Origin`, and an empty list checks nothing | Checked: both services list the site and the extension in production (the relayer answered the extension's origin with 200 on 2026-10-28). The real authorization stays the UP's signature and the subscriber check |
+| NAME-1 | Info | Controller names are untrusted labels: a misleading or look-alike name is possible | Accepted: cleaned (control, bidi, zero-width characters removed, 64 characters at most), shown as text, never used in a check; the address is always shown with it |
+| RPC-1 | Info | A custom RPC chosen by the user can mislead what is read (balance, nonce, gas), not what is signed | Accepted: the key signs locally what the signing window or the prompt decodes, and the signature is checked |
+| CIE-1 | Info | UP CIE Link statements: worth testing with adversarial statements | Noted: a text statement, not a 32-byte hash, shown before signing; the reviewer found no flaw |
+| EURO-1 | Info | EUR / USD feed addresses not checked against Chainlink's directory | Open (`WALLET-BACKLOG.md`): display only, and a wrong feed gives no price (`description()` must be "EUR / USD"); Arbitrum One's seen right live on 2026-10-29 |
+
+**What has been checked across the reviews.** This file is the register: each section lists the scope, what was checked and found correct, the findings and their status, and how the fixes were verified (sections 4, 6, 7.4, 7.5, 8, 9 to 15, and this one). Summary of the reviews and their results: README, "Audit trail".
 
