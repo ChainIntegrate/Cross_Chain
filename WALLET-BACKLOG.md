@@ -93,11 +93,20 @@ item when its PR (or, for the app, its release) is done.
    repository), not against the explorer's name, which anyone can give a contract they verify. Already
    seen: the deposit went through and the shares show in the UP's portfolio in Morpho's app, with the
    others (the maintainer, 2026-10-28).
-11. **App only: the phone key's confirmation names what the UP does** (asked 2026-10-28). As in extension
+11. **Send the key's own balance to the UP** (asked 2026-10-29; extension and app). The device key's address
+   holds the network's currency it uses for gas when it pays a transaction itself; today nothing moves it, and
+   it is lost for good with the key (no copy). In the panels "This computer" and "This phone": the key's
+   balance on the page's network, and "Send the key's balance to the UP": one plain transfer from the key to
+   the UP chosen in the page (the recipient is always that UP, never typed), of the balance minus the
+   transfer's maximum fee (21,000 gas at the network's current fees; nothing sent when the balance does not
+   cover it). Confirmed as every signature: the signing window, or the fingerprint, shows the recipient (the
+   UP), the amount and the fee. The Backup page's revoke note, and the extension's "Delete the key", say to
+   empty the key first.
+12. **App only: the phone key's confirmation names what the UP does** (asked 2026-10-28). As in extension
    0.1.3: for a transaction through the Key Manager (`execute(bytes)`, selector 0x09c5eabe) the confirmation
    shows only the outer call to the Key Manager. It should decode the payload: the UP's `execute` (or
    `executeBatch`) inside, with each call's recipient, value and function. Its size on the phone is fine.
-12. **App only: the phone key's name** (as in extension 0.1.4). The "This phone" panel shows the key's name
+13. **App only: the phone key's name** (as in extension 0.1.4). The "This phone" panel shows the key's name
    kept on the UP on the page's network (`BackupCheck.readNames`, the Backup page's controller names), and
    its link to the Backup page adds `device=phone`, so that the name starts as "Phone · UP Wallet app".
 
