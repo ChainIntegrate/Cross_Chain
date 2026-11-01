@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-1cyW8OPFEp+ufyw9L93yoT+VuztQMpvN1ZwkN39Gdp4='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-fOR0qO6BaQNLMVjR8h4oXu+VR6+RLmo73bMCbb3Nw4E='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -158,6 +158,18 @@
   .ov-thumb.has-img { color: transparent; }
   .ov-thumb.img-ask { cursor: pointer; outline: 1px dashed var(--accent); outline-offset: -1px; color: var(--accent); }
   .ov-thumb .net-logo { width: 28px; height: 28px; }
+  #sendToInfo { overflow-wrap: anywhere; }
+  .contacts-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .contacts-row button { padding: 6px 10px; width: auto; margin: 0; }
+  .contacts-box { border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-top: 8px; font-size: 13px; }
+  .contacts-box .ct-row { display: flex; gap: 6px; align-items: stretch; margin: 4px 0; }
+  .contacts-box .ct-row > button { margin: 0; }
+  .contacts-box .ct-row > button:first-child { flex: 1 1 auto; width: auto; text-align: left; padding: 8px 10px; min-width: 0; }
+  .contacts-box .ct-row > button:not(:first-child) { flex: 0 0 auto; width: auto; padding: 6px 10px; }
+  .contacts-box .ct-addr { font-size: 11.5px; opacity: 0.8; overflow-wrap: anywhere; }
+  .contacts-box textarea { width: 100%; min-height: 90px; font-size: 11.5px; box-sizing: border-box; }
+  .contacts-box .ct-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .contacts-box .ct-actions button { padding: 6px 10px; width: auto; margin: 0; }
   .send-chosen { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 13px; }
   .view-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
   .view-title { font-size: 16px; font-weight: 700; }
@@ -362,6 +374,11 @@
   </div>
   <label for="sendTo" data-i18n="sendToLabel">Destinatario</label>
   <input type="text" id="sendTo" data-i18n-placeholder="sendToPlaceholder" placeholder="0x… oppure il nome di una Universal Profile">
+  <div class="contacts-row">
+    <button id="contactsBtn" type="button" class="secondary" data-i18n="contactsBtn">📇 Contatti</button>
+    <button id="contactSaveBtn" type="button" class="secondary" hidden data-i18n="contactSaveBtn">Salva come contatto</button>
+  </div>
+  <div id="contactsBox" class="contacts-box" hidden></div>
   <div id="sendToResults"></div>
   <div class="note" id="sendToInfo" style="margin-top:6px;"></div>
   <div id="sendAmountWrap">
@@ -672,7 +689,7 @@ const I18N = {
     overviewNote: "Cosa possiede la UP su ogni rete principale dove esiste, letto dalle reti e dagli indici (Alchemy o Blockscout), in sola lettura. Il valore in dollari è una stima: c'è solo per la valuta della rete (prezzo Chainlink), per l'USDC nativo di Circle e per gli euro digitali EURe ed EURC (cambio EUR/USD di Chainlink); gli altri token sono elencati senza prezzo e non entrano nel totale. I token segnalati come spam non sono contati.",
     ovRefresh: "Aggiorna", ovNoUp: "Imposta la UP nelle Impostazioni.",
     ovReading: (v) => `Lettura delle reti: ${v.done} di ${v.total}…`,
-    ovTotal: (v) => `≈ ${v.usd} USD`, ovTotalLabel: "Totale stimato (valuta delle reti e USDC)",
+    ovTotal: (v) => `≈ ${v.usd} USD`, ovTotalLabel: "Totale stimato (valuta delle reti, USDC e stablecoin in euro)",
     ovReadAt: (v) => `Letto alle ${v.time}. Per rileggere: Aggiorna.`,
     ovNoPrice: "senza prezzo", ovNftCount: (v) => `${v.count} NFT`, ovNative: "valuta della rete",
     ovSpam: (v) => `${v.n} segnalati come spam, non contati`,
@@ -778,6 +795,28 @@ const I18N = {
     nameSearching: "Ricerca del nome nell'indice dei profili di LUKSO…",
     nameNone: "Nessun profilo con questo nome nell'indice di LUKSO.",
     nameFail: (v) => `Ricerca non riuscita (${v.err}): scrivi l'indirizzo 0x.`,
+    contactsBtn: "📇 Contatti", contactSaveBtn: "Salva come contatto",
+    ctEmpty: "Nessun contatto salvato. Scrivi o incolla un indirizzo nel destinatario, poi \"Salva come contatto\".",
+    ctIntro: "Contatti salvati solo su questo dispositivo, mai inviati altrove. Tocca un contatto per usarlo come destinatario.",
+    ctOnly: (v) => `solo ${v.nets}`,
+    ctName: "Nome del contatto", ctNamePh: "es. Mario · Bleap",
+    ctOnlyHere: (v) => `Solo su ${v.net}`,
+    ctSave: "Salva", ctCancel: "Annulla", ctRename: "✏️", ctDelete: "🗑",
+    ctRenameTitle: "Rinomina", ctDeleteTitle: "Elimina",
+    ctExport: "Esporta (copia)", ctImport: "Importa…", ctImportGo: "Importa questi contatti",
+    ctImportPh: "Incolla qui l'elenco esportato da un altro dispositivo",
+    ctExported: "✅ Elenco copiato negli appunti (è anche qui sotto): incollalo in \"Importa\" sull'altro dispositivo.",
+    ctBadName: "❌ Scrivi un nome (al massimo 40 caratteri).",
+    ctBadImport: "❌ Il testo non è un elenco di contatti esportato da UP Wallet.",
+    ctImportAsk: (v) => `Importare ${v.n} contatti? Quelli con un indirizzo già salvato restano come sono.`,
+    ctImported: (v) => `✅ Importati ${v.n} contatti (${v.skip} già presenti).`,
+    ctSaveAsk: (v) => `Salvare ${v.addr} come "${v.name}"? Controlla prima l'indirizzo carattere per carattere con chi te lo ha dato.`,
+    ctRenameAsk: (v) => `Rinominare "${v.old}" in "${v.name}"?`,
+    ctDeleteAsk: (v) => `Eliminare il contatto "${v.name}" (${v.addr})?`,
+    ctFull: "❌ La rubrica è piena (200 contatti).",
+    ctIs: (v) => `📇 Contatto: ${v.name}.`,
+    ctOtherNet: (v) => `⚠️ Il contatto "${v.name}" è salvato solo per ${v.nets}, non per ${v.net}: controlla che il destinatario usi davvero questa rete.`,
+    ctLookalike: (v) => `🛑 Questo indirizzo assomiglia al contatto "${v.name}" (${v.addr}) ma è DIVERSO: stessi caratteri all'inizio e alla fine, il resto no. È il trucco dell'address poisoning: un indirizzo finto copiato dalla cronologia. Non inviare: usa il contatto dalla rubrica.`,
     namePicked: (v) => `Scelto: ${v.label} — ${v.addr}. Il nome viene dall'indice di LUKSO e non è unico: chiunque può chiamarsi così. Conta solo l'indirizzo: confrontalo con quello che ti ha dato il destinatario.`,
     nameUpHere: "✅ Su questa rete a questo indirizzo c'è una Universal Profile.",
     nameNoUpHere: (v) => `⚠️ Su ${v.net} questa Universal Profile non esiste (ancora): l'indirizzo è lo stesso su ogni rete, ma il proprietario non l'ha creata qui. La valuta della rete arriverebbe comunque, ma la potrebbe usare solo ricreando la UP su ${v.net}; i token LSP7 verrebbero rifiutati.`,
@@ -1151,7 +1190,7 @@ const I18N = {
     overviewNote: "What the UP holds on every main network where it exists, read from the networks and from the indexes (Alchemy or Blockscout), read only. The dollar value is an estimate: only for the network's currency (Chainlink price), Circle's native USDC and the euro stablecoins EURe and EURC (Chainlink's EUR/USD rate); other tokens are listed without a price and are not in the total. Tokens flagged as spam are not counted.",
     ovRefresh: "Refresh", ovNoUp: "Set the UP in Settings.",
     ovReading: (v) => `Reading the networks: ${v.done} of ${v.total}…`,
-    ovTotal: (v) => `≈ ${v.usd} USD`, ovTotalLabel: "Estimated total (networks' currency and USDC)",
+    ovTotal: (v) => `≈ ${v.usd} USD`, ovTotalLabel: "Estimated total (networks' currency, USDC and euro stablecoins)",
     ovReadAt: (v) => `Read at ${v.time}. To read again: Refresh.`,
     ovNoPrice: "no price", ovNftCount: (v) => `${v.count} NFT`, ovNative: "network currency",
     ovSpam: (v) => `${v.n} flagged as spam, not counted`,
@@ -1257,6 +1296,28 @@ const I18N = {
     nameSearching: "Searching the name in LUKSO's profile index…",
     nameNone: "No profile with this name in LUKSO's index.",
     nameFail: (v) => `Search failed (${v.err}): write the 0x address.`,
+    contactsBtn: "📇 Contacts", contactSaveBtn: "Save as a contact",
+    ctEmpty: "No contacts saved. Type or paste an address as the recipient, then \"Save as a contact\".",
+    ctIntro: "Contacts are kept on this device only, never sent anywhere. Tap one to use it as the recipient.",
+    ctOnly: (v) => `${v.nets} only`,
+    ctName: "Contact name", ctNamePh: "e.g. Mario · Bleap",
+    ctOnlyHere: (v) => `Only on ${v.net}`,
+    ctSave: "Save", ctCancel: "Cancel", ctRename: "✏️", ctDelete: "🗑",
+    ctRenameTitle: "Rename", ctDeleteTitle: "Delete",
+    ctExport: "Export (copy)", ctImport: "Import…", ctImportGo: "Import these contacts",
+    ctImportPh: "Paste here the list exported from another device",
+    ctExported: "✅ List copied to the clipboard (it is also below): paste it into \"Import\" on the other device.",
+    ctBadName: "❌ Type a name (40 characters at most).",
+    ctBadImport: "❌ The text is not a contact list exported from UP Wallet.",
+    ctImportAsk: (v) => `Import ${v.n} contacts? Those whose address is already saved stay as they are.`,
+    ctImported: (v) => `✅ ${v.n} contacts imported (${v.skip} already there).`,
+    ctSaveAsk: (v) => `Save ${v.addr} as "${v.name}"? First check the address character by character with whoever gave it to you.`,
+    ctRenameAsk: (v) => `Rename "${v.old}" to "${v.name}"?`,
+    ctDeleteAsk: (v) => `Delete the contact "${v.name}" (${v.addr})?`,
+    ctFull: "❌ The address book is full (200 contacts).",
+    ctIs: (v) => `📇 Contact: ${v.name}.`,
+    ctOtherNet: (v) => `⚠️ The contact "${v.name}" is saved for ${v.nets} only, not for ${v.net}: check that the recipient really uses this network.`,
+    ctLookalike: (v) => `🛑 This address looks like the contact "${v.name}" (${v.addr}) but it is DIFFERENT: same characters at the start and at the end, not in between. This is the address-poisoning trick: a fake address copied from the history. Do not send: use the contact from the address book.`,
     namePicked: (v) => `Chosen: ${v.label} — ${v.addr}. The name comes from LUKSO's index and is not unique: anyone can use it. Only the address counts: compare it with the one the recipient gave you.`,
     nameUpHere: "✅ On this network there is a Universal Profile at this address.",
     nameNoUpHere: (v) => `⚠️ On ${v.net} this Universal Profile does not exist (yet): the address is the same on every network, but its owner has not created it here. The network's currency would arrive anyway, but it could be used only by recreating the UP on ${v.net}; LSP7 tokens would be refused.`,
@@ -1699,7 +1760,7 @@ function t(key, vars) {
 // WALLET-BACKLOG.md and the patch with a fix (0.x: experimental). The Android app's and the browser
 // extension's builds write the Cross_Chain commit in PAGE_COMMIT, and they give their own version
 // (window.__upwalletAppVersion, then the "upwallet:version" event).
-const PAGE_VERSION = "0.12.0";
+const PAGE_VERSION = "0.13.0";
 const PAGE_COMMIT = null;
 function renderVersion() {
   const el = $("pageVersion"), app = window.__upwalletAppVersion;
@@ -3085,6 +3146,8 @@ async function handleSendTransaction(topic, id, c, tx, validation, reject, after
       [t("kFrom"), c.up, {}],
     ];
     const warnings = [];
+    // The site relayer's check for this network, UP and controller, when it has not answered yet.
+    await relayOption.ready();
     const op = await describeCall(c, to, value, data, rows, warnings);
     const valueText = `${ethers.formatEther(value)} ${cur}`.trim();
     setDecodeHelp(op === t("unknownCall", { sel: data.slice(0, 10) }) ? { site: sessionPeer(topic), net: `${c.net.name} (chainId ${c.net.chainId})`, to, value: valueText, data } : null);
@@ -3662,6 +3725,8 @@ $("sendTo").addEventListener("input", () => {
   const v = $("sendTo").value.trim(), box = $("sendToResults"), info = $("sendToInfo");
   box.textContent = "";
   if (!picked || v !== picked.address) { picked = null; info.textContent = ""; info.className = "note"; }
+  contactSaveState();
+  if (ethers.isAddress(v) && !picked) showContactLines(v);
   if (!v || ethers.isAddress(v) || v.startsWith("0x") || v.split("#")[0].trim().length < 2) return;
   nameTimer = setTimeout(async () => {
     const run = ++nameRun;
@@ -3682,11 +3747,180 @@ $("sendTo").addEventListener("input", () => {
         $("sendTo").value = p.address; box.textContent = "";
         info.textContent = ""; info.className = "note";
         const d2 = document.createElement("div"); d2.textContent = t("namePicked", { label, addr: p.address }); info.appendChild(d2);
+        showContactLines(p.address);
+        contactSaveState();
         checkPicked(p.address).catch(() => null);
       });
       box.appendChild(b);
     }
   }, 500);
+});
+
+// Contacts for sends: a name and an address, optionally the networks they are meant for. Kept on this
+// device only (localStorage, as the saved UPs), never synced and never filled from a dApp; edits and
+// deletions ask for a confirmation. Against address poisoning, a recipient that is not a contact but has
+// a contact's first and last 4 hex digits is flagged in red, and a contact's address shows its name.
+const CONTACTS_KEY = "upwallet.contacts";
+const CONTACTS_MAX = 200;
+const ctNet = () => NETWORKS.find((n) => n.key === networkSelectEl.value) || null;
+function contacts() {
+  try {
+    const list = JSON.parse(localStorage.getItem(CONTACTS_KEY) || "[]");
+    return Array.isArray(list) ? list.map(ctClean).filter(Boolean) : [];
+  } catch (e) { return []; }
+}
+// One stored or imported entry, checked: a name on one line, a valid address, known network keys.
+function ctClean(x) {
+  if (!x || typeof x !== "object" || typeof x.address !== "string" || !ethers.isAddress(x.address)) return null;
+  const name = oneLine(x.name, 40);
+  if (!name) return null;
+  const nets = Array.isArray(x.nets) ? x.nets.filter((k) => NETWORKS.some((n) => n.key === k)) : [];
+  return { name, address: ethers.getAddress(x.address), nets };
+}
+function storeContacts(list) { try { localStorage.setItem(CONTACTS_KEY, JSON.stringify(list.slice(0, CONTACTS_MAX))); } catch (e) { /* kept for this visit only */ } }
+const ctNets = (c) => c.nets.map((k) => (NETWORKS.find((n) => n.key === k) || {}).name || k).join(", ");
+const ctLooks = (a, b) => a.slice(2, 6).toLowerCase() === b.slice(2, 6).toLowerCase() && a.slice(-4).toLowerCase() === b.slice(-4).toLowerCase();
+// The lines about a recipient address: its contact, or a contact it imitates.
+function contactLines(addr) {
+  if (!ethers.isAddress(addr)) return [];
+  const a = ethers.getAddress(addr), list = contacts(), net = ctNet();
+  const same = list.find((c) => c.address === a);
+  if (same) {
+    const out = [[t("ctIs", { name: same.name }), "line-ok"]];
+    if (same.nets.length && net && !same.nets.includes(net.key)) out.push([t("ctOtherNet", { name: same.name, nets: ctNets(same), net: net.name }), "line-warn"]);
+    return out;
+  }
+  return list.filter((c) => ctLooks(c.address, a)).map((c) => [t("ctLookalike", { name: c.name, addr: c.address }), "line-danger"]);
+}
+function showContactLines(addr) {
+  const info = $("sendToInfo");
+  for (const [text, cls] of contactLines(addr)) { const d = document.createElement("div"); d.className = cls; d.textContent = text; info.appendChild(d); }
+}
+function contactSaveState() {
+  const v = $("sendTo").value.trim();
+  $("contactSaveBtn").hidden = !(ethers.isAddress(v) && !contacts().some((c) => c.address === ethers.getAddress(v)));
+}
+let ctMode = null; // null (list), "save", "import", { rename: address }
+function renderContacts(msg) {
+  const box = $("contactsBox");
+  box.textContent = "";
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+  const btn = (text, fn, title) => { const b = el("button", "secondary", text); b.type = "button"; if (title) b.title = title; b.addEventListener("click", fn); return b; };
+  if (msg) box.appendChild(el("div", msg[1], msg[0]));
+  if (ctMode === "save") {
+    const addr = ethers.getAddress($("sendTo").value.trim()), net = ctNet();
+    box.appendChild(el("div", "ct-addr", addr));
+    const lab = el("label", "", t("ctName")); const name = el("input"); name.type = "text"; name.maxLength = 40; name.placeholder = t("ctNamePh");
+    box.append(lab, name);
+    let only = null;
+    if (net) {
+      const row = el("label"); row.style.cssText = "display:flex; gap:8px; align-items:center; margin-top:8px; cursor:pointer;";
+      only = el("input"); only.type = "checkbox"; only.style.width = "auto";
+      row.append(only, el("span", "", t("ctOnlyHere", { net: net.name })));
+      box.appendChild(row);
+    }
+    const acts = el("div", "ct-actions");
+    acts.append(btn(t("ctSave"), () => {
+      const n = oneLine(name.value, 41);
+      if (!n || n.length > 40) return renderContactsKeep(t("ctBadName"));
+      const list = contacts();
+      if (list.length >= CONTACTS_MAX) return renderContactsKeep(t("ctFull"));
+      if (list.some((c) => c.address === addr)) { ctMode = null; return renderContacts(); }
+      if (!window.confirm(t("ctSaveAsk", { addr, name: n }))) return;
+      list.push({ name: n, address: addr, nets: only && only.checked ? [net.key] : [] });
+      storeContacts(list);
+      ctMode = null; renderContacts();
+      $("sendTo").dispatchEvent(new Event("input"));
+    }), btn(t("ctCancel"), () => { ctMode = null; renderContacts(); }));
+    box.appendChild(acts);
+    name.focus();
+    // A wrong name keeps what was typed.
+    function renderContactsKeep(err) { const d = box.querySelector(".ct-err") || el("div", "line-err ct-err"); d.textContent = err; box.insertBefore(d, box.firstChild); }
+    return;
+  }
+  if (ctMode && ctMode.rename) {
+    const c = contacts().find((x) => x.address === ctMode.rename);
+    if (!c) { ctMode = null; return renderContacts(); }
+    box.appendChild(el("div", "ct-addr", c.address));
+    const lab = el("label", "", t("ctName")); const name = el("input"); name.type = "text"; name.maxLength = 40; name.value = c.name;
+    box.append(lab, name);
+    const acts = el("div", "ct-actions");
+    acts.append(btn(t("ctSave"), () => {
+      const n = oneLine(name.value, 41);
+      if (!n || n.length > 40) { const d = el("div", "line-err", t("ctBadName")); box.insertBefore(d, box.firstChild); return; }
+      if (n !== c.name) {
+        if (!window.confirm(t("ctRenameAsk", { old: c.name, name: n }))) return;
+        const all = contacts(); const k = all.findIndex((x) => x.address === c.address);
+        if (k >= 0) { all[k].name = n; storeContacts(all); }
+      }
+      ctMode = null; renderContacts();
+      $("sendTo").dispatchEvent(new Event("input"));
+    }), btn(t("ctCancel"), () => { ctMode = null; renderContacts(); }));
+    box.appendChild(acts);
+    name.focus();
+    return;
+  }
+  if (ctMode === "import") {
+    const ta = el("textarea"); ta.placeholder = t("ctImportPh");
+    box.appendChild(ta);
+    const acts = el("div", "ct-actions");
+    acts.append(btn(t("ctImportGo"), () => {
+      let incoming = null;
+      try { const j = JSON.parse(ta.value); incoming = j && j.kind === "upwallet-contacts" && Array.isArray(j.contacts) ? j.contacts.map(ctClean).filter(Boolean) : null; } catch (e) { incoming = null; }
+      if (!incoming || !incoming.length) return renderContacts([t("ctBadImport"), "line-err"]);
+      if (!window.confirm(t("ctImportAsk", { n: incoming.length }))) return;
+      const list = contacts(); let added = 0, skip = 0;
+      for (const c of incoming) {
+        if (list.some((x) => x.address === c.address)) { skip++; continue; }
+        if (list.length >= CONTACTS_MAX) break;
+        list.push(c); added++;
+      }
+      storeContacts(list);
+      ctMode = null; renderContacts([t("ctImported", { n: added, skip }), "line-ok"]);
+      $("sendTo").dispatchEvent(new Event("input"));
+    }), btn(t("ctCancel"), () => { ctMode = null; renderContacts(); }));
+    box.appendChild(acts);
+    return;
+  }
+  const list = contacts();
+  box.appendChild(el("div", "note", list.length ? t("ctIntro") : t("ctEmpty")));
+  list.forEach((c, i) => {
+    const row = el("div", "ct-row");
+    const pick = btn("", () => {
+      $("sendTo").value = c.address;
+      $("sendToResults").textContent = "";
+      $("contactsBox").hidden = true;
+      $("sendTo").dispatchEvent(new Event("input"));
+    });
+    pick.append(el("div", "", c.name + (c.nets.length ? ` · ${t("ctOnly", { nets: ctNets(c) })}` : "")), el("div", "ct-addr", c.address));
+    const ren = btn(t("ctRename"), () => { ctMode = { rename: c.address }; renderContacts(); }, t("ctRenameTitle"));
+    const del = btn(t("ctDelete"), () => {
+      if (!window.confirm(t("ctDeleteAsk", { name: c.name, addr: c.address }))) return;
+      storeContacts(contacts().filter((x) => x.address !== c.address));
+      renderContacts();
+      $("sendTo").dispatchEvent(new Event("input"));
+    }, t("ctDeleteTitle"));
+    row.append(pick, ren, del);
+    box.appendChild(row);
+  });
+  const acts = el("div", "ct-actions");
+  if (list.length) acts.appendChild(btn(t("ctExport"), async () => {
+    const text = JSON.stringify({ kind: "upwallet-contacts", version: 1, contacts: contacts() }, null, 1);
+    try { await navigator.clipboard.writeText(text); } catch (e) { /* shown below to copy by hand */ }
+    renderContacts([t("ctExported"), "line-ok"]);
+    const ta = el("textarea"); ta.readOnly = true; ta.value = text; box.appendChild(ta);
+  }));
+  acts.appendChild(btn(t("ctImport"), () => { ctMode = "import"; renderContacts(); }));
+  box.appendChild(acts);
+}
+$("contactsBtn").addEventListener("click", () => {
+  const box = $("contactsBox");
+  if (!box.hidden && ctMode === null) { box.hidden = true; return; }
+  ctMode = null; box.hidden = false; renderContacts();
+});
+$("contactSaveBtn").addEventListener("click", () => {
+  if (!ethers.isAddress($("sendTo").value.trim())) return;
+  ctMode = "save"; $("contactsBox").hidden = false; renderContacts();
 });
 
 // What is being sent, with its image: the network's logo for its currency; for a token or an NFT the
@@ -3777,6 +4011,8 @@ $("sendPrepareBtn").addEventListener("click", busyWrap(async () => {
   if (BigInt(recipient) === 0n) return fail(t("sendZeroRecipient"));
   if (recipient === c.up || recipient === c.km) return fail(t("sendSelfRecipient"));
   if (SEND_SYSTEM[recipient.toLowerCase()]) return fail(t("sendSystemRecipient", { name: SEND_SYSTEM[recipient.toLowerCase()] }));
+  // The recipient's contact, or a contact it imitates (address poisoning), in the log before the window.
+  for (const [text, cls] of contactLines(recipient)) log(text, cls);
   const amountStr = $("sendAmount").value.trim().replace(",", ".");
   // An account delegated through EIP-7702 (code 0xef0100 + address) is still a wallet.
   const code = (await c.provider.getCode(recipient)).toLowerCase();

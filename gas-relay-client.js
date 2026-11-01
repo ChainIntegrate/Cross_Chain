@@ -644,10 +644,10 @@
   // defaultOn: the option is ticked by itself when it becomes available for a network, UP and controller
   // (UP Wallet); unticked by the user, it stays so until one of them changes.
   function attach({ box, getNetwork, getUp, getSigner, onChange, onState, defaultOn = false }) {
-    let state = { state: "none" }, seq = 0, sig = "", timer = null, autoKey = "";
+    let state = { state: "none" }, seq = 0, sig = "", timer = null, autoKey = "", running = null;
     // Starts a moment after a change, after the page's own reads and the backup check: public RPCs answer
     // 429 "too many requests" to bursts.
-    const later = () => { clearTimeout(timer); timer = setTimeout(refresh, 2500); };
+    const later = () => { clearTimeout(timer); timer = setTimeout(() => { timer = null; refresh(); }, 2500); };
     box.innerHTML = "";
     const row = document.createElement("label");
     row.style.cssText = "display:flex; gap:8px; align-items:flex-start; font-size:13px; color:var(--text); margin-top:12px; cursor:pointer;";
@@ -677,7 +677,13 @@
       }
       if (onState) onState();
     }
-    async function refresh() {
+    function refresh() {
+      const p = run();
+      running = p;
+      p.finally(() => { if (running === p) running = null; });
+      return p;
+    }
+    async function run() {
       const my = ++seq;
       const net = getNetwork(), raw = (getUp() || "").trim(), signer = getSigner();
       let next = { state: "none" }, key = "";
@@ -715,7 +721,19 @@
     render(); poll();
     // set(on): the same as ticking the box (only when the option is available).
     const set = (on) => { if (state.state !== "ready" || cb.checked === !!on) return; cb.checked = !!on; cb.dispatchEvent(new Event("change")); };
-    return { enabled: () => state.state === "ready" && cb.checked, refresh, state: () => state, set, note: () => note.textContent };
+    // ready(): before a request is prepared. When the check for the current network, UP and controller has
+    // not finished (still waiting for its moment after a change, or running), it runs now and is awaited, a
+    // few seconds at most: a request that opens the page is not prepared with the controller paying the gas
+    // only because the relayer's check had not answered yet.
+    async function ready(ms = 6000) {
+      poll();
+      if (timer) { clearTimeout(timer); timer = null; refresh(); }
+      if (!running) return;
+      let tm = null;
+      await Promise.race([running.catch(() => null), new Promise((ok) => { tm = setTimeout(ok, ms); })]);
+      clearTimeout(tm);
+    }
+    return { enabled: () => state.state === "ready" && cb.checked, refresh, ready, state: () => state, set, note: () => note.textContent };
   }
 
   window.GasRelayClient = { check, prepare, signAndSend, showSignBox, waitResult, attach, text, userOpHash, sponsorHash, approvalProblem, pendingStatus, pendingView, sponsorStatus, loadInfo, ENTRY_POINT };
