@@ -55,4 +55,15 @@ item when its PR (or, for the app, its release) is done.
 
 ## Other pages
 
-Nothing open.
+1. **Idea, not decided: authorize a device with LUKSO's Universal Profile extension** (2026-11-01). For
+   someone who uses only LUKSO, without MetaMask: the transaction would go from the UP itself
+   (`UP.setDataBatch`), routed by the extension through the Key Manager with its own key. The UP would be
+   taken from the extension and locked. The extension's key is not exposed, so its permissions cannot be
+   checked first: the call would be simulated as one of the UP's admin controllers (the data checked),
+   and the UP read again after the transaction, as today. LUKSO mainnet and testnet only. Proposed with the
+   extension: authorize a device (device permissions, never admin), the controllers' names, and the
+   removal of non-admin controllers only (so the extension's own key or the admin backup cannot be
+   removed by mistake); not the admin backup, which copies the signer's permissions (unknown here).
+   The maintainer's concern: the Backup page works across networks, and a second way of signing would
+   make it hybrid and harder to use, while the MetaMask way stays needed for the other networks. To be
+   decided: inside the Backup page, or a separate small LUKSO-only page.
