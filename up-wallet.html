@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-Ny8fFFjYAkOah+Tsr2l3acGkeX0lzjIwArXaqTkiDn0='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-1cyW8OPFEp+ufyw9L93yoT+VuztQMpvN1ZwkN39Gdp4='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -540,6 +540,34 @@ const LSP26_IFACE = new ethers.Interface([
   "function follow(address addr)", "function unfollow(address addr)",
   "function followBatch(address[] addresses)", "function unfollowBatch(address[] addresses)",
 ]);
+// ChainIntegrate's Traceability Registry, on LUKSO only. Each company's registry is created by the Factory,
+// which answers isRegistry(address): a call is read with these signatures (from the public source,
+// github.com/ChainIntegrate/traceability-registry) only at the Factory or at a registry it confirms.
+const TRACE_FACTORY = { 42: "0x54c3a7c31c4eca1f1997f5e6f19197f3a82b88a3" };
+const TRACE_FACTORY_IFACE = new ethers.Interface([
+  "function deployRegistry(string name_, string symbol_)",
+  "function setSector(address account, bytes32 sector)",
+  "function setMembershipCorporate(address newMembershipCorporate)",
+  "function isRegistry(address) view returns (bool)",
+]);
+const TRACE_IFACE = new ethers.Interface([
+  "function mintRawMaterialLot(bytes32 tokenId, bytes lsp4MetadataValue, uint256 indexDate)",
+  "function mintRawMaterialLotBatch(bytes32[] tokenIds, bytes[] lsp4MetadataValues, uint256[] indexDates)",
+  "function mintProductionBatch(bytes32 tokenId, bytes lsp4MetadataValue, bytes32[] usedLotTokenIds, uint256 indexDate)",
+  "function invalidateEntry(bytes32 tokenId, string reason)",
+  "function setDocumentHash(bytes32 tokenId, bytes32 documentHash)",
+  "function setDocumentHashBatch(bytes32[] tokenIds, bytes32 documentHash)",
+  "function correctDocumentHash(bytes32 tokenId, bytes32 newHash, string reason)",
+  "function addDelegate(address delegate)",
+  "function removeDelegate(address delegate)",
+  "function setRegistryMetadata(bytes lsp4MetadataValue)",
+  "function setRegistryAdmin(address newAdmin)",
+  "function setMembershipCorporate(address newMembershipCorporate)",
+  "function registryAdmin() view returns (address)",
+  "function delegates(address) view returns (bool)",
+  "function owner() view returns (address)",
+  "function getData(bytes32) view returns (bytes)",
+]);
 // hup.social poll vote: the function's name is not known (the contract is not verified), only its selector
 // and its layout, read from a vote sent from hup.social on LUKSO: the voter (the UP), the content holding the
 // poll, the option counted from 0 (the sixth option was 5), then bytes (empty). Recognised by the selector,
@@ -964,6 +992,39 @@ const I18N = {
     vaultOwnerOther: (v) => `⛔ Le quote prelevate non sono della tua UP ma di ${v.who}: la tua UP agirebbe sulle quote di un altro (serve una sua approvazione).`,
     vaultValue: "⚠️ La chiamata invia anche valore nativo al vault: un vault ERC-4626 normalmente non lo richiede.",
     vaultNote: "ℹ️ Vault ERC-4626 (standard dei vault a quote, usato per esempio da Morpho): riconosciuto perché il contratto dichiara il suo asset. Prima del deposito serve un'approvazione dell'asset a questo vault (controlla che l'indirizzo approvato sia lo stesso). Un vault presta o investe quello che depositi: controlla chi lo gestisce e i suoi rischi sul sito della dApp.",
+    traceName: "Traceability Registry di ChainIntegrate",
+    traceUpSelf: "la tua UP",
+    traceFactoryName: "Traceability Registry Factory di ChainIntegrate",
+    traceIn: (v) => `nel registro ${v.reg}`,
+    traceLot: (v) => `Tracciabilità: registra un lotto di materia prima ${v.where} (data ${v.date})`,
+    traceLots: (v) => `Tracciabilità: registra ${v.n} lotti di materia prima ${v.where}`,
+    traceBatch: (v) => `Tracciabilità: registra un batch di produzione ${v.where} (data ${v.date}, ${v.n} lotti usati)`,
+    traceInvalidate: (v) => `Tracciabilità: annulla la registrazione ${v.id} ${v.where} (motivo: ${v.reason})`,
+    traceDoc: (v) => `Tracciabilità: registra l'impronta di un documento per ${v.n === 1 ? "la registrazione " + v.id : v.n + " registrazioni"} ${v.where}`,
+    traceDocFix: (v) => `Tracciabilità: corregge l'impronta del documento della registrazione ${v.id} ${v.where} (motivo: ${v.reason})`,
+    traceAddDelegate: (v) => `Tracciabilità: aggiunge ${v.who} come delegato ${v.where}`,
+    traceRemoveDelegate: (v) => `Tracciabilità: toglie ${v.who} dai delegati ${v.where}`,
+    traceMeta: (v) => `Tracciabilità: aggiorna nome, descrizione e immagini della collezione del registro ${v.reg}`,
+    traceAdmin: (v) => `Tracciabilità: cambia il titolare del registro ${v.reg} in ${v.who}`,
+    traceMembership: (v) => `Tracciabilità: collega ${v.what} al contratto Membership Corporate ${v.who}`,
+    traceDeploy: (v) => `Tracciabilità: crea un nuovo registro "${v.name}" (simbolo ${v.sym}) con la tua UP come titolare`,
+    traceSector: (v) => `Tracciabilità: assegna il settore ${v.sector} a ${v.who}`,
+    traceFactory: "la Factory (registri nuovi)",
+    traceSource: "ℹ️ Registro creato dalla Factory di ChainIntegrate su LUKSO (la Factory lo conferma: isRegistry). La pagina legge la chiamata con il codice sorgente pubblico del registro.",
+    traceSourceFactory: "ℹ️ Factory dei registri di ChainIntegrate su LUKSO. La pagina legge la chiamata con il suo codice sorgente pubblico.",
+    traceRoleAdmin: "✅ La tua UP è il titolare di questo registro.",
+    traceRoleDelegate: "✅ La tua UP è delegata in questo registro.",
+    traceRoleOwner: "ℹ️ La tua UP è il proprietario tecnico del registro (ChainIntegrate).",
+    traceRoleNone: "⚠️ La tua UP non è né titolare né delegata di questo registro: la transazione verrà rifiutata (la simulazione lo mostra).",
+    traceMetaNote: "ℹ️ I dati descrittivi (metadata) sono un file già caricato prima di questa richiesta, indicato dal link qui sopra: anche se rifiuti, resta dove è stato caricato.",
+    traceInvalidateNote: "⚠️ L'annullamento è definitivo: la registrazione resta visibile come annullata, con il motivo, e non si può riattivare.",
+    traceDocNote: "ℹ️ Sulla blockchain va solo l'impronta (hash) del documento, non il file. Si registra una volta sola: un errore si corregge poi con una correzione pubblica.",
+    traceDocFixNote: "ℹ️ L'impronta precedente non sparisce: resta pubblica insieme al motivo e a chi ha corretto.",
+    traceDelegateNote: "⚠️ Un delegato può registrare lotti e batch e annullare registrazioni in questo registro, a nome dell'azienda. Aggiungi solo indirizzi che conosci.",
+    traceAdminNote: "🛑 Il nuovo titolare controllerà il registro al posto dell'attuale, e i token si potranno spostare solo verso di lui. Se non è un cambio richiesto dall'azienda, rifiuta.",
+    traceMembershipNote: "⚠️ Il contratto Membership Corporate decide i livelli (tier) delle aziende, quindi cosa possono fare nei registri. Rifiuta se non sai perché cambia.",
+    traceDeployNote: "ℹ️ Il registro è una collezione LSP8 della tua UP. ChainIntegrate ne resta proprietaria tecnica: per assistenza può gestire i delegati, annullare registrazioni e cambiare il titolare.",
+    traceSectorNote: "ℹ️ Operazione di amministrazione di ChainIntegrate: il settore abilita un'azienda a creare registri.",
     lsp26Note: "ℹ️ Follower System LSP26 di LUKSO (contratto dello standard): chi segue è sempre chi chiama, cioè la tua UP. Il follow è pubblico e si può togliere in qualsiasi momento.",
     hupUserOther: (v) => `🛑 Il like sarebbe a nome di ${v.who}, non della tua UP: se non sai perché, rifiuta.`,
     hupNote: "ℹ️ Il contratto di hup.social non è verificato sull'explorer: la pagina riconosce la chiamata dalla sua firma (nome e tipi corrispondono esattamente al selettore) e la legge secondo lo schema delle transazioni di hup.social.",
@@ -1381,6 +1442,39 @@ const I18N = {
     vaultOwnerOther: (v) => `⛔ The shares withdrawn are not your UP's but ${v.who}'s: your UP would act on someone else's shares (this needs their approval).`,
     vaultValue: "⚠️ The call also sends native value to the vault: an ERC-4626 vault normally does not need it.",
     vaultNote: "ℹ️ ERC-4626 vault (the standard for share-based vaults, used for example by Morpho): recognised because the contract declares its asset. Before a deposit the asset must be approved to this vault (check that the approved address is the same). A vault lends or invests what you deposit: check who curates it and its risks on the dApp's site.",
+    traceName: "ChainIntegrate Traceability Registry",
+    traceUpSelf: "your UP",
+    traceFactoryName: "ChainIntegrate Traceability Registry Factory",
+    traceIn: (v) => `in the registry ${v.reg}`,
+    traceLot: (v) => `Traceability: record a raw material lot ${v.where} (date ${v.date})`,
+    traceLots: (v) => `Traceability: record ${v.n} raw material lots ${v.where}`,
+    traceBatch: (v) => `Traceability: record a production batch ${v.where} (date ${v.date}, ${v.n} lots used)`,
+    traceInvalidate: (v) => `Traceability: invalidate the entry ${v.id} ${v.where} (reason: ${v.reason})`,
+    traceDoc: (v) => `Traceability: record a document's fingerprint for ${v.n === 1 ? "the entry " + v.id : v.n + " entries"} ${v.where}`,
+    traceDocFix: (v) => `Traceability: correct the document fingerprint of the entry ${v.id} ${v.where} (reason: ${v.reason})`,
+    traceAddDelegate: (v) => `Traceability: add ${v.who} as a delegate ${v.where}`,
+    traceRemoveDelegate: (v) => `Traceability: remove ${v.who} from the delegates ${v.where}`,
+    traceMeta: (v) => `Traceability: update the name, description and images of the registry's collection ${v.reg}`,
+    traceAdmin: (v) => `Traceability: change the holder of the registry ${v.reg} to ${v.who}`,
+    traceMembership: (v) => `Traceability: link ${v.what} to the Membership Corporate contract ${v.who}`,
+    traceDeploy: (v) => `Traceability: create a new registry "${v.name}" (symbol ${v.sym}) with your UP as its holder`,
+    traceSector: (v) => `Traceability: assign the sector ${v.sector} to ${v.who}`,
+    traceFactory: "the Factory (new registries)",
+    traceSource: "ℹ️ A registry created by ChainIntegrate's Factory on LUKSO (the Factory confirms it: isRegistry). The page reads the call with the registry's public source code.",
+    traceSourceFactory: "ℹ️ ChainIntegrate's registry Factory on LUKSO. The page reads the call with its public source code.",
+    traceRoleAdmin: "✅ Your UP is the holder of this registry.",
+    traceRoleDelegate: "✅ Your UP is a delegate in this registry.",
+    traceRoleOwner: "ℹ️ Your UP is the registry's technical owner (ChainIntegrate).",
+    traceRoleNone: "⚠️ Your UP is neither the holder nor a delegate of this registry: the transaction will be refused (the simulation shows it).",
+    traceMetaNote: "ℹ️ The descriptive data (metadata) is a file uploaded before this request, at the link above: even if you reject, it stays where it was uploaded.",
+    traceInvalidateNote: "⚠️ Invalidating is final: the entry stays visible as invalidated, with the reason, and cannot be restored.",
+    traceDocNote: "ℹ️ Only the document's fingerprint (hash) goes on the blockchain, not the file. It is recorded once: a mistake is then fixed with a public correction.",
+    traceDocFixNote: "ℹ️ The previous fingerprint does not disappear: it stays public, with the reason and who corrected it.",
+    traceDelegateNote: "⚠️ A delegate can record lots and batches and invalidate entries in this registry, on behalf of the company. Only add addresses you know.",
+    traceAdminNote: "🛑 The new holder will control the registry instead of the current one, and tokens can then move only to them. If the company did not ask for this change, reject it.",
+    traceMembershipNote: "⚠️ The Membership Corporate contract sets the companies' tiers, and so what they can do in the registries. Reject it if you don't know why it changes.",
+    traceDeployNote: "ℹ️ The registry is an LSP8 collection of your UP. ChainIntegrate remains its technical owner: for support it can manage delegates, invalidate entries and change the holder.",
+    traceSectorNote: "ℹ️ A ChainIntegrate administration operation: the sector allows a company to create registries.",
     lsp26Note: "ℹ️ LUKSO's LSP26 Follower System (the standard's contract): the follower is always the caller, that is your UP. A follow is public and can be removed at any time.",
     hupUserOther: (v) => `🛑 The like would be in the name of ${v.who}, not your UP: unless you know why, reject it.`,
     hupNote: "ℹ️ hup.social's contract is not verified on the explorer: the page recognises the call by its signature (name and types match the selector exactly) and reads it following the layout of hup.social's transactions.",
@@ -1605,7 +1699,7 @@ function t(key, vars) {
 // WALLET-BACKLOG.md and the patch with a fix (0.x: experimental). The Android app's and the browser
 // extension's builds write the Cross_Chain commit in PAGE_COMMIT, and they give their own version
 // (window.__upwalletAppVersion, then the "upwallet:version" event).
-const PAGE_VERSION = "0.11.0";
+const PAGE_VERSION = "0.12.0";
 const PAGE_COMMIT = null;
 function renderVersion() {
   const el = $("pageVersion"), app = window.__upwalletAppVersion;
@@ -2455,7 +2549,10 @@ async function describeCall(c, to, value, data, rows, warnings) {
   const delegate = /^0xef0100[0-9a-f]{40}$/.test(toCode) ? ethers.getAddress("0x" + toCode.slice(8)) : null;
   const isContract = toCode !== "0x" && !delegate;
   const known = isContract ? KNOWN_CONTRACTS[to.toLowerCase()] : null;
-  const dapp = isContract ? DAPP_CONTRACTS[`${c.net.chainId}:${to.toLowerCase()}`] : null;
+  let dapp = isContract ? DAPP_CONTRACTS[`${c.net.chainId}:${to.toLowerCase()}`] : null;
+  // ChainIntegrate's Traceability Registry: the Factory, or a registry the Factory confirms it created.
+  const trace = isContract && !dapp ? await traceKind(c, to) : null;
+  if (trace) dapp = t(trace === "factory" ? "traceFactoryName" : "traceName");
   const kind = delegate ? t("toDelegated", { addr: delegate }) : isContract ? t("toContract") : t("toEoa");
   // A contract the page does not know: named as the network's explorer names it, with the source.
   const xl = isContract && !known && !dapp && window.AbiDecode ? await AbiDecode.labelOf(c.net.chainId, to).catch(() => null) : null;
@@ -2479,6 +2576,10 @@ async function describeCall(c, to, value, data, rows, warnings) {
   }
   if (dapp && dapp.startsWith("BENQI ")) {
     const op = await describeBenqi(c, dapp, value, data, rows, warnings, to);
+    if (op) return op;
+  }
+  if (trace) {
+    const op = await describeTrace(c, to, trace, data, rows, warnings);
     if (op) return op;
   }
   if (dapp === "LSP26 Follower System") {
@@ -2818,6 +2919,131 @@ async function describeMorphoBundles(c, to, value, data, rows, warnings, known) 
 }
 
 // LSP26 follow / unfollow: the UP starts or stops following one or more addresses.
+// "factory", "registry" or null. A registry is recognised only when the Factory says it created it.
+const traceSeen = new Map();
+async function traceKind(c, to) {
+  const factory = TRACE_FACTORY[c.net.chainId];
+  if (!factory) return null;
+  if (to.toLowerCase() === factory) return "factory";
+  const key = `${c.net.chainId}:${to.toLowerCase()}`;
+  if (!traceSeen.has(key)) {
+    const f = new ethers.Contract(factory, TRACE_FACTORY_IFACE, c.provider);
+    traceSeen.set(key, await f.isRegistry(to).catch(() => null));
+  }
+  const yes = traceSeen.get(key);
+  if (yes === null) traceSeen.delete(key); // not answered: asked again next time
+  return yes ? "registry" : null;
+}
+function describeTraceMeta(value) {
+  const u = window.TokenImage ? TokenImage.verifiableUri(value) : null;
+  return u && u.uri ? oneLine(u.uri, 120) : `${ethers.dataLength(value)} bytes`;
+}
+const traceDate = (x) => { try { return new Date(Number(x) * 1000).toISOString().slice(0, 10); } catch (e) { return String(x); } };
+const traceIds = (list) => list.slice(0, 10).join("\n") + (list.length > 10 ? `\n… (${list.length})` : "");
+async function describeTrace(c, to, kind, data, rows, warnings) {
+  const iface = kind === "factory" ? TRACE_FACTORY_IFACE : TRACE_IFACE;
+  let p = null;
+  try { p = iface.parseTransaction({ data }); } catch (e) { p = null; }
+  if (!p || p.fragment.constant) return null;
+  const a = p.args, up = c.up.toLowerCase();
+  const who = (x) => String(x).toLowerCase() === up ? `${x} (${t("traceUpSelf")})` : String(x);
+  const notes = [];
+  let op, params = [], reg = "";
+  if (kind === "registry") {
+    const r = new ethers.Contract(to, TRACE_IFACE, c.provider);
+    const [admin, isDelegate, owner, rawName] = await Promise.all([
+      r.registryAdmin().catch(() => null), r.delegates(c.up).catch(() => null), r.owner().catch(() => null),
+      // LSP4TokenName: the collection's name, as the company chose it.
+      r.getData("0xdeba1e292f8ba88238e10ab3c7f88bd4be4fac56cad5194b6ecceaf653468af1").catch(() => "0x"),
+    ]);
+    let name = "";
+    try { name = rawName && rawName !== "0x" ? oneLine(ethers.toUtf8String(rawName), 40) : ""; } catch (e) { name = ""; }
+    reg = name ? `"${name}"` : `${to.slice(0, 6)}…${to.slice(-4)}`;
+    if (admin && admin.toLowerCase() === up) notes.push([t("traceRoleAdmin"), "line-ok"]);
+    else if (isDelegate) notes.push([t("traceRoleDelegate"), "line-ok"]);
+    else if (owner && owner.toLowerCase() === up) notes.push([t("traceRoleOwner"), "line-dim"]);
+    else if (admin !== null) notes.push([t("traceRoleNone"), "line-warn"]);
+  }
+  const where = t("traceIn", { reg });
+  switch (p.name) {
+    case "mintRawMaterialLot":
+      op = t("traceLot", { where, date: traceDate(a[2]) });
+      params = [`tokenId: ${a[0]}`, `metadata: ${describeTraceMeta(a[1])}`, `indexDate: ${a[2]} (${traceDate(a[2])})`];
+      notes.push([t("traceMetaNote"), "line-dim"]);
+      break;
+    case "mintRawMaterialLotBatch": {
+      const n = a[0].length;
+      op = t("traceLots", { where, n });
+      for (let i = 0; i < Math.min(n, 10); i++) params.push(`[${i}] tokenId: ${a[0][i]}`, `    metadata: ${a[1][i] !== undefined ? describeTraceMeta(a[1][i]) : "—"}`, `    indexDate: ${a[2][i] !== undefined ? `${a[2][i]} (${traceDate(a[2][i])})` : "—"}`);
+      if (n > 10) params.push(`… (${n})`);
+      notes.push([t("traceMetaNote"), "line-dim"]);
+      break;
+    }
+    case "mintProductionBatch":
+      op = t("traceBatch", { where, date: traceDate(a[3]), n: a[2].length });
+      params = [`tokenId: ${a[0]}`, `metadata: ${describeTraceMeta(a[1])}`, `indexDate: ${a[3]} (${traceDate(a[3])})`, `usedLotTokenIds:\n${traceIds([...a[2]]) || "—"}`];
+      notes.push([t("traceMetaNote"), "line-dim"]);
+      break;
+    case "invalidateEntry":
+      op = t("traceInvalidate", { where, id: a[0], reason: JSON.stringify(oneLine(a[1], 120)) });
+      params = [`tokenId: ${a[0]}`, `reason: ${JSON.stringify(oneLine(a[1], 200))}`];
+      notes.push([t("traceInvalidateNote"), "line-warn"]);
+      break;
+    case "setDocumentHash":
+    case "setDocumentHashBatch": {
+      const ids = p.name === "setDocumentHash" ? [a[0]] : [...a[0]];
+      op = t("traceDoc", { where, n: ids.length, id: ids[0] });
+      params = [`tokenIds:\n${traceIds(ids) || "—"}`, `documentHash: ${a[1]}`];
+      notes.push([t("traceDocNote"), "line-dim"]);
+      break;
+    }
+    case "correctDocumentHash":
+      op = t("traceDocFix", { where, id: a[0], reason: JSON.stringify(oneLine(a[2], 120)) });
+      params = [`tokenId: ${a[0]}`, `newHash: ${a[1]}`, `reason: ${JSON.stringify(oneLine(a[2], 200))}`];
+      notes.push([t("traceDocFixNote"), "line-dim"]);
+      break;
+    case "addDelegate":
+    case "removeDelegate":
+      op = t(p.name === "addDelegate" ? "traceAddDelegate" : "traceRemoveDelegate", { where, who: who(a[0]) });
+      params = [`delegate: ${who(a[0])}`];
+      if (p.name === "addDelegate") notes.push([t("traceDelegateNote"), "line-warn"]);
+      break;
+    case "setRegistryMetadata":
+      op = t("traceMeta", { reg });
+      params = [`metadata: ${describeTraceMeta(a[0])}`];
+      notes.push([t("traceMetaNote"), "line-dim"]);
+      break;
+    case "setRegistryAdmin":
+      op = t("traceAdmin", { reg, who: who(a[0]) });
+      params = [`newAdmin: ${who(a[0])}`];
+      notes.push([t("traceAdminNote"), "line-danger"]);
+      break;
+    case "setMembershipCorporate":
+      op = t("traceMembership", { what: kind === "factory" ? t("traceFactory") : reg, who: a[0] });
+      params = [`newMembershipCorporate: ${a[0]}`];
+      notes.push([t("traceMembershipNote"), "line-warn"]);
+      break;
+    case "deployRegistry":
+      op = t("traceDeploy", { name: oneLine(a[0], 40), sym: oneLine(a[1], 16) });
+      params = [`name_: ${JSON.stringify(oneLine(a[0], 80))}`, `symbol_: ${JSON.stringify(oneLine(a[1], 20))}`];
+      notes.push([t("traceDeployNote"), "line-dim"]);
+      break;
+    case "setSector":
+      op = t("traceSector", { sector: a[1], who: who(a[0]) });
+      params = [`account: ${who(a[0])}`, `sector: ${a[1]}`];
+      notes.push([t("traceSectorNote"), "line-dim"]);
+      break;
+    default:
+      return null;
+  }
+  rows.push([t("kCall"), op, {}]);
+  rows.push([t("kParams"), [`${p.name}(${p.fragment.inputs.map((i) => i.type).join(",")})`, ...params].join("\n"), { block: true }]);
+  rows.push([t("kRaw"), data, { raw: true }]);
+  for (const n of notes) warnings.push(n);
+  warnings.push([t(kind === "factory" ? "traceSourceFactory" : "traceSource"), "line-dim"]);
+  return op;
+}
+
 function describeLsp26(data, rows, warnings) {
   let p = null;
   try { p = LSP26_IFACE.parseTransaction({ data }); } catch (e) { p = null; }

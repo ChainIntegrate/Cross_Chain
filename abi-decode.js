@@ -19,8 +19,10 @@
     "base": "https://base.blockscout.com",
     "arbitrum-one": "https://arbitrum.blockscout.com",
     "arc": "https://explorer.arc.io",
+    "lukso": "https://explorer.execution.mainnet.lukso.network",
+    "lukso-testnet": "https://explorer.execution.testnet.lukso.network",
   };
-  const CHAIN_KEYS = { 8453: "base", 42161: "arbitrum-one", 5042: "arc" };
+  const CHAIN_KEYS = { 8453: "base", 42161: "arbitrum-one", 5042: "arc", 42: "lukso", 4201: "lukso-testnet" };
   const lang = () => (document.documentElement.lang === "en" ? "en" : "it");
   const TEXT = {
     it: {
