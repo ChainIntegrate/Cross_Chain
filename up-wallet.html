@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-fOR0qO6BaQNLMVjR8h4oXu+VR6+RLmo73bMCbb3Nw4E='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-Hz9tsT9jN54LPTYltEJ6fumc+f8o6jYlPCv0JoSCE6Y='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -526,6 +526,8 @@ const DAPP_CONTRACTS = {
   "42:0xf6eec4e32a532b23acc56b72865e79c79877cec8": "hup.social", // LUKSO
   "1:0xd1aec7bb7679fa30e74ab30877fbdf96d51333d4": "hup.social", // Ethereum (a reply from hup.social, 2026-10-22)
   "42:0x7a5134435e029b5bbff0d4eb5aebcf0255d76d88": "hup.social", // LUKSO, polls
+  // ChainIntegrate's Supplier Trust Registry (SupplierRegistry V3, source verified on LUKSO's explorer).
+  "42:0xfa143308d85b81ed57547049f4a7718c3117a064": "Supplier Trust Registry",
   // LUKSO's LSP26 Follower System (the standard's own contract; hup.social uses it for follows).
   "42:0xf01103e5a9909fc0dbe8166da7085e0285daddca": "LSP26 Follower System",
   // Morpho's VaultBundlesV1, which Morpho's app calls to deposit into, withdraw from or migrate between
@@ -560,6 +562,24 @@ const LSP26_IFACE = new ethers.Interface([
 // ChainIntegrate's Traceability Registry, on LUKSO only. Each company's registry is created by the Factory,
 // which answers isRegistry(address): a call is read with these signatures (from the public source,
 // github.com/ChainIntegrate/traceability-registry) only at the Factory or at a registry it confirms.
+// ChainIntegrate's Supplier Trust Registry (LUKSO, V3): each registry is a soulbound LSP8 token of the company's
+// UP, and every call names it by its tokenId; only its holder may write in it (onlyRegistryOwner). From the
+// public source, github.com/ChainIntegrate/supplier-trust-registry, contracts/SupplierRegistry-v3.sol.
+const SUPPLIER_IFACE = new ethers.Interface([
+  "function mintRegistry(string label)",
+  "function defineSchema(bytes32 tokenId, string[] paramNames, int256 minValue, int256 maxValue)",
+  "function addSupplier(bytes32 tokenId, bytes32 nameHash, string nameUri, bool isNamePublic)",
+  "function addEvaluation(bytes32 tokenId, uint256 supplierId, uint256 schemaVersion, bytes32 contentHash, string uri, bool isPublic, uint256 supersedes)",
+  "function discloseEvaluation(bytes32 tokenId, uint256 supplierId, uint256 evaluationId, string disclosureUri, bytes32 disclosureHash)",
+  "function proposeSuccessor(bytes32 oldTokenId, bytes32 newTokenId)",
+  "function confirmSuccessor(bytes32 newTokenId, bytes32 oldTokenId)",
+  "function setRegistryImage(bytes32 tokenId, string uri, bytes32 hash)",
+  "function addMembershipContract(address membershipContract)",
+  "function removeMembershipContract(address membershipContract)",
+  "function setTierLimits(address membershipContract, uint8 tier, uint256 maxSuppliers, uint256 maxParams, bool canDiscloseSelectively, uint256 maxRegistries, bool canCustomizeImage)",
+  "function tokenOwnerOf(bytes32 tokenId) view returns (address)",
+  "function owner() view returns (address)",
+]);
 const TRACE_FACTORY = { 42: "0x54c3a7c31c4eca1f1997f5e6f19197f3a82b88a3" };
 const TRACE_FACTORY_IFACE = new ethers.Interface([
   "function deployRegistry(string name_, string symbol_)",
@@ -1033,6 +1053,27 @@ const I18N = {
     vaultNote: "ℹ️ Vault ERC-4626 (standard dei vault a quote, usato per esempio da Morpho): riconosciuto perché il contratto dichiara il suo asset. Prima del deposito serve un'approvazione dell'asset a questo vault (controlla che l'indirizzo approvato sia lo stesso). Un vault presta o investe quello che depositi: controlla chi lo gestisce e i suoi rischi sul sito della dApp.",
     traceName: "Traceability Registry di ChainIntegrate",
     traceUpSelf: "la tua UP",
+    supName: "Supplier Trust Registry di ChainIntegrate",
+    supReg: (v) => `nel registro ${v.id}`,
+    supMint: (v) => `Supplier Trust Registry: crea un nuovo registro fornitori "${v.label}"`,
+    supSchema: (v) => `Supplier Trust Registry: definisce i criteri di valutazione ${v.where} (${v.n} criteri, scala da ${v.min} a ${v.max})`,
+    supSupplier: (v) => `Supplier Trust Registry: aggiunge un fornitore ${v.where}, nome ${v.pub ? "pubblico" : "privato (cifrato)"}`,
+    supEval: (v) => `Supplier Trust Registry: registra ${v.fix ? `una correzione della valutazione #${v.fix}` : "una valutazione"} ${v.pub ? "pubblica" : "privata"} del fornitore #${v.sup} ${v.where}`,
+    supDisclose: (v) => `Supplier Trust Registry: rende visibile a chi riceve il link la valutazione privata #${v.ev} del fornitore #${v.sup} ${v.where}`,
+    supPropose: (v) => `Supplier Trust Registry: propone il registro ${v.to} come successore del registro ${v.from}`,
+    supConfirm: (v) => `Supplier Trust Registry: conferma questo registro (${v.to}) come successore del registro ${v.from}`,
+    supImage: (v) => `Supplier Trust Registry: cambia l'immagine del registro ${v.id}`,
+    supAdmin: (v) => `Supplier Trust Registry (amministrazione): ${v.what}`,
+    supHolderOk: "✅ La tua UP è la titolare di questo registro.",
+    supHolderNo: (v) => `⚠️ Il registro è di ${v.who}, non della tua UP: la transazione verrà rifiutata (la simulazione lo mostra).`,
+    supMintNote: "ℹ️ Il registro è un token LSP8 della tua UP, non trasferibile. Il nome dato qui resta pubblico, nella storia della rete.",
+    supPublicNote: "ℹ️ Pubblico: chiunque potrà leggerlo. Una volta scritto non si cancella (si può solo correggere con una nuova voce).",
+    supPrivateNote: "ℹ️ Privato: il contenuto è cifrato; sulla rete resta solo la sua impronta. Una volta scritto non si cancella.",
+    supFixNote: "ℹ️ Una correzione: la valutazione precedente resta nella storia, questa la sostituisce.",
+    supDiscloseNote: "⚠️ Non si può ritirare: chi ha il link e scarica la valutazione la tiene per sempre. Smettere di condividere il link non invalida quello già dato.",
+    supSuccessorNote: "⚠️ Collega pubblicamente i due registri, per la continuità dello storico: il successore deve confermare. Non sposta dati privati e non cambia titolare. Rifiuta se non è un passaggio che hai deciso tu.",
+    supAdminNote: "⚠️ Funzione di amministrazione del contratto: riservata al suo proprietario (ChainIntegrate).",
+    supSource: "ℹ️ Supplier Trust Registry di ChainIntegrate (V3, sorgente verificato su LUKSO). La pagina legge la chiamata con il codice sorgente pubblico.",
     traceFactoryName: "Traceability Registry Factory di ChainIntegrate",
     traceIn: (v) => `nel registro ${v.reg}`,
     traceLot: (v) => `Tracciabilità: registra un lotto di materia prima ${v.where} (data ${v.date})`,
@@ -1505,6 +1546,27 @@ const I18N = {
     vaultNote: "ℹ️ ERC-4626 vault (the standard for share-based vaults, used for example by Morpho): recognised because the contract declares its asset. Before a deposit the asset must be approved to this vault (check that the approved address is the same). A vault lends or invests what you deposit: check who curates it and its risks on the dApp's site.",
     traceName: "ChainIntegrate Traceability Registry",
     traceUpSelf: "your UP",
+    supName: "ChainIntegrate Supplier Trust Registry",
+    supReg: (v) => `in the registry ${v.id}`,
+    supMint: (v) => `Supplier Trust Registry: create a new supplier registry "${v.label}"`,
+    supSchema: (v) => `Supplier Trust Registry: define the evaluation criteria ${v.where} (${v.n} criteria, scale ${v.min} to ${v.max})`,
+    supSupplier: (v) => `Supplier Trust Registry: add a supplier ${v.where}, name ${v.pub ? "public" : "private (encrypted)"}`,
+    supEval: (v) => `Supplier Trust Registry: record ${v.fix ? `a correction of evaluation #${v.fix}` : "an evaluation"}, ${v.pub ? "public" : "private"}, of supplier #${v.sup} ${v.where}`,
+    supDisclose: (v) => `Supplier Trust Registry: show the private evaluation #${v.ev} of supplier #${v.sup} ${v.where} to whoever gets the link`,
+    supPropose: (v) => `Supplier Trust Registry: propose the registry ${v.to} as the successor of the registry ${v.from}`,
+    supConfirm: (v) => `Supplier Trust Registry: confirm this registry (${v.to}) as the successor of the registry ${v.from}`,
+    supImage: (v) => `Supplier Trust Registry: change the image of the registry ${v.id}`,
+    supAdmin: (v) => `Supplier Trust Registry (administration): ${v.what}`,
+    supHolderOk: "✅ Your UP holds this registry.",
+    supHolderNo: (v) => `⚠️ The registry belongs to ${v.who}, not to your UP: the transaction will be refused (the simulation shows it).`,
+    supMintNote: "ℹ️ The registry is an LSP8 token of your UP, not transferable. The name given here stays public, in the network's history.",
+    supPublicNote: "ℹ️ Public: anyone will be able to read it. Once written it cannot be deleted (only corrected with a new entry).",
+    supPrivateNote: "ℹ️ Private: the content is encrypted; only its fingerprint stays on the network. Once written it cannot be deleted.",
+    supFixNote: "ℹ️ A correction: the earlier evaluation stays in the history, this one replaces it.",
+    supDiscloseNote: "⚠️ It cannot be taken back: whoever has the link and downloads the evaluation keeps it for good. Stopping sharing the link does not invalidate the one already given.",
+    supSuccessorNote: "⚠️ It links the two registries publicly, for the continuity of the history: the successor has to confirm. It moves no private data and changes no holder. Reject it unless you decided this handover.",
+    supAdminNote: "⚠️ An administration function of the contract: reserved to its owner (ChainIntegrate).",
+    supSource: "ℹ️ ChainIntegrate's Supplier Trust Registry (V3, source verified on LUKSO). The page reads the call with its public source code.",
     traceFactoryName: "ChainIntegrate Traceability Registry Factory",
     traceIn: (v) => `in the registry ${v.reg}`,
     traceLot: (v) => `Traceability: record a raw material lot ${v.where} (date ${v.date})`,
@@ -1760,7 +1822,7 @@ function t(key, vars) {
 // WALLET-BACKLOG.md and the patch with a fix (0.x: experimental). The Android app's and the browser
 // extension's builds write the Cross_Chain commit in PAGE_COMMIT, and they give their own version
 // (window.__upwalletAppVersion, then the "upwallet:version" event).
-const PAGE_VERSION = "0.13.0";
+const PAGE_VERSION = "0.14.0";
 const PAGE_COMMIT = null;
 function renderVersion() {
   const el = $("pageVersion"), app = window.__upwalletAppVersion;
@@ -2643,6 +2705,10 @@ async function describeCall(c, to, value, data, rows, warnings) {
     const op = await describeTrace(c, to, trace, data, rows, warnings);
     if (op) return op;
   }
+  if (dapp === "Supplier Trust Registry") {
+    const op = await describeSupplier(c, to, data, rows, warnings);
+    if (op) return op;
+  }
   if (dapp === "LSP26 Follower System") {
     const op = describeLsp26(data, rows, warnings);
     if (op) return op;
@@ -3102,6 +3168,83 @@ async function describeTrace(c, to, kind, data, rows, warnings) {
   rows.push([t("kRaw"), data, { raw: true }]);
   for (const n of notes) warnings.push(n);
   warnings.push([t(kind === "factory" ? "traceSourceFactory" : "traceSource"), "line-dim"]);
+  return op;
+}
+
+// The Supplier Trust Registry's calls in plain words, with whether the UP holds the registry the call names.
+async function describeSupplier(c, to, data, rows, warnings) {
+  let p = null;
+  try { p = SUPPLIER_IFACE.parseTransaction({ data }); } catch (e) { p = null; }
+  if (!p || p.fragment.constant) return null;
+  const a = p.args, notes = [];
+  const reg = new ethers.Contract(to, SUPPLIER_IFACE, c.provider);
+  const short = (id) => `${String(id).slice(0, 10)}…${String(id).slice(-4)}`;
+  // The registry the call writes in: its holder must be the UP.
+  const holder = async (id) => {
+    const who = await reg.tokenOwnerOf(id).catch(() => null);
+    if (who === null) return;
+    notes.push(who.toLowerCase() === c.up.toLowerCase() ? [t("supHolderOk"), "line-ok"] : [t("supHolderNo", { who }), "line-warn"]);
+  };
+  const ipfs = (u) => oneLine(u, 120);
+  let op, params = [];
+  switch (p.name) {
+    case "mintRegistry":
+      op = t("supMint", { label: oneLine(a[0], 60) });
+      params = [`label: ${JSON.stringify(oneLine(a[0], 80))}`];
+      notes.push([t("supMintNote"), "line-dim"]);
+      break;
+    case "defineSchema":
+      await holder(a[0]);
+      op = t("supSchema", { where: t("supReg", { id: short(a[0]) }), n: a[1].length, min: a[2].toString(), max: a[3].toString() });
+      params = [`tokenId: ${a[0]}`, `paramNames: ${[...a[1]].slice(0, 20).map((x) => JSON.stringify(oneLine(x, 40))).join(", ")}${a[1].length > 20 ? ` … (${a[1].length})` : ""}`, `minValue: ${a[2]}`, `maxValue: ${a[3]}`];
+      notes.push([t("supPublicNote"), "line-dim"]);
+      break;
+    case "addSupplier":
+      await holder(a[0]);
+      op = t("supSupplier", { where: t("supReg", { id: short(a[0]) }), pub: a[3] });
+      params = [`tokenId: ${a[0]}`, `nameHash: ${a[1]}`, `nameUri: ${ipfs(a[2])}`, `isNamePublic: ${a[3]}`];
+      notes.push([t(a[3] ? "supPublicNote" : "supPrivateNote"), "line-dim"]);
+      break;
+    case "addEvaluation":
+      await holder(a[0]);
+      op = t("supEval", { where: t("supReg", { id: short(a[0]) }), sup: a[1].toString(), pub: a[5], fix: a[6] > 0n ? a[6].toString() : "" });
+      params = [`tokenId: ${a[0]}`, `supplierId: ${a[1]}`, `schemaVersion: ${a[2]}`, `contentHash: ${a[3]}`, `uri: ${ipfs(a[4])}`, `isPublic: ${a[5]}`, `supersedes: ${a[6]}`];
+      notes.push([t(a[5] ? "supPublicNote" : "supPrivateNote"), "line-dim"]);
+      if (a[6] > 0n) notes.push([t("supFixNote"), "line-dim"]);
+      break;
+    case "discloseEvaluation":
+      await holder(a[0]);
+      op = t("supDisclose", { where: t("supReg", { id: short(a[0]) }), sup: a[1].toString(), ev: a[2].toString() });
+      params = [`tokenId: ${a[0]}`, `supplierId: ${a[1]}`, `evaluationId: ${a[2]}`, `disclosureUri: ${ipfs(a[3])}`, `disclosureHash: ${a[4]}`];
+      notes.push([t("supDiscloseNote"), "line-warn"]);
+      break;
+    case "proposeSuccessor":
+      await holder(a[0]);
+      op = t("supPropose", { from: short(a[0]), to: short(a[1]) });
+      params = [`oldTokenId: ${a[0]}`, `newTokenId: ${a[1]}`];
+      notes.push([t("supSuccessorNote"), "line-warn"]);
+      break;
+    case "confirmSuccessor":
+      await holder(a[0]);
+      op = t("supConfirm", { to: short(a[0]), from: short(a[1]) });
+      params = [`newTokenId: ${a[0]}`, `oldTokenId: ${a[1]}`];
+      notes.push([t("supSuccessorNote"), "line-warn"]);
+      break;
+    case "setRegistryImage":
+      await holder(a[0]);
+      op = t("supImage", { id: short(a[0]) });
+      params = [`tokenId: ${a[0]}`, `uri: ${ipfs(a[1])}`, `hash: ${a[2]}`];
+      break;
+    default: // addMembershipContract, removeMembershipContract, setTierLimits: the contract's owner only
+      op = t("supAdmin", { what: p.name });
+      params = p.fragment.inputs.map((inp, i) => `${inp.name}: ${String(a[i])}`);
+      notes.push([t("supAdminNote"), "line-warn"]);
+  }
+  rows.push([t("kCall"), op, {}]);
+  rows.push([t("kParams"), [`${p.name}(${p.fragment.inputs.map((i) => i.type).join(",")})`, ...params].join("\n"), { block: true }]);
+  rows.push([t("kRaw"), data, { raw: true }]);
+  for (const n of notes) warnings.push(n);
+  warnings.push([t("supSource"), "line-dim"]);
   return op;
 }
 
