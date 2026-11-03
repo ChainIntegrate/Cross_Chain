@@ -62,4 +62,12 @@ item when its PR (or, for the app, its release) is done.
 
 ## Other pages
 
-Nothing open.
+1. **Onboarding guide, step 1: where the profile is created** (2026-11-03). `up-onboarding.html` links
+   LUKSO's general site (`lukso.network`), which is fine as a general page; the profile itself is created
+   from https://universaleverything.io/. Name that link in step 1 (IT and EN), next to the extension.
+2. **The LUKSO authorization page: live tests, then the review** (2026-11-03). `up-authorize-lukso.html`
+   was tested only against a fake LUKSO node (23/23). To do, by the maintainer with the work account:
+   authorize, name and remove a device with LUKSO's Universal Profile extension, then authorize with the
+   Universal Profiles app (WalletConnect; not known yet whether the app accepts a transaction from the UP
+   to the UP itself). Then, before proposing it to other companies, the review by two providers
+   (`AUDIT.md`, review policy): it is a new way of changing the controllers.
