@@ -53,17 +53,13 @@ item when its PR (or, for the app, its release) is done.
    (`AUDIT.md`, review policy). Made alone, in a release of its own, so the previous version stays an
    easy way back (decided 2026-11-01).
 
+4. **On LUKSO, the panel's link to the new authorization page** (2026-11-03). The panels "This computer"
+   (extension) and "This phone" (app) link to the Backup page (`up-backup.html?phone=…&device=…`), which
+   signs with MetaMask. On LUKSO they should link to `up-authorize-lukso.html` with the same parameters
+   (it reads `?network=lukso|lukso-testnet&phone=&device=`), signed with LUKSO's own wallet, as the
+   onboarding guide (`up-onboarding.html`) says; the Backup page stays the link on the other networks.
+   Until then, the onboarding guide says to copy the key's address from the panel.
+
 ## Other pages
 
-1. **Idea, not decided: authorize a device with LUKSO's Universal Profile extension** (2026-11-01). For
-   someone who uses only LUKSO, without MetaMask: the transaction would go from the UP itself
-   (`UP.setDataBatch`), routed by the extension through the Key Manager with its own key. The UP would be
-   taken from the extension and locked. The extension's key is not exposed, so its permissions cannot be
-   checked first: the call would be simulated as one of the UP's admin controllers (the data checked),
-   and the UP read again after the transaction, as today. LUKSO mainnet and testnet only. Proposed with the
-   extension: authorize a device (device permissions, never admin), the controllers' names, and the
-   removal of non-admin controllers only (so the extension's own key or the admin backup cannot be
-   removed by mistake); not the admin backup, which copies the signer's permissions (unknown here).
-   The maintainer's concern: the Backup page works across networks, and a second way of signing would
-   make it hybrid and harder to use, while the MetaMask way stays needed for the other networks. To be
-   decided: inside the Backup page, or a separate small LUKSO-only page.
+Nothing open.

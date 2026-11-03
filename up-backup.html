@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-SAb16Tdnfahrp8LaRyEI8hc4doHBZP+wsp/IB0b2ZHc='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-dyf38h/JzUpAQVeiTVu93r6NsMB1y20alPPyLgA0bCM='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
@@ -74,6 +74,7 @@
   .note b { color: var(--text); }
   .check-row { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: var(--text); margin-top: 12px; }
   .check-row input { width: auto; margin-top: 2px; }
+  .check-row[hidden] { display: none; }
   #backupLog { font-family: monospace; font-size: 12.5px; white-space: pre-wrap; word-break: break-all; line-height: 1.6; margin-top: 10px; }
   /* While a backup action runs: a fixed box that says what is happening, so the wait before the wallet opens is never silent. */
   #busyToast { display: none; position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 50;
@@ -207,7 +208,7 @@ const I18N = {
     backupNotRead: "Controller non ancora letti.",
     addBackupBtn: "Aggiungi il controller di backup",
     phoneDivider: "— oppure, per UP Wallet: app Android o estensione del browser —",
-    phoneNote: "<b>Autorizza un dispositivo.</b> L'app UP Wallet per Android (da 0.9.0) firma con una chiave creata e tenuta sul telefono; l'estensione UP Wallet per il browser con una chiave tenuta sul computer. Qui la aggiungi alla UP come controller <b>senza permessi di amministrazione</b>: <b>non</b> può aggiungere controller, cambiare permessi o estensioni. Può però <b>usare tutti i fondi della UP</b>: chiamate e invii verso qualsiasi indirizzo (SUPER_CALL, SUPER_TRANSFERVALUE), firme (SIGN), gas pagato dal sito (4337) e scrittura del solo profilo (SETDATA, limitato alla chiave <code>LSP3Profile</code>). Chi sblocca il dispositivo e passa impronta, PIN, passkey o password può muovere i fondi: autorizza solo un dispositivo tuo. Firma il controller amministratore connesso qui, una volta per rete. Se perdi il dispositivo o togli l'app o l'estensione, rimuovi la sua chiave qui sotto, rete per rete.",
+    phoneNote: "<b>Autorizza un dispositivo.</b> Solo su LUKSO? Lo puoi fare anche con l'estensione o l'app Universal Profiles, senza MetaMask: <a href=\"up-authorize-lukso.html\" style=\"color:var(--accent);\">Autorizza un dispositivo su LUKSO</a>. L'app UP Wallet per Android (da 0.9.0) firma con una chiave creata e tenuta sul telefono; l'estensione UP Wallet per il browser con una chiave tenuta sul computer. Qui la aggiungi alla UP come controller <b>senza permessi di amministrazione</b>: <b>non</b> può aggiungere controller, cambiare permessi o estensioni. Può però <b>usare tutti i fondi della UP</b>: chiamate e invii verso qualsiasi indirizzo (SUPER_CALL, SUPER_TRANSFERVALUE), firme (SIGN), gas pagato dal sito (4337) e scrittura del solo profilo (SETDATA, limitato alla chiave <code>LSP3Profile</code>). Chi sblocca il dispositivo e passa impronta, PIN, passkey o password può muovere i fondi: autorizza solo un dispositivo tuo. Firma il controller amministratore connesso qui, una volta per rete. Se perdi il dispositivo o togli l'app o l'estensione, rimuovi la sua chiave qui sotto, rete per rete.",
     phoneAddrLabel: "Indirizzo della chiave del dispositivo (lo mostra l'app, pannello \"Questo telefono\", o l'estensione, pannello \"Questo computer\")",
     phoneLinkAck: "Questo indirizzo viene dal link che hai aperto. Ho controllato che sia lo stesso che mostra la mia app (pannello \"Questo telefono\") o la mia estensione (pannello \"Questo computer\"), almeno i primi e gli ultimi 6 caratteri.",
     bkPhoneLinkAck: "L'indirizzo del dispositivo viene dal link: prima confrontalo con quello che mostra la tua app o la tua estensione e spunta la conferma. Un link di qualcun altro potrebbe darti il suo indirizzo, e con questa autorizzazione potrebbe muovere i fondi della UP.",
@@ -337,7 +338,7 @@ const I18N = {
     backupNotRead: "Controllers not read yet.",
     addBackupBtn: "Add the backup controller",
     phoneDivider: "— or, for UP Wallet: Android app or browser extension —",
-    phoneNote: "<b>Authorize a device.</b> The UP Wallet app for Android (from 0.9.0) signs with a key created and kept on the phone; the UP Wallet browser extension with a key kept on the computer. Here you add it to the UP as a controller <b>with no admin permissions</b>: it <b>cannot</b> add controllers, change permissions or extensions. It <b>can use all the UP's funds</b>, though: calls and sends to any address (SUPER_CALL, SUPER_TRANSFERVALUE), signatures (SIGN), gas paid by the site (4337) and writing the profile only (SETDATA, limited to the <code>LSP3Profile</code> key). Whoever unlocks the device and passes the fingerprint, PIN, passkey or password can move the funds: authorize only a device of yours. The admin controller connected here signs, once per network. If you lose the device or remove the app or the extension, remove its key below, network by network.",
+    phoneNote: "<b>Authorize a device.</b> Only on LUKSO? You can also do it with the Universal Profile extension or app, without MetaMask: <a href=\"up-authorize-lukso.html\" style=\"color:var(--accent);\">Authorize a device on LUKSO</a>. The UP Wallet app for Android (from 0.9.0) signs with a key created and kept on the phone; the UP Wallet browser extension with a key kept on the computer. Here you add it to the UP as a controller <b>with no admin permissions</b>: it <b>cannot</b> add controllers, change permissions or extensions. It <b>can use all the UP's funds</b>, though: calls and sends to any address (SUPER_CALL, SUPER_TRANSFERVALUE), signatures (SIGN), gas paid by the site (4337) and writing the profile only (SETDATA, limited to the <code>LSP3Profile</code> key). Whoever unlocks the device and passes the fingerprint, PIN, passkey or password can move the funds: authorize only a device of yours. The admin controller connected here signs, once per network. If you lose the device or remove the app or the extension, remove its key below, network by network.",
     phoneAddrLabel: "The device key's address (the app shows it, \"This phone\" panel, or the extension, \"This computer\" panel)",
     phoneLinkAck: "This address comes from the link you opened. I checked that it is the same one my app (\"This phone\" panel) or my extension (\"This computer\" panel) shows, at least the first and last 6 characters.",
     bkPhoneLinkAck: "The device's address comes from the link: first compare it with the one your app or your extension shows and tick the confirmation. Someone else's link could give you their address, and with this authorization they could move the UP's funds.",
