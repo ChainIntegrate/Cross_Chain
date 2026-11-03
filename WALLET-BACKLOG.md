@@ -27,38 +27,16 @@ item when its PR (or, for the app, its release) is done.
      line endings; the tests made robust (wait instead of reading at once).
    - *App:* the license and notice files in the APK; explicit `dataExtractionRules` (checked by installing
      over 0.9.7: same key, a signature works); the README: the fingerprint prompt's text comes from the
-     app's JavaScript, the diagnostic log's claim; the release text without "MetaMask mobile"
-     (`.github/workflows/android.yml`); the build tolerant to line endings.
+     app's JavaScript, the diagnostic log's claim; the build tolerant to line endings (the release
+     text without "MetaMask mobile": done 2026-11-03).
    - *Signing service (private):* the items of its review file marked "To do" (small changes with their
      tests, procedures in `OPERATIONS.md`, Nodemailer, the queue's bound, `.gitignore`).
-
-3. **App only, structural: a signing window as in the extension** (decided 2026-10-30, the direction of the
-   app). Today the page (with WalletConnect and the decoders) and the phone key share one WebView: the page's
-   JavaScript computes the digest and writes the fingerprint prompt's text, and the `PhoneKey` plugin signs
-   any 32-byte digest it receives (review of 2026-10-29 by a second provider, A06). A compromised page could
-   have it sign something other than what it shows, an EIP-7702 authorization among them (the Binance hack of
-   2026-10: authorizations signed by a compromised signing system delegated a hot wallet to a sweeper). The
-   extension has three layers: the page's request window (decoding, checks, simulation, the e-mail of an
-   unrecognised call), its own signing window (what is signed computed again from the request and shown),
-   then the passkey. The app gets the same:
-   - a second Activity with its own WebView loading only the signing code: no dApp, no WalletConnect, no
-     network;
-   - the page sends the structured request (message, typed data, transaction, operation), never a digest;
-   - the signing window computes the digest and what to show, sharing the extension's `signer.js` logic (one
-     version of what is signed and shown, and of the refusals: 32-byte messages, other accounts, other UPs,
-     EntryPoints other than v0.6; an EIP-7702 authorization cannot be produced), then asks for the
-     fingerprint;
-   - the native plugin signs only for the signing window, no longer for the page.
-   Made in app 0.10.0 (2026-11-03), released with page 0.14.0 and extension 0.1.9; app 0.9.8 stays the
-   way back. A structural change: tests on the phone, the release, then the review by two providers right
-   after it, its gaps fixed in a patch (`AUDIT.md`, review policy, decided 2026-11-03).
-
-4. **On LUKSO, the panel's link to the new authorization page** (2026-11-03). The panels "This computer"
-   (extension) and "This phone" (app) link to the Backup page (`up-backup.html?phone=…&device=…`), which
-   signs with MetaMask. On LUKSO they should link to `up-authorize-lukso.html` with the same parameters
-   (it reads `?network=lukso|lukso-testnet&phone=&device=`), signed with LUKSO's own wallet, as the
-   onboarding guide (https://www.chainintegrate.it/onboarding-lukso.html) says; the Backup page stays the link on the other networks.
-   Until then, the onboarding guide says to copy the key's address from the panel.
+3. **The review of the release of 2026-11-03 by two providers** (`AUDIT.md`, review policy: right after
+   the release). Released: app 0.10.0 (the signing window, `SignerActivity`, its own WebView with only the
+   signing code; the plugin signs only for it), extension 0.1.9 (`ext/sign-plan.js`, shared with the app),
+   page 0.14.0, and the LUKSO authorization page (`up-authorize-lukso.html`). The gaps found go in a patch
+   release; app 0.9.8 and extension 0.1.8 stay the way back. Live tests of app 0.10.0 on the phone (a
+   message, a transaction, a relayed operation, a rejection) by the maintainer.
 
 ## Other pages
 
