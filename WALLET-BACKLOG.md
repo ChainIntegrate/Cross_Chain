@@ -57,17 +57,14 @@ item when its PR (or, for the app, its release) is done.
    (extension) and "This phone" (app) link to the Backup page (`up-backup.html?phone=…&device=…`), which
    signs with MetaMask. On LUKSO they should link to `up-authorize-lukso.html` with the same parameters
    (it reads `?network=lukso|lukso-testnet&phone=&device=`), signed with LUKSO's own wallet, as the
-   onboarding guide (`up-onboarding.html`) says; the Backup page stays the link on the other networks.
+   onboarding guide (https://www.chainintegrate.it/onboarding-lukso.html) says; the Backup page stays the link on the other networks.
    Until then, the onboarding guide says to copy the key's address from the panel.
 
 ## Other pages
 
-1. **Onboarding guide, step 1: where the profile is created** (2026-11-03). `up-onboarding.html` links
-   LUKSO's general site (`lukso.network`), which is fine as a general page; the profile itself is created
-   from https://universaleverything.io/. Name that link in step 1 (IT and EN), next to the extension.
-2. **The LUKSO authorization page: live tests, then the review** (2026-11-03). `up-authorize-lukso.html`
-   was tested only against a fake LUKSO node (23/23). To do, by the maintainer with the work account:
-   authorize, name and remove a device with LUKSO's Universal Profile extension, then authorize with the
-   Universal Profiles app (WalletConnect; not known yet whether the app accepts a transaction from the UP
-   to the UP itself). Then, before proposing it to other companies, the review by two providers
-   (`AUDIT.md`, review policy): it is a new way of changing the controllers.
+1. **The LUKSO authorization page: live tests, then the review** (2026-11-03). `up-authorize-lukso.html`
+   was tested against a fake LUKSO node (25/25). Live, on the work UP: a device authorized with LUKSO's
+   Universal Profile extension and one with the Universal Profiles app (WalletConnect), both 2026-11-03;
+   the recovery key (ADDCONTROLLER only) identified and kept out of the removable devices. Still to do:
+   "Save the name" and "Remove the device" on a test key. Then, before proposing it to other companies,
+   the review by two providers (`AUDIT.md`, review policy): it is a new way of changing the controllers.
