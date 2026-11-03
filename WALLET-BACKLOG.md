@@ -49,9 +49,9 @@ item when its PR (or, for the app, its release) is done.
      EntryPoints other than v0.6; an EIP-7702 authorization cannot be produced), then asks for the
      fingerprint;
    - the native plugin signs only for the signing window, no longer for the page.
-   A structural change: prototype, tests on the phone, then a review by two providers before the release
-   (`AUDIT.md`, review policy). Made alone, in a release of its own, so the previous version stays an
-   easy way back (decided 2026-11-01).
+   Made in app 0.10.0 (2026-11-03), released with page 0.14.0 and extension 0.1.9; app 0.9.8 stays the
+   way back. A structural change: tests on the phone, the release, then the review by two providers right
+   after it, its gaps fixed in a patch (`AUDIT.md`, review policy, decided 2026-11-03).
 
 4. **On LUKSO, the panel's link to the new authorization page** (2026-11-03). The panels "This computer"
    (extension) and "This phone" (app) link to the Backup page (`up-backup.html?phone=…&device=…`), which
@@ -69,5 +69,5 @@ item when its PR (or, for the app, its release) is done.
    and "Remove the device" not tried live, taken as covered (maintainer, 2026-11-03): they write the same
    keys and values as the Backup page, tested live there, and go through the same sending path as the
    authorization, tested live here (removal needs EDITPERMISSIONS, which the admin key has; without it the
-   simulation fails before anything is sent). Still to do: before proposing it to other companies, the
-   review by two providers (`AUDIT.md`, review policy): it is a new way of changing the controllers.
+   simulation fails before anything is sent). Still to do: the review by two providers (`AUDIT.md`,
+   review policy), with the release's: it is a new way of changing the controllers.
