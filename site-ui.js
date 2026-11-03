@@ -28,7 +28,10 @@
       mmNets: "MetaMask collega solo le reti che ha già: se quella che ti serve non c'è, aggiungila in MetaMask, poi scollega e ricollega.",
       mmNoId: "WalletConnect non è configurato su questo sito: usa MetaMask nel browser del computer.", mmNoAccount: "Il wallet non ha dato nessun account.",
       mmPending: "📱 Richiesta inviata al wallet: aprilo per controllarla e approvarla.", mmPendingOpen: "Apri il wallet",
-      mmNoChain: "Questa rete non è nella connessione con il wallet (WalletConnect). Aggiungila in MetaMask, poi scollega e ricollega." },
+      mmNoChain: "Questa rete non è nella connessione con il wallet (WalletConnect). Aggiungila in MetaMask, poi scollega e ricollega.",
+      upsTitle: "📱 Collega l'app Universal Profiles",
+      upsIntro: "Collega l'app <b>Universal Profiles</b> di LUKSO con WalletConnect: ogni transazione arriva nell'app, dove la controlli e la approvi. La chiave della UP resta nell'app: la pagina non la vede mai.",
+      upsNets: "Solo LUKSO: la connessione chiede LUKSO e LUKSO Testnet." },
     en: { riskTitle: "⚠️ Before you start", ok: "Continue", later: "Not now", reopen: "Read the warnings", gotIt: "Got it",
       accepted: "✅ Warnings accepted.", pending: "⚠️ Warnings not accepted yet: until you accept them the page does nothing.",
       read: "✅ Warnings read.", other: "Other networks and custom RPC:", here: "The UP exists on this network",
@@ -49,7 +52,10 @@
       mmNets: "MetaMask connects only the networks it already has: if the one you need is missing, add it in MetaMask, then disconnect and connect again.",
       mmNoId: "WalletConnect is not configured on this site: use MetaMask in a computer browser.", mmNoAccount: "The wallet gave no account.",
       mmPending: "📱 Request sent to the wallet: open it to check and approve it.", mmPendingOpen: "Open the wallet",
-      mmNoChain: "This network is not in the connection with the wallet (WalletConnect). Add it in MetaMask, then disconnect and connect again." },
+      mmNoChain: "This network is not in the connection with the wallet (WalletConnect). Add it in MetaMask, then disconnect and connect again.",
+      upsTitle: "📱 Connect the Universal Profiles app",
+      upsIntro: "Connect LUKSO's <b>Universal Profiles</b> app with WalletConnect: every transaction reaches the app, where you check and approve it. The UP's key stays in the app: the page never sees it.",
+      upsNets: "LUKSO only: the connection asks for LUKSO and LUKSO Testnet." },
   };
   const lang = () => (document.documentElement.lang === "en" ? "en" : "it");
   const tt = (k) => T[lang()][k];
@@ -493,7 +499,7 @@ a.sui-open-app.sui-alt { background: var(--chip); font-weight: 600; font-size: 1
     const a = bar.querySelector("a"); a.textContent = tt("mmPendingOpen"); a.href = href;
     bar.hidden = false;
   }
-  function makeSignerProvider(client, session, chain) {
+  function makeSignerProvider(client, session, chain, { storeKey = SIGNER_KEY, appHref = "https://metamask.app.link/", onGone = () => { signerProv = null; } } = {}) {
     const topic = session.topic;
     const listeners = {};
     const emit = (ev, arg) => (listeners[ev] || []).slice().forEach((f) => { try { f(arg); } catch (e) { /* listener error */ } });
@@ -502,7 +508,7 @@ a.sui-open-app.sui-alt { background: var(--chip); font-weight: 600; font-size: 1
     const accounts = () => { const a = approved()[0]; return a && typeof ethers !== "undefined" && ethers.isAddress(a[2]) ? [ethers.getAddress(a[2])] : []; };
     const chainIds = () => [...new Set(approved().map((a) => Number(a[1])))];
     const peer = session.peer && session.peer.metadata ? session.peer.metadata : {};
-    const walletHref = (peer.redirect && (peer.redirect.native || peer.redirect.universal)) || "https://metamask.app.link/";
+    const walletHref = (peer.redirect && (peer.redirect.native || peer.redirect.universal)) || appHref;
     const rpcIds = {};
     async function want() {
       const c = (chain && chain()) || {};
@@ -546,8 +552,8 @@ a.sui-open-app.sui-alt { background: var(--chip); font-weight: 600; font-size: 1
       removeListener(ev, f) { listeners[ev] = (listeners[ev] || []).filter((x) => x !== f); return prov; },
       wrongChainText: () => tt("mmNoChain"),
       async disconnect() {
-        store.del(SIGNER_KEY);
-        signerProv = null;
+        store.del(storeKey);
+        onGone();
         try { await client.disconnect({ topic, reason: window.SignClientBundle.getSdkError("USER_DISCONNECTED") }); } catch (e) { /* already gone */ }
         emit("accountsChanged", []);
       },
@@ -574,7 +580,7 @@ a.sui-open-app.sui-alt { background: var(--chip); font-weight: 600; font-size: 1
       if (params.event.name === "chainChanged") emit("chainChanged", params.event.data);
     });
     client.on("session_update", ({ topic: t }) => { if (t === topic) emit("accountsChanged", accounts()); });
-    client.on("session_delete", ({ topic: t }) => { if (t !== topic) return; store.del(SIGNER_KEY); signerProv = null; emit("accountsChanged", []); });
+    client.on("session_delete", ({ topic: t }) => { if (t !== topic) return; store.del(storeKey); onGone(); emit("accountsChanged", []); });
     return prov;
   }
   async function walletConnectSigner({ chain } = {}) {
@@ -608,5 +614,38 @@ a.sui-open-app.sui-alt { background: var(--chip); font-weight: 600; font-size: 1
     return signerOpen;
   }
 
-  window.SiteUI = { initialLang, saveLang, riskWindow, netPicker, clampNotes, upAddress, walletConnectSigner };
+  // ---- the Universal Profiles app as the signing wallet, through WalletConnect (LUKSO only) ----
+  // The same EIP-1193 provider as walletConnectSigner, paired with LUKSO's app: its account is the UP itself, and
+  // a transaction from the UP is executed by the app through the UP's Key Manager with the app's own key.
+  // Kept until disconnected, apart from the MetaMask session. Resolves to null when the person cancels.
+  const UPS_KEY = "site.wcUpApp";
+  let upsOpen = null, upsProv = null;
+  async function upAppSigner({ chain } = {}) {
+    if (upsProv) return upsProv;
+    if (upsOpen) return upsOpen;
+    const opts = { storeKey: UPS_KEY, appHref: APP_LINK, onGone: () => { upsProv = null; } };
+    upsOpen = (async () => {
+      const kept = store.get(UPS_KEY);
+      if (kept) {
+        try {
+          const client = await signClient();
+          const s = client.session.get(kept);
+          if (s && s.expiry * 1000 > Date.now() + 60000) return (upsProv = makeSignerProvider(client, s, chain, opts));
+        } catch (e) { /* gone: pair again */ }
+        store.del(UPS_KEY);
+      }
+      const session = await pairWindow({
+        title: "upsTitle", intro: "upsIntro", phone: "wcPhone", notes: ["upsNets"], noIdKey: "wcNoId",
+        links: (uri) => [{ text: "wcOpen", href: uri ? appLink(uri) : "" }],
+        qr: (uri) => appLink(uri),
+        namespaces: { eip155: { chains: ["eip155:42", "eip155:4201"], methods: WALLET_METHODS, events: ["accountsChanged", "chainChanged"] } },
+      });
+      if (!session) return null;
+      store.set(UPS_KEY, session.topic);
+      return (upsProv = makeSignerProvider(wcClient, session, chain, opts));
+    })().finally(() => { upsOpen = null; });
+    return upsOpen;
+  }
+
+  window.SiteUI = { initialLang, saveLang, riskWindow, netPicker, clampNotes, upAddress, walletConnectSigner, upAppSigner };
 })();

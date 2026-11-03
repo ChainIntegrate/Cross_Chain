@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-Sdn7T3TAepdDMjAvwkUNTzXeV1k5epcD6iBdkgWavbM='">
+<script src="theme.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Autorizza un dispositivo su LUKSO — ChainIntegrate</title>
+<meta name="description" content="Autorizza su LUKSO la chiave dell'app o dell'estensione UP Wallet, firmando con l'estensione o l'app Universal Profiles: niente MetaMask, nessuna chiave da estrarre.">
+<link rel="icon" href="favicon.ico">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Autorizza un dispositivo su LUKSO — ChainIntegrate">
+<meta property="og:description" content="Autorizza su LUKSO la chiave dell'app o dell'estensione UP Wallet, firmando con l'estensione o l'app Universal Profiles: niente MetaMask, nessuna chiave da estrarre.">
+<meta property="og:image" content="https://crosschain-lukso.chainintegrate.it/og-image.png">
+<meta property="og:url" content="https://crosschain-lukso.chainintegrate.it/up-authorize-lukso.html">
+<meta name="twitter:card" content="summary">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" integrity="sha384-6Zl0Pc8zjSz8KvmNeXRvUQgY4ryFb+BwDvKCmLYcBME0joAaru491tQgi9B7zsMM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="chains.js"></script>
+<script src="site-ui.js"></script>
+<script src="backup-check.js"></script>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --border: #2a2f3a; --field: #10131a; --chip: #2a2f3a; --disabled: #3a3f4b; --raised: #1d2330;
+    --text: #e6e8ec; --text-dim: #9aa1ad;
+    --accent: #5b8cff; --ok: #3fbf6f; --warn: #e0a83c; --err: #e05a5a;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+         max-width: 820px; margin: 0 auto; padding: 32px 20px 80px; }
+  .header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .brand-row { margin-bottom: 24px; }
+  .brand-logo { display: block; width: 100%; height: auto; border-radius: 10px; }
+  .site-footer { margin-top: 40px; padding: 18px 20px; background: #f5f6f8; border: 1px solid #e3e5ea; border-radius: 10px; color: #4b4f58; }
+  .footer-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .footer-logo { height: 48px; width: auto; flex-shrink: 0; }
+  .footer-text { font-size: 13px; line-height: 1.6; }
+  .footer-li { display: inline-flex; vertical-align: middle; margin: 0 2px; }
+  .site-footer a { color: #2563eb; text-decoration: none; font-weight: 600; }
+  .site-footer a:hover { text-decoration: underline; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .subtitle { color: var(--text-dim); font-size: 13px; margin-bottom: 28px; }
+  #langToggle { width: auto; background: var(--chip); padding: 8px 14px; font-size: 12.5px; font-weight: 600;
+                border-radius: 6px; border: 1px solid var(--border); color: var(--text); cursor: pointer; margin-top: 2px; flex-shrink: 0; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+  .panel h2 { font-size: 14px; margin: 0 0 14px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.03em; }
+  label { display: block; font-size: 13px; color: var(--text-dim); margin: 14px 0 6px; }
+  label:first-child { margin-top: 0; }
+  select, input, textarea { width: 100%; background: var(--field); border: 1px solid var(--border); color: var(--text);
+                  border-radius: 6px; padding: 10px 12px; font-size: 13.5px; font-family: inherit; }
+  textarea { font-family: monospace; font-size: 11.5px; min-height: 90px; resize: vertical; word-break: break-all; }
+  button { width: 100%; background: var(--accent); color: white; border: none; border-radius: 6px;
+           padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; }
+  button:disabled { background: var(--disabled); cursor: not-allowed; }
+  button.danger { background: var(--err); }
+  button.secondary { background: var(--chip); }
+  .status-box { background: var(--field); border: 1px solid var(--border); border-radius: 6px; padding: 12px;
+                font-family: monospace; font-size: 12.5px; margin-top: 12px; word-break: break-all; }
+  .status-box .empty { color: var(--text-dim); }
+  .line-ok { color: var(--ok); } .line-warn { color: var(--warn); } .line-err { color: var(--err); } .line-dim { color: var(--text-dim); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-family: monospace; }
+  .badge.ok { background: rgba(63,191,111,0.15); color: var(--ok); }
+  .badge.err { background: rgba(224,90,90,0.15); color: var(--err); }
+  .badge.warn { background: rgba(224,168,60,0.15); color: var(--warn); }
+  .ctrl-card { background: var(--field); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin-top: 8px; }
+  .ctrl-card .addr { font-family: monospace; font-size: 12.5px; }
+  .ctrl-card .flags { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+  .divider { color: var(--text-dim); font-size: 12px; text-align: center; margin: 16px 0 6px; }
+  .note { font-size: 12px; color: var(--text-dim); margin-bottom: 10px; line-height: 1.5; }
+  .note b { color: var(--text); }
+  .check-row { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: var(--text); margin-top: 12px; }
+  .check-row input { width: auto; margin-top: 2px; }
+  .check-row[hidden] { display: none; }
+  #log { font-family: monospace; font-size: 12.5px; white-space: pre-wrap; word-break: break-all; line-height: 1.6; margin-top: 10px; }
+  /* While a backup action runs: a fixed box that says what is happening, so the wait before the wallet opens is never silent. */
+  #busyToast { display: none; position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 50;
+               width: calc(100% - 32px); max-width: 720px; background: var(--raised); border: 2px solid var(--warn); border-radius: 10px;
+               padding: 12px 16px; font-size: 14px; line-height: 1.5; color: var(--text); box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
+  #busyToast.on { display: flex; gap: 12px; align-items: center; }
+  #busyToast .spin { width: 18px; height: 18px; flex: 0 0 18px; border: 3px solid var(--warn); border-top-color: transparent; border-radius: 50%; animation: spin 0.9s linear infinite; }
+  #busyToast .msg { word-break: break-word; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { #busyToast .spin { animation: none; } }
+</style>
+</head>
+<body>
+
+<div class="brand-row">
+  <img src="banner.png" alt="ChainIntegrate" class="brand-logo">
+</div>
+
+<div class="header-row">
+  <div>
+    <h1 data-i18n="h1">Autorizza un dispositivo su LUKSO</h1>
+    <div class="subtitle" data-i18n="subtitle"></div>
+  </div>
+  <button id="langToggle" type="button">English</button>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel0Title">0 · Cosa fa questa pagina</h2>
+  <div class="note" data-i18n-html="introNote"></div>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel1Title">1 · Rete</h2>
+  <select id="network"></select>
+</div>
+
+<div class="panel">
+  <h2 data-i18n="panel2Title">2 · La tua Universal Profile</h2>
+  <div class="note" data-i18n-html="walletNote"></div>
+  <button id="connectExt" data-i18n="connectExtBtn">Collega l'estensione Universal Profile (computer)</button>
+  <button id="connectApp" class="secondary" data-i18n="connectAppBtn">Collega l'app Universal Profiles (telefono, WalletConnect)</button>
+  <div class="status-box" id="walletStatus"><span class="empty" data-i18n="notConnected">Non collegata.</span></div>
+</div>
+
+<div class="panel" id="ctrl">
+  <h2 data-i18n="panel3Title">3 · I controller della UP</h2>
+  <button id="readBtn" class="secondary" disabled data-i18n="readBtn">Leggi di nuovo i controller</button>
+  <div class="status-box" id="readStatus"><span class="empty" data-i18n="notRead">Collega la UP per leggere i controller.</span></div>
+  <div id="ctrlList"></div>
+
+  <div class="divider" data-i18n="deviceDivider">— autorizza un dispositivo: app Android o estensione UP Wallet —</div>
+  <div class="note" data-i18n-html="deviceNote"></div>
+  <label for="deviceAddress" data-i18n="deviceAddrLabel">Indirizzo della chiave del dispositivo</label>
+  <input type="text" id="deviceAddress" placeholder="0x...">
+  <label class="check-row" id="linkRow" hidden><input type="checkbox" id="linkAck"> <span data-i18n="linkAck"></span></label>
+  <label for="deviceName" data-i18n="deviceNameLabel">Nome del dispositivo (facoltativo)</label>
+  <input type="text" id="deviceName" maxlength="64" autocomplete="off" data-i18n-placeholder="deviceNamePh">
+  <button id="addDeviceBtn" disabled data-i18n="addDeviceBtn">Autorizza il dispositivo</button>
+
+  <div class="divider" data-i18n="nameDivider">— oppure, il nome di un controller —</div>
+  <label for="nameSelect" data-i18n="nameSelectLabel">Controller</label>
+  <select id="nameSelect"></select>
+  <label for="nameInput" data-i18n="nameInputLabel">Nome</label>
+  <input type="text" id="nameInput" maxlength="64" autocomplete="off">
+  <button id="nameBtn" disabled data-i18n="nameBtn">Salva il nome</button>
+
+  <div class="divider" data-i18n="removeDivider">— oppure, togli un dispositivo —</div>
+  <div class="note" data-i18n="removeNote"></div>
+  <label for="removeSelect" data-i18n="removeLabel">Dispositivo da togliere</label>
+  <select id="removeSelect"></select>
+  <label class="check-row"><input type="checkbox" id="removeAck"> <span data-i18n="removeAck"></span></label>
+  <button id="removeBtn" class="danger" disabled data-i18n="removeBtn">Togli il dispositivo selezionato</button>
+  <div id="log"></div>
+  <button id="copyLog" class="secondary" data-i18n="copyLogBtn">Copia il log</button>
+</div>
+
+<div id="busyToast" role="status" aria-live="polite"><div class="spin"></div><div class="msg" id="busyMsg"></div></div>
+
+<div class="site-footer">
+  <div class="footer-row">
+    <img src="logo.png" alt="ChainIntegrate" class="footer-logo">
+    <div class="footer-text" data-i18n-html="footerHtml"></div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+// ==================== I18N ====================
+let LANG = SiteUI.initialLang();
+const I18N = {
+  it: {
+    pageTitle: "Autorizza un dispositivo su LUKSO",
+    h1: "Autorizza un dispositivo su LUKSO",
+    subtitle: "La chiave dell'app o dell'estensione UP Wallet sulla tua Universal Profile, firmando con il wallet ufficiale di LUKSO",
+    langToggleBtn: "English",
+    panel0Title: "0 · Cosa fa questa pagina",
+    introNote: "Autorizza sulla tua Universal Profile, <b>solo su LUKSO</b>, la chiave dell'<b>app UP Wallet per Android</b> o dell'<b>estensione UP Wallet</b> per il browser. Firmi con il wallet ufficiale di LUKSO che già usi (l'estensione Universal Profile sul computer o l'app Universal Profiles sul telefono): <b>niente MetaMask e nessuna chiave da estrarre</b>.<ul style=\"margin:8px 0 0; padding-left:20px;\"><li>Il dispositivo riceve permessi <b>da dispositivo</b>: non può aggiungere o togliere controller, cambiare permessi o estensioni. Però <b>può usare tutti i fondi della UP</b>: autorizza solo un dispositivo tuo.</li><li>Il wallet ufficiale resta l'<b>amministratore</b> della UP: è lui che autorizza e revoca i dispositivi. Tieni il suo backup (il file JSON e la password) in un posto sicuro: senza, un dispositivo perso non si potrebbe più revocare.</li><li>Su LUKSO la chiave del dispositivo paga il gas da sola, in LYX: dopo l'autorizzazione mandale pochi LYX (il pannello \"Questo computer\" o \"Questo telefono\" mostra il suo saldo).</li><li>Per le altre reti, o per un backup amministratore, usa la pagina <a href=\"up-backup.html\" style=\"color:var(--accent);\">Controller di backup</a>, con MetaMask.</li></ul><div style=\"margin-top:8px;\">Pagina sperimentale: provala prima su LUKSO Testnet o con importi piccoli.</div>",
+    panel1Title: "1 · Rete",
+    panel2Title: "2 · La tua Universal Profile",
+    walletNote: "Collega il wallet ufficiale che controlla la UP. La pagina legge l'indirizzo della UP dal wallet e lavora solo su quella. Ogni transazione parte dalla UP: il wallet la mostra, la firma con la sua chiave e (sull'estensione) di solito paga il gas con il relayer di LUKSO.",
+    connectExtBtn: "Collega l'estensione Universal Profile (computer)",
+    connectAppBtn: "Collega l'app Universal Profiles (telefono, WalletConnect)",
+    notConnected: "Non collegata.",
+    disconnectBtn: "Scollega",
+    noExt: "❌ In questo browser non c'è l'estensione Universal Profile. Installala, oppure collega l'app Universal Profiles.",
+    connRejected: "❌ Connessione rifiutata nel wallet.",
+    connFail: (v) => `❌ Collegamento non riuscito: ${v.err}`,
+    connected: (v) => `✅ ${v.wallet} · UP ${v.up}`,
+    walletExt: "Estensione Universal Profile",
+    walletApp: "App Universal Profiles (WalletConnect)",
+    noAccount: "❌ Il wallet non ha dato nessun indirizzo.",
+    panel3Title: "3 · I controller della UP",
+    readBtn: "Leggi di nuovo i controller",
+    notRead: "Collega la UP per leggere i controller.",
+    reading: "Lettura dei controller…",
+    readFail: (v) => `❌ Lettura non riuscita: ${v.err}`,
+    rpcMismatch: (v) => `❌ L'RPC risponde con chainId ${v.got}, non ${v.want}.`,
+    notDeployed: (v) => `❌ Su questa rete all'indirizzo ${v.up} non c'è una Universal Profile.`,
+    rpcBehind: (v) => `L'RPC è ancora al blocco ${v.head}, prima della tua ultima modifica (blocco ${v.block}): riprova tra qualche secondo.`,
+    summary: (v) => `${v.n} controller su ${v.net}: ${v.admins} amministrator${v.admins === 1 ? "e" : "i"}, ${v.devices} con permessi limitati.`,
+    summaryNoAdmin: "⚠️ Nessun controller amministratore trovato: questa pagina non può autorizzare dispositivi su questa UP.",
+    roleAdmin: "amministratore", roleLimited: "permessi limitati", roleEp: "EntryPoint (gas pagato dal sito)", roleUrd: "Universal Receiver Delegate", roleBad: "voce non valida",
+    whyAdmin: "Può firmare qualsiasi operazione e aggiungere o togliere controller: di solito è la chiave del wallet ufficiale.",
+    whyLimited: "Può fare solo quello che dicono i suoi permessi: non gestisce gli altri controller.",
+    whyEp: "Usato dal gas pagato dal sito: esegue le operazioni firmate da un tuo controller.",
+    whyUrd: "Tiene aggiornata la lista dei token e NFT LUKSO che la UP riceve. Non firma e non sposta fondi.",
+    nameShown: (v) => `Nome: ${v.name}`,
+    deviceDivider: "— autorizza un dispositivo: app Android o estensione UP Wallet —",
+    deviceNote: "L'indirizzo della chiave lo mostra l'app UP Wallet (pannello <b>\"Questo telefono\"</b>) o l'estensione UP Wallet (pannello <b>\"Questo computer\"</b>). Confrontalo carattere per carattere. Permessi dati: SUPER_CALL, SUPER_TRANSFERVALUE, SIGN, il gas pagato dal sito (4337) e la scrittura del solo profilo (SETDATA, limitato alla chiave <code>LSP3Profile</code>). Mai ADDCONTROLLER, EDITPERMISSIONS o estensioni.",
+    deviceAddrLabel: "Indirizzo della chiave del dispositivo",
+    linkAck: "Questo indirizzo viene dal link che hai aperto. Ho controllato che è lo stesso che mostra la mia app (pannello \"Questo telefono\") o la mia estensione (pannello \"Questo computer\"), almeno i primi e gli ultimi 6 caratteri.",
+    deviceNameLabel: "Nome del dispositivo (facoltativo)",
+    deviceNamePh: "es. PC ufficio · estensione",
+    deviceComputer: "Computer · estensione UP Wallet",
+    devicePhone: "Telefono · app UP Wallet",
+    addDeviceBtn: "Autorizza il dispositivo",
+    nameDivider: "— oppure, il nome di un controller —",
+    nameSelectLabel: "Controller",
+    nameInputLabel: "Nome",
+    nameBtn: "Salva il nome",
+    nameNone: "Nessun controller",
+    removeDivider: "— oppure, togli un dispositivo —",
+    removeNote: "Solo i controller con permessi limitati: un amministratore (la chiave del wallet ufficiale o un backup) qui non si può togliere, così non resti chiuso fuori per errore. Per gli amministratori usa la pagina Controller di backup.",
+    removeLabel: "Dispositivo da togliere",
+    removeNone: "Nessun dispositivo da togliere",
+    removeAck: "Confermo: questo dispositivo è perso o non mi serve più. Prima ho mandato alla UP il saldo della sua chiave, se potevo.",
+    removeBtn: "Togli il dispositivo selezionato",
+    copyLogBtn: "Copia il log",
+    copiedLog: "✅ Log copiato",
+    busyStart: "Preparo l'operazione…",
+    needWallet: "❌ Prima collega la UP (pannello 2).",
+    needRead: "❌ I controller non sono stati letti: premi \"Leggi di nuovo i controller\".",
+    walletChain: (v) => `❌ Il wallet è sulla rete con chainId ${v.got}, la pagina su ${v.net} (${v.want}). Cambia rete nel wallet e riprova.`,
+    walletChainFail: "❌ Non riesco a leggere la rete del wallet.",
+    walletUpChanged: (v) => `❌ Il wallet ora dà la UP ${v.now}, non ${v.up}: ricollegalo.`,
+    badAddr: "❌ Indirizzo non valido.",
+    linkAckNeeded: "❌ L'indirizzo viene dal link: confrontalo con quello dell'app o dell'estensione e spunta la conferma. Un link di altri potrebbe darti il loro indirizzo, e con questa autorizzazione potrebbero muovere i fondi della UP.",
+    systemAddr: "❌ Questo indirizzo è la UP, il suo Key Manager, l'EntryPoint o l'Universal Receiver Delegate: non può essere un dispositivo.",
+    isAdmin: "❌ Questo indirizzo è già un amministratore della UP: non serve autorizzarlo come dispositivo.",
+    already: "❌ Questo indirizzo è già un controller della UP su questa rete.",
+    contractAddr: "❌ A questo indirizzo c'è un contratto: la chiave di un dispositivo è un account semplice.",
+    noAdmin: "❌ Nessun controller amministratore sulla UP: l'operazione non può essere simulata e il wallet la rifiuterebbe.",
+    planDevice: (v) => `Piano (una transazione dalla UP, eseguita dal wallet tramite il Key Manager ${v.km}):\n- AddressPermissions[] da ${v.len} a ${v.len1} voci, posizione ${v.len} → ${v.dev}\n- permessi del dispositivo → ${v.perms} (${v.names})\n- chiavi di dati consentite → solo LSP3Profile`,
+    planNameLine: (v) => `- nome → ${v.name}`,
+    planName: (v) => `Piano (una transazione dalla UP, tramite il Key Manager ${v.km}): il nome di ${v.addr} → ${v.name}`,
+    nameCleared: "(nessun nome)",
+    nameSame: "Il nome è già questo: niente da inviare.",
+    planRemove: (v) => `Piano (una transazione dalla UP, tramite il Key Manager ${v.km}):\n- tolgo ${v.target} (posizione ${v.index})${v.moved}\n- AddressPermissions[] da ${v.len} a ${v.len1} voci, i suoi permessi azzerati${v.extra}`,
+    planMoved: (v) => `\n- l'ultima voce (${v.addr}) passa al suo posto`,
+    planClear: "\n- le sue chiavi di dati consentite azzerate",
+    planNameClear: "\n- il suo nome cancellato",
+    simulating: (v) => `Simulazione come l'amministratore ${v.admin} (la pagina non conosce la chiave del wallet: il controllo vero dei permessi lo fa il Key Manager quando il wallet invia)…`,
+    simFail: (v) => `❌ La simulazione fallisce: ${v.err}. Niente inviato.`,
+    simOk: "✅ Simulazione riuscita.",
+    walletShows: (v) => `Nel wallet: una transazione dalla UP ${v.up} alla UP stessa (setDataBatch), su ${v.net}, valore 0. Controlla rete e UP, poi approva.`,
+    sent: (v) => `Transazione inviata: ${v.hash}`,
+    sentNoHash: "Il wallet non ha dato l'hash della transazione: controllo il risultato rileggendo la UP.",
+    waiting: "In attesa della conferma sulla rete…",
+    txFailed: "❌ La transazione è fallita sulla rete: niente è cambiato.",
+    noReceipt: "La conferma non è arrivata in tempo: rileggo la UP per vedere se è cambiata.",
+    verifyBad: (v) => `⚠️ La rilettura non corrisponde (${v.what}): controlla con "Leggi di nuovo i controller".`,
+    deviceOk: (v) => `✅ Dispositivo autorizzato su questa rete: ${v.addr}, senza permessi di amministrazione. Ora mandagli pochi LYX per il gas (il saldo lo vedi nel pannello \"Questo computer\" o \"Questo telefono\" di UP Wallet).`,
+    nameOk: (v) => `✅ Nome di ${v.addr}: ${v.name}.`,
+    removeOk: (v) => `✅ Dispositivo ${v.addr} tolto da questa rete.`,
+    cancelled: "Annullato nel wallet: nessuna transazione inviata.",
+    error: (v) => `Errore: ${v.err}`,
+    ackRequired: "❌ Spunta la conferma prima di togliere il dispositivo.",
+    pickRemove: "❌ Scegli il dispositivo da togliere.",
+    changedRead: "❌ I controller sono cambiati: rileggili e riprova.",
+    footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Codice sorgente su GitHub</a>`,
+  },
+  en: {
+    pageTitle: "Authorize a device on LUKSO",
+    h1: "Authorize a device on LUKSO",
+    subtitle: "The UP Wallet app's or extension's key on your Universal Profile, signed with LUKSO's official wallet",
+    langToggleBtn: "Italiano",
+    panel0Title: "0 · What this page does",
+    introNote: "It authorizes on your Universal Profile, <b>on LUKSO only</b>, the key of the <b>UP Wallet app for Android</b> or of the <b>UP Wallet browser extension</b>. You sign with LUKSO's official wallet you already use (the Universal Profile extension on the computer or the Universal Profiles app on the phone): <b>no MetaMask and no key to extract</b>.<ul style=\"margin:8px 0 0; padding-left:20px;\"><li>The device gets <b>device</b> permissions: it cannot add or remove controllers, or change permissions or extensions. But it <b>can use all the UP's funds</b>: authorize only a device of yours.</li><li>The official wallet stays the UP's <b>admin</b>: it is the one that authorizes and revokes devices. Keep its backup (the JSON file and its password) somewhere safe: without it, a lost device could no longer be revoked.</li><li>On LUKSO the device key pays its own gas, in LYX: after the authorization send it a few LYX (the \"This computer\" or \"This phone\" panel shows its balance).</li><li>For the other networks, or for an admin backup, use the <a href=\"up-backup.html\" style=\"color:var(--accent);\">Backup controller</a> page, with MetaMask.</li></ul><div style=\"margin-top:8px;\">Experimental page: try it first on LUKSO Testnet or with small amounts.</div>",
+    panel1Title: "1 · Network",
+    panel2Title: "2 · Your Universal Profile",
+    walletNote: "Connect the official wallet that controls the UP. The page reads the UP's address from the wallet and works on that one only. Every transaction comes from the UP: the wallet shows it, signs it with its own key and (on the extension) usually pays the gas with LUKSO's relayer.",
+    connectExtBtn: "Connect the Universal Profile extension (computer)",
+    connectAppBtn: "Connect the Universal Profiles app (phone, WalletConnect)",
+    notConnected: "Not connected.",
+    disconnectBtn: "Disconnect",
+    noExt: "❌ There is no Universal Profile extension in this browser. Install it, or connect the Universal Profiles app.",
+    connRejected: "❌ Connection rejected in the wallet.",
+    connFail: (v) => `❌ Connection failed: ${v.err}`,
+    connected: (v) => `✅ ${v.wallet} · UP ${v.up}`,
+    walletExt: "Universal Profile extension",
+    walletApp: "Universal Profiles app (WalletConnect)",
+    noAccount: "❌ The wallet gave no address.",
+    panel3Title: "3 · The UP's controllers",
+    readBtn: "Read the controllers again",
+    notRead: "Connect the UP to read its controllers.",
+    reading: "Reading the controllers…",
+    readFail: (v) => `❌ Reading failed: ${v.err}`,
+    rpcMismatch: (v) => `❌ The RPC answers with chainId ${v.got}, not ${v.want}.`,
+    notDeployed: (v) => `❌ On this network there is no Universal Profile at ${v.up}.`,
+    rpcBehind: (v) => `The RPC is still at block ${v.head}, before your last change (block ${v.block}): try again in a few seconds.`,
+    summary: (v) => `${v.n} controller(s) on ${v.net}: ${v.admins} admin(s), ${v.devices} with limited permissions.`,
+    summaryNoAdmin: "⚠️ No admin controller found: this page cannot authorize devices on this UP.",
+    roleAdmin: "admin", roleLimited: "limited permissions", roleEp: "EntryPoint (gas paid by the site)", roleUrd: "Universal Receiver Delegate", roleBad: "invalid entry",
+    whyAdmin: "It can sign any operation and add or remove controllers: usually the official wallet's key.",
+    whyLimited: "It can only do what its permissions say: it does not manage the other controllers.",
+    whyEp: "Used by the gas paid by the site: it runs the operations one of your controllers signed.",
+    whyUrd: "It keeps the list of LUKSO tokens and NFTs the UP receives up to date. It does not sign and does not move funds.",
+    nameShown: (v) => `Name: ${v.name}`,
+    deviceDivider: "— authorize a device: UP Wallet's Android app or extension —",
+    deviceNote: "The key's address is shown by the UP Wallet app (panel <b>\"This phone\"</b>) or by the UP Wallet extension (panel <b>\"This computer\"</b>). Compare it character by character. Permissions given: SUPER_CALL, SUPER_TRANSFERVALUE, SIGN, gas paid by the site (4337) and writing the profile only (SETDATA, limited to the <code>LSP3Profile</code> key). Never ADDCONTROLLER, EDITPERMISSIONS or extensions.",
+    deviceAddrLabel: "The device key's address",
+    linkAck: "This address comes from the link you opened. I checked that it is the same one my app (\"This phone\" panel) or my extension (\"This computer\" panel) shows, at least the first and last 6 characters.",
+    deviceNameLabel: "Device name (optional)",
+    deviceNamePh: "e.g. Office PC · extension",
+    deviceComputer: "Computer · UP Wallet extension",
+    devicePhone: "Phone · UP Wallet app",
+    addDeviceBtn: "Authorize the device",
+    nameDivider: "— or, a controller's name —",
+    nameSelectLabel: "Controller",
+    nameInputLabel: "Name",
+    nameBtn: "Save the name",
+    nameNone: "No controllers",
+    removeDivider: "— or, remove a device —",
+    removeNote: "Only controllers with limited permissions: an admin (the official wallet's key or a backup) cannot be removed here, so you cannot lock yourself out by mistake. For admins use the Backup controller page.",
+    removeLabel: "Device to remove",
+    removeNone: "No device to remove",
+    removeAck: "I confirm: this device is lost or I no longer need it. I sent its key's balance to the UP first, if I could.",
+    removeBtn: "Remove the selected device",
+    copyLogBtn: "Copy the log",
+    copiedLog: "✅ Log copied",
+    busyStart: "Preparing the operation…",
+    needWallet: "❌ Connect the UP first (panel 2).",
+    needRead: "❌ The controllers were not read: press \"Read the controllers again\".",
+    walletChain: (v) => `❌ The wallet is on the network with chainId ${v.got}, the page on ${v.net} (${v.want}). Switch the network in the wallet and try again.`,
+    walletChainFail: "❌ The wallet's network cannot be read.",
+    walletUpChanged: (v) => `❌ The wallet now gives the UP ${v.now}, not ${v.up}: connect it again.`,
+    badAddr: "❌ Invalid address.",
+    linkAckNeeded: "❌ The address comes from the link: compare it with the one your app or extension shows and tick the confirmation. Someone else's link could give you their address, and with this authorization they could move the UP's funds.",
+    systemAddr: "❌ This address is the UP, its Key Manager, the EntryPoint or the Universal Receiver Delegate: it cannot be a device.",
+    isAdmin: "❌ This address is already an admin of the UP: it does not need to be authorized as a device.",
+    already: "❌ This address is already a controller of the UP on this network.",
+    contractAddr: "❌ There is a contract at this address: a device key is a plain account.",
+    noAdmin: "❌ No admin controller on the UP: the operation cannot be simulated and the wallet would refuse it.",
+    planDevice: (v) => `Plan (one transaction from the UP, run by the wallet through the Key Manager ${v.km}):\n- AddressPermissions[] from ${v.len} to ${v.len1} entries, position ${v.len} → ${v.dev}\n- the device's permissions → ${v.perms} (${v.names})\n- allowed data keys → LSP3Profile only`,
+    planNameLine: (v) => `- name → ${v.name}`,
+    planName: (v) => `Plan (one transaction from the UP, through the Key Manager ${v.km}): the name of ${v.addr} → ${v.name}`,
+    nameCleared: "(no name)",
+    nameSame: "The name is already this one: nothing to send.",
+    planRemove: (v) => `Plan (one transaction from the UP, through the Key Manager ${v.km}):\n- remove ${v.target} (position ${v.index})${v.moved}\n- AddressPermissions[] from ${v.len} to ${v.len1} entries, its permissions cleared${v.extra}`,
+    planMoved: (v) => `\n- the last entry (${v.addr}) moves into its place`,
+    planClear: "\n- its allowed data keys cleared",
+    planNameClear: "\n- its name cleared",
+    simulating: (v) => `Simulating as the admin ${v.admin} (the page does not know the wallet's key: the Key Manager checks the real permissions when the wallet sends)…`,
+    simFail: (v) => `❌ The simulation fails: ${v.err}. Nothing sent.`,
+    simOk: "✅ Simulation passed.",
+    walletShows: (v) => `In the wallet: a transaction from the UP ${v.up} to the UP itself (setDataBatch), on ${v.net}, value 0. Check the network and the UP, then approve.`,
+    sent: (v) => `Transaction sent: ${v.hash}`,
+    sentNoHash: "The wallet gave no transaction hash: the result is checked by reading the UP again.",
+    waiting: "Waiting for the confirmation on the network…",
+    txFailed: "❌ The transaction failed on the network: nothing changed.",
+    noReceipt: "The confirmation did not come in time: reading the UP again to see whether it changed.",
+    verifyBad: (v) => `⚠️ The re-read does not match (${v.what}): check with "Read the controllers again".`,
+    deviceOk: (v) => `✅ Device authorized on this network: ${v.addr}, with no admin permissions. Now send it a few LYX for gas (UP Wallet's \"This computer\" or \"This phone\" panel shows its balance).`,
+    nameOk: (v) => `✅ Name of ${v.addr}: ${v.name}.`,
+    removeOk: (v) => `✅ Device ${v.addr} removed from this network.`,
+    cancelled: "Cancelled in the wallet: no transaction sent.",
+    error: (v) => `Error: ${v.err}`,
+    ackRequired: "❌ Tick the confirmation before removing the device.",
+    pickRemove: "❌ Choose the device to remove.",
+    changedRead: "❌ The controllers changed: read them again and retry.",
+    footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Source code on GitHub</a>`,
+  },
+};
+function t(key, vars) { const v = I18N[LANG][key]; return typeof v === "function" ? v(vars || {}) : v; }
+function applyI18n() {
+  document.documentElement.lang = LANG;
+  document.title = t("pageTitle");
+  document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.getAttribute("data-i18n")); });
+  document.querySelectorAll("[data-i18n-html]").forEach((el) => { el.innerHTML = t(el.getAttribute("data-i18n-html")); });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => { el.placeholder = t(el.getAttribute("data-i18n-placeholder")); });
+  $("langToggle").textContent = t("langToggleBtn");
+  showWallet();
+  if (st) render();
+}
+$("langToggle").addEventListener("click", () => { LANG = LANG === "it" ? "en" : "it"; SiteUI.saveLang(LANG); applyI18n(); });
+
+// ==================== APP ====================
+// LUKSO only. The official wallet (LUKSO's Universal Profile extension, or the Universal Profiles app through
+// WalletConnect) gives the UP's address, and every change is a transaction from the UP to the UP itself
+// (setDataBatch): the wallet runs it through the UP's Key Manager with its own key, which this page never
+// knows. The permissions, the checks before sending and the re-read after it are those of the Backup page.
+const BK = window.BackupCheck;
+const NETS = [LUKSO_CHAIN, LUKSO_TESTNET_CHAIN];
+const KM_EXEC_IFACE = new ethers.Interface(["function execute(bytes) payable returns (bytes)"]);
+const UP_DATA_IFACE = new ethers.Interface(["function setDataBatch(bytes32[] dataKeys, bytes[] dataValues)", "function getDataBatch(bytes32[]) view returns (bytes[])"]);
+// Bit order as in @lukso/lsp6-contracts LSP6Constants.sol (bits 0..22); bit 23 is ERC4337.
+const PERMISSION_BITS = ["CHANGEOWNER","ADDCONTROLLER","EDITPERMISSIONS","ADDEXTENSIONS","CHANGEEXTENSIONS","ADDUNIVERSALRECEIVERDELEGATE","CHANGEUNIVERSALRECEIVERDELEGATE","REENTRANCY","SUPER_TRANSFERVALUE","TRANSFERVALUE","SUPER_CALL","CALL","SUPER_STATICCALL","STATICCALL","SUPER_DELEGATECALL","DELEGATECALL","DEPLOY","SUPER_SETDATA","SETDATA","ENCRYPT","DECRYPT","SIGN","EXECUTE_RELAY_CALL"];
+const permNames = (p) => { const f = []; for (let i = 0; i < 24; i++) if ((p >> BigInt(i)) & 1n) f.push(i === 23 ? "ERC4337" : PERMISSION_BITS[i]); return f.join(", ") || "—"; };
+const permHex = (p) => "0x" + p.toString(16);
+// LUKSO's own LSP1 delegate: never a device.
+const LSP1_DELEGATE = "0x7870c5b8bc9572a8001c3f96f7ff59961b23500d";
+// The device permissions, as on the Backup page ("Authorize a device"): SUPER_CALL, SUPER_TRANSFERVALUE,
+// SIGN, the 4337 permission and SETDATA restricted by AllowedERC725YDataKeys to LSP3Profile.
+const LSP3_PROFILE_KEY = "0x5ef83ad9559033e6e941db7d7c495acdce616347d28e90c7ce47cbfcfcad3bc5";
+const DEVICE_PERMS = 0x100n | 0x400n | 0x40000n | 0x200000n | BK.ERC4337;
+const DEVICE_DATA_KEYS = ethers.concat(["0x0020", LSP3_PROFILE_KEY]);
+
+const netSel = $("network");
+NETS.forEach((n) => { const o = document.createElement("option"); o.value = n.key; o.textContent = `${n.name} (chainId ${n.chainId})`; netSel.appendChild(o); });
+const net = () => NETS.find((n) => n.key === netSel.value) || NETS[0];
+
+let wallet = null;  // { provider, kind: "ext" | "app", up }
+let st = null;      // last read: { up, chainId, netName, provider, r, names }
+let busy = false;
+
+function log(msg, cls) {
+  const d = document.createElement("div");
+  if (cls) d.className = cls;
+  d.textContent = msg;
+  $("log").appendChild(d);
+  if (busy) { const first = String(msg).split("\n")[0]; $("busyMsg").textContent = first.length > 200 ? first.slice(0, 200) + "…" : first; }
+}
+function separator() { log(`—— ${new Date().toLocaleTimeString()} · UP ${wallet ? wallet.up : "?"} · ${net().name} ——`, "line-dim"); }
+function setBusy(on) {
+  busy = on;
+  if (on) $("busyMsg").textContent = t("busyStart");
+  $("busyToast").classList.toggle("on", on);
+  updateButtons();
+}
+function setStatus(id, text, cls) {
+  const el = $(id); el.innerHTML = "";
+  const d = document.createElement("div"); d.className = cls || ""; d.style.whiteSpace = "pre-wrap"; d.textContent = text; el.appendChild(d);
+}
+const isAdmin = (c) => (c.perms & BK.ADMIN) === BK.ADMIN;
+const devices = () => (st ? st.r.controllers.filter((c) => c.role === "controller" && !isAdmin(c)) : []);
+function updateButtons() {
+  const ok = !busy && !!wallet && !!st && st.r.admins.length > 0;
+  $("addDeviceBtn").disabled = !ok;
+  $("nameBtn").disabled = !ok || !$("nameSelect").value;
+  $("removeBtn").disabled = !ok || !$("removeSelect").value;
+  $("readBtn").disabled = busy || !wallet;
+  $("connectExt").disabled = busy;
+  $("connectApp").disabled = busy;
+}
+
+// ---- the official wallet ----
+function showWallet() {
+  const box = $("walletStatus");
+  box.innerHTML = "";
+  if (!wallet) { const s = document.createElement("span"); s.className = "empty"; s.textContent = t("notConnected"); box.appendChild(s); return; }
+  const d = document.createElement("div"); d.className = "line-ok"; d.textContent = t("connected", { wallet: t(wallet.kind === "ext" ? "walletExt" : "walletApp"), up: wallet.up });
+  box.appendChild(d);
+  if (wallet.kind === "app") {
+    const b = document.createElement("button"); b.type = "button"; b.className = "secondary"; b.style.cssText = "width:auto; margin:8px 0 0; padding:4px 10px; font-size:12px;";
+    b.textContent = t("disconnectBtn");
+    b.addEventListener("click", async () => { try { await wallet.provider.disconnect(); } catch (e) { /* already gone */ } wallet = null; st = null; showWallet(); clearRead(); });
+    box.appendChild(b);
+  }
+}
+// LUKSO's extension: window.lukso, or announced through EIP-6963 under its name.
+const announced = [];
+window.addEventListener("eip6963:announceProvider", (e) => announced.push(e.detail));
+window.dispatchEvent(new Event("eip6963:requestProvider"));
+function extProvider() {
+  if (window.lukso) return window.lukso;
+  const p = announced.find((x) => x && x.info && /universal profile/i.test(x.info.name || ""));
+  return p ? p.provider : null;
+}
+async function connect(kind) {
+  if (busy) return;
+  try {
+    let provider;
+    if (kind === "ext") {
+      provider = extProvider();
+      if (!provider) { setStatus("walletStatus", t("noExt"), "line-err"); return; }
+    } else {
+      provider = await SiteUI.upAppSigner({ chain: () => ({ chainId: net().chainId, rpc: net().rpc }) });
+      if (!provider) return;
+    }
+    const accs = await provider.request({ method: "eth_requestAccounts" });
+    if (!accs || !accs[0] || !ethers.isAddress(accs[0])) { setStatus("walletStatus", t("noAccount"), "line-err"); return; }
+    wallet = { provider, kind, up: ethers.getAddress(accs[0]) };
+    if (typeof provider.on === "function") provider.on("accountsChanged", (a) => { if (wallet && wallet.provider === provider && (!a || !a[0] || ethers.getAddress(a[0]) !== wallet.up)) { wallet = null; st = null; showWallet(); clearRead(); } });
+    showWallet();
+    setBusy(true); $("busyMsg").textContent = t("reading");
+    try { await readState(); } finally { setBusy(false); }
+  } catch (e) {
+    if (e && (e.code === 4001 || e.code === "ACTION_REJECTED")) setStatus("walletStatus", t("connRejected"), "line-err");
+    else setStatus("walletStatus", t("connFail", { err: e.shortMessage || e.message || String(e) }), "line-err");
+  }
+}
+$("connectExt").addEventListener("click", () => connect("ext"));
+$("connectApp").addEventListener("click", () => connect("app"));
+
+// ---- reading the controllers ----
+function clearRead() {
+  st = null;
+  $("ctrlList").innerHTML = "";
+  setStatus("readStatus", t("notRead"), "empty");
+  ["nameSelect", "removeSelect"].forEach((id) => { $(id).innerHTML = ""; });
+  updateButtons();
+}
+// The block of this page's last write, per UP and chain: later reads are pinned at or after it (Backup page, AUDIT 2026-10-02 L-4).
+let seen = { key: "", block: 0 };
+async function readState() {
+  st = null;
+  updateButtons();
+  if (!wallet) { setStatus("readStatus", t("needWallet"), "line-err"); return null; }
+  const n = net();
+  setStatus("readStatus", t("reading"), "line-dim");
+  try {
+    const probe = new ethers.JsonRpcProvider(n.rpc, undefined, { batchMaxCount: 1 });
+    const chainId = Number(await probe.send("eth_chainId", []));
+    if (chainId !== n.chainId) { setStatus("readStatus", t("rpcMismatch", { got: chainId, want: n.chainId }), "line-err"); return null; }
+    const provider = new ethers.JsonRpcProvider(n.rpc, chainId, { staticNetwork: true, batchMaxCount: 1 });
+    const up = wallet.up;
+    if ((await provider.getCode(up)) === "0x") { setStatus("readStatus", t("notDeployed", { up }), "line-err"); return null; }
+    let at;
+    if (seen.key === `${chainId}:${up}`) {
+      let head = 0;
+      for (let i = 0; i < 6; i++) { if (i) await new Promise((res) => setTimeout(res, 1500)); head = await provider.getBlockNumber(); if (head >= seen.block) break; }
+      if (head < seen.block) { setStatus("readStatus", t("rpcBehind", { block: seen.block, head }), "line-err"); return null; }
+      at = { blockTag: head };
+    }
+    const r = await BK.read(provider, up, at);
+    const names = await BK.readNames(provider, up, r.controllers.map((c) => c.address), at).catch(() => ({}));
+    st = { up, chainId, netName: n.name, provider, r, names };
+    render();
+    return st;
+  } catch (e) {
+    setStatus("readStatus", t("readFail", { err: e.shortMessage || e.message }), "line-err");
+    return null;
+  }
+}
+function render() {
+  if (!st) return;
+  const { r } = st;
+  const ctrls = r.controllers.filter((c) => c.role === "controller");
+  setStatus("readStatus", r.admins.length ? t("summary", { n: ctrls.length, net: st.netName, admins: r.admins.length, devices: ctrls.filter((c) => !isAdmin(c)).length }) : t("summaryNoAdmin"), r.admins.length ? "line-ok" : "line-err");
+  const box = $("ctrlList");
+  box.innerHTML = "";
+  r.controllers.forEach((c) => {
+    const card = document.createElement("div"); card.className = "ctrl-card";
+    const a = document.createElement("div"); a.className = "addr"; a.textContent = `[${c.index}] ${c.address || "?"}`;
+    card.appendChild(a);
+    const nm = c.address && st.names[c.address.toLowerCase()];
+    if (nm) { const d = document.createElement("div"); d.style.cssText = "font-weight:600; margin-top:2px; overflow-wrap:anywhere;"; d.textContent = t("nameShown", { name: nm }); card.appendChild(d); }
+    const role = document.createElement("div"); role.style.marginTop = "4px";
+    const [cls, label, why] = c.role === "entrypoint" ? ["ok", t("roleEp"), t("whyEp")] : c.role === "urd" ? ["ok", t("roleUrd"), t("whyUrd")]
+      : c.role === "malformed" ? ["err", t("roleBad"), ""] : isAdmin(c) ? ["err", t("roleAdmin"), t("whyAdmin")] : ["warn", t("roleLimited"), t("whyLimited")];
+    const b = document.createElement("span"); b.className = "badge " + cls; b.textContent = label; role.appendChild(b);
+    const w = document.createElement("div"); w.style.cssText = "font-size:12.5px; margin-top:6px; line-height:1.5;"; w.textContent = why;
+    const f = document.createElement("div"); f.className = "flags"; f.textContent = `${permHex(c.perms)} — ${permNames(c.perms)}`;
+    card.append(role, w, f);
+    box.appendChild(card);
+  });
+  // Returns whether the choice made before is still there.
+  const fill = (id, list, none) => {
+    const sel = $(id), prev = sel.value;
+    sel.innerHTML = "";
+    if (!list.length) { const o = document.createElement("option"); o.value = ""; o.textContent = t(none); sel.appendChild(o); }
+    list.forEach((c) => { const o = document.createElement("option"); o.value = c.address; const nm = st.names[c.address.toLowerCase()]; o.textContent = `${nm ? nm + " · " : ""}${c.address}${isAdmin(c) ? " · " + t("roleAdmin") : ""}`; sel.appendChild(o); });
+    const kept = list.some((c) => c.address === prev);
+    if (kept) sel.value = prev;
+    return kept;
+  };
+  // A name being typed stays when the same controller is still chosen (a read before sending re-renders).
+  if (!fill("nameSelect", r.controllers.filter((c) => c.role === "controller"), "nameNone"))
+    $("nameInput").value = ($("nameSelect").value && st.names[$("nameSelect").value.toLowerCase()]) || "";
+  fill("removeSelect", devices(), "removeNone");
+  updateButtons();
+}
+$("readBtn").addEventListener("click", async () => {
+  if (busy) return;
+  setBusy(true); $("busyMsg").textContent = t("reading");
+  try { await readState(); } finally { setBusy(false); }
+});
+$("nameSelect").addEventListener("change", () => { $("nameInput").value = (st && $("nameSelect").value && st.names[$("nameSelect").value.toLowerCase()]) || ""; updateButtons(); });
+$("removeSelect").addEventListener("change", updateButtons);
+netSel.addEventListener("change", () => { if (wallet) { setBusy(true); readState().finally(() => setBusy(false)); } else clearRead(); });
+
+// ---- one change: checks, simulation, the wallet, the re-read ----
+// A fresh read, then: the wallet still gives the same UP and is on the page's network.
+async function fresh() {
+  if (!wallet) { log(t("needWallet"), "line-err"); return null; }
+  try {
+    const accs = await wallet.provider.request({ method: "eth_accounts" });
+    const now = accs && accs[0] && ethers.isAddress(accs[0]) ? ethers.getAddress(accs[0]) : null;
+    if (now && now !== wallet.up) { log(t("walletUpChanged", { now, up: wallet.up }), "line-err"); return null; }
+  } catch (e) { /* the address was given at connection */ }
+  const b = await readState();
+  if (!b) { log(t("needRead"), "line-err"); return null; }
+  let chainId;
+  try { chainId = parseInt(await wallet.provider.request({ method: "eth_chainId" }), 16); } catch (e) { log(t("walletChainFail"), "line-err"); return null; }
+  if (chainId !== b.chainId) {
+    // The extension can switch by itself; the app is asked for the page's network in each request.
+    if (wallet.kind === "ext") {
+      try { await wallet.provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x" + b.chainId.toString(16) }] }); chainId = parseInt(await wallet.provider.request({ method: "eth_chainId" }), 16); } catch (e) { /* said below */ }
+    }
+    if (chainId !== b.chainId) { log(t("walletChain", { got: chainId, want: b.chainId, net: b.netName }), "line-err"); return null; }
+  }
+  if (!b.r.km) { log(t("readFail", { err: "Key Manager" }), "line-err"); return null; }
+  b.km = ethers.getAddress(b.r.km);
+  if (!b.r.admins.length) { log(t("noAdmin"), "line-err"); return null; }
+  return b;
+}
+// After a write: every controller listed just before its block (except the one removed) must still be listed.
+async function stillListed(b, at, removed) {
+  const [before, after] = await Promise.all([BK.read(b.provider, b.up, { blockTag: at.blockTag - 1 }), BK.read(b.provider, b.up, at)]);
+  const now = new Set(after.controllers.map((c) => (c.address || "").toLowerCase()));
+  return before.controllers.filter((c) => c.address && c.address.toLowerCase() !== String(removed || "").toLowerCase() && !now.has(c.address.toLowerCase()))
+    .map((c) => `${c.address} no longer listed`);
+}
+// Simulates the change as one of the UP's admins (through the Key Manager), sends it from the UP with the
+// official wallet, waits for it, then re-reads with `verify(at)` (a list of problems). false: nothing sent.
+async function send(b, keys, vals, verify) {
+  const inner = UP_DATA_IFACE.encodeFunctionData("setDataBatch", [keys, vals]);
+  const admin = b.r.admins[0].address;
+  log(t("simulating", { admin }), "line-dim");
+  try { await b.provider.call({ from: admin, to: b.km, data: KM_EXEC_IFACE.encodeFunctionData("execute", [inner]) }); }
+  catch (e) { log(t("simFail", { err: e.shortMessage || e.reason || e.message }), "line-err"); return false; }
+  log(t("simOk"), "line-ok");
+  log(t("walletShows", { up: b.up, net: b.netName }), "line-warn");
+  const startBlock = await b.provider.getBlockNumber();
+  const hash = await wallet.provider.request({ method: "eth_sendTransaction", params: [{ from: b.up, to: b.up, data: inner, value: "0x0" }] });
+  let block = null;
+  if (typeof hash === "string" && /^0x[0-9a-fA-F]{64}$/.test(hash)) {
+    log(t("sent", { hash }), "line-dim");
+    log(t("waiting"), "line-dim");
+    let rc = null;
+    for (let i = 0; i < 60 && !rc; i++) { if (i) await new Promise((res) => setTimeout(res, 3000)); rc = await b.provider.getTransactionReceipt(hash).catch(() => null); }
+    if (rc && rc.status !== 1) { log(t("txFailed"), "line-err"); return false; }
+    if (rc) { block = rc.blockNumber; const url = getExplorerUrl(net(), "/tx/", hash); if (url) log(url, "line-dim"); }
+    else log(t("noReceipt"), "line-warn");
+  } else log(t("sentNoHash"), "line-warn");
+  // Without a receipt: the latest block, a few times, until the change shows (a relayed transaction may land later).
+  let problems = ["not read"];
+  for (let i = 0; i < 8 && problems.length; i++) {
+    if (i) await new Promise((res) => setTimeout(res, block ? 1500 : 5000));
+    try {
+      const tag = block || Math.max(startBlock + 1, await b.provider.getBlockNumber());
+      problems = await verify({ blockTag: tag });
+      if (!problems.length) seen = { key: `${b.chainId}:${b.up}`, block: tag };
+    } catch (e) { problems = [e.shortMessage || e.message]; }
+  }
+  return problems;
+}
+function explain(e) {
+  if (e && (e.code === "ACTION_REJECTED" || e.code === 4001)) log(t("cancelled"), "line-warn");
+  else log(t("error", { err: e.shortMessage || e.message || String(e) }), "line-err");
+}
+
+// ---- authorize a device ----
+let linkAddr = null;
+const fromLink = () => { const v = $("deviceAddress").value.trim(); return !!linkAddr && ethers.isAddress(v) && ethers.getAddress(v) === linkAddr; };
+function syncLink() { const f = fromLink(); $("linkRow").hidden = !f; if (!f) $("linkAck").checked = false; }
+$("deviceAddress").addEventListener("input", syncLink);
+$("addDeviceBtn").addEventListener("click", async () => {
+  if (busy) return;
+  separator();
+  setBusy(true);
+  try {
+    const raw = $("deviceAddress").value.trim();
+    if (!ethers.isAddress(raw) || BigInt(raw) === 0n) { log(t("badAddr"), "line-err"); return; }
+    // An address from a link is someone else's until the owner compares it with the app (AUDIT 2026-10-26 PK-1).
+    if (fromLink() && !$("linkAck").checked) { log(t("linkAckNeeded"), "line-err"); return; }
+    const b = await fresh();
+    if (!b) return;
+    const dev = ethers.getAddress(raw);
+    if ([b.up, b.km, BK.ENTRY_POINT, LSP1_DELEGATE].map((x) => x.toLowerCase()).includes(dev.toLowerCase()) || dev.toLowerCase() === b.r.urd) { log(t("systemAddr"), "line-err"); return; }
+    const listed = b.r.controllers.find((c) => c.address === dev);
+    if (listed && isAdmin(listed)) { log(t("isAdmin"), "line-err"); return; }
+    const upData = new ethers.Contract(b.up, UP_DATA_IFACE, b.provider);
+    const [existing] = await upData.getDataBatch([BK.permKey(dev)]);
+    if ((existing && existing !== "0x" && BigInt(existing) !== 0n) || listed) { log(t("already"), "line-err"); return; }
+    if ((await b.provider.getCode(dev)) !== "0x") { log(t("contractAddr"), "line-err"); return; }
+    const perms = ethers.zeroPadValue(ethers.toBeHex(DEVICE_PERMS), 32);
+    const keys = [BK.ARRAY_KEY, BK.indexKey(b.r.len), BK.permKey(dev), BK.dataKeysKey(dev)];
+    const vals = [ethers.toBeHex(b.r.len + 1, 16), dev, perms, DEVICE_DATA_KEYS];
+    const name = BK.cleanName($("deviceName").value), nameVal = BK.nameValue(name);
+    if (name) { keys.push(BK.nameKey(dev)); vals.push(nameVal); }
+    log(t("planDevice", { km: b.km, len: b.r.len, len1: b.r.len + 1, dev, perms: permHex(DEVICE_PERMS), names: permNames(DEVICE_PERMS) }) + (name ? "\n" + t("planNameLine", { name }) : ""), "line-dim");
+    const problems = await send(b, keys, vals, async (at) => {
+      const [p, dk, lenRaw, item, nm] = await upData.getDataBatch([BK.permKey(dev), BK.dataKeysKey(dev), BK.ARRAY_KEY, BK.indexKey(b.r.len), BK.nameKey(dev)], at);
+      const out = [];
+      if (name && String(nm).toLowerCase() !== nameVal.toLowerCase()) out.push(`name ${nm}`);
+      if (String(p).toLowerCase() !== perms.toLowerCase()) out.push(`permissions ${p}`);
+      if (String(dk).toLowerCase() !== DEVICE_DATA_KEYS.toLowerCase()) out.push(`allowed data keys ${dk}`);
+      if (BigInt(lenRaw || "0x0") !== BigInt(b.r.len + 1)) out.push(`list length ${lenRaw}`);
+      if (String(item).toLowerCase() !== dev.toLowerCase()) out.push(`list entry ${item}`);
+      if (!out.length) out.push(...await stillListed(b, at, null));
+      return out;
+    });
+    if (problems === false) return;
+    log(problems.length ? t("verifyBad", { what: problems.join(", ") }) : t("deviceOk", { addr: dev }), problems.length ? "line-warn" : "line-ok");
+    if (!problems.length) { $("deviceAddress").value = ""; $("deviceName").value = ""; linkAddr = null; syncLink(); }
+    await readState();
+  } catch (e) { explain(e); } finally { setBusy(false); }
+});
+
+// ---- a controller's name ----
+$("nameBtn").addEventListener("click", async () => {
+  if (busy) return;
+  separator();
+  const chosen = $("nameSelect").value;
+  if (!chosen) return;
+  setBusy(true);
+  try {
+    const b = await fresh();
+    if (!b) return;
+    const target = b.r.controllers.find((c) => c.role === "controller" && c.address === chosen);
+    if (!target) { log(t("changedRead"), "line-err"); return; }
+    const name = BK.cleanName($("nameInput").value), val = BK.nameValue(name);
+    const upData = new ethers.Contract(b.up, UP_DATA_IFACE, b.provider);
+    const [cur] = await upData.getDataBatch([BK.nameKey(target.address)]);
+    if (String(cur || "0x").toLowerCase() === val.toLowerCase()) { log(t("nameSame"), "line-warn"); return; }
+    const shown = name || t("nameCleared");
+    log(t("planName", { km: b.km, addr: target.address, name: shown }), "line-dim");
+    const problems = await send(b, [BK.nameKey(target.address)], [val], async (at) => {
+      const [nm] = await upData.getDataBatch([BK.nameKey(target.address)], at);
+      return String(nm || "0x").toLowerCase() === val.toLowerCase() ? [] : [`name ${nm}`];
+    });
+    if (problems === false) return;
+    log(problems.length ? t("verifyBad", { what: problems.join(", ") }) : t("nameOk", { addr: target.address, name: shown }), problems.length ? "line-warn" : "line-ok");
+    await readState();
+  } catch (e) { explain(e); } finally { setBusy(false); }
+});
+
+// ---- remove a device (never an admin) ----
+$("removeBtn").addEventListener("click", async () => {
+  if (busy) return;
+  separator();
+  if (!$("removeAck").checked) { log(t("ackRequired"), "line-err"); return; }
+  const chosen = $("removeSelect").value;
+  if (!chosen) { log(t("pickRemove"), "line-err"); return; }
+  setBusy(true);
+  try {
+    const b = await fresh();
+    if (!b) return;
+    const target = b.r.controllers.find((c) => c.role === "controller" && c.address === chosen);
+    // Read again just now: still a controller, and still not an admin.
+    if (!target || isAdmin(target)) { log(t("changedRead"), "line-err"); return; }
+    const last = b.r.len - 1;
+    const lastEntry = b.r.controllers[last];
+    if (!lastEntry || !lastEntry.address) { log(t("changedRead"), "line-err"); return; }
+    const upData = new ethers.Contract(b.up, UP_DATA_IFACE, b.provider);
+    const [calls, dataKeys, nameRaw] = await upData.getDataBatch([BK.callsKey(target.address), BK.dataKeysKey(target.address), BK.nameKey(target.address)]);
+    // Out of AddressPermissions[]: the last entry moves into the removed slot, the list is one shorter.
+    const keys = [], vals = [];
+    if (target.index !== last) { keys.push(BK.indexKey(target.index)); vals.push(lastEntry.address); }
+    keys.push(BK.indexKey(last), BK.ARRAY_KEY, BK.permKey(target.address));
+    vals.push("0x", ethers.toBeHex(last, 16), "0x");
+    let cleared = false;
+    if (calls && calls !== "0x") { keys.push(BK.callsKey(target.address)); vals.push("0x"); cleared = true; }
+    if (dataKeys && dataKeys !== "0x") { keys.push(BK.dataKeysKey(target.address)); vals.push("0x"); cleared = true; }
+    const hadName = !!(nameRaw && nameRaw !== "0x");
+    if (hadName) { keys.push(BK.nameKey(target.address)); vals.push("0x"); }
+    log(t("planRemove", { km: b.km, target: target.address, index: target.index, len: b.r.len, len1: last,
+      moved: target.index !== last ? t("planMoved", { addr: lastEntry.address }) : "", extra: (cleared ? t("planClear") : "") + (hadName ? t("planNameClear") : "") }), "line-dim");
+    const problems = await send(b, keys, vals, async (at) => {
+      const [p, lenRaw, nm] = await upData.getDataBatch([BK.permKey(target.address), BK.ARRAY_KEY, BK.nameKey(target.address)], at);
+      const len = Number(BigInt(lenRaw || "0x0"));
+      const list = len > 0 && len <= 50 ? await upData.getDataBatch(Array.from({ length: len }, (_, k) => BK.indexKey(k)), at) : [];
+      const out = [];
+      if (p && p !== "0x") out.push(`permissions ${p}`);
+      if (hadName && nm && nm !== "0x") out.push(`name ${nm}`);
+      if (len !== last) out.push(`list length ${len}`);
+      if (list.some((v) => v && v.toLowerCase() === target.address.toLowerCase())) out.push("still listed");
+      if (!out.length) out.push(...await stillListed(b, at, target.address));
+      return out;
+    });
+    if (problems === false) return;
+    log(problems.length ? t("verifyBad", { what: problems.join(", ") }) : t("removeOk", { addr: target.address }), problems.length ? "line-warn" : "line-ok");
+    $("removeAck").checked = false;
+    await readState();
+  } catch (e) { explain(e); } finally { setBusy(false); }
+});
+
+$("copyLog").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($("log").innerText); $("copyLog").textContent = t("copiedLog"); } catch (e) { /* select by hand */ }
+  setTimeout(() => { $("copyLog").textContent = t("copyLogBtn"); }, 1500);
+});
+
+// Links from UP Wallet's panels "This computer" / "This phone": ?network=lukso&phone=<the device key>&device=computer|phone
+{
+  const q = new URLSearchParams(location.search);
+  const n = q.get("network");
+  if (n && NETS.some((x) => x.key === n)) netSel.value = n;
+  const p = q.get("phone");
+  if (p && ethers.isAddress(p)) {
+    linkAddr = ethers.getAddress(p);
+    $("deviceAddress").value = linkAddr;
+    const kind = q.get("device");
+    if (kind === "computer" || kind === "phone") $("deviceName").value = t(kind === "computer" ? "deviceComputer" : "devicePhone");
+  }
+  syncLink();
+}
+
+applyI18n();
+updateButtons();
+SiteUI.clampNotes();
+</script>
+
+</body>
+</html>
