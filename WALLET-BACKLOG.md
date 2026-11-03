@@ -49,9 +49,9 @@ item when its PR (or, for the app, its release) is done.
      EntryPoints other than v0.6; an EIP-7702 authorization cannot be produced), then asks for the
      fingerprint;
    - the native plugin signs only for the signing window, no longer for the page.
-   A structural change: prototype, tests on the phone, then a review by two providers before the release
-   (`AUDIT.md`, review policy). Made alone, in a release of its own, so the previous version stays an
-   easy way back (decided 2026-11-01).
+   Made in app 0.10.0 (2026-11-03), released with page 0.14.0 and extension 0.1.9; app 0.9.8 stays the
+   way back. A structural change: tests on the phone, the release, then the review by two providers right
+   after it, its gaps fixed in a patch (`AUDIT.md`, review policy, decided 2026-11-03).
 
 4. **On LUKSO, the panel's link to the new authorization page** (2026-11-03). The panels "This computer"
    (extension) and "This phone" (app) link to the Backup page (`up-backup.html?phone=…&device=…`), which
@@ -59,26 +59,6 @@ item when its PR (or, for the app, its release) is done.
    (it reads `?network=lukso|lukso-testnet&phone=&device=`), signed with LUKSO's own wallet, as the
    onboarding guide (https://www.chainintegrate.it/onboarding-lukso.html) says; the Backup page stays the link on the other networks.
    Until then, the onboarding guide says to copy the key's address from the panel.
-
-5. **Supplier Trust Registry decoded in plain words, on LUKSO** (2026-11-03). Its site is getting the
-   WalletConnect connection (in its own repository), so its calls will reach UP Wallet. Today they are
-   decoded from the ABI verified on LUKSO's Blockscout (function and parameter names), not explained. A
-   decoder as for the Traceability Registry, at the registry's address only (`SupplierRegistry` V3, mainnet
-   `0xFa143308D85b81Ed57547049F4A7718c3117A064`; testnet V1 `0x325f6f9790409DB689cf976BcEEa621DE0606C7C`,
-   to check before adding), from its public source (github.com/ChainIntegrate/supplier-trust-registry,
-   `contracts/SupplierRegistry-v3.sol`):
-   - `mintRegistry(label)`: create a supplier registry (an LSP8 token of the UP);
-   - `defineSchema(tokenId, paramNames, min, max)`: the evaluation criteria and their scale;
-   - `addSupplier(tokenId, nameHash, nameUri, isNamePublic)`: add a supplier, its name public or not;
-   - `addEvaluation(tokenId, supplierId, schemaVersion, contentHash, uri, isPublic, supersedes)`: record an
-     evaluation (public or private; a correction when `supersedes` is set, the earlier one stays);
-   - `discloseEvaluation(tokenId, supplierId, evaluationId, disclosureUri, disclosureHash)`: show a private
-     evaluation to someone (say it cannot be taken back);
-   - `proposeSuccessor` / `confirmSuccessor`: move a registry to a new token (in red: a change of holder);
-   - `setRegistryImage(tokenId, uri, hash)`: the registry's image.
-   With the registry's label read from the chain and whether the UP holds the registry token
-   (`onlyRegistryOwner`), as the Traceability decoder says holder or delegate. The admin functions
-   (`addMembershipContract`, `removeMembershipContract`, `setTierLimits`) only for the contract's owner.
 
 ## Other pages
 
@@ -89,5 +69,5 @@ item when its PR (or, for the app, its release) is done.
    and "Remove the device" not tried live, taken as covered (maintainer, 2026-11-03): they write the same
    keys and values as the Backup page, tested live there, and go through the same sending path as the
    authorization, tested live here (removal needs EDITPERMISSIONS, which the admin key has; without it the
-   simulation fails before anything is sent). Still to do: before proposing it to other companies, the
-   review by two providers (`AUDIT.md`, review policy): it is a new way of changing the controllers.
+   simulation fails before anything is sent). Still to do: the review by two providers (`AUDIT.md`,
+   review policy), with the release's: it is a new way of changing the controllers.
