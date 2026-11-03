@@ -65,6 +65,9 @@ item when its PR (or, for the app, its release) is done.
 1. **The LUKSO authorization page: live tests, then the review** (2026-11-03). `up-authorize-lukso.html`
    was tested against a fake LUKSO node (25/25). Live, on the work UP: a device authorized with LUKSO's
    Universal Profile extension and one with the Universal Profiles app (WalletConnect), both 2026-11-03;
-   the recovery key (ADDCONTROLLER only) identified and kept out of the removable devices. Still to do:
-   "Save the name" and "Remove the device" on a test key. Then, before proposing it to other companies,
-   the review by two providers (`AUDIT.md`, review policy): it is a new way of changing the controllers.
+   the recovery key (ADDCONTROLLER only) identified and kept out of the removable devices. "Save the name"
+   and "Remove the device" not tried live, taken as covered (maintainer, 2026-11-03): they write the same
+   keys and values as the Backup page, tested live there, and go through the same sending path as the
+   authorization, tested live here (removal needs EDITPERMISSIONS, which the admin key has; without it the
+   simulation fails before anything is sent). Still to do: before proposing it to other companies, the
+   review by two providers (`AUDIT.md`, review policy): it is a new way of changing the controllers.
