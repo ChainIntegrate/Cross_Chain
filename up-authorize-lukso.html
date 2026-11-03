@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-AMMuEaM/d3oyxIDG9zTj5C1TWZknT+X3r++/o76/zTM='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-eps+3ocMbnSLf5OgIR2DNrzsdMmCDff1QlTqF3xKwhI='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
@@ -197,7 +197,7 @@ const I18N = {
     whyAdmin: "Può firmare qualsiasi operazione e aggiungere o togliere controller: di solito è la chiave del wallet ufficiale.",
     whyLimited: "Può fare solo quello che dicono i suoi permessi: non gestisce gli altri controller.",
     roleMgmt: "gestione della UP",
-    whyMgmt: "Ha almeno un permesso di gestione della UP (per esempio aggiungere controller): può essere una chiave messa da un wallet o da un sistema di recupero. Non è un dispositivo: questa pagina non lo tocca.",
+    whyMgmt: "Ha almeno un permesso di gestione della UP. Una chiave con il solo permesso di aggiungere controller (ADDCONTROLLER) è di solito la chiave di recupero del profilo, impostata dall'estensione di LUKSO (\"recovery\"): se perdi la chiave dell'estensione, è lei che aggiunge quella nuova. Non è un dispositivo: questa pagina non la tocca, e non va tolta.",
     whyEp: "Usato dal gas pagato dal sito: esegue le operazioni firmate da un tuo controller.",
     whyUrd: "Tiene aggiornata la lista dei token e NFT LUKSO che la UP riceve. Non firma e non sposta fondi.",
     nameShown: (v) => `Nome: ${v.name}`,
@@ -300,7 +300,7 @@ const I18N = {
     whyAdmin: "It can sign any operation and add or remove controllers: usually the official wallet's key.",
     whyLimited: "It can only do what its permissions say: it does not manage the other controllers.",
     roleMgmt: "manages the UP",
-    whyMgmt: "It holds at least one permission that manages the UP (for example adding controllers): it may be a key set up by a wallet or by a recovery system. It is not a device: this page leaves it alone.",
+    whyMgmt: "It holds at least one permission that manages the UP. A key that can only add controllers (ADDCONTROLLER) is usually the profile's recovery key, set up by LUKSO's extension (\"recovery\"): if you lose the extension's key, it is the one that adds a new one. It is not a device: this page leaves it alone, and it should not be removed.",
     whyEp: "Used by the gas paid by the site: it runs the operations one of your controllers signed.",
     whyUrd: "It keeps the list of LUKSO tokens and NFTs the UP receives up to date. It does not sign and does not move funds.",
     nameShown: (v) => `Name: ${v.name}`,
