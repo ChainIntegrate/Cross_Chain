@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-Sdn7T3TAepdDMjAvwkUNTzXeV1k5epcD6iBdkgWavbM='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-AMMuEaM/d3oyxIDG9zTj5C1TWZknT+X3r++/o76/zTM='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
@@ -191,11 +191,13 @@ const I18N = {
     rpcMismatch: (v) => `❌ L'RPC risponde con chainId ${v.got}, non ${v.want}.`,
     notDeployed: (v) => `❌ Su questa rete all'indirizzo ${v.up} non c'è una Universal Profile.`,
     rpcBehind: (v) => `L'RPC è ancora al blocco ${v.head}, prima della tua ultima modifica (blocco ${v.block}): riprova tra qualche secondo.`,
-    summary: (v) => `${v.n} controller su ${v.net}: ${v.admins} amministrator${v.admins === 1 ? "e" : "i"}, ${v.devices} con permessi limitati.`,
+    summary: (v) => `${v.n} controller su ${v.net}: ${v.admins} amministrator${v.admins === 1 ? "e" : "i"}${v.mgmt ? `, ${v.mgmt} di gestione della UP` : ""}, ${v.devices} con permessi limitati.`,
     summaryNoAdmin: "⚠️ Nessun controller amministratore trovato: questa pagina non può autorizzare dispositivi su questa UP.",
     roleAdmin: "amministratore", roleLimited: "permessi limitati", roleEp: "EntryPoint (gas pagato dal sito)", roleUrd: "Universal Receiver Delegate", roleBad: "voce non valida",
     whyAdmin: "Può firmare qualsiasi operazione e aggiungere o togliere controller: di solito è la chiave del wallet ufficiale.",
     whyLimited: "Può fare solo quello che dicono i suoi permessi: non gestisce gli altri controller.",
+    roleMgmt: "gestione della UP",
+    whyMgmt: "Ha almeno un permesso di gestione della UP (per esempio aggiungere controller): può essere una chiave messa da un wallet o da un sistema di recupero. Non è un dispositivo: questa pagina non lo tocca.",
     whyEp: "Usato dal gas pagato dal sito: esegue le operazioni firmate da un tuo controller.",
     whyUrd: "Tiene aggiornata la lista dei token e NFT LUKSO che la UP riceve. Non firma e non sposta fondi.",
     nameShown: (v) => `Nome: ${v.name}`,
@@ -214,7 +216,7 @@ const I18N = {
     nameBtn: "Salva il nome",
     nameNone: "Nessun controller",
     removeDivider: "— oppure, togli un dispositivo —",
-    removeNote: "Solo i controller con permessi limitati: un amministratore (la chiave del wallet ufficiale o un backup) qui non si può togliere, così non resti chiuso fuori per errore. Per gli amministratori usa la pagina Controller di backup.",
+    removeNote: "Solo i controller con permessi limitati: un amministratore (la chiave del wallet ufficiale o un backup) o una chiave con permessi di gestione qui non si può togliere, così non resti chiuso fuori per errore. Per gli amministratori usa la pagina Controller di backup.",
     removeLabel: "Dispositivo da togliere",
     removeNone: "Nessun dispositivo da togliere",
     removeAck: "Confermo: questo dispositivo è perso o non mi serve più. Prima ho mandato alla UP il saldo della sua chiave, se potevo.",
@@ -292,11 +294,13 @@ const I18N = {
     rpcMismatch: (v) => `❌ The RPC answers with chainId ${v.got}, not ${v.want}.`,
     notDeployed: (v) => `❌ On this network there is no Universal Profile at ${v.up}.`,
     rpcBehind: (v) => `The RPC is still at block ${v.head}, before your last change (block ${v.block}): try again in a few seconds.`,
-    summary: (v) => `${v.n} controller(s) on ${v.net}: ${v.admins} admin(s), ${v.devices} with limited permissions.`,
+    summary: (v) => `${v.n} controller(s) on ${v.net}: ${v.admins} admin(s)${v.mgmt ? `, ${v.mgmt} managing the UP` : ""}, ${v.devices} with limited permissions.`,
     summaryNoAdmin: "⚠️ No admin controller found: this page cannot authorize devices on this UP.",
     roleAdmin: "admin", roleLimited: "limited permissions", roleEp: "EntryPoint (gas paid by the site)", roleUrd: "Universal Receiver Delegate", roleBad: "invalid entry",
     whyAdmin: "It can sign any operation and add or remove controllers: usually the official wallet's key.",
     whyLimited: "It can only do what its permissions say: it does not manage the other controllers.",
+    roleMgmt: "manages the UP",
+    whyMgmt: "It holds at least one permission that manages the UP (for example adding controllers): it may be a key set up by a wallet or by a recovery system. It is not a device: this page leaves it alone.",
     whyEp: "Used by the gas paid by the site: it runs the operations one of your controllers signed.",
     whyUrd: "It keeps the list of LUKSO tokens and NFTs the UP receives up to date. It does not sign and does not move funds.",
     nameShown: (v) => `Name: ${v.name}`,
@@ -315,7 +319,7 @@ const I18N = {
     nameBtn: "Save the name",
     nameNone: "No controllers",
     removeDivider: "— or, remove a device —",
-    removeNote: "Only controllers with limited permissions: an admin (the official wallet's key or a backup) cannot be removed here, so you cannot lock yourself out by mistake. For admins use the Backup controller page.",
+    removeNote: "Only controllers with limited permissions: an admin (the official wallet's key or a backup) or a key with management permissions cannot be removed here, so you cannot lock yourself out by mistake. For admins use the Backup controller page.",
     removeLabel: "Device to remove",
     removeNone: "No device to remove",
     removeAck: "I confirm: this device is lost or I no longer need it. I sent its key's balance to the UP first, if I could.",
@@ -426,7 +430,12 @@ function setStatus(id, text, cls) {
   const d = document.createElement("div"); d.className = cls || ""; d.style.whiteSpace = "pre-wrap"; d.textContent = text; el.appendChild(d);
 }
 const isAdmin = (c) => (c.perms & BK.ADMIN) === BK.ADMIN;
-const devices = () => (st ? st.r.controllers.filter((c) => c.role === "controller" && !isAdmin(c)) : []);
+// Any permission that manages the UP itself: CHANGEOWNER, ADDCONTROLLER, EDITPERMISSIONS, the extensions and the
+// Universal Receiver Delegates. A controller holding one of them is part of the UP's management (an admin, or a
+// key a wallet or a recovery set up, e.g. ADDCONTROLLER alone): never a device, never removable on this page.
+const MANAGE = 0x7fn;
+const manages = (c) => (c.perms & MANAGE) !== 0n;
+const devices = () => (st ? st.r.controllers.filter((c) => c.role === "controller" && !manages(c)) : []);
 function updateButtons() {
   const ok = !busy && !!wallet && !!st && st.r.admins.length > 0;
   $("addDeviceBtn").disabled = !ok;
@@ -530,7 +539,7 @@ function render() {
   if (!st) return;
   const { r } = st;
   const ctrls = r.controllers.filter((c) => c.role === "controller");
-  setStatus("readStatus", r.admins.length ? t("summary", { n: ctrls.length, net: st.netName, admins: r.admins.length, devices: ctrls.filter((c) => !isAdmin(c)).length }) : t("summaryNoAdmin"), r.admins.length ? "line-ok" : "line-err");
+  setStatus("readStatus", r.admins.length ? t("summary", { n: ctrls.length, net: st.netName, admins: r.admins.length, devices: ctrls.filter((c) => !manages(c)).length, mgmt: ctrls.filter((c) => manages(c) && !isAdmin(c)).length }) : t("summaryNoAdmin"), r.admins.length ? "line-ok" : "line-err");
   const box = $("ctrlList");
   box.innerHTML = "";
   r.controllers.forEach((c) => {
@@ -541,7 +550,7 @@ function render() {
     if (nm) { const d = document.createElement("div"); d.style.cssText = "font-weight:600; margin-top:2px; overflow-wrap:anywhere;"; d.textContent = t("nameShown", { name: nm }); card.appendChild(d); }
     const role = document.createElement("div"); role.style.marginTop = "4px";
     const [cls, label, why] = c.role === "entrypoint" ? ["ok", t("roleEp"), t("whyEp")] : c.role === "urd" ? ["ok", t("roleUrd"), t("whyUrd")]
-      : c.role === "malformed" ? ["err", t("roleBad"), ""] : isAdmin(c) ? ["err", t("roleAdmin"), t("whyAdmin")] : ["warn", t("roleLimited"), t("whyLimited")];
+      : c.role === "malformed" ? ["err", t("roleBad"), ""] : isAdmin(c) ? ["err", t("roleAdmin"), t("whyAdmin")] : manages(c) ? ["err", t("roleMgmt"), t("whyMgmt")] : ["warn", t("roleLimited"), t("whyLimited")];
     const b = document.createElement("span"); b.className = "badge " + cls; b.textContent = label; role.appendChild(b);
     const w = document.createElement("div"); w.style.cssText = "font-size:12.5px; margin-top:6px; line-height:1.5;"; w.textContent = why;
     const f = document.createElement("div"); f.className = "flags"; f.textContent = `${permHex(c.perms)} — ${permNames(c.perms)}`;
@@ -733,7 +742,7 @@ $("removeBtn").addEventListener("click", async () => {
     if (!b) return;
     const target = b.r.controllers.find((c) => c.role === "controller" && c.address === chosen);
     // Read again just now: still a controller, and still not an admin.
-    if (!target || isAdmin(target)) { log(t("changedRead"), "line-err"); return; }
+    if (!target || manages(target)) { log(t("changedRead"), "line-err"); return; }
     const last = b.r.len - 1;
     const lastEntry = b.r.controllers[last];
     if (!lastEntry || !lastEntry.address) { log(t("changedRead"), "line-err"); return; }
