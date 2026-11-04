@@ -37,6 +37,13 @@ item when its PR (or, for the app, its release) is done.
    page 0.14.0, and the LUKSO authorization page (`up-authorize-lukso.html`). The gaps found go in a patch
    release; app 0.9.8 and extension 0.1.8 stay the way back. App 0.10.0 tested live on the phone by the
    maintainer on 2026-11-03: it works. Extension 0.1.9: its live test to come.
+4. **With "Simulation only" on, a message signature says it is real** (2026-11-04, from a user on
+   hup.social: with simulation on, three signatures and a post, asked whether simulation works).
+   Simulation applies to transactions only; message signatures (personal_sign, typed data) cannot be
+   simulated and are always real, as the note under the checkbox says, but easy to miss. When the
+   checkbox is on, the request window of a signature shows at the top a line such as "Simulation does not
+   apply to signatures: this one is real, and signed only if you press Sign the message", in both
+   languages. The page only (the app and the extension take it with the page).
 
 ## Other pages
 
