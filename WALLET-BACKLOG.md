@@ -37,6 +37,10 @@ item when its PR (or, for the app, its release) is done.
    page 0.14.0, and the LUKSO authorization page (`up-authorize-lukso.html`). The gaps found go in a patch
    release; app 0.9.8 and extension 0.1.8 stay the way back. App 0.10.0 tested live on the phone by the
    maintainer on 2026-11-03: it works. Extension 0.1.9 tested live on 2026-11-04: as expected.
+   **Review done on 2026-11-04** (Claude, in depth, with local reproductions; Codex, lighter, no test run),
+   on the app, the extension, the site and the signing service. The findings are with the maintainer and
+   stay private until fixed (`AUDIT.md`: the summary is published with the fixes); the fixes go in the next
+   batches, each listed here when it is made.
 4. **With "Simulation only" on, a message signature says it is real** (2026-11-04, from a user on
    hup.social: with simulation on, three signatures and a post, asked whether simulation works).
    Simulation applies to transactions only; message signatures (personal_sign, typed data) cannot be
@@ -76,8 +80,9 @@ item when its PR (or, for the app, its release) is done.
    type, a one-line verdict from the worst one, e.g. "✅ Conforme ai controlli del wallet: nessun avviso" /
    "⚠️ Da controllare: <the first warning>" / "🛑 Pericolo: <the first danger>", in both languages; the
    details stay below. Never "sicuro" / "safe": the wallet says what its checks found, not that a request is
-   safe. A request the page cannot decode at all is never "conforme". The page only; the app and the
-   extension take it with the page.
+   safe. A request the page cannot decode at all is never "conforme"; nor is one whose site WalletConnect
+   could not verify (validation not VALID), or whose calls are shown only by their function selector: those
+   are at most "Da controllare". The page only; the app and the extension take it with the page.
 
 ## Other pages
 
@@ -88,5 +93,7 @@ item when its PR (or, for the app, its release) is done.
    and "Remove the device" not tried live, taken as covered (maintainer, 2026-11-03): they write the same
    keys and values as the Backup page, tested live there, and go through the same sending path as the
    authorization, tested live here (removal needs EDITPERMISSIONS, which the admin key has; without it the
-   simulation fails before anything is sent). Still to do: the review by two providers (`AUDIT.md`,
-   review policy), with the release's: it is a new way of changing the controllers.
+   simulation fails before anything is sent). Reviewed with the release on 2026-11-04: no logic error
+   found. Three small changes to make: the "public, no personal data" note next to the device name (as on
+   the Backup page), the `chainId` in its transaction (as on every other page), and a stronger check of an
+   address that comes from a link than the tick box.
