@@ -84,6 +84,15 @@ item when its PR (or, for the app, its release) is done.
    could not verify (validation not VALID), or whose calls are shown only by their function selector: those
    are at most "Da controllare". The page only; the app and the extension take it with the page.
 
+8. **The review of 2026-11-04: what to change, per repository** (decided by the maintainer item by item;
+   the ones that are not serious may stay open). The full reports are private until the fixes are
+   released; then `AUDIT.md` gets the public summary, with the 2026-10-29 Codex one.
+   - Cross_Chain (site, page, relayer): [tools/audits/2026-11-04-review.md](tools/audits/2026-11-04-review.md);
+   - extension: `up-wallet-extension/audits/2026-11-04-review.md`;
+   - app: `up-wallet-android/audits/2026-11-04-review.md`;
+   - signing service (private): `cross-chain-sponsor/audits/2026-11-04-review.md`.
+   Items 6 and 7 above and the LUKSO page's three changes (Other pages, 1) are part of it.
+
 ## Other pages
 
 1. **The LUKSO authorization page: live tests, then the review** (2026-11-03). `up-authorize-lukso.html`
