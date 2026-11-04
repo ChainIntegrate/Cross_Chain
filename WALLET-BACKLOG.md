@@ -70,6 +70,15 @@ item when its PR (or, for the app, its release) is done.
    - the READMEs say what the hash covers: the source file. What runs is an esbuild bundle with ethers; a
      reproducible build, to check the APK and the zip themselves, is a later step.
 
+7. **A verdict in large type at the top of the request window** (2026-11-04, from mrfunny: after a few
+   uses nobody reads the long text). The page already grades every note (`line-ok`, `line-warn`,
+   `line-danger`, in `requestNotes` and the rows' `warn` class): `showRequestModal` shows first, in large
+   type, a one-line verdict from the worst one, e.g. "✅ Conforme ai controlli del wallet: nessun avviso" /
+   "⚠️ Da controllare: <the first warning>" / "🛑 Pericolo: <the first danger>", in both languages; the
+   details stay below. Never "sicuro" / "safe": the wallet says what its checks found, not that a request is
+   safe. A request the page cannot decode at all is never "conforme". The page only; the app and the
+   extension take it with the page.
+
 ## Other pages
 
 1. **The LUKSO authorization page: live tests, then the review** (2026-11-03). `up-authorize-lukso.html`
