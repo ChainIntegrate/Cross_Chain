@@ -58,6 +58,18 @@ item when its PR (or, for the app, its release) is done.
      the checks per network, the site relayer's outstanding operations and the simulation must follow the
      new network, so it needs its own tests.
 
+6. **App and extension: the shared signing file pinned and checked** (2026-11-04, from aye_iye on
+   hup.social: "is the signing file pinned or hashed anywhere, so people can check the APK and the
+   extension really run the same code?"). Today `app/sign-plan.js` (app v0.10.0) and `ext/sign-plan.js`
+   (extension v0.1.9) are identical (SHA-256 `baf80c6032648b3865477fb651668a84f7f0d28e8e4b2dd48faa4cb7b320eee3`),
+   but nothing enforces it: the app's `test/signer.js` compares them only when the extension is checked
+   out next to it, so its CI skips the check. To do:
+   - the app's CI fetches the extension at a pinned commit (in `UPSTREAM.json`, next to Cross_Chain's) and
+     fails when the two files differ;
+   - both release notes print the file's SHA-256 (written by the release workflows, not by hand);
+   - the READMEs say what the hash covers: the source file. What runs is an esbuild bundle with ethers; a
+     reproducible build, to check the APK and the zip themselves, is a later step.
+
 ## Other pages
 
 1. **The LUKSO authorization page: live tests, then the review** (2026-11-03). `up-authorize-lukso.html`
