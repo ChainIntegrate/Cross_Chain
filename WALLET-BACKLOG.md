@@ -36,7 +36,7 @@ item when its PR (or, for the app, its release) is done.
    signing code; the plugin signs only for it), extension 0.1.9 (`ext/sign-plan.js`, shared with the app),
    page 0.14.0, and the LUKSO authorization page (`up-authorize-lukso.html`). The gaps found go in a patch
    release; app 0.9.8 and extension 0.1.8 stay the way back. App 0.10.0 tested live on the phone by the
-   maintainer on 2026-11-03: it works. Extension 0.1.9: its live test to come.
+   maintainer on 2026-11-03: it works. Extension 0.1.9 tested live on 2026-11-04: as expected.
 4. **With "Simulation only" on, a message signature says it is real** (2026-11-04, from a user on
    hup.social: with simulation on, three signatures and a post, asked whether simulation works).
    Simulation applies to transactions only; message signatures (personal_sign, typed data) cannot be
