@@ -44,15 +44,19 @@ item when its PR (or, for the app, its release) is done.
    checkbox is on, the request window of a signature shows at the top a line such as "Simulation does not
    apply to signatures: this one is real, and signed only if you press Sign the message", in both
    languages. The page only (the app and the extension take it with the page).
-5. **A dApp that offers only another network, then asks to switch to the page's** (2026-11-04, Tunnel,
-   https://www.tunnelapp.chat). Its WalletConnect proposal lists only Base (8453, optional) and, once
-   connected, it asks `wallet_switchEthereumChain` to LUKSO (42). The page keeps one network per session
-   and never switches on a dApp's request, so it is refused both ways: on Base the switch is refused and
-   the session closed; on LUKSO the proposal is refused (LUKSO not offered). To check first: whether
-   WalletConnect lets a wallet approve a session on a network the dApp did not list, and how Tunnel takes
-   it. If so: when the proposal does not list panel 1's network, approve it on that network all the same
-   (only where the UP exists there), saying so in the log; the dApp's switch to that same network is then
-   a no-op. Other dApps unchanged. With LUKSO's Universal Profile extension Tunnel connects.
+5. **Low priority: changing network inside a WalletConnect session** (2026-11-04). Today the page keeps
+   one network per session: a dApp's `wallet_switchEthereumChain` is refused and the session closed, so
+   moving between networks in a dApp (Morpho, Base to Arbitrum One) means connecting again. Two cases:
+   - *a dApp that offers only another network, then asks to switch to the page's* (Tunnel,
+     https://www.tunnelapp.chat: its proposal lists only Base, then it asks for LUKSO): to check whether
+     WalletConnect lets a wallet approve a session on a network the dApp did not list; if so, approve it
+     on panel 1's network (only where the UP exists there), saying so in the log. Tunnel itself no longer
+     needs it: the UP only links a Tunnel account at the start (done with LUKSO's extension);
+   - *a switch asked inside a session* (Morpho): instead of closing, the page asks the user, and on
+     confirmation changes panel 1's network and tells the dApp (`chainChanged`), only to networks where the
+     UP exists and that the session lists. It changes a choice of design (one UP, one network per session):
+     the checks per network, the site relayer's outstanding operations and the simulation must follow the
+     new network, so it needs its own tests.
 
 ## Other pages
 
