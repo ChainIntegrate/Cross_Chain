@@ -93,6 +93,20 @@ item when its PR (or, for the app, its release) is done.
    - signing service (private): `cross-chain-sponsor/audits/2026-11-04-review.md`.
    Items 6 and 7 above and the LUKSO page's three changes (Other pages, 1) are part of it.
 
+9. **Sign-in messages (SIWE, EIP-4361) laid out in the request window** (2026-11-04). Today a SIWE message
+   in `personal_sign` is shown as raw text; LUKSO's extension lays it out, with clickable links. Example to
+   reproduce: the sign-ins of Track & Trace (`traceability.chainintegrate.it`). When the content is a valid
+   EIP-4361 message:
+   - the statement shown first, as readable text;
+   - the fields in a table: site, account, network (Chain ID), issued at, expires at (when present);
+   - the "Resources" links clickable only when on the same domain as the connected site **and** that site
+     is verified by WalletConnect (Verify VALID), opened in a new tab; links to other domains stay text,
+     with a warning (phishing risk);
+   - the exact text always available under "Show the exact text": it is what is signed;
+   - no change to the existing checks (domain, controller, refusal of 32-byte hashes).
+   The page only; the app and the extension take it with the page. Together with item 7 (the verdict) and
+   CC-06 of the 2026-11-04 review (the "same site" tick only with Verify VALID).
+
 ## Other pages
 
 1. **The LUKSO authorization page: live tests, then the review** (2026-11-03). `up-authorize-lukso.html`
