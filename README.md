@@ -49,7 +49,6 @@ LUKSO's official wallet stays the admin, used rarely. It can be removed only aft
 | Start here: the step-by-step guide | [up-crosschain-guide.html](https://crosschain-lukso.chainintegrate.it/up-crosschain-guide.html) |
 | UP Wallet | [up-wallet.html](https://crosschain-lukso.chainintegrate.it/up-wallet.html) |
 | Onboarding for ChainIntegrate's services on LUKSO | [chainintegrate.it/onboarding-lukso.html](https://www.chainintegrate.it/onboarding-lukso.html) |
-| Create a Universal Profile on LUKSO for a client (the operator pays the gas; experimental) | [up-create.html](https://crosschain-lukso.chainintegrate.it/up-create.html) |
 | Authorize a device on LUKSO, with LUKSO's own wallet (no MetaMask) | [up-authorize-lukso.html](https://crosschain-lukso.chainintegrate.it/up-authorize-lukso.html) |
 | Backup controller, and authorizing a device (the app's phone key, the extension's computer key) on any network, with MetaMask | [up-backup.html](https://crosschain-lukso.chainintegrate.it/up-backup.html) |
 | Gas paid by the site: check a UP | [up-gas-relay.html](https://crosschain-lukso.chainintegrate.it/up-gas-relay.html) |
