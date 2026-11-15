@@ -137,8 +137,13 @@ item when its PR (or, for the app, its release) is done.
       with a red note: "BENQI sends AVAX with a gas-limited transfer that a Universal Profile cannot receive:
       the withdrawal fails from the UP. Send the qiAVAX to an ordinary address of yours and withdraw from
       there (no open loan on BENQI with this UP, or the transfer is refused)";
-    - the same warning in the deposit's note (`benqiMintNote`), so it is known before depositing.
-    The page only; the app and the extension take it with the page.
+    - the same warning in the deposit's note (`benqiMintNote`), so it is known before depositing;
+    - sAVAX (`0x2b2C…a4bE`): the unlock request `requestUnlock(uint256)` (`0xc9d2ff9d`, the sAVAX locked, about
+      15 days, then a 2-day window to redeem) and the redemption `redeem(uint256)` decoded. Whether the
+      redemption can pay a UP (how it sends the AVAX) was not checked: until it is, the note says to unstake
+      from an ordinary address (send the sAVAX there first), as the maintainer did on 2026-11-15.
+    The page only; the app and the extension take it with the page. Everything else used from the UP on
+    Avalanche on 2026-11-15 worked (Yield Yak, swaps; one WAVAX → AVAX swap done on LFJ for liquidity).
 
 ## Other pages
 
