@@ -140,8 +140,8 @@ item when its PR (or, for the app, its release) is done.
     - the same warning in the deposit's note (`benqiMintNote`), so it is known before depositing;
     - sAVAX (`0x2b2C…a4bE`): the unlock request `requestUnlock(uint256)` (`0xc9d2ff9d`, the sAVAX locked, about
       15 days, then a 2-day window to redeem) and the redemption `redeem(uint256)` decoded. Whether the
-      redemption can pay a UP (how it sends the AVAX) was not checked: until it is, the note says to unstake
-      from an ordinary address (send the sAVAX there first), as the maintainer did on 2026-11-15.
+      redemption can pay a UP (how it sends the AVAX) is not checked (maintainer's decision, 2026-11-15): the
+      note always says to unstake from an ordinary address (send the sAVAX there first), as he did.
     The page only; the app and the extension take it with the page. Everything else used from the UP on
     Avalanche on 2026-11-15 worked (Yield Yak, swaps; one WAVAX → AVAX swap done on LFJ for liquidity).
 
