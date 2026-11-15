@@ -107,6 +107,25 @@ item when its PR (or, for the app, its release) is done.
    The page only; the app and the extension take it with the page. Together with item 7 (the verdict) and
    CC-06 of the 2026-11-04 review (the "same site" tick only with Verify VALID).
 
+10. **The gas relay's worst case closer to the real cost** (2026-11-15). With a paymaster the EntryPoint
+    bounds an operation by (call gas + 3 × verification gas + preVerificationGas) × maximum fee, and the
+    paymaster refuses it above its cap per operation; the page checks the same before using the relayer
+    (`gas-relay-client.js`). Two of its values are wider than needed: the verification gas is a fixed
+    180,000 (`VERIFICATION_GAS`; times three, about three quarters of the total for a simple call), and the
+    maximum fee is twice the base fee plus the tip. On Avalanche, with gas around 20 nAVAX, an `approve` from
+    Yield Yak came to about 0.014 AVAX, above the cap of 0.01: every dApp needed gas on the controller until
+    the cap was raised to 0.03 (on chain and in the signing service, 2026-11-15). To do:
+    - the verification gas estimated per operation (a simulation of the UP's validation through the
+      EntryPoint), with a margin, instead of the fixed 180,000; the fixed value kept as the upper bound;
+    - the maximum fee at about 1.5 × the base fee plus the tip (the EntryPoint charges the effective price,
+      the maximum is only a ceiling; the relayer simulates before sending, so a fee that became too low only
+      means preparing the operation again);
+    - within the signing service's bounds (2026-11-04 SPN-01: a fee up to 3 × base fee + tip, a
+      verification gas up to 300,000), and with the relayer's preVerificationGas rule unchanged;
+    - tested on every served network (Base, Polygon, Arbitrum One, Avalanche, Arc): the page's operations still
+      run, and the worst case is about half of today's. The page only; the app and the extension take it with
+      the page.
+
 ## Other pages
 
 1. **The LUKSO authorization page: live tests, then the review** (2026-11-03). `up-authorize-lukso.html`
