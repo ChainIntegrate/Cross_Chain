@@ -126,6 +126,20 @@ item when its PR (or, for the app, its release) is done.
       run, and the worst case is about half of today's. The page only; the app and the extension take it with
       the page.
 
+11. **BENQI's lending market: the withdrawal decoded, and the UP warned before depositing** (2026-11-15).
+    The withdrawal of AVAX from qiAVAX (`0x5C04…Ef1c`, `redeemUnderlying(uint256)` `0x852a12e3`, and
+    `redeem(uint256)` `0xdb006a75`) showed as an unrecognised call; the page decodes only the deposit
+    (`mint()`). Its simulation from the UP failed: as in Compound, the market sends the AVAX with a transfer
+    limited to 2,300 gas, and a UP (a proxy contract, whose `receive` runs code) cannot take it. The
+    maintainer got the AVAX back by sending the qiAVAX to a MetaMask address and redeeming from there. To do,
+    in `describeBenqi`:
+    - `redeem` and `redeemUnderlying` decoded (the qiAVAX burnt, the AVAX asked, with the contract's own rate),
+      with a red note: "BENQI sends AVAX with a gas-limited transfer that a Universal Profile cannot receive:
+      the withdrawal fails from the UP. Send the qiAVAX to an ordinary address of yours and withdraw from
+      there (no open loan on BENQI with this UP, or the transfer is refused)";
+    - the same warning in the deposit's note (`benqiMintNote`), so it is known before depositing.
+    The page only; the app and the extension take it with the page.
+
 ## Other pages
 
 1. **The LUKSO authorization page: live tests, then the review** (2026-11-03). `up-authorize-lukso.html`
