@@ -263,7 +263,7 @@ Severity scale: **High** means funds can be lost or sent to the wrong place, or 
 
 ### I-02 — Guide screenshots show real addresses
 
-- **Files:** `guide-assets/step1-tx-details.png`, `step-genesis-link.png`, `step-connect-up.png`, `step3-controllers.png`, `step4-controller-match.png`
+- **Files:** `guide-assets/step1-tx-details.png`, `step-genesis-link.png`, `step4-controller-match.png` (and, until 2026-11-16, `step-connect-up.png` and `step3-controllers.png`: replaced by screenshots of the current Deploy tool with an example profile and an example controller, in Italian and English)
 - **Impact:** The screenshots show the ChainIntegrate profile, its controller EOA `0x9C8F…5C9c`, the paying wallet `0x6c5d…15c9` and the browser profile avatar. All the addresses belong to ChainIntegrate, which has chosen to be fully public about them, and they are public on-chain data anyway. The only side effect is that publishing the controller makes it a more obvious target for phishing attempts.
 - **Status:** ⏳ Accepted (deliberate choice of the maintainer)
 
