@@ -128,8 +128,8 @@
     <h3>Connect your UP to the Deploy tool</h3>
     <p>Open the <a href="up-deploy-public.html">Deploy tool</a> and click <b>Connect your Universal Profile</b> in panel 2. Approve the connection in the extension popup: this only reads your address, it never asks for a private key.</p>
     <p>The tool then does the rest by itself: it fills in your address as the "expected address", fetches your UP's <b>deployment calldata</b> (the original creation transaction, public on-chain data) from the LUKSO explorer, and checks that it produces exactly your address. Nothing to copy or paste.</p>
-    <img class="shot" src="guide-assets/step-connect-up.png" alt="Deploy tool showing the Universal Profile connected, with its address filled in automatically">
-    <div class="shot-caption">Once connected, your UP's address appears here — this is what the decoded calldata will be checked against.</div>
+    <img class="shot" src="guide-assets/step-connect-up-en.png" alt="Deploy tool, panel 2: the Universal Profile connected, its address filled in as the expected address, the calldata fetched from the LUKSO explorer and verified (example profile)">
+    <div class="shot-caption">Once connected, your UP's address appears here and the calldata is fetched and checked against it ("Calldata fetched from the LUKSO explorer and verified"). The screenshots use an example profile: yours shows your own address.</div>
     <details style="margin-top:14px;"><summary style="cursor:pointer; font-weight:600;">If the automatic fetch fails: find the calldata by hand</summary>
     <h4>Find your UP's original creation transaction</h4>
     <p>Open your UP's address on the <a href="https://explorer.execution.mainnet.lukso.network" target="_blank" rel="noopener noreferrer">LUKSO mainnet explorer</a>, on its <b>Details</b> tab. Find the <b>Creator</b> row — it shows the creator's address <i>"at txn"</i> followed by a transaction hash. Click that transaction hash link: it takes you straight to the creation transaction.</p>
@@ -154,7 +154,7 @@
   <div class="step-body">
     <h3>Check the controller</h3>
     <p>The calldata is filled in automatically after you connect (otherwise, paste the one you found by hand in step 2). It will show you the address this calldata predicts for your UP on any chain, and — critically — it will decode and display <i>every controller</i> named in the calldata, including which one gets <code>ALL_PERMISSIONS</code>.</p>
-    <img class="shot" src="guide-assets/step3-controllers.png" alt="Deploy tool showing the decoded controllers, one flagged as system infrastructure and one with ALL_PERMISSIONS">
+    <img class="shot" src="guide-assets/step3-controllers-en.png" alt="Deploy tool: the predicted address matches the expected one; the decoded controllers, one flagged as system infrastructure and one with ALL_PERMISSIONS (example profile)">
     <div class="shot-caption">The tool separates known system infrastructure (green) from the actual controller with <code>ALL_PERMISSIONS</code> (red) — that second one is what you need to hold the key for.</div>
     <div class="note">Compare the predicted address to your actual UP address on LUKSO. They must match exactly before you go any further. The tool already checks this and blocks a deploy that does not match: if they don't match, stop and re-check step 2.</div>
   </div>
@@ -175,7 +175,9 @@
   <div class="step-num">5</div>
   <div class="step-body">
     <h3>Deploy on the destination chain</h3>
-    <p>Still on the <a href="up-deploy-public.html">Deploy tool</a>: connect any wallet to pay gas (it does not need to be the controller — it only pays the transaction fee), select the destination network, and run the built-in checks. The tool verifies the predicted address again, checks nothing already exists there, estimates gas, and — after the transaction confirms — verifies the deployed bytecode matches exactly before calling it a success.</p>
+    <p>Still on the <a href="up-deploy-public.html">Deploy tool</a>: choose the destination network in panel 1, connect any wallet to pay gas in panel 3 (it does not need to be the controller — it only pays the transaction fee), then press <b>Verify</b> and <b>Deploy</b> in panel 4. The tool verifies the predicted address again, checks nothing already exists there, estimates gas, and — after the transaction confirms — verifies the deployed bytecode matches exactly before calling it a success.</p>
+    <img class="shot" src="guide-assets/step5-network-en.png" alt="Deploy tool, panel 1: the destination networks as buttons (Base selected), with a filter and a list for other networks or a custom RPC">
+    <div class="shot-caption">Panel 1: pick the destination network. Other networks, or your own RPC, are in the list below the buttons.</div>
   </div>
 </div>
 
@@ -183,7 +185,7 @@
   <div class="step-num">6</div>
   <div class="step-body">
     <h3>Operate your profile on the new chain</h3>
-    <p>Import the private key you extracted in step 1 into MetaMask (or your wallet of choice) — this is standard "import account" functionality in any wallet. From there, use the <a href="up-test-operazione.html">Test tool</a> to confirm the controller actually operates the profile — it writes a timestamp on-chain through the Key Manager and reads it back. Once that works, you can also use panel 6 of <a href="up-wallet.html">UP Wallet</a> to send native currency, tokens and NFTs from the profile to another address, signed by that same controller. The <a href="up-identity.html">Identity tool</a> shows the profile on that network next to LUKSO's and can align it (name, images, links) with one transaction.</p>
+    <p>Import the private key you extracted in step 1 into MetaMask (or your wallet of choice) — this is standard "import account" functionality in any wallet. From there, use the <a href="up-test-operazione.html">Test tool</a> to confirm the controller actually operates the profile — it writes a timestamp on-chain through the Key Manager and reads it back. Once that works, you can also use <b>Send</b> (panel 6) in <a href="up-wallet.html">UP Wallet</a> to send native currency, tokens and NFTs from the profile to another address, signed by that same controller. The <a href="up-identity.html">Identity tool</a> shows the profile on that network next to LUKSO's and can align it (name, images, links) with one transaction.</p>
     <div class="note danger">
       <b>Importing the key puts your whole profile inside that wallet.</b> The same key also controls your profile on LUKSO, so a compromise of this wallet is a compromise of the profile everywhere.
       <ul>
@@ -240,7 +242,7 @@
 </div>
 
 <div class="note">
-  <b>Sending currency, tokens and NFTs with UP Wallet (panel 6).</b> No dApp is needed: choose the network, enter the profile and connect MetaMask with the controller (panels 1–3); once the check is green, panel 6 sends from the profile.
+  <b>Sending currency, tokens and NFTs with UP Wallet (Send, panel 6).</b> No dApp is needed: in <b>Settings</b> choose the network, enter the profile and connect MetaMask with the controller (panels 1–3); once the check is green, <b>Send</b> sends from the profile.
   <ul>
     <li><b>Finding what the profile holds.</b> Panel 6 lists it by itself: the currency, the tokens and NFTs registered in the profile, and the others from an external index (Alchemy; Blockscout where Alchemy does not cover the network). Tap a row to choose it; for an NFT the IDs the profile holds appear as buttons. If something is missing, paste the contract address yourself: you find it on the network's explorer, on your profile's page (tokens or NFTs tab), or on the marketplace, together with the token ID. <i>All</i> fills in the whole balance.</li>
     <li><b>The list is only a shortcut.</b> Before the confirmation window, the page reads everything again from the chain: what the contract is (ERC-20, ERC-721, ERC-1155, LSP7, LSP8), your balance or the NFT's owner, and a simulation of the transfer. After the send it reads the result again. An index can be incomplete or late; the chain is what counts.</li>
@@ -386,8 +388,8 @@
     <h3>Connetti la tua UP allo strumento di Deploy</h3>
     <p>Apri la <a href="up-deploy-public.html">pagina di Deploy</a> e clicca <b>Connetti la tua Universal Profile</b> nel pannello 2. Approva la connessione nel popup dell'estensione: legge solo il tuo indirizzo, non chiede mai una chiave privata.</p>
     <p>Poi la pagina fa il resto da sola: compila il tuo indirizzo come "indirizzo atteso", recupera dall'explorer di LUKSO la <b>calldata di deploy</b> della tua UP (la transazione di creazione originale, dato pubblico on-chain) e controlla che produca esattamente il tuo indirizzo. Niente da copiare o incollare.</p>
-    <img class="shot" src="guide-assets/step-connect-up.png" alt="Strumento di Deploy con la Universal Profile connessa e l'indirizzo compilato automaticamente">
-    <div class="shot-caption">Una volta connesso, l'indirizzo della tua UP compare qui — è quello con cui verrà confrontata la calldata decodificata.</div>
+    <img class="shot" src="guide-assets/step-connect-up-it.png" alt="Pagina di Deploy, pannello 2: la Universal Profile connessa, il suo indirizzo compilato come indirizzo atteso, la calldata recuperata dall'explorer di LUKSO e verificata (profilo di esempio)">
+    <div class="shot-caption">Una volta connesso, l'indirizzo della tua UP compare qui e la calldata viene recuperata e confrontata con esso ("Calldata recuperata dall'explorer di LUKSO e verificata"). Le immagini usano un profilo di esempio: nella tua vedi il tuo indirizzo.</div>
     <details style="margin-top:14px;"><summary style="cursor:pointer; font-weight:600;">Se il recupero automatico non riesce: trova la calldata a mano</summary>
     <h4>Trova la transazione di creazione originale della tua UP</h4>
     <p>Apri l'indirizzo della tua UP sull'<a href="https://explorer.execution.mainnet.lukso.network" target="_blank" rel="noopener noreferrer">explorer di LUKSO mainnet</a>, nella scheda <b>Details</b>. Trova la riga <b>Creator</b> — mostra l'indirizzo del creatore <i>"at txn"</i> seguito da un hash di transazione. Clicca su quel link dell'hash: ti porta direttamente alla transazione di creazione.</p>
@@ -412,7 +414,7 @@
   <div class="step-body">
     <h3>Controlla il controller</h3>
     <p>La calldata viene compilata in automatico dopo la connessione (altrimenti incolla quella trovata a mano al passo 2). Ti mostrerà l'indirizzo che questa calldata predice per la tua UP su qualsiasi rete e — punto cruciale — decodificherà e mostrerà <i>ogni controller</i> nominato nella calldata, incluso chi riceve <code>ALL_PERMISSIONS</code>.</p>
-    <img class="shot" src="guide-assets/step3-controllers.png" alt="Pagina di Deploy con i controller decodificati, uno segnato come infrastruttura di sistema e uno con ALL_PERMISSIONS">
+    <img class="shot" src="guide-assets/step3-controllers-it.png" alt="Pagina di Deploy: l'indirizzo predetto coincide con quello atteso; i controller decodificati, uno segnato come infrastruttura di sistema e uno con ALL_PERMISSIONS (profilo di esempio)">
     <div class="shot-caption">Lo strumento separa l'infrastruttura di sistema nota (verde) dal vero controller con <code>ALL_PERMISSIONS</code> (rosso) — di quest'ultimo devi possedere la chiave.</div>
     <div class="note">Confronta l'indirizzo predetto con l'indirizzo reale della tua UP su LUKSO. Devono coincidere esattamente prima di andare oltre. La pagina lo controlla già e blocca un deploy che non coincide: se non coincidono, fermati e ricontrolla il passo 2.</div>
   </div>
@@ -433,7 +435,9 @@
   <div class="step-num">5</div>
   <div class="step-body">
     <h3>Deploya sulla rete di destinazione</h3>
-    <p>Sempre sulla <a href="up-deploy-public.html">pagina di Deploy</a>: collega un wallet qualsiasi per pagare il gas (non deve essere il controller — paga solo la commissione della transazione), scegli la rete di destinazione ed esegui i controlli integrati. Lo strumento riverifica l'indirizzo predetto, controlla che non esista già nulla lì, stima il gas e — dopo la conferma della transazione — verifica che il bytecode deployato corrisponda esattamente prima di dichiarare il successo.</p>
+    <p>Sempre sulla <a href="up-deploy-public.html">pagina di Deploy</a>: scegli la rete di destinazione nel pannello 1, collega un wallet qualsiasi per pagare il gas nel pannello 3 (non deve essere il controller — paga solo la commissione della transazione), poi premi <b>Verifica</b> e <b>Deploy</b> nel pannello 4. Lo strumento riverifica l'indirizzo predetto, controlla che non esista già nulla lì, stima il gas e — dopo la conferma della transazione — verifica che il bytecode deployato corrisponda esattamente prima di dichiarare il successo.</p>
+    <img class="shot" src="guide-assets/step5-network-it.png" alt="Pagina di Deploy, pannello 1: le reti di destinazione come pulsanti (Base selezionata), con un filtro e un elenco per altre reti o un RPC personalizzato">
+    <div class="shot-caption">Pannello 1: scegli la rete di destinazione. Altre reti, o un tuo RPC, sono nell'elenco sotto i pulsanti.</div>
   </div>
 </div>
 
@@ -441,7 +445,7 @@
   <div class="step-num">6</div>
   <div class="step-body">
     <h3>Opera il tuo profilo sulla nuova rete</h3>
-    <p>Importa in MetaMask (o nel wallet che preferisci) la chiave privata estratta al passo 1 — è la normale funzione "importa account" di qualsiasi wallet. Da lì usa la <a href="up-test-operazione.html">pagina di Test</a> per confermare che il controller operi davvero il profilo — scrive un timestamp on-chain tramite il Key Manager e lo rilegge. Una volta verificato, puoi anche usare il pannello 6 di <a href="up-wallet.html">UP Wallet</a> per inviare valuta nativa, token e NFT dal profilo a un altro indirizzo, firmato dallo stesso controller. La <a href="up-identity.html">pagina Identità</a> mostra il profilo su quella rete accanto a quello di LUKSO e può allinearlo (nome, immagini, link) con una transazione.</p>
+    <p>Importa in MetaMask (o nel wallet che preferisci) la chiave privata estratta al passo 1 — è la normale funzione "importa account" di qualsiasi wallet. Da lì usa la <a href="up-test-operazione.html">pagina di Test</a> per confermare che il controller operi davvero il profilo — scrive un timestamp on-chain tramite il Key Manager e lo rilegge. Una volta verificato, puoi anche usare <b>Invia</b> (pannello 6) in <a href="up-wallet.html">UP Wallet</a> per inviare valuta nativa, token e NFT dal profilo a un altro indirizzo, firmato dallo stesso controller. La <a href="up-identity.html">pagina Identità</a> mostra il profilo su quella rete accanto a quello di LUKSO e può allinearlo (nome, immagini, link) con una transazione.</p>
     <div class="note danger">
       <b>Importare la chiave significa mettere l'intero profilo dentro quel wallet.</b> La stessa chiave controlla il tuo profilo anche su LUKSO: se quel wallet viene compromesso, il profilo è compromesso ovunque.
       <ul>
@@ -498,7 +502,7 @@
 </div>
 
 <div class="note">
-  <b>Inviare valuta, token e NFT con UP Wallet (pannello 6).</b> Non serve una dApp: scegli la rete, inserisci il profilo e collega MetaMask con il controller (pannelli 1–3); quando la verifica è verde, il pannello 6 invia dal profilo.
+  <b>Inviare valuta, token e NFT con UP Wallet (Invia, pannello 6).</b> Non serve una dApp: in <b>Impostazioni</b> scegli la rete, inserisci il profilo e collega MetaMask con il controller (pannelli 1–3); quando la verifica è verde, <b>Invia</b> invia dal profilo.
   <ul>
     <li><b>Trovare cosa possiede il profilo.</b> Il pannello 6 lo elenca da solo: la valuta, i token e gli NFT registrati nel profilo, e gli altri da un indice esterno (Alchemy; Blockscout dove Alchemy non copre la rete). Tocca una riga per sceglierla; per un NFT gli ID che il profilo possiede compaiono come pulsanti. Se manca qualcosa, incolla tu l'indirizzo del contratto: lo trovi sull'explorer della rete, nella pagina del tuo profilo (scheda token o NFT), oppure sul marketplace, insieme all'ID del token. <i>Tutto</i> compila l'intero saldo.</li>
     <li><b>L'elenco è solo una scorciatoia.</b> Prima della finestra di conferma, la pagina rilegge tutto dalla blockchain: che contratto è (ERC-20, ERC-721, ERC-1155, LSP7, LSP8), il tuo saldo o il proprietario dell'NFT, e una simulazione del trasferimento. Dopo l'invio rilegge il risultato. Un indice può essere incompleto o in ritardo; conta la blockchain.</li>
