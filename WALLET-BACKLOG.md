@@ -93,6 +93,58 @@ item when its PR (or, for the app, its release) is done.
    - signing service (private): `cross-chain-sponsor/audits/2026-11-04-review.md`.
    Items 6 and 7 above and the LUKSO page's three changes (Other pages, 1) are part of it.
 
+9. **Sign-in messages (SIWE, EIP-4361) laid out in the request window** (2026-11-04). Today a SIWE message
+   in `personal_sign` is shown as raw text; LUKSO's extension lays it out, with clickable links. Example to
+   reproduce: the sign-ins of Track & Trace (`traceability.chainintegrate.it`). When the content is a valid
+   EIP-4361 message:
+   - the statement shown first, as readable text;
+   - the fields in a table: site, account, network (Chain ID), issued at, expires at (when present);
+   - the "Resources" links clickable only when on the same domain as the connected site **and** that site
+     is verified by WalletConnect (Verify VALID), opened in a new tab; links to other domains stay text,
+     with a warning (phishing risk);
+   - the exact text always available under "Show the exact text": it is what is signed;
+   - no change to the existing checks (domain, controller, refusal of 32-byte hashes).
+   The page only; the app and the extension take it with the page. Together with item 7 (the verdict) and
+   CC-06 of the 2026-11-04 review (the "same site" tick only with Verify VALID).
+
+10. **The gas relay's worst case closer to the real cost** (2026-11-15). With a paymaster the EntryPoint
+    bounds an operation by (call gas + 3 × verification gas + preVerificationGas) × maximum fee, and the
+    paymaster refuses it above its cap per operation; the page checks the same before using the relayer
+    (`gas-relay-client.js`). Two of its values are wider than needed: the verification gas is a fixed
+    180,000 (`VERIFICATION_GAS`; times three, about three quarters of the total for a simple call), and the
+    maximum fee is twice the base fee plus the tip. On Avalanche, with gas around 20 nAVAX, an `approve` from
+    Yield Yak came to about 0.014 AVAX, above the cap of 0.01: every dApp needed gas on the controller until
+    the cap was raised to 0.03 (on chain and in the signing service, 2026-11-15). To do:
+    - the verification gas estimated per operation (a simulation of the UP's validation through the
+      EntryPoint), with a margin, instead of the fixed 180,000; the fixed value kept as the upper bound;
+    - the maximum fee at about 1.5 × the base fee plus the tip (the EntryPoint charges the effective price,
+      the maximum is only a ceiling; the relayer simulates before sending, so a fee that became too low only
+      means preparing the operation again);
+    - within the signing service's bounds (2026-11-04 SPN-01: a fee up to 3 × base fee + tip, a
+      verification gas up to 300,000), and with the relayer's preVerificationGas rule unchanged;
+    - tested on every served network (Base, Polygon, Arbitrum One, Avalanche, Arc): the page's operations still
+      run, and the worst case is about half of today's. The page only; the app and the extension take it with
+      the page.
+
+11. **BENQI's lending market: the withdrawal decoded, and the UP warned before depositing** (2026-11-15).
+    The withdrawal of AVAX from qiAVAX (`0x5C04…Ef1c`, `redeemUnderlying(uint256)` `0x852a12e3`, and
+    `redeem(uint256)` `0xdb006a75`) showed as an unrecognised call; the page decodes only the deposit
+    (`mint()`). Its simulation from the UP failed: as in Compound, the market sends the AVAX with a transfer
+    limited to 2,300 gas, and a UP (a proxy contract, whose `receive` runs code) cannot take it. The
+    maintainer got the AVAX back by sending the qiAVAX to a MetaMask address and redeeming from there. To do,
+    in `describeBenqi`:
+    - `redeem` and `redeemUnderlying` decoded (the qiAVAX burnt, the AVAX asked, with the contract's own rate),
+      with a red note: "BENQI sends AVAX with a gas-limited transfer that a Universal Profile cannot receive:
+      the withdrawal fails from the UP. Send the qiAVAX to an ordinary address of yours and withdraw from
+      there (no open loan on BENQI with this UP, or the transfer is refused)";
+    - the same warning in the deposit's note (`benqiMintNote`), so it is known before depositing;
+    - sAVAX (`0x2b2C…a4bE`): the unlock request `requestUnlock(uint256)` (`0xc9d2ff9d`, the sAVAX locked, about
+      15 days, then a 2-day window to redeem) and the redemption `redeem(uint256)` decoded. Whether the
+      redemption can pay a UP (how it sends the AVAX) is not checked (maintainer's decision, 2026-11-15): the
+      note always says to unstake from an ordinary address (send the sAVAX there first), as he did.
+    The page only; the app and the extension take it with the page. Everything else used from the UP on
+    Avalanche on 2026-11-15 worked (Yield Yak, swaps; one WAVAX → AVAX swap done on LFJ for liquidity).
+
 ## Other pages
 
 1. **The LUKSO authorization page: live tests, then the review** (2026-11-03). `up-authorize-lukso.html`
