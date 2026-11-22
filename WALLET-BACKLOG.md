@@ -179,6 +179,19 @@ item when its PR (or, for the app, its release) is done.
     - the network switch decided first (item 5);
     - tests, the release, then the two-provider review right after it (`AUDIT.md`, review policy).
 
+14. **Extension and app: a new release announced inside the wallet** (2026-11-22, as ChainIntegrate Account does:
+    `up-onboarding/extension/app.js`, `checkUpdate`). Today a user learns of a new version only from GitHub or a
+    post. The wallet reads, at start, the latest version from ChainIntegrate's server (ChainIntegrate Account reads
+    it from its service's health answer, `{ extension: { version, download } }`; here the site relayer's
+    `relay/info`, or a small JSON on the site, updated with each release) and, when it is newer than its own,
+    shows a box: "A new version is available", the version it has and the latest, how to update (the extension:
+    copy the new folder's files over the current one and reload, never remove it, or the key is lost; the app:
+    install the new APK over the old one, the key stays), and the download link. The link is used only if it is a
+    release of ChainIntegrate's own repositories (`https://github.com/ChainIntegrate/…`), as ChainIntegrate Account
+    checks, so a changed answer cannot send the user elsewhere. No automatic download or install; nothing sent
+    about the user (a plain read). The releases are pre-releases on GitHub, so the server's value is set at each
+    release (by the maintainer, or by the release workflow), not taken from GitHub's "latest".
+
 ## Other pages
 
 1. **The LUKSO authorization page: live tests, then the review** (2026-11-03). `up-authorize-lukso.html`
