@@ -162,6 +162,23 @@ item when its PR (or, for the app, its release) is done.
     - the network switch decided first (item 5): dApps with an injected wallet ask for it more often;
     - tests, the release, then the two-provider review right after it (`AUDIT.md`, review policy).
 
+13. **App: a dApp browser inside UP Wallet, with an injected wallet (EIP-1193, EIP-6963); WalletConnect kept**
+    (2026-11-22, as LUKSO's Universal Profiles app does). On the phone a browser cannot hold an extension: the
+    dApp's own "Browser wallet" choice works only inside a wallet app's browser, which gives the page its wallet.
+    The app gets one, next to WalletConnect:
+    - *first, the discovery test*, as item 12: a test build with a browser tab that opens a dApp and gives it
+      the same keyless provider as the extension's spike (public address, network, every signature refused, the
+      calls logged); the maintainer notes for the dApps used whether they connect through "Browser wallet" and
+      what they ask. Nothing is built before;
+    - then the browser: its own WebView, separate from the wallet page and from the signing window
+      (`SignerActivity`, already isolated since 0.10.0); https only, the address bar always showing the site; the
+      origin taken from the WebView, not from the page; the provider on `window.ethereum` and through EIP-6963
+      (inside its own browser the app is the only wallet, so nothing to share); a site connects only after the
+      user allows it, with a list of connected sites; each request through the page's request window (checks,
+      simulation) and then the signing window, as with WalletConnect today;
+    - the network switch decided first (item 5);
+    - tests, the release, then the two-provider review right after it (`AUDIT.md`, review policy).
+
 ## Other pages
 
 1. **The LUKSO authorization page: live tests, then the review** (2026-11-03). `up-authorize-lukso.html`
