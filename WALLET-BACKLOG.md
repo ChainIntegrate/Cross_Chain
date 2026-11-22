@@ -93,6 +93,116 @@ item when its PR (or, for the app, its release) is done.
    - signing service (private): `cross-chain-sponsor/audits/2026-11-04-review.md`.
    Items 6 and 7 above and the LUKSO page's three changes (Other pages, 1) are part of it.
 
+9. **Sign-in messages (SIWE, EIP-4361) laid out in the request window** (2026-11-04). Today a SIWE message
+   in `personal_sign` is shown as raw text; LUKSO's extension lays it out, with clickable links. Example to
+   reproduce: the sign-ins of Track & Trace (`traceability.chainintegrate.it`). When the content is a valid
+   EIP-4361 message:
+   - the statement shown first, as readable text;
+   - the fields in a table: site, account, network (Chain ID), issued at, expires at (when present);
+   - the "Resources" links clickable only when on the same domain as the connected site **and** that site
+     is verified by WalletConnect (Verify VALID), opened in a new tab; links to other domains stay text,
+     with a warning (phishing risk);
+   - the exact text always available under "Show the exact text": it is what is signed;
+   - no change to the existing checks (domain, controller, refusal of 32-byte hashes).
+   The page only; the app and the extension take it with the page. Together with item 7 (the verdict) and
+   CC-06 of the 2026-11-04 review (the "same site" tick only with Verify VALID).
+
+10. **The gas relay's worst case closer to the real cost** (2026-11-15). With a paymaster the EntryPoint
+    bounds an operation by (call gas + 3 × verification gas + preVerificationGas) × maximum fee, and the
+    paymaster refuses it above its cap per operation; the page checks the same before using the relayer
+    (`gas-relay-client.js`). Two of its values are wider than needed: the verification gas is a fixed
+    180,000 (`VERIFICATION_GAS`; times three, about three quarters of the total for a simple call), and the
+    maximum fee is twice the base fee plus the tip. On Avalanche, with gas around 20 nAVAX, an `approve` from
+    Yield Yak came to about 0.014 AVAX, above the cap of 0.01: every dApp needed gas on the controller until
+    the cap was raised to 0.03 (on chain and in the signing service, 2026-11-15). To do:
+    - the verification gas estimated per operation (a simulation of the UP's validation through the
+      EntryPoint), with a margin, instead of the fixed 180,000; the fixed value kept as the upper bound;
+    - the maximum fee at about 1.5 × the base fee plus the tip (the EntryPoint charges the effective price,
+      the maximum is only a ceiling; the relayer simulates before sending, so a fee that became too low only
+      means preparing the operation again);
+    - within the signing service's bounds (2026-11-04 SPN-01: a fee up to 3 × base fee + tip, a
+      verification gas up to 300,000), and with the relayer's preVerificationGas rule unchanged;
+    - tested on every served network (Base, Polygon, Arbitrum One, Avalanche, Arc): the page's operations still
+      run, and the worst case is about half of today's. The page only; the app and the extension take it with
+      the page.
+
+11. **BENQI's lending market: the withdrawal decoded, and the UP warned before depositing** (2026-11-15).
+    The withdrawal of AVAX from qiAVAX (`0x5C04…Ef1c`, `redeemUnderlying(uint256)` `0x852a12e3`, and
+    `redeem(uint256)` `0xdb006a75`) showed as an unrecognised call; the page decodes only the deposit
+    (`mint()`). Its simulation from the UP failed: as in Compound, the market sends the AVAX with a transfer
+    limited to 2,300 gas, and a UP (a proxy contract, whose `receive` runs code) cannot take it. The
+    maintainer got the AVAX back by sending the qiAVAX to a MetaMask address and redeeming from there. To do,
+    in `describeBenqi`:
+    - `redeem` and `redeemUnderlying` decoded (the qiAVAX burnt, the AVAX asked, with the contract's own rate),
+      with a red note: "BENQI sends AVAX with a gas-limited transfer that a Universal Profile cannot receive:
+      the withdrawal fails from the UP. Send the qiAVAX to an ordinary address of yours and withdraw from
+      there (no open loan on BENQI with this UP, or the transfer is refused)";
+    - the same warning in the deposit's note (`benqiMintNote`), so it is known before depositing;
+    - sAVAX (`0x2b2C…a4bE`): the unlock request `requestUnlock(uint256)` (`0xc9d2ff9d`, the sAVAX locked, about
+      15 days, then a 2-day window to redeem) and the redemption `redeem(uint256)` decoded. Whether the
+      redemption can pay a UP (how it sends the AVAX) is not checked (maintainer's decision, 2026-11-15): the
+      note always says to unstake from an ordinary address (send the sAVAX there first), as he did.
+    The page only; the app and the extension take it with the page. Everything else used from the UP on
+    Avalanche on 2026-11-15 worked (Yield Yak, swaps; one WAVAX → AVAX swap done on LFJ for liquidity).
+
+12. **Extension, phase 2: UP Wallet offered to dApps as an injected wallet (EIP-1193, EIP-6963), WalletConnect
+    removed from the extension** (2026-11-22; Cross_Chain roadmap step 5; the maintainer's decision of
+    2026-11-22: the first change to the extension, together with EXT-01). A structural change, in phases:
+    - *first, the discovery test* (`up-wallet-extension/spike/eip6963-discovery/`, 2026-11-22): an unpacked
+      extension with no key that announces "UP Wallet (test)" through EIP-6963 on https pages, answers a public
+      address and the network, refuses every signature and logs the dApps' calls. The maintainer loads it and
+      notes, for hup, Morpho, Aerodrome, KyberSwap, Yield Yak, BENQI, revoke.cash and Uniswap, whether it is listed
+      in their "Connect" window and what they ask. Nothing is built until it shows that the dApps used list it;
+    - then, in one release: the isolation of the signing window from the rest of the extension (2026-11-04
+      review, EXT-01; `up-wallet-extension/audits/2026-11-04-review.md`), before any provider reaches other
+      sites, and WalletConnect (WalletKit) removed from the extension: the largest third-party code leaves the
+      privileged pages, and its sessions no longer need storing through the isolated host. The Android app
+      keeps WalletConnect. If the test shows a dApp in use that does not list an injected wallet, WalletConnect
+      stays until that is decided;
+    - then the provider: EIP-6963 only (nothing on `window.ethereum`, so MetaMask and LUKSO's extension keep
+      working), on the sites the user connects only (Chrome's optional host permissions, granted site by site,
+      instead of "all sites"), the origin taken from Chrome, structured requests only through the bridge, one
+      request per site at a time, a list of connected sites; the request window and the signing window as
+      today. The model of ChainIntegrate Account (`up-onboarding`, `docs/integration.md` section 4);
+    - the network switch decided first (item 5): dApps with an injected wallet ask for it more often;
+    - tests, the release, then the two-provider review right after it (`AUDIT.md`, review policy).
+
+13. **App: a dApp browser inside UP Wallet, with an injected wallet (EIP-1193, EIP-6963); WalletConnect kept**
+    (2026-11-22, as LUKSO's Universal Profiles app does). On the phone a browser cannot hold an extension: the
+    dApp's own "Browser wallet" choice works only inside a wallet app's browser, which gives the page its wallet.
+    The app gets one, next to WalletConnect:
+    - *first, the discovery test*, as item 12: a test build with a browser tab that opens a dApp and gives it
+      the same keyless provider as the extension's spike (public address, network, every signature refused, the
+      calls logged); the maintainer notes for the dApps used whether they connect through "Browser wallet" and
+      what they ask. Nothing is built before;
+    - then the browser: its own WebView, separate from the wallet page and from the signing window
+      (`SignerActivity`, already isolated since 0.10.0); https only, the address bar always showing the site; the
+      origin taken from the WebView, not from the page; the provider on `window.ethereum` and through EIP-6963
+      (inside its own browser the app is the only wallet, so nothing to share); a site connects only after the
+      user allows it, with a list of connected sites; each request through the page's request window (checks,
+      simulation) and then the signing window, as with WalletConnect today;
+    - the network switch decided first (item 5);
+    - tests, the release, then the two-provider review right after it (`AUDIT.md`, review policy).
+
+14. **Extension and app: a new release announced inside the wallet** (2026-11-22, as ChainIntegrate Account does:
+    `up-onboarding/extension/app.js`, `checkUpdate`). Today a user learns of a new version only from GitHub or a
+    post. The wallet reads, at start, the latest version from ChainIntegrate's server (ChainIntegrate Account reads
+    it from its service's health answer, `{ extension: { version, download } }`; here the site relayer's
+    `relay/info`, or a small JSON on the site, updated with each release) and, when it is newer than its own,
+    shows a box: "A new version is available", the version it has and the latest, how to update (the extension:
+    copy the new folder's files over the current one and reload, never remove it, or the key is lost; the app:
+    install the new APK over the old one, the key stays), and the download link. The link is used only if it is a
+    release of ChainIntegrate's own repositories (`https://github.com/ChainIntegrate/…`), as ChainIntegrate Account
+    checks, so a changed answer cannot send the user elsewhere. No automatic download or install; nothing sent
+    about the user (a plain read). From the next release (maintainer's decision, 2026-11-22) both wallets are
+    published as full GitHub releases, no longer pre-releases, as ChainIntegrate Account already is: GitHub's
+    "latest" then names the newest version, so the server reads it from the GitHub API (cached, a few reads an
+    hour) and the wallet asks only the server, never GitHub (no GitHub rate limit, the user's address not sent
+    to GitHub). Each release workflow also attaches a copy with a fixed name (`up-wallet-extension.zip`,
+    `up-wallet.apk`), so `…/releases/latest/download/<name>` is a link that never changes, for pages and guides.
+    The prototype status stays said where it is said today (the name, the release notes, the README, the notice
+    at first start): only GitHub's "Pre-release" label goes.
+
 ## Other pages
 
 1. **The LUKSO authorization page: live tests, then the review** (2026-11-03). `up-authorize-lukso.html`

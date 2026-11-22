@@ -31,6 +31,7 @@
 15. [Rev. 13 — External review of the whole system (2026-10-26)](#15-rev-13--external-review-of-the-whole-system-2026-10-26)
 16. [Scope of the next review: changes since 2026-10-26](#16-scope-of-the-next-review-changes-since-2026-10-26)
 17. [Rev. 14 — External review of the whole system, with the browser extension (2026-10-29)](#17-rev-14--external-review-of-the-whole-system-with-the-browser-extension-2026-10-29)
+18. [External incident: LUKSO's email-based recovery (2026-11-17/18)](#18-external-incident-luksos-email-based-recovery-2026-1117-18)
 
 ---
 
@@ -799,3 +800,8 @@ External AI-assisted review of the four repositories, with the brief of section 
 
 **What has been checked across the reviews.** This file is the register: each section lists the scope, what was checked and found correct, the findings and their status, and how the fixes were verified (sections 4, 6, 7.4, 7.5, 8, 9 to 15, and this one). Summary of the reviews and their results: README, "Audit trail".
 
+---
+
+## 18. External incident: LUKSO's email-based recovery (2026-11-17/18)
+
+An attacker exploited a vulnerability in LUKSO's email-based Universal Profile recovery service; the LUKSO blockchain and the Universal Profile contracts were not affected ([LUKSO's post mortem](https://medium.com/@lukso/post-mortem-security-incident-in-the-email-based-recovery-system-029f6f241e2b)). Cross_Chain's tools, UP Wallet and the signing service do not use that service. The profiles operated by ChainIntegrate were checked on chain on 2026-11-18: not affected.
