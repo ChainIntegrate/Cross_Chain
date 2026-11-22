@@ -189,8 +189,14 @@ item when its PR (or, for the app, its release) is done.
     install the new APK over the old one, the key stays), and the download link. The link is used only if it is a
     release of ChainIntegrate's own repositories (`https://github.com/ChainIntegrate/…`), as ChainIntegrate Account
     checks, so a changed answer cannot send the user elsewhere. No automatic download or install; nothing sent
-    about the user (a plain read). The releases are pre-releases on GitHub, so the server's value is set at each
-    release (by the maintainer, or by the release workflow), not taken from GitHub's "latest".
+    about the user (a plain read). From the next release (maintainer's decision, 2026-11-22) both wallets are
+    published as full GitHub releases, no longer pre-releases, as ChainIntegrate Account already is: GitHub's
+    "latest" then names the newest version, so the server reads it from the GitHub API (cached, a few reads an
+    hour) and the wallet asks only the server, never GitHub (no GitHub rate limit, the user's address not sent
+    to GitHub). Each release workflow also attaches a copy with a fixed name (`up-wallet-extension.zip`,
+    `up-wallet.apk`), so `…/releases/latest/download/<name>` is a link that never changes, for pages and guides.
+    The prototype status stays said where it is said today (the name, the release notes, the README, the notice
+    at first start): only GitHub's "Pre-release" label goes.
 
 ## Other pages
 
