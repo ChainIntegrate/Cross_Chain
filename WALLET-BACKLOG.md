@@ -145,6 +145,23 @@ item when its PR (or, for the app, its release) is done.
     The page only; the app and the extension take it with the page. Everything else used from the UP on
     Avalanche on 2026-11-15 worked (Yield Yak, swaps; one WAVAX → AVAX swap done on LFJ for liquidity).
 
+12. **Extension, phase 2: UP Wallet offered to dApps as an injected wallet (EIP-1193, EIP-6963), WalletConnect
+    kept as the other way** (2026-11-22; Cross_Chain roadmap step 5). A structural change, in phases:
+    - *first, the discovery test* (`up-wallet-extension/spike/eip6963-discovery/`, 2026-11-22): an unpacked
+      extension with no key that announces "UP Wallet (test)" through EIP-6963 on https pages, answers a public
+      address and the network, refuses every signature and logs the dApps' calls. The maintainer loads it and
+      notes, for hup, Morpho, Aerodrome, KyberSwap, Yield Yak, BENQI, revoke.cash and Uniswap, whether it is listed
+      in their "Connect" window and what they ask. Nothing is built until it shows that the dApps used list it;
+    - then the isolation of the signing window from the wallet page (2026-11-04 review, EXT-01), before any
+      provider reaches other sites;
+    - then the provider: EIP-6963 only (nothing on `window.ethereum`, so MetaMask and LUKSO's extension keep
+      working), on the sites the user connects only (Chrome's optional host permissions, granted site by site,
+      instead of "all sites"), the origin taken from Chrome, structured requests only through the bridge, one
+      request per site at a time, a list of connected sites; the request window and the signing window as
+      today. The model of ChainIntegrate Account (`up-onboarding`, `docs/integration.md` section 4);
+    - the network switch decided first (item 5): dApps with an injected wallet ask for it more often;
+    - tests, the release, then the two-provider review right after it (`AUDIT.md`, review policy).
+
 ## Other pages
 
 1. **The LUKSO authorization page: live tests, then the review** (2026-11-03). `up-authorize-lukso.html`
