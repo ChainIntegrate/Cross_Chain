@@ -146,14 +146,19 @@ item when its PR (or, for the app, its release) is done.
     Avalanche on 2026-11-15 worked (Yield Yak, swaps; one WAVAX → AVAX swap done on LFJ for liquidity).
 
 12. **Extension, phase 2: UP Wallet offered to dApps as an injected wallet (EIP-1193, EIP-6963), WalletConnect
-    kept as the other way** (2026-11-22; Cross_Chain roadmap step 5). A structural change, in phases:
+    removed from the extension** (2026-11-22; Cross_Chain roadmap step 5; the maintainer's decision of
+    2026-11-22: the first change to the extension, together with EXT-01). A structural change, in phases:
     - *first, the discovery test* (`up-wallet-extension/spike/eip6963-discovery/`, 2026-11-22): an unpacked
       extension with no key that announces "UP Wallet (test)" through EIP-6963 on https pages, answers a public
       address and the network, refuses every signature and logs the dApps' calls. The maintainer loads it and
       notes, for hup, Morpho, Aerodrome, KyberSwap, Yield Yak, BENQI, revoke.cash and Uniswap, whether it is listed
       in their "Connect" window and what they ask. Nothing is built until it shows that the dApps used list it;
-    - then the isolation of the signing window from the wallet page (2026-11-04 review, EXT-01), before any
-      provider reaches other sites;
+    - then, in one release: the isolation of the signing window from the rest of the extension (2026-11-04
+      review, EXT-01; `up-wallet-extension/audits/2026-11-04-review.md`), before any provider reaches other
+      sites, and WalletConnect (WalletKit) removed from the extension: the largest third-party code leaves the
+      privileged pages, and its sessions no longer need storing through the isolated host. The Android app
+      keeps WalletConnect. If the test shows a dApp in use that does not list an injected wallet, WalletConnect
+      stays until that is decided;
     - then the provider: EIP-6963 only (nothing on `window.ethereum`, so MetaMask and LUKSO's extension keep
       working), on the sites the user connects only (Chrome's optional host permissions, granted site by site,
       instead of "all sites"), the origin taken from Chrome, structured requests only through the bridge, one
