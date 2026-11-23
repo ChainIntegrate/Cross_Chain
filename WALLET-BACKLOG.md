@@ -155,7 +155,14 @@ item when its PR (or, for the app, its release) is done.
     gives no activeTab when it opens the panel by itself); 0.2.2 opens the panel from the toolbar click and
     notes that tab's site (no new permission), and drops the footer's WalletConnect notice. Connecting a site
     is deliberately one by one (smaller attack surface, the wallet not announced to every site, no "all
-    sites" permission); an "all sites" option, off by default, is not planned before the review. Next: the
+    sites" permission); an "all sites" option, off by default, is not planned before the review. Then, live
+    on 2026-11-23: 0.2.4 answers a site's request for another network with 4901 instead of 4001 (wagmi's
+    connect, Aave's, drops the whole connection on 4001), Aave V3 on Arbitrum connected and used (a withdrawal
+    through the gas relay); Arcstock works too. 0.2.5 to 0.2.7: Alchemy reached through the host (the sandboxed
+    page's "null" origin is refused), without a host permission (Chrome leaves the Origin header out of a GET
+    to a permitted host), and page 0.14.2 keeps Alchemy's tokens when only its NFT API refuses (403 to the
+    extension's key). The signing window's EXT-02 and EXT-03 in 0.2.3; the "unknown function" warning kept
+    on top, by the maintainer's choice. Next: the
     two-provider review right after the release (`AUDIT.md`, review policy). A structural change, in phases:
     - *first, the discovery test* (`up-wallet-extension/spike/eip6963-discovery/`, 2026-11-22): an unpacked
       extension with no key that announces "UP Wallet (test)" through EIP-6963 on https pages, answers a public
@@ -198,7 +205,8 @@ item when its PR (or, for the app, its release) is done.
 
 14. **Extension and app: a new release announced inside the wallet** (extension: done in 0.2.1, 2026-11-23, with the relayer's `GET /relay/versions`, deployed the same day;
     tested live: a build of 0.2.1's code as 0.2.0 announced 0.2.1, then 0.2.1 announced 0.2.2, updated from the
-    notice's link; app: with its next batch, once its releases are full releases too) (2026-11-22, as ChainIntegrate Account does:
+    notice's link; app: in 0.10.1, its releases full releases from then; tested live: 0.10.1 announced 0.10.2,
+    updated from the notice's link) (2026-11-22, as ChainIntegrate Account does:
     `up-onboarding/extension/app.js`, `checkUpdate`). Today a user learns of a new version only from GitHub or a
     post. The wallet reads, at start, the latest version from ChainIntegrate's server (ChainIntegrate Account reads
     it from its service's health answer, `{ extension: { version, download } }`; here the site relayer's
