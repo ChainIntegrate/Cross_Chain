@@ -105,10 +105,10 @@ journalctl -u crosschain-relayer -n 20     # "chain 8453: ready (OP stack) …" 
 
 **6. Web server: pass `/relay/` to the service.** Only this path. The service listens on `127.0.0.1` only.
 
-nginx: first the per-IP rate zone, once, in the http context (`tools/nginx/relay-limit.conf`):
+nginx: first the per-IP rate zone, once, in the http context (the content of `tools/nginx/relay-limit.conf`; the server's clone of the relayer holds only `tools/relayer`, so it is written directly):
 
 ```bash
-sudo cp /opt/crosschain-relayer/tools/nginx/relay-limit.conf /etc/nginx/conf.d/crosschain-relay-limit.conf
+printf '%s\n' 'limit_req_zone $binary_remote_addr zone=crosschain_relay:10m rate=10r/s;' 'limit_req_status 429;' | sudo tee /etc/nginx/conf.d/crosschain-relay-limit.conf
 ```
 
 then, inside the site's `server { … }` block:
@@ -122,7 +122,7 @@ location /relay/ {
 }
 ```
 
-The signing service's own `location /relay/sponsor/` takes the same `limit_req` line.
+The signing service's own `location /relay/sponsor/` takes the same `limit_req` line. Check it with one `curl` sending 80 requests on one connection (`curl -s -o /dev/null -w "%{http_code}\n" URL URL …` with `/relay/versions` 80 times): about 41 answer 200 and the rest 429. Separate `curl` runs, even in parallel, open a TLS connection each and are too slow to reach the limit.
 
 Apache, inside the site's `<VirtualHost *:443>` (needs `sudo a2enmod proxy proxy_http`). `.htaccess` is not applied on this host, so it goes in the virtual host file:
 
