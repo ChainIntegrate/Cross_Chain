@@ -9,7 +9,8 @@
   ],
   "limits": {
     "perIpPerMinute": 6,
-    "perSenderPerMinute": 3
+    "perSenderPerMinute": 3,
+    "globalPerMinute": 60
   },
   "chains": {
     "8453": {
