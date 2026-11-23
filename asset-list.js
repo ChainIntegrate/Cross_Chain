@@ -191,6 +191,9 @@
     }
     const nfts = {};
     pageKey = null;
+    // The NFT API may refuse while the token API answers (seen with the browser extension's key: HTTP 403 on
+    // getNFTsForOwner, 200 on the token calls): the tokens are kept, the NFTs come from elsewhere (list()).
+    try {
     for (let page = 0; page < MAX_PAGES; page++) {
       const u = new URL(`https://${net}.g.alchemy.com/nft/v3/${key}/getNFTsForOwner`);
       u.searchParams.set("owner", up); u.searchParams.set("withMetadata", "true"); u.searchParams.set("pageSize", "100");
@@ -213,6 +216,7 @@
       pageKey = res.pageKey;
       if (!pageKey) break;
     }
+    } catch (e) { rows.nftErr = e.message || String(e); return rows; }
     Object.values(nfts).forEach(r => { r.count = String(r.n); delete r.n; rows.push(r); });
     return rows;
   }
@@ -262,6 +266,19 @@
       if (out.indexer.err && ix.kind === "alchemy" && BLOCKSCOUT[netKey]) {
         try { out.indexer = { kind: "blockscout", rows: await fromBlockscout(BLOCKSCOUT[netKey], up), fallback: out.indexer.err }; }
         catch (e) { out.indexer.err += "; Blockscout: " + e.message; }
+      }
+      // Alchemy gave the tokens but not the NFTs: the NFTs from the network's Blockscout, when it has one.
+      const nftErr = out.indexer.rows && out.indexer.rows.nftErr;
+      if (!out.indexer.err && nftErr) {
+        out.indexer.nftErr = nftErr;
+        if (BLOCKSCOUT[netKey]) {
+          try {
+            const have = new Set(out.indexer.rows.map((r) => r.address));
+            const nftRows = (await fromBlockscout(BLOCKSCOUT[netKey], up)).filter((r) => Array.isArray(r.rawIds) && !have.has(r.address));
+            out.indexer.rows = out.indexer.rows.concat(nftRows);
+            out.indexer.nftSource = "blockscout";
+          } catch (e) { out.indexer.nftErr += "; Blockscout: " + e.message; }
+        }
       }
       if (!out.indexer.err) {
         const c = await checkIndexedNfts(provider, up, out.indexer.rows);
