@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-Hz9tsT9jN54LPTYltEJ6fumc+f8o6jYlPCv0JoSCE6Y='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-roQZuVJMgLYM9dnTQKLXpOWh1x7Qju0xq4El40hVAu4='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -1164,6 +1164,7 @@ const I18N = {
     signBadData: (v) => `❌ Dati da firmare non validi: ${v.err}. Rifiutata.`,
     signNoChain: "⚠️ Il messaggio non indica la rete (chainId): la firma può valere su ogni rete dove esiste questa UP.",
     signWrongDomainChain: (v) => `❌ Il messaggio è per la rete con chainId ${v.id}, non per quella scelta: rifiutata.`,
+    signTypeMismatch: (v) => `❌ La dApp dichiara il tipo "${v.declared}" ma si firmerebbe "${v.signed}" (il tipo calcolato dai types): rifiutata. Un tipo dichiarato diverso da quello firmato può nascondere un permesso di spesa o un trasferimento.`,
     signNoPermission: "❌ Il controller non ha il permesso SIGN sulla UP: la UP non riconoscerebbe la firma. Rifiutata.",
     verifyBad: (v) => `❌ WalletConnect segnala il sito come non affidabile (${v.v}): richiesta rifiutata.`,
     verifyWarn: (v) => `⚠️ Verifica del dominio WalletConnect: ${v.v}. Non è confermato che la richiesta venga dal sito dichiarato.`,
@@ -1656,6 +1657,7 @@ const I18N = {
     signBadData: (v) => `❌ Invalid data to sign: ${v.err}. Rejected.`,
     signNoChain: "⚠️ The message does not state a network (chainId): the signature may be valid on every network where this UP exists.",
     signWrongDomainChain: (v) => `❌ The message is for chainId ${v.id}, not for the chosen network: rejected.`,
+    signTypeMismatch: (v) => `❌ The dApp declares the type "${v.declared}" but "${v.signed}" would be signed (the type computed from the types): rejected. A declared type different from the signed one can hide a spending permit or a transfer.`,
     signNoPermission: "❌ The controller does not have the SIGN permission on the UP: the UP would not recognise the signature. Rejected.",
     verifyBad: (v) => `❌ WalletConnect flags the site as untrusted (${v.v}): request rejected.`,
     verifyWarn: (v) => `⚠️ WalletConnect domain verification: ${v.v}. It is not confirmed that the request comes from the declared site.`,
@@ -1822,7 +1824,7 @@ function t(key, vars) {
 // WALLET-BACKLOG.md and the patch with a fix (0.x: experimental). The Android app's and the browser
 // extension's builds write the Cross_Chain commit in PAGE_COMMIT, and they give their own version
 // (window.__upwalletAppVersion, then the "upwallet:version" event).
-const PAGE_VERSION = "0.14.0";
+const PAGE_VERSION = "0.14.1";
 const PAGE_COMMIT = null;
 function renderVersion() {
   const el = $("pageVersion"), app = window.__upwalletAppVersion;
@@ -3575,18 +3577,23 @@ async function handleSignRequest(topic, id, c, request, validation, reject) {
       const types = { ...data.types };
       delete types.EIP712Domain;
       hash = ethers.TypedDataEncoder.hash(domain, types, data.message);
+      // What is signed is the type computed from `types` (the hash does not use the declared primaryType), with
+      // only its typed fields: the checks, the warnings and what is shown use that (review of 2026-11-04, EXT-02).
+      const enc = ethers.TypedDataEncoder.from(types);
+      const pt = enc.primaryType;
+      if (data.primaryType != null && data.primaryType !== pt) return reject(t("signTypeMismatch", { declared: oneLine(data.primaryType, 40), signed: oneLine(pt, 40) }));
+      const message = enc.visit(data.message, (type, value) => (typeof value === "bigint" ? value.toString() : value));
       walletParams = typeof raw === "string" ? raw : JSON.stringify(raw);
-      compare = `${oneLine(data.primaryType) || "?"} · ${oneLine(domain.name) || "?"} · verifyingContract ${oneLine(domain.verifyingContract, 42) || "—"} · chainId ${oneLine(domain.chainId ?? "—", 20)}`;
+      compare = `${oneLine(pt) || "?"} · ${oneLine(domain.name) || "?"} · verifyingContract ${oneLine(domain.verifyingContract, 42) || "—"} · chainId ${oneLine(domain.chainId ?? "—", 20)}`;
       rows.push([t("kContentType"), t("ctTyped"), {}]);
       rows.push([t("kDomain"), JSON.stringify(domain, null, 2), { block: true }]);
-      rows.push([t("kPrimaryType"), oneLine(data.primaryType) || "—", {}]);
-      rows.push([t("kContent"), JSON.stringify(data.message, null, 2), { block: true }]);
+      rows.push([t("kPrimaryType"), oneLine(pt) || "—", {}]);
+      rows.push([t("kContent"), JSON.stringify(message, null, 2), { block: true }]);
       const vc = String(domain.verifyingContract || "").toLowerCase();
-      const pt = String(data.primaryType || "");
       if (/permit/i.test(pt) || vc === PERMIT2 || /permit2/i.test(String(domain.name || ""))) {
         warnings.push([t("signPermit"), "line-danger"]);
         // Name the spender when it is a known contract with code on this network.
-        const spender = data.message?.spender || data.message?.details?.spender;
+        const spender = message?.spender || message?.details?.spender;
         if (typeof spender === "string" && ethers.isAddress(spender)) {
           const known = KNOWN_CONTRACTS[spender.toLowerCase()];
           if (known && (await c.provider.getCode(spender)) !== "0x") warnings.push([t("knownSpender", { addr: ethers.getAddress(spender), name: known.name, role: t(known.role) }), "line-dim"]);
@@ -3595,12 +3602,12 @@ async function handleSignRequest(topic, id, c, request, validation, reject) {
       else if (/order/i.test(pt)) warnings.push([t("signOrder"), "line-danger"]);
       // EIP-3009 (USDC and others): a signed transfer that anyone can submit (AUDIT I-7).
       if (/^(Transfer|Receive)WithAuthorization$/.test(pt)) {
-        const m = data.message || {};
+        const m = message || {};
         warnings.push([t("signTransferAuth", { to: oneLine(m.to, 42), value: oneLine(m.value, 40), token: oneLine(domain.name) || oneLine(domain.verifyingContract, 42) || "?" }), "line-danger"]);
       }
       // The account a Permit or a transfer authorization is for must be the UP: a controller's signature is
       // also valid for its own address and any other UP it controls (AUDIT I-7).
-      const forWho = /permit/i.test(pt) ? data.message?.owner : /WithAuthorization$/.test(pt) ? data.message?.from : undefined;
+      const forWho = /permit/i.test(pt) ? message?.owner : /WithAuthorization$/.test(pt) ? message?.from : undefined;
       if (typeof forWho === "string" && ethers.isAddress(forWho) && ethers.getAddress(forWho) !== ethers.getAddress(up)) {
         warnings.push([t("signNotForUp", { who: ethers.getAddress(forWho) }), "line-danger"]);
       }

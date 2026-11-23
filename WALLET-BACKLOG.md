@@ -150,8 +150,13 @@ item when its PR (or, for the app, its release) is done.
     2026-11-22: the first change to the extension, together with EXT-01). **Released in extension 0.2.0
     (2026-11-23, the first full GitHub release, not a pre-release)**: the wallet page sandboxed behind a small
     privileged host (EXT-01), the provider on the sites connected one by one from panel 4, WalletConnect
-    removed; tests 71/71 (CI with Playwright 1.56 and locally 1.63). Next: the maintainer's live test, then
-    the two-provider review right after the release (`AUDIT.md`, review policy). A structural change, in phases:
+    removed; tests 71/71 (CI with Playwright 1.56 and locally 1.63). Tested live by the maintainer on
+    2026-11-23 with Aave V3 on 0.2.2: 0.2.1 could not read the active tab's site from the side panel (Chrome
+    gives no activeTab when it opens the panel by itself); 0.2.2 opens the panel from the toolbar click and
+    notes that tab's site (no new permission), and drops the footer's WalletConnect notice. Connecting a site
+    is deliberately one by one (smaller attack surface, the wallet not announced to every site, no "all
+    sites" permission); an "all sites" option, off by default, is not planned before the review. Next: the
+    two-provider review right after the release (`AUDIT.md`, review policy). A structural change, in phases:
     - *first, the discovery test* (`up-wallet-extension/spike/eip6963-discovery/`, 2026-11-22): an unpacked
       extension with no key that announces "UP Wallet (test)" through EIP-6963 on https pages, answers a public
       address and the network, refuses every signature and logs the dApps' calls. The maintainer loads it and
@@ -191,7 +196,9 @@ item when its PR (or, for the app, its release) is done.
     - the network switch decided first (item 5);
     - tests, the release, then the two-provider review right after it (`AUDIT.md`, review policy).
 
-14. **Extension and app: a new release announced inside the wallet** (extension: done in 0.2.1, 2026-11-23, with the relayer's `GET /relay/versions`; app: with its next batch) (2026-11-22, as ChainIntegrate Account does:
+14. **Extension and app: a new release announced inside the wallet** (extension: done in 0.2.1, 2026-11-23, with the relayer's `GET /relay/versions`, deployed the same day;
+    tested live: a build of 0.2.1's code as 0.2.0 announced 0.2.1, then 0.2.1 announced 0.2.2, updated from the
+    notice's link; app: with its next batch, once its releases are full releases too) (2026-11-22, as ChainIntegrate Account does:
     `up-onboarding/extension/app.js`, `checkUpdate`). Today a user learns of a new version only from GitHub or a
     post. The wallet reads, at start, the latest version from ChainIntegrate's server (ChainIntegrate Account reads
     it from its service's health answer, `{ extension: { version, download } }`; here the site relayer's
