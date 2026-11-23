@@ -191,7 +191,7 @@ item when its PR (or, for the app, its release) is done.
     - the network switch decided first (item 5);
     - tests, the release, then the two-provider review right after it (`AUDIT.md`, review policy).
 
-14. **Extension and app: a new release announced inside the wallet** (2026-11-22, as ChainIntegrate Account does:
+14. **Extension and app: a new release announced inside the wallet** (extension: done in 0.2.1, 2026-11-23, with the relayer's `GET /relay/versions`; app: with its next batch) (2026-11-22, as ChainIntegrate Account does:
     `up-onboarding/extension/app.js`, `checkUpdate`). Today a user learns of a new version only from GitHub or a
     post. The wallet reads, at start, the latest version from ChainIntegrate's server (ChainIntegrate Account reads
     it from its service's health answer, `{ extension: { version, download } }`; here the site relayer's

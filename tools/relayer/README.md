@@ -39,6 +39,7 @@ Sending the same signed operation again returns the same transaction.
 |---|---|
 | `GET /relay/info` | `{ relayer, entryPoint, chains: { "<chainId>": { paymasters, balance, sponsorPaymaster? } } }` |
 | `POST /relay/send` with `{ "chainId": 8453, "op": { … } }` | `{ "hash": "0x…" }`, or `{ "error": "…" }` with status 4xx/5xx |
+| `GET /relay/versions` | The latest full release of UP Wallet for the browser and for Android: `{ "extension": { "version": "0.2.1", "download": "…", "notes": "…" }, "app": { … } }`, read from GitHub's "latest" (full releases only) at most every 30 minutes; a wallet is missing while GitHub has given no answer. The links are ChainIntegrate's own release files and pages. The wallets ask this, never GitHub (`WALLET-BACKLOG.md` item 14). |
 | `GET /relay/receipt?hash=0x…` | For a transaction this relayer sent (only those, the last 1,000 per chain): `{ status, blockNumber, logs }`, or `{ pending: true }` until it is mined; 404 for any other hash. The pages ask it when the public RPC refuses receipt lookups (publicnode on Base does). |
 
 In `op`, the numbers are decimal or hex strings and the bytes are 0x-hex strings.

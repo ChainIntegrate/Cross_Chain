@@ -360,6 +360,40 @@ function readBody(req) {
   });
 }
 
+// ==================== the wallets' latest versions ====================
+// GET /versions: the latest full release of UP Wallet for the browser and for Android, read from GitHub (its
+// "latest", which counts full releases only) at most every 30 minutes, so that the wallets learn of a new
+// version from this service and never call GitHub themselves (no GitHub rate limit, no user's address sent to
+// GitHub). { extension: { version, download, notes }, app: { ... } }; a wallet missing when GitHub did not
+// answer. The links are always ChainIntegrate's own release pages and files (WALLET-BACKLOG item 14).
+const WALLETS = { extension: { repo: "up-wallet-extension", asset: "up-wallet-extension.zip" }, app: { repo: "up-wallet-android", asset: "up-wallet.apk" } };
+const VERSIONS_TTL_MS = 30 * 60 * 1000;
+let versions = { at: 0, data: {} }, versionsLoading = null;
+async function latestVersions(fetchFn = fetch) {
+  if (Date.now() - versions.at < VERSIONS_TTL_MS) return versions.data;
+  if (!versionsLoading) {
+    versionsLoading = (async () => {
+      const data = { ...versions.data };
+      await Promise.all(Object.entries(WALLETS).map(async ([kind, w]) => {
+        try {
+          const r = await fetchFn(`https://api.github.com/repos/ChainIntegrate/${w.repo}/releases/latest`,
+            { headers: { accept: "application/vnd.github+json", "user-agent": "crosschain-relayer" }, signal: AbortSignal.timeout(8000) });
+          if (!r.ok) return;
+          const j = await r.json();
+          const m = /^v(\d{1,4}\.\d{1,4}\.\d{1,4})$/.exec(String(j.tag_name || ""));
+          if (!m || j.draft || j.prerelease) return;
+          const page = `https://github.com/ChainIntegrate/${w.repo}/releases/tag/v${m[1]}`;
+          const file = (j.assets || []).some((a) => a && a.name === w.asset);
+          data[kind] = { version: m[1], download: file ? `https://github.com/ChainIntegrate/${w.repo}/releases/download/v${m[1]}/${w.asset}` : page, notes: page };
+        } catch (e) { /* GitHub did not answer: the last known version stays */ }
+      }));
+      versions = { at: Date.now(), data };
+    })().finally(() => { versionsLoading = null; });
+  }
+  await versionsLoading;
+  return versions.data;
+}
+
 function makeServer(config, wallet, chains) {
   const perIp = new RateLimiter(config.limits.perIpPerMinute);
   const perSender = new RateLimiter(config.limits.perSenderPerMinute);
@@ -379,6 +413,7 @@ function makeServer(config, wallet, chains) {
         }));
         return send(res, 200, out);
       }
+      if (req.method === "GET" && path === "/versions") return send(res, 200, await latestVersions());
       // Receipt of a transaction this relayer sent (and only those): { pending: true } until it is mined.
       if (req.method === "GET" && path === "/receipt") {
         const h = new URL(req.url, "http://x").searchParams.get("hash") || "";
@@ -435,4 +470,4 @@ if (require.main === module) {
   main(process.argv.slice(2)).catch((e) => { console.error(e.message || e); process.exit(1); });
 }
 
-module.exports = { main, userOpHash, parseOp, readConfig, readKey, ENTRY_POINT };
+module.exports = { main, userOpHash, parseOp, readConfig, readKey, ENTRY_POINT, latestVersions, makeServer };
