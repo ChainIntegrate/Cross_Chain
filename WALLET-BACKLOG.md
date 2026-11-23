@@ -147,7 +147,11 @@ item when its PR (or, for the app, its release) is done.
 
 12. **Extension, phase 2: UP Wallet offered to dApps as an injected wallet (EIP-1193, EIP-6963), WalletConnect
     removed from the extension** (2026-11-22; Cross_Chain roadmap step 5; the maintainer's decision of
-    2026-11-22: the first change to the extension, together with EXT-01). A structural change, in phases:
+    2026-11-22: the first change to the extension, together with EXT-01). **Released in extension 0.2.0
+    (2026-11-23, the first full GitHub release, not a pre-release)**: the wallet page sandboxed behind a small
+    privileged host (EXT-01), the provider on the sites connected one by one from panel 4, WalletConnect
+    removed; tests 71/71 (CI with Playwright 1.56 and locally 1.63). Next: the maintainer's live test, then
+    the two-provider review right after the release (`AUDIT.md`, review policy). A structural change, in phases:
     - *first, the discovery test* (`up-wallet-extension/spike/eip6963-discovery/`, 2026-11-22): an unpacked
       extension with no key that announces "UP Wallet (test)" through EIP-6963 on https pages, answers a public
       address and the network, refuses every signature and logs the dApps' calls. The maintainer loads it and
@@ -157,8 +161,11 @@ item when its PR (or, for the app, its release) is done.
       review, EXT-01; `up-wallet-extension/audits/2026-11-04-review.md`), before any provider reaches other
       sites, and WalletConnect (WalletKit) removed from the extension: the largest third-party code leaves the
       privileged pages, and its sessions no longer need storing through the isolated host. The Android app
-      keeps WalletConnect. If the test shows a dApp in use that does not list an injected wallet, WalletConnect
-      stays until that is decided;
+      keeps WalletConnect. The test (2026-11-22, results in the spike's README): listed and connected by hup,
+      Morpho, KyberSwap, Yield Yak, BENQI, revoke.cash, Uniswap, Aave and Merkl; not by Aerodrome, whose
+      "Browser wallet" is a fixed list. Decided on 2026-11-23: WalletConnect removed from the extension anyway;
+      Aerodrome is used from the app (WalletConnect) or the site's page with MetaMask. Work on the extension's
+      branch `phase2`: the isolation first (done on 2026-11-23, tests 55/55), then the provider;
     - then the provider: EIP-6963 only (nothing on `window.ethereum`, so MetaMask and LUKSO's extension keep
       working), on the sites the user connects only (Chrome's optional host permissions, granted site by site,
       instead of "all sites"), the origin taken from Chrome, structured requests only through the bridge, one
