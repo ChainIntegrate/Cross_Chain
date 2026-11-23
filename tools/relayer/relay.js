@@ -64,7 +64,11 @@ const MAX = {
   callDataBytes: 16 * 1024,
   bodyBytes: 64 * 1024,
 };
-const DEFAULT_LIMITS = { perIpPerMinute: 6, perSenderPerMinute: 3 };
+// perSenderPerMinute is charged only to operations that passed both simulations, so the UP's own signature:
+// requests that anyone can forge for a UP (bad shape, bad signature) never use up that UP's quota (CC-01).
+// globalPerMinute bounds the simulations of all clients together, whatever their IPs.
+const DEFAULT_LIMITS = { perIpPerMinute: 6, perSenderPerMinute: 3, globalPerMinute: 60 };
+const INFO_CACHE_MS = 10_000;
 
 // ==================== helpers ====================
 const log = (...a) => console.log(new Date().toISOString(), ...a);
@@ -259,18 +263,18 @@ async function setupChains(config, wallet) {
   return chains;
 }
 
-async function relay(chain, id, op) {
+async function relay(chain, id, op, allowSender = () => true) {
   const pm = checkShape(op, chain);
   const hash = userOpHash(op, chain.chainId);
   const seen = chain.recent.get(hash);
   if (seen) return { hash: seen, repeated: true };
   if (chain.pendingSender.has(op.sender)) throw new Refused("an operation of this UP is still pending: wait for it", 429);
   chain.pendingSender.set(op.sender, true);
-  try { return await checkAndSend(chain, id, op, pm, hash); }
+  try { return await checkAndSend(chain, id, op, pm, hash, allowSender); }
   catch (e) { chain.pendingSender.delete(op.sender); throw e; }
 }
 
-async function checkAndSend(chain, id, op, pm, hash) {
+async function checkAndSend(chain, id, op, pm, hash, allowSender) {
   const block = await chain.provider.getBlock("latest");
   const legacy = block.baseFeePerGas == null;
   if (!legacy && op.maxFeePerGas < block.baseFeePerGas) throw new Refused("maxFeePerGas below the current base fee: prepare and sign the operation again");
@@ -292,6 +296,8 @@ async function checkAndSend(chain, id, op, pm, hash) {
   // So the execution is simulated on its own, as the EntryPoint will call it, and refused if it fails.
   try { await chain.provider.call({ from: ENTRY_POINT, to: op.sender, data: op.callData, gasLimit: op.callGasLimit }); }
   catch (e) { throw new Refused(`the operation would fail: ${revertReason(e)}`); }
+  // The per-UP limit, now that the simulations have checked the UP's own signature and execution.
+  if (!allowSender(`${id}:${op.sender}`)) throw new Refused("too many operations for this UP, try again in a minute", 429);
   const gasLimit = gas + gas / 4n;
   if (gasLimit > MAX.txGas) throw new Refused("transaction gas above the relayer limit");
   // Same prices as the operation: the EntryPoint reimburses at the operation's price, so the relayer
@@ -397,6 +403,18 @@ async function latestVersions(fetchFn = fetch) {
 function makeServer(config, wallet, chains) {
   const perIp = new RateLimiter(config.limits.perIpPerMinute);
   const perSender = new RateLimiter(config.limits.perSenderPerMinute);
+  const global = new RateLimiter(config.limits.globalPerMinute);
+  // /info reads every chain's balance: one answer shared by all requests for a few seconds.
+  let info = null;
+  const readInfo = async () => {
+    const out = { relayer: wallet.address, entryPoint: ENTRY_POINT, chains: {}, unavailable: [...chains.unavailable] };
+    await Promise.all([...chains].map(async ([id, ch]) => {
+      let balance = null;
+      try { balance = (await ch.provider.getBalance(wallet.address)).toString(); } catch (e) { /* rpc down */ }
+      out.chains[id] = { paymasters: ch.paymasters, balance, ...(ch.sponsorPaymaster ? { sponsorPaymaster: ch.sponsorPaymaster } : {}) };
+    }));
+    return out;
+  };
   return http.createServer(async (req, res) => {
     const ip = clientIp(req);
     try {
@@ -405,13 +423,8 @@ function makeServer(config, wallet, chains) {
       const origin = req.headers.origin;
       if (origin && config.allowedOrigins.length && !config.allowedOrigins.includes(origin)) throw new Refused("origin not allowed", 403);
       if (req.method === "GET" && path === "/info") {
-        const out = { relayer: wallet.address, entryPoint: ENTRY_POINT, chains: {}, unavailable: [...chains.unavailable] };
-        await Promise.all([...chains].map(async ([id, ch]) => {
-          let balance = null;
-          try { balance = (await ch.provider.getBalance(wallet.address)).toString(); } catch (e) { /* rpc down */ }
-          out.chains[id] = { paymasters: ch.paymasters, balance, ...(ch.sponsorPaymaster ? { sponsorPaymaster: ch.sponsorPaymaster } : {}) };
-        }));
-        return send(res, 200, out);
+        if (!info || Date.now() - info.at > INFO_CACHE_MS) info = { at: Date.now(), out: readInfo() };
+        return send(res, 200, await info.out);
       }
       if (req.method === "GET" && path === "/versions") return send(res, 200, await latestVersions());
       // Receipt of a transaction this relayer sent (and only those): { pending: true } until it is mined.
@@ -431,8 +444,8 @@ function makeServer(config, wallet, chains) {
         if (!chain && chains.unavailable.has(id)) throw new Refused(`chain ${id} is temporarily unavailable (its RPC does not answer): try again in a few minutes`, 503);
         if (!chain) throw new Refused(`chain ${id || "?"} is not served by this relayer`, 404);
         const op = parseOp(body.op);
-        if (!perSender.allow(`${id}:${op.sender}`)) throw new Refused("too many operations for this UP, try again in a minute", 429);
-        const out = await relay(chain, id, op);
+        if (!global.allow("all")) throw new Refused("the relayer is busy, try again in a minute", 429);
+        const out = await relay(chain, id, op, (key) => perSender.allow(key));
         return send(res, 200, out);
       }
       throw new Refused("not found", 404);

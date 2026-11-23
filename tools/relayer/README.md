@@ -25,7 +25,9 @@ The relay transaction uses the operation's own fee fields, so the relayer never 
 
 Other limits:
 - one pending operation per UP at a time;
-- per-IP and per-UP rate limits;
+- rate limits (`limits` in the configuration): per IP (`perIpPerMinute`, default 6), for all clients together (`globalPerMinute`, default 60, before any RPC call), and per UP (`perSenderPerMinute`, default 3). The per-UP limit is charged only to operations that passed both simulations, so the UP's own signature: anyone can forge a request naming a UP, and such requests never use up that UP's quota (AUDIT CC-01);
+- `GET /relay/info` is read from the chains at most every 10 seconds, whoever asks;
+- nginx limits each IP to 10 requests a second (burst 40) on `/relay/` (step 6);
 - requests up to 64 KB;
 - the browser `Origin` must be the site's.
 
@@ -103,15 +105,24 @@ journalctl -u crosschain-relayer -n 20     # "chain 8453: ready (OP stack) …" 
 
 **6. Web server: pass `/relay/` to the service.** Only this path. The service listens on `127.0.0.1` only.
 
-nginx, inside the site's `server { … }` block:
+nginx: first the per-IP rate zone, once, in the http context (`tools/nginx/relay-limit.conf`):
+
+```bash
+sudo cp /opt/crosschain-relayer/tools/nginx/relay-limit.conf /etc/nginx/conf.d/crosschain-relay-limit.conf
+```
+
+then, inside the site's `server { … }` block:
 
 ```nginx
 location /relay/ {
+    limit_req zone=crosschain_relay burst=40 nodelay;
     proxy_pass http://127.0.0.1:8787;
     proxy_set_header X-Real-IP $remote_addr;
     client_max_body_size 64k;
 }
 ```
+
+The signing service's own `location /relay/sponsor/` takes the same `limit_req` line.
 
 Apache, inside the site's `<VirtualHost *:443>` (needs `sudo a2enmod proxy proxy_http`). `.htaccess` is not applied on this host, so it goes in the virtual host file:
 
