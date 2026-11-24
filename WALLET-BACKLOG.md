@@ -4,7 +4,8 @@ Changes to `up-wallet.html` and its scripts are collected here and made together
 one app release. Changes to the other pages asked at the same time are listed below, under "Other
 pages", and go in the same batch (they need no app release). Changes to the Android app alone
 (up-wallet-android) are listed with them, marked "App only", and go in the same app release. Remove an
-item when its PR (or, for the app, its release) is done.
+item when its PR (or, for the app, its release) is done; an item that other files cite by its number
+stays, marked "Done.", until those mentions are updated.
 
 ## Open
 
@@ -36,9 +37,8 @@ item when its PR (or, for the app, its release) is done.
    release; app 0.9.8 and extension 0.1.8 stay the way back. App 0.10.0 tested live on the phone by the
    maintainer on 2026-11-03: it works. Extension 0.1.9 tested live on 2026-11-04: as expected.
    **Review done on 2026-11-04** (Claude, in depth, with local reproductions; Codex, lighter, no test run),
-   on the app, the extension, the site and the signing service. The findings are with the maintainer and
-   stay private until fixed (`AUDIT.md`: the summary is published with the fixes); the fixes go in the next
-   batches, each listed here when it is made.
+   on the app, the extension, the site and the signing service. **Fixed by 2026-11-24** except the Low items
+   that need a new app or extension release (item 8); the public summary is in `AUDIT.md` section 19.
 4. **With "Simulation only" on, a message signature says it is real** (2026-11-04, from a user on
    hup.social: with simulation on, three signatures and a post, asked whether simulation works).
    Simulation applies to transactions only; message signatures (personal_sign, typed data) cannot be
@@ -83,8 +83,13 @@ item when its PR (or, for the app, its release) is done.
    are at most "Da controllare". The page only; the app and the extension take it with the page.
 
 8. **The review of 2026-11-04: what to change, per repository** (decided by the maintainer item by item;
-   the ones that are not serious may stay open). The full reports are private until the fixes are
-   released; then `AUDIT.md` gets the public summary, with the 2026-10-29 Codex one.
+   the ones that are not serious may stay open). Status on 2026-11-24: every High and Medium fixed and
+   deployed; the Low items that need no wallet release done (site, relayer, signing service, the
+   workflows, the READMEs); still open, with the next app and extension releases: EXT-04 / AND-03 (network
+   name and payer in the signing window), AND-05 (native confirmation before deleting the phone key), the
+   diagnostic log's redaction (AND-06), A05 / A07 / A08 (item 2), a stronger password function (EXT-05),
+   and CC-10's L1 fee at the effective price (it raises the minimum `preVerificationGas` the wallets send).
+   The public summary, with the 2026-10-29 Codex one, is in `AUDIT.md` section 19.
    - Cross_Chain (site, page, relayer): [tools/audits/2026-11-04-review.md](tools/audits/2026-11-04-review.md);
    - extension: `up-wallet-extension/audits/2026-11-04-review.md`;
    - app: `up-wallet-android/audits/2026-11-04-review.md`;
@@ -143,7 +148,7 @@ item when its PR (or, for the app, its release) is done.
     The page only; the app and the extension take it with the page. Everything else used from the UP on
     Avalanche on 2026-11-15 worked (Yield Yak, swaps; one WAVAX → AVAX swap done on LFJ for liquidity).
 
-12. **Extension, phase 2: UP Wallet offered to dApps as an injected wallet (EIP-1193, EIP-6963), WalletConnect
+12. **Done. Extension, phase 2: UP Wallet offered to dApps as an injected wallet (EIP-1193, EIP-6963), WalletConnect
     removed from the extension** (2026-11-22; Cross_Chain roadmap step 5; the maintainer's decision of
     2026-11-22: the first change to the extension, together with EXT-01). **Released in extension 0.2.0
     (2026-11-23, the first full GitHub release, not a pre-release)**: the wallet page sandboxed behind a small
@@ -201,7 +206,7 @@ item when its PR (or, for the app, its release) is done.
     - the network switch decided first (item 5);
     - tests, the release, then the two-provider review right after it (`AUDIT.md`, review policy).
 
-14. **Extension and app: a new release announced inside the wallet** (extension: done in 0.2.1, 2026-11-23, with the relayer's `GET /relay/versions`, deployed the same day;
+14. **Done. Extension and app: a new release announced inside the wallet** (extension: done in 0.2.1, 2026-11-23, with the relayer's `GET /relay/versions`, deployed the same day;
     tested live: a build of 0.2.1's code as 0.2.0 announced 0.2.1, then 0.2.1 announced 0.2.2, updated from the
     notice's link; app: in 0.10.1, its releases full releases from then; tested live: 0.10.1 announced 0.10.2,
     updated from the notice's link) (2026-11-22, as ChainIntegrate Account does:
@@ -225,7 +230,7 @@ item when its PR (or, for the app, its release) is done.
 
 ## Other pages
 
-1. **The LUKSO authorization page: live tests, then the review** (2026-11-03). `up-authorize-lukso.html`
+1. **Done. The LUKSO authorization page: live tests, then the review** (2026-11-03). `up-authorize-lukso.html`
    was tested against a fake LUKSO node (25/25). Live, on the work UP: a device authorized with LUKSO's
    Universal Profile extension and one with the Universal Profiles app (WalletConnect), both 2026-11-03;
    the recovery key (ADDCONTROLLER only) identified and kept out of the removable devices. "Save the name"
@@ -233,6 +238,6 @@ item when its PR (or, for the app, its release) is done.
    keys and values as the Backup page, tested live there, and go through the same sending path as the
    authorization, tested live here (removal needs EDITPERMISSIONS, which the admin key has; without it the
    simulation fails before anything is sent). Reviewed with the release on 2026-11-04: no logic error
-   found. Three small changes to make: the "public, no personal data" note next to the device name (as on
-   the Backup page), the `chainId` in its transaction (as on every other page), and a stronger check of an
-   address that comes from a link than the tick box.
+   found. Its three small changes **done on 2026-11-24** (CC-04, CC-05, CC-09): the "public, no personal data"
+   note next to the device name, the `chainId` in its transaction, and an address from a link used only
+   after its last 8 characters are typed as the device shows them (the Backup page too).

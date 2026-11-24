@@ -12,7 +12,7 @@ The repository is released under the [MIT License](LICENSE), with the exceptions
 
 Used by `up-wallet.html`. Built as described in [vendor/README.md](vendor/README.md); a rebuild gives a byte-identical file.
 
-- **Reown / WalletConnect packages** — `@reown/walletkit` 1.6.0, `@walletconnect/core` 2.25.0, `@walletconnect/utils` 2.25.0, `@walletconnect/sign-client` 2.25.0, `@walletconnect/types` 2.25.0, `@walletconnect/pay` 1.1.0: **WalletConnect Community License Agreement** of Reown, Inc. (release date 20 August 2025). It is not an open-source license. Full text: [vendor/walletkit-1.6.0.LICENSE.md](vendor/walletkit-1.6.0.LICENSE.md). Notice required by its section 2(a):
+- **Reown / WalletConnect packages** — `@reown/walletkit` 1.6.0, `@walletconnect/core` 2.25.0, `@walletconnect/utils` 2.25.0, `@walletconnect/sign-client` 2.25.0, `@walletconnect/types` 2.25.0, `@walletconnect/pay` 1.1.0: **WalletConnect Community License Agreement** of Reown, Inc. (release date 20 August 2025). It is not an open-source license. Full text: [vendor/walletkit-1.6.0.LICENSE.md](vendor/walletkit-1.6.0.LICENSE.md) (also as [vendor/walletkit-1.6.0.LICENSE.txt](vendor/walletkit-1.6.0.LICENSE.txt), the copy the pages link: the web server does not serve `.md` files). Notice required by its section 2(a):
 
   > Portions © 2025 Reown, Inc. All Rights Reserved
 

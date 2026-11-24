@@ -4,6 +4,8 @@ Internal notes for the maintainer. They live in `tools/`, which is **not publish
 
 Last update: 2026-09-30, with later entries dated. **Current state (2026-10-21):** README (Contents, Roadmap), `AUDIT.md` rev. 12 (open by design: M-1, L-07) and `WALLET-BACKLOG.md` are the reference; the entries below are kept as history and may be outdated where they disagree.
 
+**Current state (2026-11-24):** the reference is README (Contents, Roadmap), `AUDIT.md` (section 19, the reviews of 2026-10-29 and 2026-11-04, and the review files in `tools/audits/` and in the wallets' repositories) and `WALLET-BACKLOG.md`. Live: page 0.14.3, extension 0.2.7 (injected wallet, no WalletConnect), app 0.10.2, the relayer with `/relay/versions`, the privacy notice `privacy.html`. The two deprecated pages were removed from the site on 2026-11-24.
+
 ---
 
 ## 1. Where we are
@@ -13,7 +15,7 @@ Last update: 2026-09-30, with later entries dated. **Current state (2026-10-21):
 |---|---|
 | Deploy, Verify, Test, Send, Publish implementation | Stable. Audited (AUDIT.md rev. 1–3). |
 | `up-wallet.html` — UP Wallet | Experimental. Tested live on Base and Polygon (OpenSea sign-in, EURe swap, LI.FI, Basenames). Audited (AUDIT.md §7). |
-| `up-walletconnect-basenames.html` | Deprecated 2026-10-03 (closed experiment): banner, all actions disabled, kept for reference; superseded by the UP Wallet (AUDIT R-07 decided). |
+| `up-walletconnect-basenames.html` | Deprecated 2026-10-03 (closed experiment), removed from the site on 2026-11-24 (in the git history); superseded by the UP Wallet (AUDIT R-07). |
 | `up-nft-receiver.html` + `contracts/NFTReceiverExtension.sol` | Experimental, merged (PR #33, #36). Tested on a local chain with LUKSO UP/LSP6 0.12.1 and 0.14.0 and on Base mainnet. Since 2026-10-05 the receiver callbacks go to LUKSO's official `ERCTokenCallbacks`; `supportsInterface` stays on ours (see 2.1). The page only enables; publishing ours on a new chain is done in `up-publish-implementation.html` (shortcut chip), with any wallet. |
 | Deploy tool section 5 + `backup-check.js` — backup controller | Add a backup controller or remove a lost one, per network; alert on Send, Test and UP Wallet when the backup is missing. Tested on a local chain with LUKSO UP/LSP6 0.12.1 and 0.14.0. Live 2026-10-02: the three maintainer UPs (ChainIntegrate, personal, Birra20venti) have a backup controller on Base and Polygon (logs in `tools/logs/2026-10-02-*-backup.txt`). |
 
@@ -28,7 +30,7 @@ Last update: 2026-09-30, with later entries dated. **Current state (2026-10-21):
 - **Alchemy API key** (free plan) only in the server's `config.js`, restricted to the site's domain in the Alchemy dashboard. Used by UP Wallet and the Identity page to list a UP's tokens and NFTs. Networks enabled in the Alchemy app: Ethereum, Polygon, Arbitrum, Base, Avalanche, Gnosis; others can be enabled in the dashboard without code changes.
 - **Finding a UP's holdings:** Alchemy first; Blockscout as the alternative without a key (its index proved incomplete on Polygon and Base); pasting the contract address always works. The `eth_getLogs` scan was tried and removed: public RPCs allow only small block ranges, hundreds of requests per search. The list is only a shortcut: the check reads everything again from the chain.
 - **Spam label:** only Alchemy's `isSpam` verdict (or Blockscout's reputation) marks a row; `spamClassifications` are signals, not a verdict. Alchemy flags Basenames as spam (false positive): accepted as is, explained in the guide. No allowlist of "trusted" contracts.
-- **No browser extension impersonating a wallet.**
+- **No browser extension impersonating a wallet.** The UP Wallet extension (0.2.0) announces itself as "UP Wallet" (EIP-6963) and never sets `window.ethereum`.
 - **Security model of the bridge pages:** security comes from the architecture (Key Manager permissions, signing in the user's wallet) and from services (Reown Verify). Every step is shown; ChainIntegrate takes no responsibility for requests approved on unclear content.
 - **UP Wallet:** one network at a time; compatibility check between UP and controller as soon as network, UP and MetaMask are set, again on every change and before every request.
 - **NFT reception:** LUKSO's official `ERCTokenCallbacks` (`0x082d49D8487d2ed2527440c7879C66d850daaBc5`) for the three receiver callbacks; our stateless extension (`0x7F68e74483867058C806218aa05aB5527984C03e`) for `supportsInterface` (exact interface set), and for everything where LUKSO's is missing. Enabled with one atomic `executeBatch` that restores the controller's exact permission bytes.
