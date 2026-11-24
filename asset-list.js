@@ -305,7 +305,12 @@
         if (BLOCKSCOUT[netKey]) {
           try {
             const have = new Set(out.indexer.rows.map((r) => r.address));
-            const nftRows = (await fromBlockscout(BLOCKSCOUT[netKey], up)).filter((r) => Array.isArray(r.rawIds) && !have.has(r.address));
+            // At most 25 s: Base's Blockscout can be slow, and the tokens already read must not be lost with it
+            // (the browser extension's Alchemy key gets no NFTs, so it always comes here).
+            let timer;
+            const late = new Promise((_, no) => { timer = setTimeout(() => no(new Error("timeout 25 s")), 25000); });
+            const all = await Promise.race([fromBlockscout(BLOCKSCOUT[netKey], up), late]).finally(() => clearTimeout(timer));
+            const nftRows = all.filter((r) => Array.isArray(r.rawIds) && !have.has(r.address));
             out.indexer.rows = out.indexer.rows.concat(nftRows);
             out.indexer.nftSource = "blockscout";
           } catch (e) { out.indexer.nftErr += "; Blockscout: " + e.message; }

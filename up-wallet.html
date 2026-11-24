@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-kwBwiLIdSGHT7zZN8QNj/fY36F7Pu4RnkKU+j5FKsdI='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-MaEFwcKO1ilAb8qPhQN6XyGOAn695ydHt2FA1fY4BbU='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -782,6 +782,7 @@ const I18N = {
     ovSpam: (v) => `${v.n} segnalati come spam, non contati`,
     ovIxFail: (v) => `Indice ${v.ix} non disponibile (${v.err}): mancano i token che solo lui elenca.`,
     ovIxSrc: (v) => `Altri token letti da ${v.ix}.`,
+    ovNftFail: (v) => `NFT non letti (${v.err}): riprova con Aggiorna.`,
     ixFallback: (v) => `Alchemy non ha risposto (${v.err}): gli altri token sono letti da Blockscout, che può elencarne meno.`,
     ovNothing: (v) => `Niente su: ${v.list}.`, ovAbsent: (v) => `La UP non esiste su: ${v.list}.`,
     ovFailed: (v) => `Non lette: ${v.list}. Riprova con Aggiorna.`,
@@ -1309,6 +1310,7 @@ const I18N = {
     ovSpam: (v) => `${v.n} flagged as spam, not counted`,
     ovIxFail: (v) => `${v.ix} index not available (${v.err}): tokens only it lists are missing.`,
     ovIxSrc: (v) => `Other tokens read from ${v.ix}.`,
+    ovNftFail: (v) => `NFTs not read (${v.err}): try again with Refresh.`,
     ixFallback: (v) => `Alchemy did not answer (${v.err}): the other tokens are read from Blockscout, which may list fewer.`,
     ovNothing: (v) => `Nothing on: ${v.list}.`, ovAbsent: (v) => `The UP does not exist on: ${v.list}.`,
     ovFailed: (v) => `Not read: ${v.list}. Try again with Refresh.`,
@@ -4713,6 +4715,8 @@ function renderOverview() {
     if (ix && ix.err) add("div", "ov-sub line-warn", t("ovIxFail", { ix: ix.kind === "alchemy" ? "Alchemy" : "Blockscout", err: oneLine(ix.err, 120) }), card);
     else if (ix && ix.fallback) add("div", "ov-sub line-warn", t("ixFallback", { err: oneLine(ix.fallback, 120) }), card);
     else if (ix) add("div", "ov-sub", t("ovIxSrc", { ix: ix.kind === "alchemy" ? "Alchemy" : "Blockscout" }), card);
+    // Alchemy gave the tokens, and neither it nor Blockscout the NFTs (the extension's key gets none from Alchemy).
+    if (ix && !ix.err && ix.nftErr && !ix.nftSource) add("div", "ov-sub line-warn", t("ovNftFail", { err: oneLine(ix.nftErr, 120) }), card);
   }
   if (empty.length) add("div", "ov-sub", t("ovNothing", { list: empty.join(", ") }));
   if (absent.length) add("div", "ov-sub", t("ovAbsent", { list: absent.join(", ") }));
