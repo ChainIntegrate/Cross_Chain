@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-dyf38h/JzUpAQVeiTVu93r6NsMB1y20alPPyLgA0bCM='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-5n8b154fSp3ibvORz3OUxvhkx8EnGwJxx0mPMMQVgLs='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
@@ -148,7 +148,12 @@
   <div class="note" data-i18n-html="phoneNote"></div>
   <label data-i18n="phoneAddrLabel">Indirizzo della chiave del dispositivo (lo mostra l'app, pannello "Questo telefono", o l'estensione, pannello "Questo computer")</label>
   <input type="text" id="phoneAddress" placeholder="0x...">
-  <label class="check-row" id="phoneLinkRow" hidden><input type="checkbox" id="phoneLinkAck"> <span data-i18n="phoneLinkAck"></span></label>
+  <div id="phoneLinkRow" hidden>
+    <div class="note" data-i18n-html="phoneLinkTailNote"></div>
+    <label for="phoneLinkTail" data-i18n="phoneLinkTailLabel">Ultimi 8 caratteri</label>
+    <input type="text" id="phoneLinkTail" maxlength="8" autocomplete="off" spellcheck="false" placeholder="········">
+    <div class="note" id="phoneLinkTailState"></div>
+  </div>
   <label for="phoneName" data-i18n="phoneNameLabel">Nome del dispositivo (facoltativo)</label>
   <input type="text" id="phoneName" maxlength="64" autocomplete="off" data-i18n-placeholder="phoneNamePh">
   <button id="addPhoneBtn" disabled data-i18n="addPhoneBtn">Autorizza il dispositivo su questa rete</button>
@@ -210,8 +215,11 @@ const I18N = {
     phoneDivider: "— oppure, per UP Wallet: app Android o estensione del browser —",
     phoneNote: "<b>Autorizza un dispositivo.</b> Solo su LUKSO? Lo puoi fare anche con l'estensione o l'app Universal Profiles, senza MetaMask: <a href=\"up-authorize-lukso.html\" style=\"color:var(--accent);\">Autorizza un dispositivo su LUKSO</a>. L'app UP Wallet per Android (da 0.9.0) firma con una chiave creata e tenuta sul telefono; l'estensione UP Wallet per il browser con una chiave tenuta sul computer. Qui la aggiungi alla UP come controller <b>senza permessi di amministrazione</b>: <b>non</b> può aggiungere controller, cambiare permessi o estensioni. Può però <b>usare tutti i fondi della UP</b>: chiamate e invii verso qualsiasi indirizzo (SUPER_CALL, SUPER_TRANSFERVALUE), firme (SIGN), gas pagato dal sito (4337) e scrittura del solo profilo (SETDATA, limitato alla chiave <code>LSP3Profile</code>). Chi sblocca il dispositivo e passa impronta, PIN, passkey o password può muovere i fondi: autorizza solo un dispositivo tuo. Firma il controller amministratore connesso qui, una volta per rete. Se perdi il dispositivo o togli l'app o l'estensione, rimuovi la sua chiave qui sotto, rete per rete.",
     phoneAddrLabel: "Indirizzo della chiave del dispositivo (lo mostra l'app, pannello \"Questo telefono\", o l'estensione, pannello \"Questo computer\")",
-    phoneLinkAck: "Questo indirizzo viene dal link che hai aperto. Ho controllato che sia lo stesso che mostra la mia app (pannello \"Questo telefono\") o la mia estensione (pannello \"Questo computer\"), almeno i primi e gli ultimi 6 caratteri.",
-    bkPhoneLinkAck: "L'indirizzo del dispositivo viene dal link: prima confrontalo con quello che mostra la tua app o la tua estensione e spunta la conferma. Un link di qualcun altro potrebbe darti il suo indirizzo, e con questa autorizzazione potrebbe muovere i fondi della UP.",
+    phoneLinkTailNote: () => `Il link porta l'indirizzo <code>${phoneLinkAddr ? phoneLinkAddr.slice(0, 10) : ""}…</code>. Chiunque può fare un link così: apri la tua app UP Wallet ("Questo telefono") o la tua estensione ("Questo computer") e <b>scrivi qui gli ultimi 8 caratteri</b> dell'indirizzo che ti mostra.`,
+    phoneLinkTailLabel: "Ultimi 8 caratteri dell'indirizzo, dall'app o dall'estensione",
+    phoneLinkTailOk: "✅ Corrisponde: l'indirizzo del link è quello del tuo dispositivo.",
+    phoneLinkTailBad: "❌ Non corrisponde. Ricontrolla l'app o l'estensione: se è giusto, il link non è tuo e non va usato.",
+    bkPhoneLinkAck: "L'indirizzo del dispositivo viene dal link: prima scrivi gli ultimi 8 caratteri che mostra la tua app o la tua estensione. Un link di qualcun altro potrebbe darti il suo indirizzo, e con questa autorizzazione potrebbe muovere i fondi della UP.",
     addPhoneBtn: "Autorizza il dispositivo su questa rete",
     phoneNameLabel: "Nome del dispositivo (facoltativo): salvato sulla UP con l'autorizzazione, per riconoscerlo nella lista. Pubblico, come gli indirizzi dei controller: niente dati personali",
     phoneNamePh: "es. PC ufficio · estensione",
@@ -261,7 +269,7 @@ const I18N = {
     customExplorerLabel: "Explorer URL custom (opzionale)",
     customExplorerPlaceholder: "https://.../address/",
     networkFilterPlaceholder: "Filtra per nome... (es. base, polygon, arbitrum)",
-    footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Codice sorgente su GitHub</a>`,
+    footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Codice sorgente su GitHub</a> · <a href="privacy.html">Privacy</a>`,
     placeholderAddr: "0x...",
     bkAckRequired: "Spunta la conferma prima di rimuovere.",
     bkAddOk: (v) => `✅ Backup registrato: ${v.addr} ha gli stessi permessi del controller che ha firmato. Custodisci la sua seed a parte, mai insieme alla chiave di genesi.`,
@@ -340,8 +348,11 @@ const I18N = {
     phoneDivider: "— or, for UP Wallet: Android app or browser extension —",
     phoneNote: "<b>Authorize a device.</b> Only on LUKSO? You can also do it with the Universal Profile extension or app, without MetaMask: <a href=\"up-authorize-lukso.html\" style=\"color:var(--accent);\">Authorize a device on LUKSO</a>. The UP Wallet app for Android (from 0.9.0) signs with a key created and kept on the phone; the UP Wallet browser extension with a key kept on the computer. Here you add it to the UP as a controller <b>with no admin permissions</b>: it <b>cannot</b> add controllers, change permissions or extensions. It <b>can use all the UP's funds</b>, though: calls and sends to any address (SUPER_CALL, SUPER_TRANSFERVALUE), signatures (SIGN), gas paid by the site (4337) and writing the profile only (SETDATA, limited to the <code>LSP3Profile</code> key). Whoever unlocks the device and passes the fingerprint, PIN, passkey or password can move the funds: authorize only a device of yours. The admin controller connected here signs, once per network. If you lose the device or remove the app or the extension, remove its key below, network by network.",
     phoneAddrLabel: "The device key's address (the app shows it, \"This phone\" panel, or the extension, \"This computer\" panel)",
-    phoneLinkAck: "This address comes from the link you opened. I checked that it is the same one my app (\"This phone\" panel) or my extension (\"This computer\" panel) shows, at least the first and last 6 characters.",
-    bkPhoneLinkAck: "The device's address comes from the link: first compare it with the one your app or your extension shows and tick the confirmation. Someone else's link could give you their address, and with this authorization they could move the UP's funds.",
+    phoneLinkTailNote: () => `The link carries the address <code>${phoneLinkAddr ? phoneLinkAddr.slice(0, 10) : ""}…</code>. Anyone can make such a link: open your UP Wallet app ("This phone") or your extension ("This computer") and <b>type here the last 8 characters</b> of the address it shows.`,
+    phoneLinkTailLabel: "Last 8 characters of the address, from the app or the extension",
+    phoneLinkTailOk: "✅ It matches: the link's address is your device's.",
+    phoneLinkTailBad: "❌ It does not match. Check the app or the extension again: if this is right, the link is not yours and must not be used.",
+    bkPhoneLinkAck: "The device's address comes from the link: first type the last 8 characters your app or your extension shows. Someone else's link could give you their address, and with this authorization they could move the UP's funds.",
     addPhoneBtn: "Authorize the device on this network",
     phoneNameLabel: "The device's name (optional): saved on the UP with the authorization, to recognize it in the list. Public, as the controllers' addresses are: no personal data",
     phoneNamePh: "e.g. Office PC · extension",
@@ -391,7 +402,7 @@ const I18N = {
     customExplorerLabel: "Custom explorer URL (optional)",
     customExplorerPlaceholder: "https://.../address/",
     networkFilterPlaceholder: "Filter by name... (e.g. base, polygon, arbitrum)",
-    footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Source code on GitHub</a>`,
+    footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Source code on GitHub</a> · <a href="privacy.html">Privacy</a>`,
     placeholderAddr: "0x...",
     bkAckRequired: "Tick the confirmation before removing.",
     bkAddOk: (v) => `✅ Backup registered: ${v.addr} has the same permissions as the controller that signed. Keep its seed phrase separately, never together with the genesis key.`,
@@ -1017,9 +1028,10 @@ $("addPhoneBtn").addEventListener("click", async () => {
     const b = await freshAdminState();
     if (!b) return;
     const rawAddr = $("phoneAddress").value.trim();
+    if (!rawAddr && phoneLinkAddr && !phoneLinkOk) { bkLog(t("bkPhoneLinkAck"), "line-err"); return; }
     if (!ethers.isAddress(rawAddr) || BigInt(rawAddr) === 0n) { bkLog(t("bkBadAddr"), "line-err"); return; }
     // An address from the link is someone else's until the admin compares it with the app (AUDIT 2026-10-26 PK-1).
-    if (phoneFromLink() && !$("phoneLinkAck").checked) { bkLog(t("bkPhoneLinkAck"), "line-err"); return; }
+    if (phoneFromLink() && !phoneLinkOk) { bkLog(t("bkPhoneLinkAck"), "line-err"); return; }
     const phone = ethers.getAddress(rawAddr);
     if (phone === b.signer) { bkLog(t("bkSameAsSigner"), "line-err"); return; }
     if ([b.up, b.km, BK.ENTRY_POINT].map(x => x.toLowerCase()).includes(phone.toLowerCase()) || phone.toLowerCase() === b.r.urd || KNOWN_ADDRESSES[phone.toLowerCase()]) { bkLog(t("bkSystem"), "line-err"); return; }
@@ -1159,18 +1171,26 @@ $("removeBtn").addEventListener("click", async () => {
 ["upAddress", "customRpc", "customExplorer"].forEach(id => $(id).addEventListener("input", resetBackupView));
 networkSelectEl.addEventListener("change", resetBackupView);
 
-// The phone's address as the link gave it, while the field still holds it.
-let phoneLinkAddr = null;
+// The device's address as the link gave it. It is put in the field only once the admin has typed its last
+// 8 characters as the device's own panel shows them (AUDIT 2026-11-04 CC-05): a tick box was too easy.
+let phoneLinkAddr = null, phoneLinkOk = false;
 function phoneFromLink() {
   const v = $("phoneAddress").value.trim();
   return !!phoneLinkAddr && ethers.isAddress(v) && ethers.getAddress(v) === phoneLinkAddr;
 }
 function syncPhoneLink() {
-  const fromLink = phoneFromLink();
-  $("phoneLinkRow").hidden = !fromLink;
-  if (!fromLink) $("phoneLinkAck").checked = false;
+  $("phoneLinkRow").hidden = !phoneLinkAddr || phoneLinkOk;
+  const typed = $("phoneLinkTail").value.trim().toLowerCase();
+  const st = $("phoneLinkTailState");
+  if (!phoneLinkAddr || typed.length < 8) { st.textContent = ""; return; }
+  if (typed === phoneLinkAddr.slice(-8).toLowerCase()) {
+    phoneLinkOk = true;
+    $("phoneAddress").value = phoneLinkAddr;
+    $("phoneLinkRow").hidden = true;
+    bkLog(t("phoneLinkTailOk"), "line-ok");
+  } else { st.textContent = t("phoneLinkTailBad"); st.style.color = "var(--err)"; }
 }
-$("phoneAddress").addEventListener("input", syncPhoneLink);
+$("phoneLinkTail").addEventListener("input", syncPhoneLink);
 
 // Links from the deploy page and from the alert on the other pages: ?network=<key>&up=<address>
 {
@@ -1186,10 +1206,10 @@ $("phoneAddress").addEventListener("input", syncPhoneLink);
   const presetPhone = q.get("phone");
   if (presetPhone && ethers.isAddress(presetPhone)) {
     phoneLinkAddr = ethers.getAddress(presetPhone);
-    $("phoneAddress").value = phoneLinkAddr;
-    // The kind of device, from UP Wallet's link (?device=computer or phone): a starting point for its name.
+    // The kind of device (?device=computer or phone) only as a suggestion: the link does not choose the name
+    // written on chain (CC-05).
     const kind = q.get("device");
-    if (kind === "computer" || kind === "phone") $("phoneName").value = t(kind === "computer" ? "deviceComputer" : "devicePhone");
+    if (kind === "computer" || kind === "phone") $("phoneName").setAttribute("data-i18n-placeholder", kind === "computer" ? "deviceComputer" : "devicePhone");
   }
   syncPhoneLink();
 }

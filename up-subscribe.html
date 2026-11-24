@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-E0RA3PoppkcBEHXqAK7j2L7wibhfZapfXPTPmBQxH+s='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-R+3bLxcBFhbFmB/nBGtLAEHfQGchKpPXnd8yX9l81tQ='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -118,7 +118,7 @@
   <label for="email" data-i18n="emailLabel">La tua email (per l'attivazione)</label>
   <input type="email" id="email" placeholder="nome@esempio.it" autocomplete="email">
   <div class="note" style="margin-top:10px;" data-i18n-html="privacyNote"></div>
-  <div class="check-row"><input type="checkbox" id="ackPrivacy"><label for="ackPrivacy" style="margin:0; color: var(--text);" data-i18n="ackPrivacy">Ho letto l'informativa e acconsento all'uso dell'email per l'attivazione</label></div>
+  <div class="check-row"><input type="checkbox" id="ackPrivacy"><label for="ackPrivacy" style="margin:0; color: var(--text);" data-i18n="ackPrivacy">Ho letto l'informativa</label></div>
   <button id="payBtn" disabled data-i18n="payBtn">Paga 5 USDC e richiedi l'attivazione</button>
   <div id="payHint" class="note" style="margin-top:8px;"></div>
   <div id="log" class="line-dim" style="margin-top:10px;"></div>
@@ -207,12 +207,12 @@ const I18N = {
     fixSetup: "Fai la configurazione 4337 (pagina Gas relay, sezione 4) →",
     panel3Title: "3 · Email e pagamento",
     emailLabel: "La tua email (per l'attivazione)",
-    privacyNote: "<b>Informativa.</b> L'email serve solo per comunicarti l'attivazione e per le comunicazioni su questo servizio. È conservata sul server del servizio, collegata alla tua UP; non è pubblicata né ceduta a terzi. Titolare: ChainIntegrate. Per farla cancellare scrivi all'assistenza (Telegram, in fondo alla pagina).",
-    ackPrivacy: "Ho letto l'informativa e acconsento all'uso dell'email per l'attivazione",
+    privacyNote: "<b>Informativa.</b> Titolare: ChainIntegrate (<a href=\"mailto:info@chainintegrate.it\">info@chainintegrate.it</a>). L'email serve per l'attivazione, gli avvisi di saldo basso e le comunicazioni su questo servizio: è il contratto che chiedi (art. 6.1.b GDPR). È conservata sul server del servizio (Aruba S.p.A., in Italia, che invia anche le email), collegata alla tua UP; non è pubblicata né ceduta ad altri. Si cancella da sola 12 mesi dopo l'ultimo movimento della UP, o prima se lo chiedi per email. Pagamenti e addebiti restano 10 anni come scritture contabili. Hai diritto di accesso, rettifica, cancellazione, limitazione, portabilità e opposizione, e di reclamo al Garante. Tutto nell'<a href=\"privacy.html#s6\">informativa completa</a>.",
+    ackPrivacy: "Ho letto l'informativa",
     payBtn: "Paga 5 USDC e richiedi l'attivazione",
     hintAck: "Accetta le condizioni (pannello 0).",
     hintCheck: "Completa la verifica (pannello 2).",
-    hintEmail: "Scrivi un'email valida e accetta l'informativa.",
+    hintEmail: "Scrivi un'email valida e conferma di aver letto l'informativa.",
     hintReady: "MetaMask ti chiederà di firmare un messaggio (nessun gas): il gas di questo pagamento lo paga il sito.",
     hintPaid: "Il pagamento è già registrato e in attesa di attivazione: non serve pagare di nuovo.",
     badEmail: "Email non valida.",
@@ -224,7 +224,7 @@ const I18N = {
     opFailed: "❌ L'operazione non è riuscita: niente è stato pagato.",
     genericError: (v) => `Errore: ${v.err}`,
     editedDuringCheckLog: "❌ Dati cambiati mentre la preparazione era in corso: niente è stato inviato. Ripeti.",
-    footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Codice sorgente su GitHub</a>`,
+    footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Codice sorgente su GitHub</a> · <a href="privacy.html">Privacy</a>`,
   },
   en: {
     pageTitle: "Sponsored gas (beta): subscription — ChainIntegrate",
@@ -281,12 +281,12 @@ const I18N = {
     fixSetup: "Do the 4337 setup (Gas relay page, section 4) →",
     panel3Title: "3 · E-mail and payment",
     emailLabel: "Your e-mail (for the activation)",
-    privacyNote: "<b>Privacy notice.</b> The e-mail is used only to tell you about the activation and for communications about this service. It is kept on the service's server, linked to your UP; it is not published or given to third parties. Controller: ChainIntegrate. To have it deleted, write to support (Telegram, bottom of the page).",
-    ackPrivacy: "I have read the notice and agree to the use of the e-mail for the activation",
+    privacyNote: "<b>Privacy notice.</b> Controller: ChainIntegrate (<a href=\"mailto:info@chainintegrate.it\">info@chainintegrate.it</a>). The e-mail is used for the activation, the low-balance alerts and communications about this service: it is the contract you ask for (Art. 6(1)(b) GDPR). It is kept on the service's server (Aruba S.p.A., in Italy, which also sends the e-mails), linked to your UP; it is not published or given to anyone else. It is erased by itself 12 months after the UP's last movement, or earlier if you ask by e-mail. Payments and charges stay 10 years as accounting records. You have the rights of access, rectification, erasure, restriction, portability and objection, and to complain to the Garante. All in the <a href=\"privacy.html#s6\">full notice</a>.",
+    ackPrivacy: "I have read the notice",
     payBtn: "Pay 5 USDC and request activation",
     hintAck: "Accept the conditions (panel 0).",
     hintCheck: "Complete the check (panel 2).",
-    hintEmail: "Enter a valid e-mail and accept the notice.",
+    hintEmail: "Enter a valid e-mail and confirm you have read the notice.",
     hintReady: "MetaMask will ask you to sign a message (no gas): the site pays the gas of this payment.",
     hintPaid: "The payment is already recorded and waits for activation: no need to pay again.",
     badEmail: "Invalid e-mail.",
@@ -298,7 +298,7 @@ const I18N = {
     opFailed: "❌ The operation did not succeed: nothing was paid.",
     genericError: (v) => `Error: ${v.err}`,
     editedDuringCheckLog: "❌ Data changed while it was being prepared: nothing was sent. Repeat.",
-    footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Source code on GitHub</a>`,
+    footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Source code on GitHub</a> · <a href="privacy.html">Privacy</a>`,
   },
 };
 let LANG = SiteUI.initialLang();

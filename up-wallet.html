@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-020J81+PlXjIku8P9Q4duCmL7yv2dZ0nVtEoamxt950='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-rXr7Q6qCtUBqLzBoTqNF4UaEp8RAxUGQZjJBWj4HFM0='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -1179,6 +1179,10 @@ const I18N = {
     siweDomainMismatch: (v) => `⚠️⚠️ Messaggio di accesso per il dominio \"${v.d}\", ma il sito collegato è ${v.site}: possibile phishing. Rifiuta se non sei sicuro.`,
     siweChainMismatch: (v) => `⚠️ Il messaggio di accesso indica chainId ${v.id}, diverso dalla rete scelta.`,
     siweDomainOk: (v) => `✅ Accesso a ${v.d}: è lo stesso sito della dApp collegata.`,
+    siteNotVerified: (v) => `⚠️ ${v.what}: è il sito che la dApp dichiara di essere (${v.d}), ma WalletConnect non lo ha verificato. Firma solo se la richiesta l'hai avviata tu, su ${v.d}.`,
+    whatSiwe: (v) => `Accesso a ${v.d}`,
+    whatHup: "Accesso alla chat di hup.social (un login con la tua UP, non autorizza transazioni né spese)",
+    whatCie: "Dichiarazione UP CIE Link",
     hupChatLogin: "✅ Accesso alla chat di hup.social: è un login con la tua UP, non autorizza transazioni né spese.",
     hupChatOtherWallet: (v) => `🛑 Il messaggio di accesso nomina ${v.who}, non la tua UP: se non sai perché, rifiuta.`,
     hupChatOld: "⚠️ L'orario scritto nel messaggio di accesso non è di adesso (più di 10 minuti di differenza): se non hai appena aperto la chat, rifiuta.",
@@ -1213,7 +1217,7 @@ const I18N = {
     versionSite: (v) => `UP Wallet · pagina ${v.v}`,
     versionApp: (v) => `UP Wallet · app ${v.app} · pagina ${v.v} (commit ${v.commit})`,
     versionExt: (v) => `UP Wallet · estensione ${v.app} · pagina ${v.v} (commit ${v.commit})`,
-    footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Codice sorgente su GitHub</a> · <a href="https://github.com/ChainIntegrate/up-wallet-android" target="_blank" rel="noopener">App Android (in prova)</a><br><span style="font-size:11.5px;">WalletConnect: Portions © 2025 Reown, Inc. All Rights Reserved. <a href="vendor/walletkit-1.6.0.LICENSE.md" target="_blank" rel="noopener">Licenza</a> · <a href="vendor/walletkit-1.6.0.THIRD-PARTY.txt" target="_blank" rel="noopener">componenti di terzi</a></span>`,
+    footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Codice sorgente su GitHub</a> · <a href="privacy.html">Privacy</a> · <a href="https://github.com/ChainIntegrate/up-wallet-android" target="_blank" rel="noopener">App Android (in prova)</a><br><span style="font-size:11.5px;">WalletConnect: Portions © 2025 Reown, Inc. All Rights Reserved. <a href="vendor/walletkit-1.6.0.LICENSE.txt" target="_blank" rel="noopener">Licenza</a> · <a href="vendor/walletkit-1.6.0.THIRD-PARTY.txt" target="_blank" rel="noopener">componenti di terzi</a></span>`,
   },
   en: {
     pageTitle: "UP Wallet — ChainIntegrate",
@@ -1672,6 +1676,10 @@ const I18N = {
     siweDomainMismatch: (v) => `⚠️⚠️ Sign-in message for the domain \"${v.d}\", but the connected site is ${v.site}: possible phishing. Reject it unless you are sure.`,
     siweChainMismatch: (v) => `⚠️ The sign-in message states chainId ${v.id}, which is not the chosen network.`,
     siweDomainOk: (v) => `✅ Sign-in to ${v.d}: the same site as the connected dApp.`,
+    siteNotVerified: (v) => `⚠️ ${v.what}: it is the site the dApp says it is (${v.d}), but WalletConnect has not verified it. Sign only if you started the request yourself, on ${v.d}.`,
+    whatSiwe: (v) => `Sign-in to ${v.d}`,
+    whatHup: "Sign-in to hup.social's chat (a login with your UP, it authorises no transaction or spending)",
+    whatCie: "UP CIE Link statement",
     hupChatLogin: "✅ Sign-in to hup.social's chat: a login with your UP, it authorises no transaction or spending.",
     hupChatOtherWallet: (v) => `🛑 The sign-in message names ${v.who}, not your UP: unless you know why, reject it.`,
     hupChatOld: "⚠️ The time written in the sign-in message is not now (more than 10 minutes apart): unless you just opened the chat, reject it.",
@@ -1706,7 +1714,7 @@ const I18N = {
     versionSite: (v) => `UP Wallet · page ${v.v}`,
     versionApp: (v) => `UP Wallet · app ${v.app} · page ${v.v} (commit ${v.commit})`,
     versionExt: (v) => `UP Wallet · extension ${v.app} · page ${v.v} (commit ${v.commit})`,
-    footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Source code on GitHub</a> · <a href="https://github.com/ChainIntegrate/up-wallet-android" target="_blank" rel="noopener">Android app (in testing)</a><br><span style="font-size:11.5px;">WalletConnect: Portions © 2025 Reown, Inc. All Rights Reserved. <a href="vendor/walletkit-1.6.0.LICENSE.md" target="_blank" rel="noopener">License</a> · <a href="vendor/walletkit-1.6.0.THIRD-PARTY.txt" target="_blank" rel="noopener">third-party components</a></span>`,
+    footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Source code on GitHub</a> · <a href="privacy.html">Privacy</a> · <a href="https://github.com/ChainIntegrate/up-wallet-android" target="_blank" rel="noopener">Android app (in testing)</a><br><span style="font-size:11.5px;">WalletConnect: Portions © 2025 Reown, Inc. All Rights Reserved. <a href="vendor/walletkit-1.6.0.LICENSE.txt" target="_blank" rel="noopener">License</a> · <a href="vendor/walletkit-1.6.0.THIRD-PARTY.txt" target="_blank" rel="noopener">third-party components</a></span>`,
   },
 };
 
@@ -1824,7 +1832,7 @@ function t(key, vars) {
 // WALLET-BACKLOG.md and the patch with a fix (0.x: experimental). The Android app's and the browser
 // extension's builds write the Cross_Chain commit in PAGE_COMMIT, and they give their own version
 // (window.__upwalletAppVersion, then the "upwallet:version" event).
-const PAGE_VERSION = "0.14.2";
+const PAGE_VERSION = "0.14.3";
 const PAGE_COMMIT = null;
 function renderVersion() {
   const el = $("pageVersion"), app = window.__upwalletAppVersion;
@@ -3461,12 +3469,15 @@ function readableText(bytes) {
   return /^[\P{C}\n\r\t]*$/u.test(text) ? text : null;
 }
 
+// The site's own address, as the dApp declared it, can be trusted for a green "same site" only when WalletConnect
+// verified it (VALID); otherwise the match is said in amber (AUDIT 2026-11-04 CC-06). A mismatch is always red.
 // Sign-In with Ethereum (EIP-4361): the domain must be the connected site's.
-function checkSiwe(text, topic, c, warnings) {
+function checkSiwe(text, topic, c, warnings, verified = true) {
   const m = text.match(/^(?:[a-z][a-z0-9+.-]*:\/\/)?([^\s/]+) wants you to sign in with your Ethereum account:/i);
   if (!m) return;
   const host = sessionHost(topic);
   if (host && m[1].toLowerCase() !== host) warnings.push([t("siweDomainMismatch", { d: m[1], site: host }), "line-danger"]);
+  else if (host && !verified) warnings.push([t("siteNotVerified", { what: t("whatSiwe", { d: m[1] }), d: host }), "line-warn"]);
   else if (host) {
     warnings.push([t("siweDomainOk", { d: m[1] }), "line-ok"]);
     // MetaMask sees a sign-in for this domain requested by another site (this page) and warns about it
@@ -3482,12 +3493,12 @@ function checkSiwe(text, topic, c, warnings) {
 
 // hup.social's chat sign-in ("Sign in to Hup chat", wallet, nonce, timestamp): a login to its chat,
 // which authorises no transaction. Asked by another site, it would let that site into the user's chat.
-function checkHupChat(text, topic, c, warnings) {
+function checkHupChat(text, topic, c, warnings, verified = true) {
   const m = text.match(/^Sign in to Hup chat\s*\n\s*\nWallet: (0x[0-9a-fA-F]{40})\s*\nNonce: (\S+)\s*\nTimestamp: (\d+)\s*$/);
   if (!m) return;
   const host = sessionHost(topic).replace(/^www\./, "");
   if (host !== "hup.social") { warnings.push([t("hupChatOtherSite", { site: host || "?" }), "line-danger"]); return; }
-  warnings.push([t("hupChatLogin"), "line-ok"]);
+  warnings.push(verified ? [t("hupChatLogin"), "line-ok"] : [t("siteNotVerified", { what: t("whatHup"), d: host }), "line-warn"]);
   if (m[1].toLowerCase() !== c.up.toLowerCase()) warnings.push([t("hupChatOtherWallet", { who: m[1] }), "line-danger"]);
   const age = Math.abs(Date.now() - Number(m[3])) / 60000;
   if (age > 10) warnings.push([t("hupChatOld"), "line-warn"]);
@@ -3506,7 +3517,7 @@ const CIE_DECLARATION = [
   "I declare that I control this Universal Profile and that I hold the CIE used to sign this statement.",
   "Dichiaro di controllare questo Universal Profile e di essere titolare della CIE con cui firmo questo enunciato.",
 ];
-function checkCieLink(text, topic, c, warnings, now = Date.now()) {
+function checkCieLink(text, topic, c, warnings, now = Date.now(), verified = true) {
   if (!/^up-cie-link statement /.test(text)) return;
   const lines = text.split("\n");
   const keys = ["Origin", "Chain-Id", "Contract", "Universal-Profile", "Mode", "Nonce", "Issued-At", "Expires-At"];
@@ -3524,6 +3535,7 @@ function checkCieLink(text, topic, c, warnings, now = Date.now()) {
   if (!mode) warnings.push([t("cieModeOther", { mode: oneLine(f.Mode, 40) }), "line-warn"]);
   const host = sessionHost(topic).replace(/^www\./, ""), origin = new URL(f.Origin).host.toLowerCase();
   if (topic !== LOCAL_TOPIC && host !== origin) warnings.push([t("cieOtherSite", { origin: f.Origin, site: host || "?" }), "line-danger"]);
+  else if (topic !== LOCAL_TOPIC && !verified) warnings.push([t("siteNotVerified", { what: t("whatCie"), d: host }), "line-warn"]);
   if (Number(f["Chain-Id"]) !== c.chainId) warnings.push([t("cieOtherChain", { id: f["Chain-Id"], net: c.net.name, chain: c.chainId }), "line-danger"]);
   if (ethers.getAddress(f["Universal-Profile"]) !== ethers.getAddress(c.up)) warnings.push([t("cieOtherUp", { who: ethers.getAddress(f["Universal-Profile"]) }), "line-danger"]);
   const known = CIE_CONTRACTS[`${c.chainId}:${f.Contract.toLowerCase()}`], addr = ethers.getAddress(f.Contract);
@@ -3562,7 +3574,7 @@ async function handleSignRequest(topic, id, c, request, validation, reject) {
       rows.push([t("kContentType"), text !== null ? t("ctText") : t("ctOpaque"), { cls: text !== null ? "" : "warn" }]);
       rows.push([t("kContent"), compare, { block: true }]);
       if (text === null) warnings.push([t("signOpaque"), "line-warn"]);
-      else { checkSiwe(text, topic, c, warnings); checkHupChat(text, topic, c, warnings); checkCieLink(text, topic, c, warnings); }
+      else { const ok = topic === LOCAL_TOPIC || validation === "VALID"; checkSiwe(text, topic, c, warnings, ok); checkHupChat(text, topic, c, warnings, ok); checkCieLink(text, topic, c, warnings, Date.now(), ok); }
     } else {
       account = p[0];
       const raw = p[1];

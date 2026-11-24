@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-eps+3ocMbnSLf5OgIR2DNrzsdMmCDff1QlTqF3xKwhI='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-vH2W+gVqvsjp9lcxzK8aQ0epRHyT9wJ4/KjHlmoA4lg='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
@@ -128,8 +128,14 @@
   <div class="note" data-i18n-html="deviceNote"></div>
   <label for="deviceAddress" data-i18n="deviceAddrLabel">Indirizzo della chiave del dispositivo</label>
   <input type="text" id="deviceAddress" placeholder="0x...">
-  <label class="check-row" id="linkRow" hidden><input type="checkbox" id="linkAck"> <span data-i18n="linkAck"></span></label>
+  <div id="linkRow" hidden>
+    <div class="note" data-i18n-html="linkTailNote"></div>
+    <label for="linkTail" data-i18n="linkTailLabel">Ultimi 8 caratteri</label>
+    <input type="text" id="linkTail" maxlength="8" autocomplete="off" spellcheck="false" placeholder="········">
+    <div class="note" id="linkTailState"></div>
+  </div>
   <label for="deviceName" data-i18n="deviceNameLabel">Nome del dispositivo (facoltativo)</label>
+  <div class="note" data-i18n="namePublic"></div>
   <input type="text" id="deviceName" maxlength="64" autocomplete="off" data-i18n-placeholder="deviceNamePh">
   <button id="addDeviceBtn" disabled data-i18n="addDeviceBtn">Autorizza il dispositivo</button>
 
@@ -137,6 +143,7 @@
   <label for="nameSelect" data-i18n="nameSelectLabel">Controller</label>
   <select id="nameSelect"></select>
   <label for="nameInput" data-i18n="nameInputLabel">Nome</label>
+  <div class="note" data-i18n="namePublic"></div>
   <input type="text" id="nameInput" maxlength="64" autocomplete="off">
   <button id="nameBtn" disabled data-i18n="nameBtn">Salva il nome</button>
 
@@ -207,7 +214,11 @@ const I18N = {
     deviceDivider: "— autorizza un dispositivo: app Android o estensione UP Wallet —",
     deviceNote: "L'indirizzo della chiave lo mostra l'app UP Wallet (pannello <b>\"Questo telefono\"</b>) o l'estensione UP Wallet (pannello <b>\"Questo computer\"</b>). Confrontalo carattere per carattere. Permessi dati: SUPER_CALL, SUPER_TRANSFERVALUE, SIGN, il gas pagato dal sito (4337) e la scrittura del solo profilo (SETDATA, limitato alla chiave <code>LSP3Profile</code>). Mai ADDCONTROLLER, EDITPERMISSIONS o estensioni.",
     deviceAddrLabel: "Indirizzo della chiave del dispositivo",
-    linkAck: "Questo indirizzo viene dal link che hai aperto. Ho controllato che è lo stesso che mostra la mia app (pannello \"Questo telefono\") o la mia estensione (pannello \"Questo computer\"), almeno i primi e gli ultimi 6 caratteri.",
+    linkTailNote: () => `Il link porta l'indirizzo <code>${linkAddr ? linkAddr.slice(0, 10) : ""}…</code>. Chiunque può fare un link così: apri la tua app UP Wallet ("Questo telefono") o la tua estensione ("Questo computer") e <b>scrivi qui gli ultimi 8 caratteri</b> dell'indirizzo che ti mostra.`,
+    linkTailLabel: "Ultimi 8 caratteri dell'indirizzo, dall'app o dall'estensione",
+    linkTailOk: "✅ Corrisponde: l'indirizzo del link è quello del tuo dispositivo.",
+    linkTailBad: "❌ Non corrisponde. Ricontrolla l'app o l'estensione: se è giusto, il link non è tuo e non va usato.",
+    namePublic: "Pubblico, come gli indirizzi dei controller: resta sulla blockchain e chiunque lo legge. Niente dati personali (nome, cognome, luogo).",
     deviceNameLabel: "Nome del dispositivo (facoltativo)",
     deviceNamePh: "es. PC ufficio · estensione",
     deviceComputer: "Computer · estensione UP Wallet",
@@ -233,7 +244,7 @@ const I18N = {
     walletChainFail: "❌ Non riesco a leggere la rete del wallet.",
     walletUpChanged: (v) => `❌ Il wallet ora dà la UP ${v.now}, non ${v.up}: ricollegalo.`,
     badAddr: "❌ Indirizzo non valido.",
-    linkAckNeeded: "❌ L'indirizzo viene dal link: confrontalo con quello dell'app o dell'estensione e spunta la conferma. Un link di altri potrebbe darti il loro indirizzo, e con questa autorizzazione potrebbero muovere i fondi della UP.",
+    linkAckNeeded: "❌ L'indirizzo viene dal link: prima scrivi gli ultimi 8 caratteri che mostra la tua app o la tua estensione. Un link di altri potrebbe darti il loro indirizzo, e con questa autorizzazione potrebbero muovere i fondi della UP.",
     systemAddr: "❌ Questo indirizzo è la UP, il suo Key Manager, l'EntryPoint o l'Universal Receiver Delegate: non può essere un dispositivo.",
     isAdmin: "❌ Questo indirizzo è già un amministratore della UP: non serve autorizzarlo come dispositivo.",
     already: "❌ Questo indirizzo è già un controller della UP su questa rete.",
@@ -266,7 +277,7 @@ const I18N = {
     ackRequired: "❌ Spunta la conferma prima di togliere il dispositivo.",
     pickRemove: "❌ Scegli il dispositivo da togliere.",
     changedRead: "❌ I controller sono cambiati: rileggili e riprova.",
-    footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Codice sorgente su GitHub</a>`,
+    footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Codice sorgente su GitHub</a> · <a href="privacy.html">Privacy</a>`,
   },
   en: {
     pageTitle: "Authorize a device on LUKSO",
@@ -310,7 +321,11 @@ const I18N = {
     deviceDivider: "— authorize a device: UP Wallet's Android app or extension —",
     deviceNote: "The key's address is shown by the UP Wallet app (panel <b>\"This phone\"</b>) or by the UP Wallet extension (panel <b>\"This computer\"</b>). Compare it character by character. Permissions given: SUPER_CALL, SUPER_TRANSFERVALUE, SIGN, gas paid by the site (4337) and writing the profile only (SETDATA, limited to the <code>LSP3Profile</code> key). Never ADDCONTROLLER, EDITPERMISSIONS or extensions.",
     deviceAddrLabel: "The device key's address",
-    linkAck: "This address comes from the link you opened. I checked that it is the same one my app (\"This phone\" panel) or my extension (\"This computer\" panel) shows, at least the first and last 6 characters.",
+    linkTailNote: () => `The link carries the address <code>${linkAddr ? linkAddr.slice(0, 10) : ""}…</code>. Anyone can make such a link: open your UP Wallet app ("This phone") or your extension ("This computer") and <b>type here the last 8 characters</b> of the address it shows.`,
+    linkTailLabel: "Last 8 characters of the address, from the app or the extension",
+    linkTailOk: "✅ It matches: the link's address is your device's.",
+    linkTailBad: "❌ It does not match. Check the app or the extension again: if this is right, the link is not yours and must not be used.",
+    namePublic: "Public, as the controllers' addresses are: it stays on the blockchain and anyone can read it. No personal data (name, surname, place).",
     deviceNameLabel: "Device name (optional)",
     deviceNamePh: "e.g. Office PC · extension",
     deviceComputer: "Computer · UP Wallet extension",
@@ -336,7 +351,7 @@ const I18N = {
     walletChainFail: "❌ The wallet's network cannot be read.",
     walletUpChanged: (v) => `❌ The wallet now gives the UP ${v.now}, not ${v.up}: connect it again.`,
     badAddr: "❌ Invalid address.",
-    linkAckNeeded: "❌ The address comes from the link: compare it with the one your app or extension shows and tick the confirmation. Someone else's link could give you their address, and with this authorization they could move the UP's funds.",
+    linkAckNeeded: "❌ The address comes from the link: first type the last 8 characters your app or extension shows. Someone else's link could give you their address, and with this authorization they could move the UP's funds.",
     systemAddr: "❌ This address is the UP, its Key Manager, the EntryPoint or the Universal Receiver Delegate: it cannot be a device.",
     isAdmin: "❌ This address is already an admin of the UP: it does not need to be authorized as a device.",
     already: "❌ This address is already a controller of the UP on this network.",
@@ -369,7 +384,7 @@ const I18N = {
     ackRequired: "❌ Tick the confirmation before removing the device.",
     pickRemove: "❌ Choose the device to remove.",
     changedRead: "❌ The controllers changed: read them again and retry.",
-    footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Source code on GitHub</a>`,
+    footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Source code on GitHub</a> · <a href="privacy.html">Privacy</a>`,
   },
 };
 function t(key, vars) { const v = I18N[LANG][key]; return typeof v === "function" ? v(vars || {}) : v; }
@@ -628,7 +643,7 @@ async function send(b, keys, vals, verify) {
   log(t("simOk"), "line-ok");
   log(t("walletShows", { up: b.up, net: b.netName }), "line-warn");
   const startBlock = await b.provider.getBlockNumber();
-  const hash = await wallet.provider.request({ method: "eth_sendTransaction", params: [{ from: b.up, to: b.up, data: inner, value: "0x0" }] });
+  const hash = await wallet.provider.request({ method: "eth_sendTransaction", params: [{ from: b.up, to: b.up, data: inner, value: "0x0", chainId: "0x" + b.chainId.toString(16) }] });   // chainId as on every page (AUDIT L-1, CC-09)
   let block = null;
   if (typeof hash === "string" && /^0x[0-9a-fA-F]{64}$/.test(hash)) {
     log(t("sent", { hash }), "line-dim");
@@ -657,19 +672,33 @@ function explain(e) {
 }
 
 // ---- authorize a device ----
-let linkAddr = null;
+// An address from a link is put in the field only once the admin has typed its last 8 characters as the
+// device's own panel shows them (AUDIT 2026-11-04 CC-05): a tick box was too easy to tick without looking.
+let linkAddr = null, linkOk = false;
 const fromLink = () => { const v = $("deviceAddress").value.trim(); return !!linkAddr && ethers.isAddress(v) && ethers.getAddress(v) === linkAddr; };
-function syncLink() { const f = fromLink(); $("linkRow").hidden = !f; if (!f) $("linkAck").checked = false; }
-$("deviceAddress").addEventListener("input", syncLink);
+function syncLink() {
+  $("linkRow").hidden = !linkAddr || linkOk;
+  const typed = $("linkTail").value.trim().toLowerCase();
+  const st = $("linkTailState");
+  if (!linkAddr || typed.length < 8) { st.textContent = ""; return; }
+  if (typed === linkAddr.slice(-8).toLowerCase()) {
+    linkOk = true;
+    $("deviceAddress").value = linkAddr;
+    $("linkRow").hidden = true;
+    log(t("linkTailOk"), "line-ok");
+  } else { st.textContent = t("linkTailBad"); st.style.color = "var(--err)"; }
+}
+$("linkTail").addEventListener("input", syncLink);
 $("addDeviceBtn").addEventListener("click", async () => {
   if (busy) return;
   separator();
   setBusy(true);
   try {
     const raw = $("deviceAddress").value.trim();
+    if (!raw && linkAddr && !linkOk) { log(t("linkAckNeeded"), "line-err"); return; }
     if (!ethers.isAddress(raw) || BigInt(raw) === 0n) { log(t("badAddr"), "line-err"); return; }
     // An address from a link is someone else's until the owner compares it with the app (AUDIT 2026-10-26 PK-1).
-    if (fromLink() && !$("linkAck").checked) { log(t("linkAckNeeded"), "line-err"); return; }
+    if (fromLink() && !linkOk) { log(t("linkAckNeeded"), "line-err"); return; }
     const b = await fresh();
     if (!b) return;
     const dev = ethers.getAddress(raw);
@@ -795,9 +824,9 @@ $("copyLog").addEventListener("click", async () => {
   const p = q.get("phone");
   if (p && ethers.isAddress(p)) {
     linkAddr = ethers.getAddress(p);
-    $("deviceAddress").value = linkAddr;
+    // The kind of device only as a suggestion: the link does not choose the name written on chain (CC-05).
     const kind = q.get("device");
-    if (kind === "computer" || kind === "phone") $("deviceName").value = t(kind === "computer" ? "deviceComputer" : "devicePhone");
+    if (kind === "computer" || kind === "phone") $("deviceName").setAttribute("data-i18n-placeholder", kind === "computer" ? "deviceComputer" : "devicePhone");
   }
   syncLink();
 }

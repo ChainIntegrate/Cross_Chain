@@ -1,0 +1,11 @@
+# Line endings: LF in the repository and in every checkout (AUDIT 2026-10-29 A07), so the pages' script
+# hashes (tools/csp.js) and the wallets' builds give the same result on every system.
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.jpg binary
+*.webp binary
+# Kept byte for byte as generated or recorded (third-party license texts, logs).
+vendor/*.txt -text
+vendor/*.md -text
+tools/logs/** -text

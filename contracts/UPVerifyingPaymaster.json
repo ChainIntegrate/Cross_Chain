@@ -1,6 +1,6 @@
 {
   "contract": "UPVerifyingPaymaster",
-  "status": "experimental, unaudited, not published",
+  "status": "experimental, unaudited; deployed and in use on Base, Polygon, Avalanche C-Chain, Arbitrum One and Arc (addresses in contracts/README.md)",
   "compiler": "0.8.24+commit.e11b9ed9.Emscripten.clang",
   "settings": {
     "optimizer": {
