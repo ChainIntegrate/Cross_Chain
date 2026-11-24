@@ -39,6 +39,11 @@ stays, marked "Done.", until those mentions are updated.
    **Review done on 2026-11-04** (Claude, in depth, with local reproductions; Codex, lighter, no test run),
    on the app, the extension, the site and the signing service. **Fixed by 2026-11-24** except the Low items
    that need a new app or extension release (item 8); the public summary is in `AUDIT.md` section 19.
+3b. **The review of 2026-11-24 by two providers** (run by the maintainer on the snapshots of that day:
+   page 0.14.3, extension 0.2.7, app 0.10.2, the relayer and the signing service). No Critical or High;
+   the findings, and how to act on each, are recorded in the signing service's private repository
+   (`audits/2026-11-24-review.md`) and stay private until fixed. **Nothing changed yet**: the maintainer
+   decides item by item (2026-11-24: track only). `AUDIT.md` gets the public summary with the fixes.
 4. **With "Simulation only" on, a message signature says it is real** (2026-11-04, from a user on
    hup.social: with simulation on, three signatures and a post, asked whether simulation works).
    Simulation applies to transactions only; message signatures (personal_sign, typed data) cannot be
