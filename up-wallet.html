@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-mAcj5/P9ujG+j+wiNUajX17lZparYAjWA1/Bpu0Et+Y='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-kwBwiLIdSGHT7zZN8QNj/fY36F7Pu4RnkKU+j5FKsdI='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -784,7 +784,7 @@ const I18N = {
     ovIxSrc: (v) => `Altri token letti da ${v.ix}.`,
     ixFallback: (v) => `Alchemy non ha risposto (${v.err}): gli altri token sono letti da Blockscout, che può elencarne meno.`,
     ovNothing: (v) => `Niente su: ${v.list}.`, ovAbsent: (v) => `La UP non esiste su: ${v.list}.`,
-    ovFailed: (v) => `Non lette (rete non raggiungibile): ${v.list}. Riprova con Aggiorna.`,
+    ovFailed: (v) => `Non lette: ${v.list}. Riprova con Aggiorna.`,
     ovUnpriced: "contiene anche token senza prezzo",
     ovAToken: (v) => `deposito Aave v3 di ${v.amount} ${v.sym}`, ovVault: (v) => `quote di un vault, valgono ≈ ${v.amount} ${v.sym}`,
     ovSpoke: "deposito Aave v4 (pro.aave.com), non è un token nella UP",
@@ -1311,7 +1311,7 @@ const I18N = {
     ovIxSrc: (v) => `Other tokens read from ${v.ix}.`,
     ixFallback: (v) => `Alchemy did not answer (${v.err}): the other tokens are read from Blockscout, which may list fewer.`,
     ovNothing: (v) => `Nothing on: ${v.list}.`, ovAbsent: (v) => `The UP does not exist on: ${v.list}.`,
-    ovFailed: (v) => `Not read (network not reachable): ${v.list}. Try again with Refresh.`,
+    ovFailed: (v) => `Not read: ${v.list}. Try again with Refresh.`,
     ovUnpriced: "also holds tokens without a price",
     ovAToken: (v) => `Aave v3 deposit of ${v.amount} ${v.sym}`, ovVault: (v) => `vault shares, worth ≈ ${v.amount} ${v.sym}`,
     ovSpoke: "Aave v4 deposit (pro.aave.com), not a token in the UP",
@@ -4597,12 +4597,13 @@ async function readOverview() {
   if (cur && cur.rpc && !nets.some((n) => n.key === cur.key)) nets.push(cur);
   ovState = { up, test: isTestnet(cur), total: nets.length, results: [], at: null };
   renderOverview();
-  const timeout = (p, ms) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error("timeout")), ms))]);
+  // Each step's timeout names the step, shown with the network that was not read (where it stopped).
+  const timeout = (p, ms, step = "") => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error(`${step ? step + ": " : ""}timeout ${ms / 1000} s`)), ms))]);
   const one = async (n) => {
     const pv = new ethers.JsonRpcProvider(n.rpc, n.chainId || undefined, { staticNetwork: !!n.chainId, batchMaxCount: 1 });
     try {
-      if ((await timeout(pv.getCode(up), 10000)) === "0x") return { n, absent: true };
-      const a = await timeout(AssetList.list(pv, up, n.key), 60000);
+      if ((await timeout(pv.getCode(up), 10000, "RPC")) === "0x") return { n, absent: true };
+      const a = await timeout(AssetList.list(pv, up, n.key), 60000, "assets");
       let price = null;
       if (window.UsdPrice && n.chainId) price = await timeout(UsdPrice.read(pv, n.chainId, ethers), 10000).catch(() => null);
       let eur = null;
@@ -4675,7 +4676,7 @@ function renderOverview() {
   const done = ovState.results;
   const held = [], empty = [], absent = [], failed = [];
   for (const r of done) {
-    if (r.err) failed.push(r.n.name);
+    if (r.err) failed.push(`${r.n.name} (${oneLine(r.err, 80)})`);
     else if (r.absent) absent.push(r.n.name);
     else { const l = ovLines(r); if (l.lines.length || l.spam) held.push({ r, ...l }); else empty.push(r.n.name); }
   }
