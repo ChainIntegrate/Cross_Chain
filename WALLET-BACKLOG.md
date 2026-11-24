@@ -42,8 +42,11 @@ stays, marked "Done.", until those mentions are updated.
 3b. **The review of 2026-11-24 by two providers** (run by the maintainer on the snapshots of that day:
    page 0.14.3, extension 0.2.7, app 0.10.2, the relayer and the signing service). No Critical or High;
    the findings, and how to act on each, are recorded in the signing service's private repository
-   (`audits/2026-11-24-review.md`) and stay private until fixed. **Nothing changed yet**: the maintainer
-   decides item by item (2026-11-24: track only). `AUDIT.md` gets the public summary with the fixes.
+   (`audits/2026-11-24-review.md`) and stay private until fixed. The maintainer decides item by item.
+   Fixed on 2026-11-24: the signing window's calls (page 0.14.4, extension 0.2.8, app 0.10.3), then a batch
+   of the extension, the app, the relayer and the CI (extension 0.2.9, app 0.10.4, Cross_Chain #267).
+   Still open, to discuss: the password's key derivation, the device address from a link, the signing
+   service and billing, the ethers update, the informational items. `AUDIT.md` gets the public summary.
 4. **With "Simulation only" on, a message signature says it is real** (2026-11-04, from a user on
    hup.social: with simulation on, three signatures and a post, asked whether simulation works).
    Simulation applies to transactions only; message signatures (personal_sign, typed data) cannot be
@@ -238,6 +241,17 @@ stays, marked "Done.", until those mentions are updated.
     `up-wallet.apk`), so `…/releases/latest/download/<name>` is a link that never changes, for pages and guides.
     The prototype status stays said where it is said today (the name, the release notes, the README, the notice
     at first start): only GitHub's "Pre-release" label goes.
+
+15. **The "Every network" view: networks closed, each read when opened** (2026-11-24, from the maintainer;
+    not urgent). Today the overview reads all 9 networks at every opening and every "Refresh": each one's
+    balance, tokens, NFTs, prices and positions. The token and NFT lists come from Alchemy on 6 of them with
+    the site's key (free plan), shared by every visitor of the site and by the app: the only shared limit
+    of the view (per second and per month; past it, Blockscout, which lists fewer tokens on Base and
+    Polygon). Instead: the view opens with every network as a closed row (its name, and the total once
+    read); a network is read only when its row is opened, and kept until "Refresh". Optionally a light first
+    pass (the native balance only, from the public RPCs, which count per visitor) to show which networks hold
+    something. Fewer Alchemy calls per visit, a faster first view. The page only (the app and the extension
+    take it with the page); the identity page could follow the same way.
 
 ## Other pages
 
