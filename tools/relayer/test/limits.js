@@ -1,6 +1,7 @@
 // The relayer's limits (AUDIT CC-01), against a mocked chain: no network. Run: npm test (in tools/relayer).
 const { ethers } = require("ethers");
-const { makeServer, setLockPollMs } = require("../relay.js");
+const { makeServer, setLockPollMs, SendLog, restore, ipKey, redact } = require("../relay.js");
+const fs = require("fs"), os = require("os"), path = require("path");
 setLockPollMs(20);
 const PM = "0xb353565d1f801E7402DBC267b8C0E30E3540D4eD";
 const wallet = ethers.Wallet.createRandom();
@@ -45,7 +46,7 @@ const op = (nonce, sender = victim) => ({ sender, nonce: String(nonce), initCode
   await new Promise((r) => srv.listen(0, "127.0.0.1", r));
   const base = `http://127.0.0.1:${srv.address().port}/relay`;
   const post = (o) => fetch(base + "/send", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chainId: 8453, op: o }) }).then(async (r) => [r.status, await r.json()]);
-  const ok = (c, m) => { console.log((c ? "PASS " : "FAIL ") + m); if (!c) process.exitCode = 1; };
+  const ok = (c, m, x = "") => { console.log((c ? "PASS " : "FAIL ") + m + (c || !x ? "" : "\n      " + x)); if (!c) process.exitCode = 1; };
   // Forged ops for the victim with a bad signature: refused by the simulation, no quota used.
   sigOk.delete(victim);
   for (let i = 0; i < 5; i++) { const [s, b] = await post(op(100 + i)); ok(s === 400 && /simulation failed/.test(b.error), `forged #${i} refused by simulation (${s})`); }
@@ -78,11 +79,16 @@ const op = (nonce, sender = victim) => ({ sender, nonce: String(nonce), initCode
   const [, lb2] = await post2(op(0, up2));
   ok(lb2.hash === lb1.hash && lb2.repeated && net.broadcasts.length === 1, "the same operation again: the same transaction, no second one");
   net.broadcast = "fail";
+  const nB = net.broadcasts.length;
   const [f1, fb1] = await post2(op(0, up3));
+  const unknown = Object.values(chain2.sends.items).find((r) => r.sender === up3);
   ok(f1 === 502 && fb1.notSent === false, `a send that never reached the network: 502, "may not be sent" (${f1})`);
+  ok(unknown && unknown.state === "unknown" && chain2.pendingSender.has(up3), "R15: its outcome unknown: kept in the record, the UP blocked");
+  const [f1b, fb1b] = await post2(op(1, up3));
+  ok(f1b === 429 && /still pending/.test(fb1b.error), "R15: another operation of that UP waits meanwhile");
   net.broadcast = "ok";
   const [f2, fb2] = await post2(op(0, up3));
-  ok(f2 === 200 && fb2.hash && !fb2.repeated, "after it, the same operation can be sent");
+  ok(f2 === 200 && fb2.hash === unknown.tx && net.broadcasts.length === nB + 1 && net.broadcasts.at(-1) === unknown.tx, "R15: the same operation again: the same signed transaction broadcast again, not a second one");
   await wait(30);
   net.wait = "timeout"; net.nextNonce = 0n;
   const [t1] = await post2(op(0, up4));
@@ -95,4 +101,50 @@ const op = (nonce, sender = victim) => ({ sender, nonce: String(nonce), initCode
   ok(!chain2.pendingSender.has(up4), "the nonce used: the UP unblocked");
   net.wait = "mined";
   srv2.close();
+
+  // ---- R15: the record survives a restart; a transaction that never reached the network is settled
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "relay-")), file = path.join(dir, "relay-sends.json");
+  const up5 = ethers.getAddress("0x" + "55".repeat(20)), up6 = ethers.getAddress("0x" + "66".repeat(20));
+  const signedFor = async (nonce) => wallet.signTransaction({ to: "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789", data: "0x", nonce, gasLimit: 100000n, maxFeePerGas: 10n, maxPriorityFeePerGas: 1n, chainId: 8453n, type: 2 });
+  const raw5 = await signedFor(500), raw6 = await signedFor(0);
+  const rec = (sender, raw, state) => ({ chain: "8453", op: ethers.id(sender), tx: ethers.keccak256(raw), sender, opNonce: "7", raw, at: Date.now(), state });
+  const first = new SendLog(file);
+  first.put(rec(up5, raw5, "sent")); first.put(rec(up6, raw6, "unknown"));
+  ok((fs.statSync(file).mode & 0o777) === 0o600, "R15: the record file is mode 600");
+  const chain3 = { ...chain, queue: Promise.resolve(), recent: new Map(), receipts: new Map(), pendingSender: new Map(), sends: new SendLog(file) };
+  net.nextNonce = 0n; net.txCount = 5; net.known = new Set();
+  restore(chain3, "8453");
+  ok(chain3.pendingSender.has(up5) && chain3.pendingSender.has(up6) && chain3.recent.get(ethers.id(up5)) === ethers.keccak256(raw5), "R15: after a restart, the recorded transactions block their UPs again");
+  await wait(120);
+  ok(!chain3.pendingSender.has(up6) && !chain3.recent.has(ethers.id(up6)) && !(ethers.keccak256(raw6) in chain3.sends.items), "R15: never on the network and its relayer nonce used by another: unblocked, the operation can be sent again");
+  ok(chain3.pendingSender.has(up5) && net.broadcasts.includes(ethers.keccak256(raw5)), "R15: not seen yet, its relayer nonce unused: broadcast again, the UP still blocked");
+  net.nextNonce = 8n;
+  await wait(120);
+  ok(!chain3.pendingSender.has(up5) && Object.keys(JSON.parse(fs.readFileSync(file, "utf8"))).length === 0, "R15: its operation's nonce used: unblocked, the record empty");
+  fs.writeFileSync(file, "{not json");
+  const bad = new SendLog(file);
+  ok(Object.keys(bad.items).length === 0 && fs.readdirSync(dir).some((f) => f.startsWith("relay-sends.json.unreadable-")), "R15: an unreadable record is moved aside, never overwritten");
+  fs.rmSync(dir, { recursive: true, force: true });
+
+  // ---- R16: IPv6 by /64; the global cap after the cheap checks; no lock for a forged operation
+  ok(ipKey("2001:db8:1:2::a") === ipKey("2001:db8:1:2:ffff:1:2:3") && ipKey("2001:db8:1:2::a") !== ipKey("2001:db8:1:3::a") && ipKey("2001:db8::1") === "2001:db8:0:0::/64" && ipKey("::ffff:1.2.3.4") === "1.2.3.4", "R16: the rate key of an IPv6 address is its /64");
+  const chain4 = { ...chain, queue: Promise.resolve(), recent: new Map(), receipts: new Map(), pendingSender: new Map() };
+  const chains4 = new Map([["8453", chain4]]); chains4.unavailable = new Set();
+  const srv4 = makeServer({ allowedOrigins: [], limits: { perIpPerMinute: 2, perSenderPerMinute: 1000, globalPerMinute: 2 } }, wallet, chains4);
+  await new Promise((r) => srv4.listen(0, "127.0.0.1", r));
+  const post4 = (o, ip) => fetch(`http://127.0.0.1:${srv4.address().port}/relay/send`, { method: "POST", headers: { "content-type": "application/json", "x-real-ip": ip }, body: JSON.stringify({ chainId: 8453, op: o }) }).then(async (r) => [r.status, await r.json()]);
+  const badPm = (n) => ({ ...op(n, ethers.getAddress("0x" + "77".repeat(20))), paymasterAndData: "0x" + "99".repeat(20) });
+  const r1 = await post4(badPm(1), "2001:db8:5:5::1"), r2 = await post4(badPm(2), "2001:db8:5:5::2"), r3 = await post4(badPm(3), "2001:db8:5:5::3");
+  ok(r1[0] === 403 && r2[0] === 403 && r3[0] === 429 && /too many requests/.test(r3[1].error), "R16: three addresses of one /64 share its per-IP limit", JSON.stringify([r1, r2, r3]));
+  const up8 = ethers.getAddress("0x" + "88".repeat(20)); sigOk.add(up8);
+  const g = await post4(op(0, up8), "198.51.100.7");
+  ok(g[0] === 200 && g[1].hash, "R16: refused shapes did not use up the global cap");
+  const up9 = ethers.getAddress("0x" + "99".repeat(20));
+  const f = await post4(op(0, up9), "198.51.100.8");
+  ok(f[0] === 400 && /simulation failed/.test(f[1].error) && !chain4.pendingSender.has(up9), "R16: a forged operation never holds the UP's lock");
+  srv4.close();
+
+  // ---- R17: URLs in logs keep only scheme and host
+  const line = redact("could not reach https://base-mainnet.g.alchemy.com/v2/SECRETKEY123 and https://user:pw@rpc.example.org/?key=abc; listening on http://127.0.0.1:8787");
+  ok(!/SECRETKEY123|user:pw|key=abc/.test(line) && line.includes("https://base-mainnet.g.alchemy.com/…") && line.includes("https://rpc.example.org/…") && line.includes("http://127.0.0.1:8787"), "R17: keys in URLs never reach the log");
 })();

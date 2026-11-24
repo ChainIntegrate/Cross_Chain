@@ -17,6 +17,7 @@
 
 const fs = require("fs");
 const http = require("http");
+const path = require("path");
 const { ethers } = require("ethers");
 
 const ENTRY_POINT = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
@@ -74,7 +75,11 @@ const DEFAULT_LIMITS = { perIpPerMinute: 6, perSenderPerMinute: 3, globalPerMinu
 const INFO_CACHE_MS = 10_000;
 
 // ==================== helpers ====================
-const log = (...a) => console.log(new Date().toISOString(), ...a);
+// URLs in logs keep their scheme and host only: an RPC's path, query or user part may hold an API key, and
+// provider errors quote the URL they called (audit 2026-11-24 R17; the signing service's SPN-06).
+const redact = (t) => String(t).replace(/([a-z][a-z0-9+.-]*:\/\/)(?:[^\s"'<>)\/@]*@)?([^\s"'<>)\/?#]+)([^\s"'<>)]*)/gi,
+  (m, scheme, host, rest) => scheme + host + (rest && rest !== "/" ? "/…" : rest));
+const log = (...a) => console.log(new Date().toISOString(), ...a.map(redact));
 const enc = (types, vals) => ethers.AbiCoder.defaultAbiCoder().encode(types, vals);
 
 // notSent: the refusal came before any transaction was sent, so the page can say so plainly. Only a
@@ -232,6 +237,44 @@ class RateLimiter {
 // other chains keep working meanwhile.
 class ConfigError extends Error {}
 
+// ==================== the record of sent transactions (audit 2026-11-24 R15) ====================
+// Every transaction is written here, signed, before it is broadcast, and removed once settled (mined, its
+// operation's nonce used, or known never to have reached the network). An answer lost on sending is then
+// "unknown", not forgotten: the UP stays blocked, the same operation sent again gets the same signed
+// transaction broadcast again (never a second one at the relayer's cost), and after a restart the record
+// is read again. A file in the service's state directory (/var/lib/crosschain-relayer), mode 600.
+class SendLog {
+  constructor(file) {
+    this.file = file || null;
+    this.items = {};
+    if (!this.file) return;
+    try {
+      const j = JSON.parse(fs.readFileSync(this.file, "utf8"));
+      if (j && typeof j === "object" && !Array.isArray(j)) this.items = j;
+    } catch (e) {
+      if (e.code === "ENOENT") return;
+      // Kept aside, never overwritten: what it held is checked by hand (README, "Record of sent transactions").
+      const aside = `${this.file}.unreadable-${Date.now()}`;
+      try { fs.renameSync(this.file, aside); } catch (x) { /* read-only: nothing to keep */ }
+      log(`WARNING the record of sent transactions was unreadable (${e.message}): moved to ${aside}, starting empty`);
+    }
+  }
+  put(r) { this.items[r.tx] = r; this.save(); }
+  drop(tx) { if (this.items[tx]) { delete this.items[tx]; this.save(); } }
+  of(chainId) { return Object.values(this.items).filter((r) => r && r.chain === chainId); }
+  save() {
+    if (!this.file) return;
+    const tmp = this.file + ".tmp";
+    fs.writeFileSync(tmp, JSON.stringify(this.items), { mode: 0o600 });
+    fs.renameSync(tmp, this.file);
+  }
+}
+function sendLogFile(config) {
+  if (config.sendLogFile) return config.sendLogFile;
+  const dir = (process.env.STATE_DIRECTORY || "").split(":")[0];
+  return dir ? path.join(dir, "relay-sends.json") : null;
+}
+
 async function setupChain(id, ch, wallet) {
   const chainId = BigInt(id);
   const provider = new ethers.JsonRpcProvider(ch.rpc, Number(chainId), { staticNetwork: true });
@@ -247,14 +290,29 @@ async function setupChain(id, ch, wallet) {
   return { ...ch, chainId, provider, signer: wallet.connect(provider), opStack, arbitrum, queue: Promise.resolve(), recent: new Map(), receipts: new Map(), pendingSender: new Map() };
 }
 
-async function setupChains(config, wallet) {
+// After a restart: the transactions still in the record block their UPs again and are settled as usual.
+function restore(chain, id) {
+  for (const r of chain.sends.of(id)) {
+    if (Date.now() - r.at > 30 * 60_000) { log(`chain ${id}: ${r.tx} in the record for over 30 minutes: dropped`); chain.sends.drop(r.tx); continue; }
+    chain.recent.set(r.op, r.tx);
+    chain.receipts.set(r.tx.toLowerCase(), null);
+    chain.pendingSender.set(r.sender, true);
+    log(`chain ${id}: ${r.tx} (sender ${r.sender}, ${r.state}) restored from the record`);
+    settle(chain, id, r, false);
+  }
+}
+
+async function setupChains(config, wallet, sends = new SendLog(null)) {
   const chains = new Map();
   chains.unavailable = new Set();
   const retryMs = (config.chainRetrySeconds || 60) * 1000;
   const attempt = async (id, ch) => {
     try {
-      chains.set(id, await setupChain(id, ch, wallet));
+      const chain = await setupChain(id, ch, wallet);
+      chain.sends = sends;
+      chains.set(id, chain);
       chains.unavailable.delete(id);
+      restore(chain, id);
     } catch (e) {
       if (e instanceof ConfigError) throw e;
       chains.unavailable.add(id);
@@ -266,18 +324,43 @@ async function setupChains(config, wallet) {
   return chains;
 }
 
-async function relay(chain, id, op, allowSender = () => true) {
+// allow: { sender(key), global() } rate limits, charged in this order of checks (audit 2026-11-24 R16): the
+// global one only after the cheap checks and the lookup of an operation already sent; the per-UP lock only
+// after the handleOps simulation (the UP's signature then known good); the per-UP limit after both.
+async function relay(chain, id, op, allow = {}) {
+  if (!chain.sends) chain.sends = new SendLog(null);
   const pm = checkShape(op, chain);
   const hash = userOpHash(op, chain.chainId);
   const seen = chain.recent.get(hash);
-  if (seen) return { hash: seen, repeated: true };
+  if (seen) {
+    const r = chain.sends.items[seen];
+    if (r && r.state === "unknown") return rebroadcast(chain, id, r);
+    return { hash: seen, repeated: true };
+  }
+  if (allow.global && !allow.global()) throw new Refused("the relayer is busy, try again in a minute", 429);
   if (chain.pendingSender.has(op.sender)) throw new Refused("an operation of this UP is still pending: wait for it", 429);
-  chain.pendingSender.set(op.sender, true);
-  try { return await checkAndSend(chain, id, op, pm, hash, allowSender); }
-  catch (e) { chain.pendingSender.delete(op.sender); throw e; }
+  const ctx = { locked: false };
+  try { return await checkAndSend(chain, id, op, pm, hash, allow.sender || (() => true), ctx); }
+  catch (e) { if (ctx.locked && !e.keepLock) chain.pendingSender.delete(op.sender); throw e; }
 }
 
-async function checkAndSend(chain, id, op, pm, hash, allowSender) {
+// The same operation sent again while its transaction's fate is unknown: that same signed transaction is
+// broadcast again (same hash, same relayer nonce: at most one of them can be mined).
+async function rebroadcast(chain, id, r) {
+  const job = chain.queue.then(async () => {
+    try { await chain.provider.broadcastTransaction(r.raw); }
+    catch (e) { if (!(await chain.provider.getTransaction(r.tx).catch(() => null))) throw e; }
+    r.state = "sent";
+    chain.sends.put(r);
+    log(`chain ${id}: ${r.tx} broadcast again, now on the network`);
+    return { hash: r.tx };
+  });
+  chain.queue = job.catch(() => {});
+  try { return await job; }
+  catch (e) { throw new Refused(`send failed again: ${revertReason(e)}; the UP stays blocked until this is settled (up to 15 minutes)`, 502, false); }
+}
+
+async function checkAndSend(chain, id, op, pm, hash, allowSender, ctx = {}) {
   const block = await chain.provider.getBlock("latest");
   const legacy = block.baseFeePerGas == null;
   if (!legacy && op.maxFeePerGas < block.baseFeePerGas) throw new Refused("maxFeePerGas below the current base fee: prepare and sign the operation again");
@@ -295,6 +378,10 @@ async function checkAndSend(chain, id, op, pm, hash, allowSender) {
     await chain.provider.call({ from, to: ENTRY_POINT, data });
     gas = await chain.provider.estimateGas({ from, to: ENTRY_POINT, data });
   } catch (e) { throw new Refused(`simulation failed: ${revertReason(e)}`); }
+  // The UP's signature is good: one operation of this UP at a time from here.
+  if (chain.pendingSender.has(op.sender)) throw new Refused("an operation of this UP is still pending: wait for it", 429);
+  chain.pendingSender.set(op.sender, true);
+  ctx.locked = true;
   // handleOps does not revert when only the execution fails: the EntryPoint still charges the paymaster.
   // So the execution is simulated on its own, as the EntryPoint will call it, and refused if it fails.
   try { await chain.provider.call({ from: ENTRY_POINT, to: op.sender, data: op.callData, gasLimit: op.callGasLimit }); }
@@ -310,57 +397,92 @@ async function checkAndSend(chain, id, op, pm, hash, allowSender) {
   if (balance < gasLimit * op.maxFeePerGas) throw new Refused("the relayer has not enough gas on this chain right now", 503);
 
   // One transaction at a time per chain, so the relayer's nonces never collide. The transaction is signed
-  // first and its hash recorded before it is broadcast (audit CC-10): a send whose answer is lost but that
-  // reached the network is then still known, and the same operation sent again gets that transaction back
-  // instead of a second one that would revert at the relayer's cost.
+  // first and written to the record before it is broadcast (audit CC-10, 2026-11-24 R15): a send whose answer
+  // is lost is then still known, here and after a restart, and the same operation sent again gets that
+  // transaction (broadcast again if needed) instead of a second one that would revert at the relayer's cost.
   const job = chain.queue.then(async () => {
     const signed = await chain.signer.signTransaction(await chain.signer.populateTransaction({ to: ENTRY_POINT, data, gasLimit, ...fees }));
-    const txHash = ethers.keccak256(signed);
-    chain.recent.set(hash, txHash);
+    const r = { chain: id, op: hash, tx: ethers.keccak256(signed), sender: op.sender, opNonce: op.nonce.toString(), raw: signed, at: Date.now(), state: "sent" };
+    chain.sends.put(r);
+    chain.recent.set(hash, r.tx);
     try { await chain.provider.broadcastTransaction(signed); }
     catch (e) {
-      const seen = await chain.provider.getTransaction(txHash).catch(() => null);
-      if (!seen) { chain.recent.delete(hash); throw e; }
-      log(`chain ${id}: ${txHash} reported an error on sending but is on the network (${revertReason(e)})`);
+      const seen = await chain.provider.getTransaction(r.tx).catch(() => null);
+      if (!seen) { r.state = "unknown"; chain.sends.put(r); e.record = r; throw e; }
+      log(`chain ${id}: ${r.tx} reported an error on sending but is on the network (${revertReason(e)})`);
     }
-    return txHash;
+    return r;
   });
   chain.queue = job.catch(() => {});
-  let txHash;
-  try { txHash = await job; }
-  catch (e) { throw new Refused(`send failed: ${revertReason(e)}`, 502, false); }
+  let r;
+  try { r = await job; }
+  catch (e) {
+    if (!e.record) throw new Refused(`send failed: ${revertReason(e)}`, 502, false);
+    // Not found right after an error: it may still have reached the network. Kept, and settled below.
+    chain.receipts.set(e.record.tx.toLowerCase(), null);
+    log(`chain ${id}: ${e.record.tx} sender ${op.sender}: sending failed (${revertReason(e)}), outcome unknown: kept in the record, the UP blocked`);
+    settle(chain, id, e.record, false);
+    throw Object.assign(new Refused(`send failed: ${revertReason(e)}; the same operation sent again gets this transaction`, 502, false), { keepLock: true });
+  }
   if (chain.recent.size > 1000) chain.recent.delete(chain.recent.keys().next().value);
   // The outcome of the relayer's own transactions, for GET /relay/receipt: some public RPCs refuse
   // receipt lookups (publicnode on Base), and the page has no wallet that knows this transaction.
-  chain.receipts.set(txHash.toLowerCase(), null);
+  chain.receipts.set(r.tx.toLowerCase(), null);
   if (chain.receipts.size > 1000) chain.receipts.delete(chain.receipts.keys().next().value);
-  log(`chain ${id}: sent ${txHash} sender ${op.sender} nonce ${op.nonce} paymaster ${pm} gasLimit ${gasLimit}`);
-  // A UP stays blocked until its transaction is mined. If it is not mined within 3 minutes, the UP stays
-  // blocked while the EntryPoint has not used the operation's nonce, for up to 15 minutes (audit CC-10): the
-  // same operation signed again meanwhile would make a second transaction that reverts.
-  const nonceUsed = async () => (await new ethers.Contract(ENTRY_POINT, EP_NONCE_ABI, chain.provider).getNonce(op.sender, op.nonce >> 64n)) > op.nonce;
-  chain.provider.waitForTransaction(txHash, 1, 180_000).then((rc) => {
-    if (!rc) throw new Error("no receipt");
-    chain.receipts.set(txHash.toLowerCase(), { status: rc.status, blockNumber: rc.blockNumber, logs: rc.logs.map((l) => ({ address: l.address, topics: l.topics, data: l.data })) });
-    log(`chain ${id}: ${txHash} mined in block ${rc.blockNumber}, status ${rc.status}`);
-    return true;
-  })
-    .catch(async (e) => {
-      log(`chain ${id}: ${txHash} not confirmed in 3 minutes: ${revertReason(e)}`);
-      for (let i = 0; i < 24; i++) {
-        try { if (await nonceUsed()) { log(`chain ${id}: the nonce of ${op.sender} is used: unblocked`); return; } } catch (x) { /* RPC: try again */ }
-        await new Promise((r) => setTimeout(r, LOCK_POLL_MS));
-      }
-      log(`chain ${id}: ${op.sender} unblocked after 15 minutes, its nonce still unused`);
-    })
-    .finally(async () => {
-      chain.pendingSender.delete(op.sender);
+  log(`chain ${id}: sent ${r.tx} sender ${op.sender} nonce ${op.nonce} paymaster ${pm} gasLimit ${gasLimit}`);
+  settle(chain, id, r, true);
+  return { hash: r.tx };
+}
+
+// A UP stays blocked until its transaction is settled: mined; or, when it is not mined within 3 minutes (or its
+// sending failed), until the EntryPoint has used the operation's nonce, for up to 15 minutes (audit CC-10): the
+// same operation signed again meanwhile would make a second transaction that reverts. A transaction never seen
+// by the network whose relayer nonce another one has used can no longer be mined: the UP is unblocked then and
+// the operation can be sent again. Meanwhile one not seen is broadcast again (it may have been dropped).
+function settle(chain, id, r, waitFirst) {
+  const from = chain.signer.address;
+  const opNonce = BigInt(r.opNonce);
+  const nonceUsed = async () => (await new ethers.Contract(ENTRY_POINT, EP_NONCE_ABI, chain.provider).getNonce(r.sender, opNonce >> 64n)) > opNonce;
+  const keep = (rc) => chain.receipts.set(r.tx.toLowerCase(), { status: rc.status, blockNumber: rc.blockNumber, logs: rc.logs.map((l) => ({ address: l.address, topics: l.topics, data: l.data })) });
+  const run = async () => {
+    if (waitFirst) {
       try {
-        const bal = await chain.provider.getBalance(from);
-        if (bal < chain.minBalanceWarn) log(`WARNING chain ${id}: relayer balance ${ethers.formatEther(bal)} below ${ethers.formatEther(chain.minBalanceWarn)}`);
-      } catch (e) { /* the next request will tell */ }
-    });
-  return { hash: txHash };
+        const rc = await chain.provider.waitForTransaction(r.tx, 1, 180_000);
+        if (rc) { keep(rc); log(`chain ${id}: ${r.tx} mined in block ${rc.blockNumber}, status ${rc.status}`); return; }
+        throw new Error("no receipt");
+      } catch (e) { log(`chain ${id}: ${r.tx} not confirmed in 3 minutes: ${revertReason(e)}`); }
+    }
+    for (let i = 0; i < 24; i++) {
+      try {
+        if (await nonceUsed()) {
+          const rc = await Promise.resolve().then(() => chain.provider.getTransactionReceipt(r.tx)).catch(() => null);
+          if (rc) keep(rc);
+          log(`chain ${id}: the nonce of ${r.sender} is used: unblocked`);
+          return;
+        }
+        if (!(await chain.provider.getTransaction(r.tx))) {
+          const txNonce = ethers.Transaction.from(r.raw).nonce;
+          if ((await chain.provider.getTransactionCount(from, "latest")) > txNonce) {
+            chain.recent.delete(r.op);
+            chain.receipts.delete(r.tx.toLowerCase());
+            log(`chain ${id}: ${r.tx} never reached the network (its relayer nonce is used): ${r.sender} unblocked, the operation can be sent again`);
+            return;
+          }
+          await chain.provider.broadcastTransaction(r.raw).catch(() => null);
+        } else if (r.state === "unknown") { r.state = "sent"; chain.sends.put(r); }
+      } catch (x) { /* RPC: try again */ }
+      await new Promise((ok) => setTimeout(ok, LOCK_POLL_MS));
+    }
+    log(`chain ${id}: ${r.sender} unblocked after 15 minutes, its nonce still unused`);
+  };
+  run().finally(async () => {
+    chain.sends.drop(r.tx);
+    chain.pendingSender.delete(r.sender);
+    try {
+      const bal = await chain.provider.getBalance(from);
+      if (bal < chain.minBalanceWarn) log(`WARNING chain ${id}: relayer balance ${ethers.formatEther(bal)} below ${ethers.formatEther(chain.minBalanceWarn)}`);
+    } catch (e) { /* the next request will tell */ }
+  });
 }
 
 // ==================== HTTP ====================
@@ -373,6 +495,21 @@ function clientIp(req) {
     if (real) return real;
   }
   return direct;
+}
+
+// The rate-limit key of an address: IPv4 as it is, IPv6 by its /64 (one subscriber usually holds a whole /64;
+// audit 2026-11-24 R16, as the signing service's SPN-07).
+function ipKey(ip) {
+  const a = String(ip).trim();
+  if (/^::ffff:\d+\.\d+\.\d+\.\d+$/i.test(a)) return a.slice(7);
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(a)) return a;
+  if (/^[0-9a-f:]+$/i.test(a) && a.includes(":")) {
+    const [head, tail = ""] = a.split("::");
+    const h = head ? head.split(":") : [], t = tail ? tail.split(":") : [];
+    const full = a.includes("::") ? h.concat(Array(Math.max(0, 8 - h.length - t.length)).fill("0"), t) : h;
+    return full.slice(0, 4).map((x) => (parseInt(x, 16) || 0).toString(16)).join(":") + "::/64";
+  }
+  return a.slice(0, 64);
 }
 
 function send(res, status, body) {
@@ -464,7 +601,7 @@ function makeServer(config, wallet, chains) {
       }
       if (req.method === "POST" && path === "/send") {
         if (!/^application\/json\b/.test(req.headers["content-type"] || "")) throw new Refused("content-type must be application/json", 415);
-        if (!perIp.allow(ip)) throw new Refused("too many requests, try again in a minute", 429);
+        if (!perIp.allow(ipKey(ip))) throw new Refused("too many requests, try again in a minute", 429);
         let body;
         try { body = JSON.parse(await readBody(req)); } catch (e) { if (e instanceof Refused) throw e; throw new Refused("body is not JSON"); }
         const id = String(body.chainId ?? "");
@@ -472,15 +609,15 @@ function makeServer(config, wallet, chains) {
         if (!chain && chains.unavailable.has(id)) throw new Refused(`chain ${id} is temporarily unavailable (its RPC does not answer): try again in a few minutes`, 503);
         if (!chain) throw new Refused(`chain ${id || "?"} is not served by this relayer`, 404);
         const op = parseOp(body.op);
-        if (!global.allow("all")) throw new Refused("the relayer is busy, try again in a minute", 429);
-        const out = await relay(chain, id, op, (key) => perSender.allow(key));
+        const out = await relay(chain, id, op, { sender: (key) => perSender.allow(key), global: () => global.allow("all") });
         return send(res, 200, out);
       }
       throw new Refused("not found", 404);
     } catch (e) {
       const status = e instanceof Refused ? e.status : 500;
-      if (status >= 500 || !(e instanceof Refused)) log(`error ${req.method} ${req.url} from ${ip}: ${e.stack || e}`);
-      else log(`refused ${req.method} ${req.url} from ${ip}: ${e.message}`);
+      const url = String(req.url).slice(0, 200);
+      if (status >= 500 || !(e instanceof Refused)) log(`error ${req.method} ${url} from ${ip}: ${e.stack || e}`);
+      else log(`refused ${req.method} ${url} from ${ip}: ${e.message}`);
       if (!res.headersSent) send(res, status, e instanceof Refused ? { error: e.message, notSent: e.notSent } : { error: "internal error" });
     }
   });
@@ -496,7 +633,9 @@ async function main(argv) {
     const config = readConfig(opt("--config"));
     const wallet = readKey(config.keyFile);
     log(`relayer ${wallet.address}`);
-    const chains = await setupChains(config, wallet);
+    const file = sendLogFile(config);
+    if (!file) log("WARNING no state directory: the record of sent transactions is kept in memory only (see README)");
+    const chains = await setupChains(config, wallet, new SendLog(file));
     const server = makeServer(config, wallet, chains);
     await new Promise((r) => server.listen(config.listen.port, config.listen.host, r));
     log(`listening on http://${config.listen.host}:${server.address().port}`);
@@ -508,7 +647,7 @@ async function main(argv) {
 
 if (require.main === module) {
   process.on("unhandledRejection", (e) => log(`unhandled: ${e && e.stack || e}`));
-  main(process.argv.slice(2)).catch((e) => { console.error(e.message || e); process.exit(1); });
+  main(process.argv.slice(2)).catch((e) => { console.error(redact(e.message || e)); process.exit(1); });
 }
 
-module.exports = { setLockPollMs: (ms) => { LOCK_POLL_MS = ms; }, main, userOpHash, parseOp, readConfig, readKey, ENTRY_POINT, latestVersions, makeServer };
+module.exports = { setLockPollMs: (ms) => { LOCK_POLL_MS = ms; }, main, userOpHash, parseOp, readConfig, readKey, ENTRY_POINT, latestVersions, makeServer, SendLog, restore, ipKey, redact };
