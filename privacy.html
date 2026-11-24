@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-HuWnbgAHoxkM0CVsgd7Vxu76p8YJPX5w9zdn4+7xYKw='">
+<script src="theme.js"></script>
+<script src="site-ui.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://crosschain-lukso.chainintegrate.it/og-image.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://crosschain-lukso.chainintegrate.it/og-image.png">
+<meta name="referrer" content="no-referrer">
+<title data-i18n="pageTitle">Privacy — Cross_Chain e UP Wallet — ChainIntegrate</title>
+<meta name="description" content="Informativa sulla privacy del sito Cross_Chain, di UP Wallet (pagina web ed estensione del browser), del relayer e dell'abbonamento al gas sponsorizzato.">
+<link rel="icon" href="favicon.ico">
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --border: #2a2f3a; --field: #10131a; --chip: #2a2f3a; --disabled: #3a3f4b; --raised: #1d2330;
+    --text: #e6e8ec; --text-dim: #9aa1ad;
+    --accent: #5b8cff; --ok: #3fbf6f; --warn: #e0a83c; --err: #e05a5a;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+         max-width: 820px; margin: 0 auto; padding: 32px 20px 80px; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .subtitle { color: var(--text-dim); font-size: 13px; margin-bottom: 28px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+  .panel h2 { font-size: 14px; margin: 0 0 14px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.03em; }
+  .text { font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+  .text ul { margin: 0 0 10px; padding-left: 20px; }
+  .text li { margin-bottom: 6px; }
+  .text a { color: var(--accent); }
+  code { font-size: 12.5px; }
+  .brand-row { margin-bottom: 24px; }
+  .brand-logo { display: block; width: 100%; height: auto; border-radius: 10px; }
+  .top-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .lang-btn { width: auto; background: var(--chip); color: var(--text); border: none; border-radius: 6px; padding: 6px 14px; font-size: 12px; cursor: pointer; flex-shrink: 0; }
+  .site-footer { margin-top: 40px; padding: 18px 20px; background: #f5f6f8; border: 1px solid #e3e5ea; border-radius: 10px; color: #4b4f58; }
+  .footer-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .footer-logo { height: 48px; width: auto; flex-shrink: 0; }
+  .footer-text { font-size: 13px; line-height: 1.6; }
+  .footer-li { display: inline-flex; vertical-align: middle; margin: 0 2px; }
+  .site-footer a { color: #2563eb; text-decoration: none; font-weight: 600; }
+  .site-footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<div class="brand-row">
+  <img src="banner.png" alt="ChainIntegrate" class="brand-logo">
+</div>
+
+<div class="top-row">
+  <div>
+    <h1 data-i18n="h1">Informativa sulla privacy</h1>
+    <div class="subtitle" data-i18n="subtitle"></div>
+  </div>
+  <button class="lang-btn" id="langToggle" data-i18n="langToggleBtn">English</button>
+</div>
+
+<div class="panel" id="s1">
+  <h2 data-i18n="s1t"></h2>
+  <div class="text" data-i18n-html="s1"></div>
+</div>
+<div class="panel" id="s2">
+  <h2 data-i18n="s2t"></h2>
+  <div class="text" data-i18n-html="s2"></div>
+</div>
+<div class="panel" id="s3">
+  <h2 data-i18n="s3t"></h2>
+  <div class="text" data-i18n-html="s3"></div>
+</div>
+<div class="panel" id="s4">
+  <h2 data-i18n="s4t"></h2>
+  <div class="text" data-i18n-html="s4"></div>
+</div>
+<div class="panel" id="s5">
+  <h2 data-i18n="s5t"></h2>
+  <div class="text" data-i18n-html="s5"></div>
+</div>
+<div class="panel" id="s6">
+  <h2 data-i18n="s6t"></h2>
+  <div class="text" data-i18n-html="s6"></div>
+</div>
+<div class="panel" id="s7">
+  <h2 data-i18n="s7t"></h2>
+  <div class="text" data-i18n-html="s7"></div>
+</div>
+<div class="panel" id="s8">
+  <h2 data-i18n="s8t"></h2>
+  <div class="text" data-i18n-html="s8"></div>
+</div>
+<div class="panel" id="s9">
+  <h2 data-i18n="s9t"></h2>
+  <div class="text" data-i18n-html="s9"></div>
+</div>
+<div class="panel" id="s10">
+  <h2 data-i18n="s10t"></h2>
+  <div class="text" data-i18n-html="s10"></div>
+</div>
+<div class="panel" id="s11">
+  <h2 data-i18n="s11t"></h2>
+  <div class="text" data-i18n-html="s11"></div>
+</div>
+
+<div class="site-footer">
+  <div class="footer-row">
+    <img src="logo.png" alt="ChainIntegrate" class="footer-logo">
+    <div class="footer-text" data-i18n-html="footerHtml"></div>
+  </div>
+</div>
+
+<script>
+// Static text only: every string below is written in this file, none comes from outside.
+let LANG = SiteUI.initialLang();
+const I18N = {
+  it: {
+    pageTitle: "Privacy — Cross_Chain e UP Wallet — ChainIntegrate",
+    h1: "Informativa sulla privacy",
+    subtitle: "Ultimo aggiornamento: 24 novembre 2026. Riguarda il sito crosschain-lukso.chainintegrate.it e le sue pagine, UP Wallet nella pagina web e nell'estensione del browser, il relayer del sito, il servizio che approva il gas sponsorizzato e l'abbonamento a pagamento. Per l'app Android c'è un'informativa a parte.",
+    langToggleBtn: "English",
+    s1t: "1 · In breve",
+    s1: `<ul>
+      <li><b>Nessun account, nessun cookie, nessun tracciamento, nessuna statistica d'uso.</b> Le pagine e i wallet non chiedono registrazioni; ChainIntegrate non detiene mai le chiavi delle tue Universal Profile (UP).</li>
+      <li>Il tuo browser parla <b>direttamente</b> con alcuni servizi di terzi (nodi RPC, indici dei token, explorer, WalletConnect, gateway IPFS): ognuno vede il tuo indirizzo IP e quello che gli chiedi. L'elenco completo è al punto 4.</li>
+      <li>Il <b>server di ChainIntegrate</b> riceve dati solo per le funzioni che usano il relayer, il gas sponsorizzato o l'abbonamento, e per i normali registri del server web (punto 5).</li>
+      <li><b>Le blockchain sono pubbliche:</b> le operazioni inviate, gli indirizzi e i nomi dei dispositivi scritti sulla UP restano visibili a chiunque, per sempre, e nessuno li può cancellare.</li>
+    </ul>`,
+    s2t: "2 · Titolare del trattamento",
+    s2: `ChainIntegrate, che sviluppa le pagine, l'estensione e l'app e gestisce il sito, il relayer e il servizio di gas sponsorizzato. Contatti: e-mail <a href="mailto:info@chainintegrate.it">info@chainintegrate.it</a>; anche Telegram (in fondo alla pagina) o una segnalazione su <a href="https://github.com/ChainIntegrate/Cross_Chain/issues" target="_blank" rel="noopener">GitHub</a>.`,
+    s3t: "3 · Cosa resta nel tuo browser o dispositivo",
+    s3: `Nella memoria locale del browser (localStorage), mai inviati a ChainIntegrate: la lingua e il tema scelti, l'indirizzo della UP e la rete usati per ultimi, alcune preferenze delle pagine; nel wallet della pagina web, i dati delle sessioni WalletConnect con le dApp (chiavi temporanee del canale cifrato, indirizzo e rete presentati alla dApp). Nell'estensione UP Wallet anche: la chiave del dispositivo, solo cifrata (la sblocchi con la passkey o con la password), l'elenco dei siti che hai collegato e le loro autorizzazioni. Si cancellano dalle impostazioni del browser o togliendo l'estensione.`,
+    s4t: "4 · Servizi di terzi con cui parla il tuo browser",
+    s4: `Questi servizi ricevono le richieste direttamente dal tuo browser: vedono il tuo indirizzo IP e i dati della richiesta, e li trattano come titolari autonomi, secondo le loro informative. Alcuni hanno sede fuori dall'Unione europea (per esempio negli Stati Uniti).
+    <ul>
+      <li><b>Nodi RPC pubblici</b> della rete che scegli (l'elenco è nel codice, <code>chains.js</code>: per esempio quelli di LUKSO, publicnode, i nodi ufficiali delle reti): per leggere saldi, contratti e permessi e per simulare e inviare le operazioni. Vedono gli indirizzi consultati e le transazioni.</li>
+      <li><b>Alchemy, Inc.</b> (USA), sulle reti che copre: l'elenco dei token e degli NFT della UP e le loro immagini. Vede l'indirizzo della UP.</li>
+      <li><b>Gli explorer delle reti</b> (Blockscout; su LUKSO l'explorer di LUKSO; su Arc il suo): l'elenco dei token dove Alchemy non arriva, e la descrizione (ABI) dei contratti che una richiesta chiama, per spiegarti cosa firmi. Vedono l'indirizzo della UP o del contratto.</li>
+      <li><b>WalletConnect (Reown, Inc., USA)</b>, solo nel wallet della pagina web: il collegamento con le dApp. Vede i metadati della sessione (indirizzo della UP, rete, nome e indirizzo della dApp); il contenuto delle richieste è cifrato tra il wallet e la dApp. L'estensione non lo usa.</li>
+      <li><b>Gateway IPFS</b> (<code>api.universalprofile.cloud</code>, <code>ipfs.chainintegrate.it</code>, <code>ipfs.io</code>): le immagini di token, NFT e profili. Le immagini su altri server si caricano solo se le chiedi tu.</li>
+      <li><b>L'indice dei profili di LUKSO</b> (<code>envio.lukso-mainnet.universal.tech</code>): solo se cerchi un destinatario per nome. Vede il nome cercato.</li>
+      <li><b>CoW Protocol</b> (<code>api.cow.fi</code>): solo quando firmi un ordine CoW, per mostrarti l'ordine. Vede l'identificativo dell'ordine.</li>
+      <li><b>cdnjs (Cloudflare, Inc., USA)</b>: la libreria ethers.js, su ogni pagina.</li>
+      <li><b>Le dApp che colleghi</b>: vedono l'indirizzo della UP e la rete, e ricevono le risposte che approvi.</li>
+      <li>I link a Telegram, LinkedIn e GitHub portano a quei servizi solo se li apri.</li>
+    </ul>`,
+    s5t: "5 · Cosa riceve e conserva ChainIntegrate",
+    s5: `Il server è un VPS di <b>Aruba S.p.A.</b>, in Italia, che agisce come responsabile del trattamento.
+    <ul>
+      <li><b>Registri del server web:</b> indirizzo IP, pagina richiesta, data e ora, browser. Servono al funzionamento e alla sicurezza del sito e sono conservati al massimo 30 giorni.</li>
+      <li><b>Relayer del sito.</b> Quando una pagina o un wallet ha una UP su una rete dove c'è il gas sponsorizzato del sito, chiede da solo se quella UP ne ha diritto: invia l'indirizzo della UP e la rete (non serve spuntare niente). Quando paghi il gas con il relayer, riceve l'operazione firmata (indirizzo della UP, rete, chiamata) e la invia alla blockchain. Il registro del relayer (data e ora, rete, UP, transazione, esito; per le richieste rifiutate anche l'IP) è conservato al massimo 30 giorni.</li>
+      <li><b>Servizio del gas sponsorizzato.</b> Tiene un elenco delle approvazioni e dei rifiuti (data e ora, rete, indirizzo della UP, numero dell'operazione; nessun IP), per i limiti giornalieri e i conteggi: 12 mesi. Il suo registro tecnico (per le richieste rifiutate anche l'IP): al massimo 30 giorni.</li>
+      <li><b>Controllo delle nuove versioni:</b> l'estensione e l'app chiedono al server qual è l'ultima versione; il server vede l'IP, come per ogni richiesta (registri del server web).</li>
+      <li>Per inviare le operazioni e leggere la blockchain, il relayer e il servizio usano a loro volta dei nodi RPC: su alcune reti quelli di <b>Alchemy, Inc.</b> (USA), sulle altre nodi pubblici. Ricevono le operazioni e l'IP del server, non il tuo.</li>
+      <li>Se ci mandi per e-mail i dati di una chiamata che il wallet non sa spiegare (lo proponi tu, con il tuo programma di posta), riceviamo quello che invii: lo usiamo solo per migliorare il wallet.</li>
+    </ul>`,
+    s6t: "6 · Abbonamento al gas sponsorizzato",
+    s6: `Se ti abboni (pagina <a href="up-subscribe.html">Abbonamento</a>):
+    <ul>
+      <li><b>Dati:</b> l'e-mail che inserisci, collegata all'indirizzo della tua UP; i pagamenti, le ricariche e gli addebiti delle operazioni (UP, rete, importi, transazioni). Saldo e stato dell'abbonamento di una UP sono leggibili da chiunque conosca l'indirizzo, come i pagamenti sulla blockchain.</li>
+      <li><b>Finalità e base giuridica:</b> fornirti il servizio che hai chiesto (contratto, art. 6.1.b GDPR): l'attivazione, gli avvisi di saldo basso, le comunicazioni sul servizio; la contabilità (obbligo di legge, art. 6.1.c).</li>
+      <li><b>Responsabili:</b> Aruba S.p.A. (il server e l'invio delle e-mail).</li>
+      <li><b>Conservazione:</b> l'e-mail fino a 12 mesi dopo l'ultimo movimento della UP (pagamento, ricarica, addebito), poi si cancella da sola; prima, se lo chiedi. Pagamenti, ricariche e addebiti 10 anni, come scritture contabili (art. 2220 del codice civile).</li>
+      <li><b>Saldo:</b> gli USDC pagati arrivano alla UP di ChainIntegrate; il saldo prepagato è l'unica cosa che ChainIntegrate tiene per conto degli utenti.</li>
+      <li>Per cancellare l'e-mail scrivi a <a href="mailto:info@chainintegrate.it">info@chainintegrate.it</a> indicando l'indirizzo della UP.</li>
+    </ul>`,
+    s7t: "7 · L'estensione UP Wallet",
+    s7: `L'estensione per il browser fa le stesse richieste della pagina web (punti 4 e 5), con queste differenze: non usa WalletConnect; le richieste ad Alchemy partono dall'estensione con una chiave sua; i siti che colleghi (solo se lo chiedi tu, dal pannello "Siti collegati") vedono l'indirizzo della UP e la rete e mandano al wallet le loro richieste, che approvi o rifiuti; la chiave del dispositivo resta cifrata nel browser e non esce mai. L'estensione chiede al relayer l'ultima versione disponibile. Nessuna statistica d'uso, nessun invio di dati a ChainIntegrate oltre a quanto descritto.`,
+    s8t: "8 · L'app Android",
+    s8: `L'app UP Wallet per Android ha <a href="up-wallet-app-privacy.html">la sua informativa</a>.`,
+    s9t: "9 · Basi giuridiche, in sintesi",
+    s9: `<ul>
+      <li>Registri del server, del relayer e del servizio: interesse legittimo a far funzionare il servizio in sicurezza e a prevenire abusi (art. 6.1.f GDPR).</li>
+      <li>L'invio delle operazioni con il relayer e il gas sponsorizzato: la funzione che chiedi (art. 6.1.b).</li>
+      <li>Abbonamento: contratto (art. 6.1.b) e obblighi contabili (art. 6.1.c).</li>
+    </ul>`,
+    s10t: "10 · I tuoi diritti",
+    s10: `Secondo il Regolamento UE 2016/679 (GDPR) puoi chiedere l'accesso ai dati che ti riguardano, la loro rettifica o cancellazione, la limitazione del trattamento e la portabilità, e opporti al trattamento basato sull'interesse legittimo, scrivendo a <a href="mailto:info@chainintegrate.it">info@chainintegrate.it</a> (indica rete, indirizzo della UP e giorno, così possiamo trovarli). Puoi anche presentare reclamo al Garante per la protezione dei dati personali (<a href="https://www.garanteprivacy.it" target="_blank" rel="noopener">garanteprivacy.it</a>). Quello che sta sulla blockchain non può essere cancellato da nessuno.`,
+    s11t: "11 · Minori e modifiche",
+    s11: `I servizi non sono pensati per chi ha meno di 18 anni. Se questa informativa cambia, cambia la data in alto; le versioni precedenti restano nella cronologia del <a href="https://github.com/ChainIntegrate/Cross_Chain/commits/main/privacy.html" target="_blank" rel="noopener">repository</a>.`,
+
+    footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Codice sorgente su GitHub</a> · <a href="privacy.html">Privacy</a> · <a href="https://github.com/ChainIntegrate/up-wallet-android" target="_blank" rel="noopener">App Android (in prova)</a>`
+  },
+  en: {
+    pageTitle: "Privacy — Cross_Chain and UP Wallet — ChainIntegrate",
+    h1: "Privacy notice",
+    subtitle: "Last updated: 24 November 2026. It covers the website crosschain-lukso.chainintegrate.it and its pages, UP Wallet in the web page and in the browser extension, the site's relayer, the service that approves sponsored gas, and the paid subscription. The Android app has a notice of its own.",
+    langToggleBtn: "Italiano",
+    s1t: "1 · In short",
+    s1: `<ul>
+      <li><b>No account, no cookies, no tracking, no usage statistics.</b> The pages and the wallets ask for no sign-up; ChainIntegrate never holds the keys of your Universal Profiles (UPs).</li>
+      <li>Your browser talks <b>directly</b> to some third-party services (RPC nodes, token indexes, explorers, WalletConnect, IPFS gateways): each one sees your IP address and what you ask it. The full list is in section 4.</li>
+      <li><b>ChainIntegrate's server</b> receives data only for the features that use the relayer, sponsored gas or the subscription, and in the web server's ordinary logs (section 5).</li>
+      <li><b>Blockchains are public:</b> the operations sent, the addresses and the device names written on a UP stay visible to anyone, forever, and nobody can delete them.</li>
+    </ul>`,
+    s2t: "2 · Controller",
+    s2: `ChainIntegrate, which develops the pages, the extension and the app and runs the website, the relayer and the sponsored gas service. Contact: e-mail <a href="mailto:info@chainintegrate.it">info@chainintegrate.it</a>; also Telegram (bottom of the page) or an issue on <a href="https://github.com/ChainIntegrate/Cross_Chain/issues" target="_blank" rel="noopener">GitHub</a>.`,
+    s3t: "3 · What stays in your browser or device",
+    s3: `In the browser's local storage (localStorage), never sent to ChainIntegrate: the language and theme you chose, the UP address and network last used, a few page preferences; in the web page's wallet, the data of the WalletConnect sessions with dApps (the encrypted channel's temporary keys, the address and network shown to the dApp). In the UP Wallet extension also: the device key, only encrypted (you unlock it with the passkey or the password), the list of sites you connected and their permissions. They are deleted from the browser's settings or by removing the extension.`,
+    s4t: "4 · Third-party services your browser talks to",
+    s4: `These services receive the requests directly from your browser: they see your IP address and the request's data, and process them as independent controllers, under their own policies. Some are based outside the European Union (for example in the United States).
+    <ul>
+      <li><b>Public RPC nodes</b> of the network you choose (the list is in the code, <code>chains.js</code>: for example LUKSO's, publicnode, the networks' official nodes): to read balances, contracts and permissions and to simulate and send operations. They see the addresses looked up and the transactions.</li>
+      <li><b>Alchemy, Inc.</b> (USA), on the networks it covers: the list of the UP's tokens and NFTs and their images. It sees the UP's address.</li>
+      <li><b>The networks' explorers</b> (Blockscout; on LUKSO, LUKSO's explorer; on Arc, its own): the token list where Alchemy does not reach, and the description (ABI) of the contracts a request calls, to explain what you sign. They see the UP's or the contract's address.</li>
+      <li><b>WalletConnect (Reown, Inc., USA)</b>, only in the web page's wallet: the connection with dApps. It sees the session's metadata (UP address, network, the dApp's name and address); the requests' content is encrypted between the wallet and the dApp. The extension does not use it.</li>
+      <li><b>IPFS gateways</b> (<code>api.universalprofile.cloud</code>, <code>ipfs.chainintegrate.it</code>, <code>ipfs.io</code>): the images of tokens, NFTs and profiles. Images on other servers load only when you ask.</li>
+      <li><b>LUKSO's profile index</b> (<code>envio.lukso-mainnet.universal.tech</code>): only when you look for a recipient by name. It sees the name searched.</li>
+      <li><b>CoW Protocol</b> (<code>api.cow.fi</code>): only when you sign a CoW order, to show you the order. It sees the order's identifier.</li>
+      <li><b>cdnjs (Cloudflare, Inc., USA)</b>: the ethers.js library, on every page.</li>
+      <li><b>The dApps you connect</b>: they see the UP's address and the network, and get the answers you approve.</li>
+      <li>The links to Telegram, LinkedIn and GitHub lead to those services only if you open them.</li>
+    </ul>`,
+    s5t: "5 · What ChainIntegrate receives and keeps",
+    s5: `The server is a VPS of <b>Aruba S.p.A.</b>, in Italy, acting as processor.
+    <ul>
+      <li><b>Web server logs:</b> IP address, page requested, date and time, browser. They serve the site's operation and security and are kept for at most 30 days.</li>
+      <li><b>The site's relayer.</b> When a page or a wallet has a UP on a network where the site's sponsored gas is available, it asks by itself whether that UP is entitled to it: it sends the UP's address and the network (nothing needs to be ticked). When you pay the gas with the relayer, it receives the signed operation (UP address, network, call) and sends it to the blockchain. The relayer's log (date and time, network, UP, transaction, outcome; for refused requests also the IP) is kept for at most 30 days.</li>
+      <li><b>The sponsored gas service.</b> It keeps a list of approvals and refusals (date and time, network, UP address, operation number; no IP), for the daily limits and the counts: 12 months. Its technical log (for refused requests also the IP): at most 30 days.</li>
+      <li><b>New version check:</b> the extension and the app ask the server for the latest version; the server sees the IP, as for any request (web server logs).</li>
+      <li>To send the operations and read the blockchain, the relayer and the service use RPC nodes in turn: on some networks those of <b>Alchemy, Inc.</b> (USA), on the others public nodes. They receive the operations and the server's IP, not yours.</li>
+      <li>If you e-mail us the data of a call the wallet cannot explain (you choose to, with your own mail program), we receive what you send: we use it only to improve the wallet.</li>
+    </ul>`,
+    s6t: "6 · The sponsored gas subscription",
+    s6: `If you subscribe (<a href="up-subscribe.html">Subscription</a> page):
+    <ul>
+      <li><b>Data:</b> the e-mail you enter, linked to your UP's address; the payments, top-ups and charges of operations (UP, network, amounts, transactions). A UP's balance and subscription status can be read by anyone who knows the address, as the payments on the blockchain can.</li>
+      <li><b>Purposes and legal basis:</b> providing the service you asked for (contract, Art. 6(1)(b) GDPR): the activation, the low-balance alerts, the communications about the service; accounting (legal obligation, Art. 6(1)(c)).</li>
+      <li><b>Processors:</b> Aruba S.p.A. (the server and the sending of e-mails).</li>
+      <li><b>Retention:</b> the e-mail until 12 months after the UP's last movement (payment, top-up, charge), then it is erased by itself; earlier, if you ask. Payments, top-ups and charges 10 years, as accounting records (Art. 2220 of the Italian civil code).</li>
+      <li><b>Balance:</b> the USDC paid go to ChainIntegrate's UP; the prepaid balance is the only thing ChainIntegrate holds for its users.</li>
+      <li>To erase the e-mail, write to <a href="mailto:info@chainintegrate.it">info@chainintegrate.it</a> with the UP's address.</li>
+    </ul>`,
+    s7t: "7 · The UP Wallet extension",
+    s7: `The browser extension makes the same requests as the web page (sections 4 and 5), with these differences: it does not use WalletConnect; its requests to Alchemy leave from the extension with a key of its own; the sites you connect (only when you ask, from the "Connected sites" panel) see the UP's address and the network and send their requests to the wallet, which you approve or refuse; the device key stays encrypted in the browser and never leaves it. The extension asks the relayer for the latest version available. No usage statistics, no data sent to ChainIntegrate beyond what is described here.`,
+    s8t: "8 · The Android app",
+    s8: `The UP Wallet app for Android has <a href="up-wallet-app-privacy.html">its own notice</a>.`,
+    s9t: "9 · Legal bases, in short",
+    s9: `<ul>
+      <li>The server's, the relayer's and the service's logs: legitimate interest in running the service safely and preventing abuse (Art. 6(1)(f) GDPR).</li>
+      <li>Sending operations with the relayer and sponsored gas: the feature you ask for (Art. 6(1)(b)).</li>
+      <li>Subscription: contract (Art. 6(1)(b)) and accounting obligations (Art. 6(1)(c)).</li>
+    </ul>`,
+    s10t: "10 · Your rights",
+    s10: `Under Regulation (EU) 2016/679 (GDPR) you can ask for access to the data about you, its rectification or erasure, the restriction of processing and portability, and object to processing based on legitimate interest, by writing to <a href="mailto:info@chainintegrate.it">info@chainintegrate.it</a> (give network, UP address and day, so that we can find them). You can also lodge a complaint with the Italian data protection authority, the Garante per la protezione dei dati personali (<a href="https://www.garanteprivacy.it" target="_blank" rel="noopener">garanteprivacy.it</a>). What is on the blockchain cannot be deleted by anyone.`,
+    s11t: "11 · Minors and changes",
+    s11: `The services are not meant for people under 18. If this notice changes, the date at the top changes; earlier versions stay in the <a href="https://github.com/ChainIntegrate/Cross_Chain/commits/main/privacy.html" target="_blank" rel="noopener">repository</a>'s history.`,
+
+    footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Source code on GitHub</a> · <a href="privacy.html">Privacy</a> · <a href="https://github.com/ChainIntegrate/up-wallet-android" target="_blank" rel="noopener">Android app (in testing)</a>`
+  },
+};
+const t = (k) => I18N[LANG][k] ?? I18N.it[k] ?? k;
+function applyI18n() {
+  document.documentElement.lang = LANG;
+  document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.getAttribute("data-i18n")); });
+  document.querySelectorAll("[data-i18n-html]").forEach((el) => { el.innerHTML = t(el.getAttribute("data-i18n-html")); });
+}
+applyI18n();
+document.getElementById("langToggle").addEventListener("click", () => { LANG = LANG === "it" ? "en" : "it"; SiteUI.saveLang(LANG); applyI18n(); });
+</script>
+</body>
+</html>

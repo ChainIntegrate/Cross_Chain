@@ -67,6 +67,9 @@ const MAX = {
 // perSenderPerMinute is charged only to operations that passed both simulations, so the UP's own signature:
 // requests that anyone can forge for a UP (bad shape, bad signature) never use up that UP's quota (CC-01).
 // globalPerMinute bounds the simulations of all clients together, whatever their IPs.
+const EP_NONCE_ABI = ["function getNonce(address sender, uint192 key) view returns (uint256)"];
+// How often a UP whose transaction is not mined after 3 minutes is checked (24 times: 15 minutes).
+let LOCK_POLL_MS = 37_500;
 const DEFAULT_LIMITS = { perIpPerMinute: 6, perSenderPerMinute: 3, globalPerMinute: 60 };
 const INFO_CACHE_MS = 10_000;
 
@@ -306,25 +309,50 @@ async function checkAndSend(chain, id, op, pm, hash, allowSender) {
   const balance = await chain.provider.getBalance(from);
   if (balance < gasLimit * op.maxFeePerGas) throw new Refused("the relayer has not enough gas on this chain right now", 503);
 
-  // One transaction at a time per chain, so the relayer's nonces never collide.
-  const sent = chain.queue.then(() => chain.signer.sendTransaction({ to: ENTRY_POINT, data, gasLimit, ...fees }));
-  chain.queue = sent.catch(() => {});
-  let tx;
-  try { tx = await sent; }
+  // One transaction at a time per chain, so the relayer's nonces never collide. The transaction is signed
+  // first and its hash recorded before it is broadcast (audit CC-10): a send whose answer is lost but that
+  // reached the network is then still known, and the same operation sent again gets that transaction back
+  // instead of a second one that would revert at the relayer's cost.
+  const job = chain.queue.then(async () => {
+    const signed = await chain.signer.signTransaction(await chain.signer.populateTransaction({ to: ENTRY_POINT, data, gasLimit, ...fees }));
+    const txHash = ethers.keccak256(signed);
+    chain.recent.set(hash, txHash);
+    try { await chain.provider.broadcastTransaction(signed); }
+    catch (e) {
+      const seen = await chain.provider.getTransaction(txHash).catch(() => null);
+      if (!seen) { chain.recent.delete(hash); throw e; }
+      log(`chain ${id}: ${txHash} reported an error on sending but is on the network (${revertReason(e)})`);
+    }
+    return txHash;
+  });
+  chain.queue = job.catch(() => {});
+  let txHash;
+  try { txHash = await job; }
   catch (e) { throw new Refused(`send failed: ${revertReason(e)}`, 502, false); }
-  chain.recent.set(hash, tx.hash);
   if (chain.recent.size > 1000) chain.recent.delete(chain.recent.keys().next().value);
   // The outcome of the relayer's own transactions, for GET /relay/receipt: some public RPCs refuse
   // receipt lookups (publicnode on Base), and the page has no wallet that knows this transaction.
-  chain.receipts.set(tx.hash.toLowerCase(), null);
+  chain.receipts.set(txHash.toLowerCase(), null);
   if (chain.receipts.size > 1000) chain.receipts.delete(chain.receipts.keys().next().value);
-  log(`chain ${id}: sent ${tx.hash} sender ${op.sender} nonce ${op.nonce} paymaster ${pm} gasLimit ${gasLimit}`);
-  // A UP stays blocked until its transaction is mined, or for 3 minutes at most.
-  tx.wait(1, 180_000).then((rc) => {
-    chain.receipts.set(tx.hash.toLowerCase(), { status: rc.status, blockNumber: rc.blockNumber, logs: rc.logs.map((l) => ({ address: l.address, topics: l.topics, data: l.data })) });
-    log(`chain ${id}: ${tx.hash} mined in block ${rc.blockNumber}, status ${rc.status}`);
+  log(`chain ${id}: sent ${txHash} sender ${op.sender} nonce ${op.nonce} paymaster ${pm} gasLimit ${gasLimit}`);
+  // A UP stays blocked until its transaction is mined. If it is not mined within 3 minutes, the UP stays
+  // blocked while the EntryPoint has not used the operation's nonce, for up to 15 minutes (audit CC-10): the
+  // same operation signed again meanwhile would make a second transaction that reverts.
+  const nonceUsed = async () => (await new ethers.Contract(ENTRY_POINT, EP_NONCE_ABI, chain.provider).getNonce(op.sender, op.nonce >> 64n)) > op.nonce;
+  chain.provider.waitForTransaction(txHash, 1, 180_000).then((rc) => {
+    if (!rc) throw new Error("no receipt");
+    chain.receipts.set(txHash.toLowerCase(), { status: rc.status, blockNumber: rc.blockNumber, logs: rc.logs.map((l) => ({ address: l.address, topics: l.topics, data: l.data })) });
+    log(`chain ${id}: ${txHash} mined in block ${rc.blockNumber}, status ${rc.status}`);
+    return true;
   })
-    .catch((e) => log(`chain ${id}: ${tx.hash} not confirmed: ${revertReason(e)}`))
+    .catch(async (e) => {
+      log(`chain ${id}: ${txHash} not confirmed in 3 minutes: ${revertReason(e)}`);
+      for (let i = 0; i < 24; i++) {
+        try { if (await nonceUsed()) { log(`chain ${id}: the nonce of ${op.sender} is used: unblocked`); return; } } catch (x) { /* RPC: try again */ }
+        await new Promise((r) => setTimeout(r, LOCK_POLL_MS));
+      }
+      log(`chain ${id}: ${op.sender} unblocked after 15 minutes, its nonce still unused`);
+    })
     .finally(async () => {
       chain.pendingSender.delete(op.sender);
       try {
@@ -332,7 +360,7 @@ async function checkAndSend(chain, id, op, pm, hash, allowSender) {
         if (bal < chain.minBalanceWarn) log(`WARNING chain ${id}: relayer balance ${ethers.formatEther(bal)} below ${ethers.formatEther(chain.minBalanceWarn)}`);
       } catch (e) { /* the next request will tell */ }
     });
-  return { hash: tx.hash };
+  return { hash: txHash };
 }
 
 // ==================== HTTP ====================
@@ -483,4 +511,4 @@ if (require.main === module) {
   main(process.argv.slice(2)).catch((e) => { console.error(e.message || e); process.exit(1); });
 }
 
-module.exports = { main, userOpHash, parseOp, readConfig, readKey, ENTRY_POINT, latestVersions, makeServer };
+module.exports = { setLockPollMs: (ms) => { LOCK_POLL_MS = ms; }, main, userOpHash, parseOp, readConfig, readKey, ENTRY_POINT, latestVersions, makeServer };

@@ -21,7 +21,7 @@ const SCRIPT_SRC = ["'self'", "https://cdnjs.cloudflare.com/ajax/libs/ethers/6.1
 const META_RE = /<meta http-equiv="Content-Security-Policy" content="[^"]*">\n/;
 const ANCHOR = '<meta charset="UTF-8">\n';
 // Deprecated and frozen (CONTRIBUTING.md): only the server's fixed policy applies to it.
-const SKIP = ["up-multichain-deploy-v2.html"];
+const SKIP = [];
 
 // The text of each inline script, exactly as the browser hashes it (the bytes between the tags).
 function inlineScripts(html) {

@@ -32,6 +32,7 @@
 16. [Scope of the next review: changes since 2026-10-26](#16-scope-of-the-next-review-changes-since-2026-10-26)
 17. [Rev. 14 — External review of the whole system, with the browser extension (2026-10-29)](#17-rev-14--external-review-of-the-whole-system-with-the-browser-extension-2026-10-29)
 18. [External incident: LUKSO's email-based recovery (2026-11-17/18)](#18-external-incident-luksos-email-based-recovery-2026-1117-18)
+19. [Rev. 14b and 15 — Second provider (2026-10-29) and two-provider review (2026-11-04): public summary](#19-rev-14b-and-15--second-provider-2026-10-29-and-two-provider-review-2026-11-04-public-summary)
 
 ---
 
@@ -805,3 +806,34 @@ External AI-assisted review of the four repositories, with the brief of section 
 ## 18. External incident: LUKSO's email-based recovery (2026-11-17/18)
 
 An attacker exploited a vulnerability in LUKSO's email-based Universal Profile recovery service; the LUKSO blockchain and the Universal Profile contracts were not affected ([LUKSO's post mortem](https://medium.com/@lukso/post-mortem-security-incident-in-the-email-based-recovery-system-029f6f241e2b)). Cross_Chain's tools, UP Wallet and the signing service do not use that service. The profiles operated by ChainIntegrate were checked on chain on 2026-11-18: not affected.
+
+---
+
+## 19. Rev. 14b and 15 — Second provider (2026-10-29) and two-provider review (2026-11-04): public summary
+
+Published on 2026-11-24, once the findings below were fixed. Section 17 said "no Critical, High or Medium" for the review of 2026-10-29 by the first provider; the **second provider's** review of the same day (Codex) found four Medium issues, all in the signing service's accounting, kept private while they were open.
+
+**Rev. 14b — second provider, 2026-10-29.** The rule decided for rare cases: when something fortuitous and small goes wrong (a request across UTC midnight, a late observation, a reorganization of a chain, a damaged file), the operator bears the loss, never the customer.
+
+| # | Severity | Finding | Status |
+|---|---|---|---|
+| A01 | Medium | The signing service's open reservations were dropped at UTC midnight; a customer's balance could go below zero and be taken from the next top-up | **Fixed** (2026-11-24): open approvals and their holds survive midnight; a balance never goes below zero, the rest is the operator's loss |
+| A02 | Medium | A renewed approval of the same operation skips the day's quota and budget | **Accepted**: the operator's limits only, no customer loss; the hold on a customer's balance is kept (2026-11-24) |
+| A03 | Medium | A damaged cursor file restarted the watch at the current block: a subscription payment in the blocks in between would not be credited | **Fixed** (2026-11-24): a damaged cursor stops the watch (customers paused, the operator e-mailed); a procedure sets it again without losing blocks |
+| A04 | Medium | No rollback of a charge after a deep reorganization of a chain | **Accepted** with a procedure (2026-11-24): the customer is refunded twice the charge |
+| A05 | Low | WalletKit's license not served (the server answers 404 for `.md`); no license files in the clients' packages | **Fixed** on the site (`vendor/walletkit-1.6.0.LICENSE.txt`, linked from the footer); the clients with their next releases |
+| A06 | Low | Documentation stronger than the threat model | **Fixed** in part (README: what "non-custodial" means, the third parties, the open-source parts); the clients' texts with their releases |
+| A07 | Low | The builds depended on line endings | **Fixed** here (`.gitattributes`); the clients with their next releases |
+| A08 | Low | Android: device-to-device transfer not excluded explicitly | Open: with the app's next release (the app's notice says it now) |
+| A09 | Low | Nodemailer below 10.1.4 | **Fixed** (2026-11-24): 10.3.1 in the relayer, its monitor and the signing service |
+| A10 | Low | The signing service's queue unbounded; `relay/info` uncached | **Fixed** (2026-11-23/24) |
+
+**Rev. 15 — two providers, 2026-11-04.** Cross_Chain @ `0384f03`, the signing service, the extension 0.1.9 and the app 0.10.0, reviewed by two providers from the same brief. The decisions and statuses per repository: this repository's [`tools/audits/2026-11-04-review.md`](tools/audits/2026-11-04-review.md), and `audits/2026-11-04-review.md` in `up-wallet-extension` and `up-wallet-android`.
+
+| Area | Findings | Status on 2026-11-24 |
+|---|---|---|
+| Signing service | SPN-01 (High): an approval's fee fields were not bounded, so its holder could take up to the cap per operation from the deposit; SPN-02, SPN-03, SPN-04 (Medium): an imitation of a UP could get unpaid operations, unbounded log lines, the subscribers' data without retention; Low and Info items | **All fixed**: SPN-01 on 2026-11-04 (no sign of use on chain), the others on 2026-11-23/24 |
+| Site, relayer | CC-01 (Medium): the per-UP limit charged before the checks; CC-02 (Medium): no privacy notice for the site; Low and Info items | **Fixed**, except the L1 fee at the effective price (CC-10, with the wallets' next releases) |
+| Extension | EXT-01, EXT-02, EXT-03 (Medium): the wallet page not isolated from the signing window; typed data and the UP's call arguments shown incompletely; Low items | EXT-01 to EXT-03 **fixed** (0.2.0 to 0.2.3); the Low items with the next releases |
+| Android app | AND-01, AND-02 (Medium): as EXT-02 and EXT-03; Low items | AND-01, AND-02 **fixed** (0.10.1); the Low items with the next releases |
+

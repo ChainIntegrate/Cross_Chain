@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-gDMK6wwfpKMur2+eypGDsWfBauOmudtryzY/2WKDTD0='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-7lyP8WKIBpTbyq80Gt07jSY0gBUwalD8gdaHuGZBZL8='">
 <script src="theme.js"></script>
 <script src="site-ui.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -54,7 +54,7 @@
 <div class="top-row">
   <div>
     <h1 data-i18n="h1">UP Wallet per Android — Informativa sulla privacy</h1>
-    <div class="subtitle" data-i18n="subtitle"></div>
+    <div class="subtitle" data-i18n-html="subtitle"></div>
   </div>
   <button class="lang-btn" id="langToggle" data-i18n="langToggleBtn">English</button>
 </div>
@@ -106,14 +106,14 @@ const I18N = {
   it: {
     pageTitle: "UP Wallet per Android — Privacy — ChainIntegrate",
     h1: "UP Wallet per Android — Informativa sulla privacy",
-    subtitle: "Ultimo aggiornamento: 25 ottobre 2026 (versione 0.9.0). Riguarda l'app Android UP Wallet (it.chainintegrate.upwallet), in prova.",
+    subtitle: "Ultimo aggiornamento: 24 novembre 2026 (versione 0.10.2). Riguarda l'app Android UP Wallet (it.chainintegrate.upwallet), in prova. Il sito, il wallet nel browser, il relayer e l'abbonamento hanno l'<a href=\"privacy.html\">informativa del sito</a>.",
     langToggleBtn: "English",
     s1t: "1 · In breve",
     s1: `<ul>
       <li><b>Nessun account. Una chiave che resta sul telefono.</b> L'app non chiede registrazioni. Dalla versione 0.9.0 crea sul telefono una chiave di firma (la "chiave del telefono"), cifrata con il Keystore di Android e usata solo dopo impronta o PIN: non esce mai dal telefono, non ha copie e ChainIntegrate non la vede. Non c'è seed phrase. I permessi li applica il Key Manager della tua Universal Profile. Fino alla 0.8.x l'app non conservava chiavi e firmava con MetaMask.</li>
       <li><b>Nessuna pubblicità, nessun tracciamento, nessuna statistica d'uso.</b> La telemetria di WalletConnect non è attiva.</li>
-      <li><b>Quello che l'app ricorda resta sul telefono</b> e non entra nei backup di Android.</li>
-      <li><b>Le blockchain sono pubbliche:</b> le operazioni che invii sono visibili a chiunque e non si possono cancellare.</li>
+      <li><b>Quello che l'app ricorda resta sul telefono</b> e non entra nei backup di Android sul cloud.</li>
+      <li><b>Le blockchain sono pubbliche:</b> le operazioni che invii sono visibili a chiunque e non si possono cancellare. Anche il nome che dai a un dispositivo quando lo autorizzi viene scritto sulla UP: pubblico, niente dati personali.</li>
     </ul>`,
     s2t: "2 · Chi è il titolare",
     s2: `ChainIntegrate, che sviluppa l'app e gestisce il sito <code>crosschain-lukso.chainintegrate.it</code> e il relayer del sito. Contatti: e-mail <a href="mailto:info@chainintegrate.it">info@chainintegrate.it</a>, <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Telegram</a> oppure una segnalazione su <a href="https://github.com/ChainIntegrate/up-wallet-android/issues" target="_blank" rel="noopener">GitHub</a>.`,
@@ -122,9 +122,9 @@ const I18N = {
       <li>l'indirizzo della UP e la rete scelti, per ritrovarli alla prossima apertura;</li>
       <li>la chiave del telefono, solo cifrata (la chiave che la decifra è nel Keystore di Android, nell'hardware sicuro dove il telefono lo ha, e si usa solo dopo impronta o PIN), e il suo indirizzo pubblico;</li>
       <li>i dati delle sessioni WalletConnect con le dApp (chiavi temporanee del canale cifrato, indirizzo e rete presentati alla dApp);</li>
-      <li>un registro diagnostico (al massimo 300 righe): orari, apertura e chiusura dell'app, nomi delle richieste (per esempio "eth_sendTransaction"), il loro esito e il nome della dApp. Non contiene messaggi, importi, firme né indirizzi. Lo vedi e lo svuoti in fondo alla pagina dell'app ("Registro diagnostico"); esce dal telefono solo se lo copi tu.</li>
+      <li>un registro diagnostico (al massimo 300 righe): orari, apertura e chiusura dell'app, nomi delle richieste (per esempio "eth_sendTransaction"), il loro esito e il nome della dApp. Non registra messaggi, firme né il contenuto delle richieste; un messaggio d'errore copiato nel registro può però contenere un indirizzo o un importo: guardalo prima di condividerlo. Lo vedi e lo svuoti in fondo alla pagina dell'app ("Registro diagnostico"); esce dal telefono solo se lo copi tu.</li>
     </ul>
-    Questi dati non vengono inviati a ChainIntegrate, non entrano nei backup di Android e si cancellano disinstallando l'app o cancellandone i dati dalle impostazioni del telefono.`,
+    Questi dati non vengono inviati a ChainIntegrate, non entrano nei backup di Android sul cloud e si cancellano disinstallando l'app o cancellandone i dati dalle impostazioni del telefono. Il trasferimento diretto da un telefono vecchio a uno nuovo (Android 12 e successivi) può copiarli; la chiave del telefono però non funziona sul nuovo, perché la chiave che la decifra resta nel Keystore del vecchio.`,
     s4t: "4 · Con chi parla l'app, e cosa vede",
     s4: `<ul>
       <li><b>WalletConnect</b> (Reown, Inc.): il collegamento con le dApp passa dai server di Reown, che vedono i metadati della sessione (indirizzo della UP, rete, nome e indirizzo della dApp) e l'indirizzo IP; il contenuto delle richieste è cifrato tra l'app e la dApp. Reown verifica anche il dominio della dApp.</li>
@@ -133,7 +133,9 @@ const I18N = {
       <li><b>L'indice dei profili di LUKSO</b> (envio.lukso-mainnet.universal.tech, gestito per LUKSO): solo se nel campo Destinatario scrivi un nome invece di un indirizzo, per cercare le Universal Profile con quel nome. Vede il nome cercato e l'indirizzo IP.</li>
       <li><b>Google Play services</b> (Google LLC), solo se usi "Scansiona QR": il lettore QR di Google Play services usa la fotocamera e legge il codice sul telefono. L'app riceve solo il testo del codice, mai le immagini. Google lo tratta secondo la sua informativa.</li>
       <li><b>Le dApp</b> che colleghi: vedono l'indirizzo della UP e la rete, e ricevono le risposte che approvi.</li>
-      <li><b>Il relayer del sito</b> (ChainIntegrate), solo se scegli "paga il gas con il relayer del sito": riceve l'operazione firmata (indirizzo della UP, rete, chiamata) e la invia alla blockchain. Vedi il punto 5. Per inviarla e per leggere la blockchain, il relayer e il servizio che approva le operazioni usano a loro volta dei nodi RPC: su alcune reti quelli di Alchemy, Inc., sulle altre nodi pubblici. Questi vedono l'operazione e l'indirizzo IP del server, non il tuo.</li>
+      <li><b>Gli explorer delle reti</b> (Blockscout; su LUKSO l'explorer di LUKSO): per mostrarti la descrizione (ABI) di un contratto che una richiesta chiama e che il wallet non conosce. Vedono l'indirizzo del contratto e l'IP.</li>
+      <li><b>Gateway IPFS</b> (<code>api.universalprofile.cloud</code>, <code>ipfs.chainintegrate.it</code>, <code>ipfs.io</code>): le immagini di token, NFT e profili. Vedono l'immagine chiesta e l'IP.</li>
+      <li><b>Il relayer del sito</b> (ChainIntegrate). L'opzione "paga il gas con il relayer del sito" è attiva di default: quando invii un'operazione con il relayer, riceve l'operazione firmata (indirizzo della UP, rete, chiamata) e la invia alla blockchain. Su una rete dove c'è il gas sponsorizzato del sito, il wallet chiede anche da solo se la tua UP ne ha diritto (indirizzo della UP e rete). L'app chiede al relayer anche qual è l'ultima versione disponibile. Vedi il punto 5. Per inviarla e per leggere la blockchain, il relayer e il servizio che approva le operazioni usano a loro volta dei nodi RPC: su alcune reti quelli di Alchemy, Inc., sulle altre nodi pubblici. Questi vedono l'operazione e l'indirizzo IP del server, non il tuo.</li>
     </ul>
     Le notifiche delle richieste sono create dall'app sul telefono: non c'è un server di notifiche. Reown e i gestori dei nodi trattano questi dati secondo le loro informative.`,
     s5t: "5 · Cosa conserva ChainIntegrate",
@@ -154,19 +156,19 @@ const I18N = {
     s8t: "8 · Minori e modifiche",
     s8: `L'app non è pensata per chi ha meno di 18 anni. Se questa informativa cambia, cambia la data in alto; le versioni precedenti restano nella cronologia del <a href="https://github.com/ChainIntegrate/Cross_Chain/commits/main/up-wallet-app-privacy.html" target="_blank" rel="noopener">repository</a>.`,
 
-    footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Codice sorgente su GitHub</a> · <a href="https://github.com/ChainIntegrate/up-wallet-android" target="_blank" rel="noopener">App Android (in prova)</a>`,
+    footerHtml: `Servizi di consulenza in integrazione dati &amp; blockchain a cura di ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Assistenza via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Codice sorgente su GitHub</a> · <a href="privacy.html">Privacy</a> · <a href="https://github.com/ChainIntegrate/up-wallet-android" target="_blank" rel="noopener">App Android (in prova)</a>`,
   },
   en: {
     pageTitle: "UP Wallet for Android — Privacy — ChainIntegrate",
     h1: "UP Wallet for Android — Privacy policy",
-    subtitle: "Last updated: 25 October 2026 (version 0.9.0). Covers the UP Wallet Android app (it.chainintegrate.upwallet), in testing.",
+    subtitle: "Last updated: 24 November 2026 (version 0.10.2). Covers the UP Wallet Android app (it.chainintegrate.upwallet), in testing. The website, the wallet in the browser, the relayer and the subscription have the <a href=\"privacy.html\">site's notice</a>.",
     langToggleBtn: "Italiano",
     s1t: "1 · In short",
     s1: `<ul>
       <li><b>No account. A key that stays on the phone.</b> The app asks for no sign-up. From version 0.9.0 it creates a signing key on the phone (the "phone key"), encrypted with the Android Keystore and used only after fingerprint or PIN: it never leaves the phone, has no copy, and ChainIntegrate never sees it. There is no seed phrase. Your Universal Profile's Key Manager enforces the permissions. Up to 0.8.x the app kept no keys and signed with MetaMask.</li>
       <li><b>No ads, no tracking, no usage statistics.</b> WalletConnect's telemetry is not enabled.</li>
-      <li><b>What the app remembers stays on the phone</b> and is not included in Android backups.</li>
-      <li><b>Blockchains are public:</b> the operations you send are visible to anyone and cannot be deleted.</li>
+      <li><b>What the app remembers stays on the phone</b> and is not included in Android's cloud backups.</li>
+      <li><b>Blockchains are public:</b> the operations you send are visible to anyone and cannot be deleted. The name you give a device when you authorize it is written on the UP too: public, no personal data.</li>
     </ul>`,
     s2t: "2 · Who is responsible",
     s2: `ChainIntegrate, which develops the app and runs the site <code>crosschain-lukso.chainintegrate.it</code> and the site's relayer. Contact: e-mail <a href="mailto:info@chainintegrate.it">info@chainintegrate.it</a>, <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Telegram</a> or an issue on <a href="https://github.com/ChainIntegrate/up-wallet-android/issues" target="_blank" rel="noopener">GitHub</a>.`,
@@ -175,9 +177,9 @@ const I18N = {
       <li>the UP address and the network you chose, to find them again next time;</li>
       <li>the phone key, only encrypted (the key that decrypts it is in the Android Keystore, in the secure hardware where the phone has it, and is used only after fingerprint or PIN), and its public address;</li>
       <li>the data of the WalletConnect sessions with dApps (temporary keys of the encrypted channel, address and network presented to the dApp);</li>
-      <li>a diagnostic log (at most 300 lines): times, app opened and closed, names of the requests (for example "eth_sendTransaction"), their outcome and the dApp's name. It holds no messages, amounts, signatures or addresses. You see and clear it at the bottom of the app's page ("Diagnostic log"); it leaves the phone only if you copy it.</li>
+      <li>a diagnostic log (at most 300 lines): times, app opened and closed, names of the requests (for example "eth_sendTransaction"), their outcome and the dApp's name. It records no messages, signatures or request content; an error message copied into the log may however contain an address or an amount: look at it before sharing it. You see and clear it at the bottom of the app's page ("Diagnostic log"); it leaves the phone only if you copy it.</li>
     </ul>
-    This data is not sent to ChainIntegrate, is not included in Android backups, and is deleted when you uninstall the app or clear its data in the phone's settings.`,
+    This data is not sent to ChainIntegrate, is not included in Android's cloud backups, and is deleted when you uninstall the app or clear its data in the phone's settings. A direct transfer from an old phone to a new one (Android 12 and later) may copy it; the phone key however does not work on the new phone, because the key that decrypts it stays in the old phone's Keystore.`,
     s4t: "4 · Who the app talks to, and what they see",
     s4: `<ul>
       <li><b>WalletConnect</b> (Reown, Inc.): the connection with dApps goes through Reown's servers, which see the session metadata (UP address, network, the dApp's name and address) and the IP address; the content of requests is encrypted between the app and the dApp. Reown also verifies the dApp's domain.</li>
@@ -186,7 +188,9 @@ const I18N = {
       <li><b>LUKSO's profile index</b> (envio.lukso-mainnet.universal.tech, run for LUKSO): only if you write a name instead of an address in the Recipient field, to find the Universal Profiles with that name. It sees the name searched and the IP address.</li>
       <li><b>Google Play services</b> (Google LLC), only if you use "Scan QR": Google Play services' QR scanner uses the camera and reads the code on the phone. The app receives only the text of the code, never the images. Google handles it under its own privacy policy.</li>
       <li><b>The dApps</b> you connect: they see the UP address and the network, and receive the answers you approve.</li>
-      <li><b>The site's relayer</b> (ChainIntegrate), only if you choose "pay the gas with the site relayer": it receives the signed operation (UP address, network, call) and sends it to the blockchain. See section 5. To send it and to read the blockchain, the relayer and the service that approves operations use RPC nodes in turn: Alchemy, Inc.'s on some networks, public nodes on the others. They see the operation and the server's IP address, not yours.</li>
+      <li><b>The networks' explorers</b> (Blockscout; on LUKSO, LUKSO's explorer): to show you the description (ABI) of a contract a request calls that the wallet does not know. They see the contract's address and the IP.</li>
+      <li><b>IPFS gateways</b> (<code>api.universalprofile.cloud</code>, <code>ipfs.chainintegrate.it</code>, <code>ipfs.io</code>): the images of tokens, NFTs and profiles. They see the image asked for and the IP.</li>
+      <li><b>The site's relayer</b> (ChainIntegrate). The option "pay the gas with the site relayer" is on by default: when you send an operation with the relayer, it receives the signed operation (UP address, network, call) and sends it to the blockchain. On a network with the site's sponsored gas, the wallet also asks by itself whether your UP is entitled to it (UP address and network). The app also asks the relayer for the latest version available. See section 5. To send it and to read the blockchain, the relayer and the service that approves operations use RPC nodes in turn: Alchemy, Inc.'s on some networks, public nodes on the others. They see the operation and the server's IP address, not yours.</li>
     </ul>
     Request notifications are created by the app on the phone: there is no notification server. Reown and the node operators handle this data under their own policies.`,
     s5t: "5 · What ChainIntegrate keeps",
@@ -207,7 +211,7 @@ const I18N = {
     s8t: "8 · Minors and changes",
     s8: `The app is not meant for people under 18. If this policy changes, the date at the top changes; earlier versions stay in the <a href="https://github.com/ChainIntegrate/Cross_Chain/commits/main/up-wallet-app-privacy.html" target="_blank" rel="noopener">repository</a>'s history.`,
 
-    footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Source code on GitHub</a> · <a href="https://github.com/ChainIntegrate/up-wallet-android" target="_blank" rel="noopener">Android app (in testing)</a>`,
+    footerHtml: `Data &amp; blockchain integration consulting by ChainIntegrate <a href="https://www.linkedin.com/company/chainintegrate" target="_blank" rel="noopener" aria-label="LinkedIn" class="footer-li"><svg width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0A66C2"/><text x="10" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">in</text></svg></a> · <a href="https://t.me/Simone_1977_2" target="_blank" rel="noopener">Support via Telegram</a> · <a href="https://github.com/ChainIntegrate/Cross_Chain" target="_blank" rel="noopener">Source code on GitHub</a> · <a href="privacy.html">Privacy</a> · <a href="https://github.com/ChainIntegrate/up-wallet-android" target="_blank" rel="noopener">Android app (in testing)</a>`,
   },
 };
 const t = (k) => I18N[LANG][k] ?? I18N.it[k] ?? k;

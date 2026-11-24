@@ -35,6 +35,5 @@ Pull requests written with AI assistants are fine, but you are responsible for t
 - **Two languages.** Every user-visible text exists in English and Italian.
 - **Untrusted data.** Anything that comes from users, wallets, RPCs or explorers must be escaped before it is written into the page (`escapeHtml`) or checked before it is trusted (for example the CREATE2 address check).
 - **Keep the safety checks.** Do not remove or weaken the existing checks: wallet/RPC/selected chain match, invalidation of a verification when inputs change, presence of factory, module and implementations, and bytecode verification after a deploy.
-- **Deprecated page.** Do not modify `up-multichain-deploy-v2.html`.
 - **UP Wallet changes are batched.** Proposed changes to `up-wallet.html` and its scripts are listed in `WALLET-BACKLOG.md` and made together, so that each batch is tested once and followed by one Android app release.
 - **Language.** Code, comments, commit messages and documentation are in English.

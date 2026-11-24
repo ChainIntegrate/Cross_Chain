@@ -8,7 +8,7 @@
 // - WalletConnect Project ID: "allowed domains" of the project on cloud.reown.com;
 // - Alchemy API key: the app's allowlist (allowed domains / origins) on dashboard.alchemy.com.
 window.CROSSCHAIN_CONFIG = {
-  // WalletConnect (Reown) Project ID, used by up-wallet.html (up-walletconnect-basenames.html is deprecated).
+  // WalletConnect (Reown) Project ID, used by up-wallet.html.
   walletConnectProjectId: "",
 
   // Alchemy API key, used by up-wallet.html and up-identity.html to list the tokens and NFTs a UP holds

@@ -23,6 +23,23 @@ ProtectControlGroups=true
 RestrictSUIDSGID=true
 LockPersonality=true
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+# More hardening (audit 2026-11-04 CC-08; check: systemd-analyze security <unit>). Not
+# MemoryDenyWriteExecute: Node's JIT needs it. Directives unknown to an older systemd are only warned about.
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+RestrictNamespaces=true
+RestrictRealtime=true
+ProtectKernelLogs=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+ProcSubset=pid
+UMask=0077
+# The relayer does not send e-mail: no access to the SMTP password.
+InaccessiblePaths=-/etc/crosschain-relayer/smtp.env
 
 [Install]
 WantedBy=multi-user.target

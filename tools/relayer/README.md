@@ -24,7 +24,8 @@ Only operations that:
 The relay transaction uses the operation's own fee fields, so the relayer never pays a higher price than it gets back.
 
 Other limits:
-- one pending operation per UP at a time;
+- one pending operation per UP at a time: a UP stays blocked until its transaction is mined, and, if it is not mined within 3 minutes, while the EntryPoint has not used the operation's nonce, for up to 15 minutes (AUDIT CC-10);
+- the relay transaction is signed and its hash recorded before it is broadcast: if the answer to the send is lost but the transaction reached the network, the page gets it, and the same operation sent again gets the same transaction, never a second one that would revert at the relayer's cost (AUDIT CC-10);
 - rate limits (`limits` in the configuration): per IP (`perIpPerMinute`, default 6), for all clients together (`globalPerMinute`, default 60, before any RPC call), and per UP (`perSenderPerMinute`, default 3). The per-UP limit is charged only to operations that passed both simulations, so the UP's own signature: anyone can forge a request naming a UP, and such requests never use up that UP's quota (AUDIT CC-01);
 - `GET /relay/info` is read from the chains at most every 10 seconds, whoever asks;
 - nginx limits each IP to 10 requests a second (burst 40) on `/relay/` (step 6);
@@ -77,7 +78,7 @@ sudo git clone --filter=blob:none --no-checkout https://github.com/ChainIntegrat
 cd /opt/crosschain-relayer
 sudo git sparse-checkout set --no-cone '/tools/relayer/' '/usd-price.js' '/op-cost.js'
 sudo git checkout main
-cd tools/relayer && sudo npm ci --omit=dev
+cd tools/relayer && sudo npm ci --omit=dev --ignore-scripts
 ```
 
 **3. Key and configuration**, readable only by the service user.
@@ -188,10 +189,30 @@ A chain check that fails on an RPC error is retried twice, 15 seconds apart, bef
 ## Update, logs, stop
 
 ```bash
-cd /opt/crosschain-relayer && sudo git pull && (cd tools/relayer && sudo npm ci --omit=dev) && sudo systemctl restart crosschain-relayer
+cd /opt/crosschain-relayer && sudo git pull && (cd tools/relayer && sudo npm ci --omit=dev --ignore-scripts) && sudo systemctl restart crosschain-relayer
 journalctl -u crosschain-relayer -f       # each send, its confirmation, refusals, low-balance warnings
 sudo systemctl stop crosschain-relayer    # the page shows "not reachable" and B stays off
 ```
+
+`--ignore-scripts`: no dependency of the relayer runs an install script, so none is run as root (AUDIT CC-08).
+
+**The units** (AUDIT CC-08, 2026-11-24): both run as `up-relayer` with systemd's sandboxing (no capabilities, a system-call filter, no namespaces, a private `/proc` view, `UMask=0077`). The relayer cannot read the SMTP password (`smtp.env`); the monitor cannot read the relayer's key. When a commit changes them, install them again and check:
+
+```bash
+cd /opt/crosschain-relayer/tools/relayer && sudo cp crosschain-relayer.service crosschain-relayer-monitor.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl restart crosschain-relayer
+```
+
+```bash
+cd /opt/crosschain-relayer/tools/relayer && systemd-analyze security crosschain-relayer | tail -1 && sudo systemctl start crosschain-relayer-monitor && journalctl -u crosschain-relayer-monitor -n 5 --no-pager
+```
+
+**How long the logs are kept.** The privacy notices say that the server's logs (the relayer's, the signing service's, the web server's) are kept at most 30 days. journald keeps them by size unless told otherwise. The setting is for the whole server, every service on it:
+
+```bash
+sudo mkdir -p /etc/systemd/journald.conf.d && printf '%s\n' '[Journal]' 'MaxRetentionSec=30day' | sudo tee /etc/systemd/journald.conf.d/retention.conf && sudo systemctl restart systemd-journald
+```
+
+nginx's access logs are rotated by logrotate (`/etc/logrotate.d/nginx`; Ubuntu's default keeps 14 days: check with `cat /etc/logrotate.d/nginx`).
 
 **An RPC that does not answer does not stop the service.** At start, a configuration mistake (the RPC is on another chain, no EntryPoint, no contract at a paymaster) stops it, because it must be fixed by hand. An RPC that is down or overloaded only marks that chain as unavailable: the other chains work, `relay/info` lists it under `unavailable`, operations for it get "temporarily unavailable" (503), and the chain is retried every `chainRetrySeconds` (default 60) until it answers. Prefer reliable RPCs anyway, and check them now and then: on Polygon, `polygon-bor-rpc.publicnode.com` answered "upstream overloaded" on 2026-10-01, so `polygon.drpc.org` was used; on 2026-10-12 `polygon.drpc.org` refused about one log read in five (HTTP 400; 305 failed reads of the signing service in 24 hours), and publicnode then refused some too (HTTP 403). Free public RPCs throttle a busy server, so since 2026-10-12 the relayer's Polygon `rpc` is an Alchemy URL with a key made for the server (Node API only, no domain restriction, allowlisted to the server's IP; not the site's key, which only works from the site's domain). The key is written into `/etc/crosschain-relayer/config.json` (mode 600) by a command that reads it with `read -s` and passes it on standard input, so it never appears on a command line or in the shell history. The relayer reads no events, so Alchemy's free tier (which limits `eth_getLogs` to 10 blocks) is enough for it. The site's pages keep a public RPC (`polygon-bor-rpc.publicnode.com`): there each visitor's browser makes its own requests. To compare two RPCs from the server, time a few `eth_getLogs` calls over the last 30 blocks of the EntryPoint against each.
 

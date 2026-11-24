@@ -4,7 +4,7 @@ Third-party code bundled into single static files, served by the website togethe
 
 ## `walletkit-1.6.0.min.js`
 
-WalletConnect wallet SDK, used by `up-wallet.html` (and by the deprecated `up-walletconnect-basenames.html`). It exposes `window.WalletKitBundle = { Core, WalletKit, buildApprovedNamespaces, getSdkError }`.
+WalletConnect wallet SDK, used by `up-wallet.html`. It exposes `window.WalletKitBundle = { Core, WalletKit, buildApprovedNamespaces, getSdkError }`.
 
 The pages load it with Subresource Integrity (`integrity="sha384-o1OPho4aXup6dZTxTsaL+hXbLbZ9dmbU0j/hlmpw5t0P/k91PxXHqIdLkQWag92X"`): a changed file is refused by the browser. When the version changes, update that attribute in both pages too (`openssl dgst -sha384 -binary walletkit-1.6.0.min.js | openssl base64 -A`).
 
@@ -59,7 +59,7 @@ openssl dgst -sha384 -binary signclient-2.25.0.min.js | openssl base64 -A   # th
 
 The package list with licenses is in `signclient-2.25.0.THIRD-PARTY.txt`; the license terms are the same as for walletkit (below).
 
-**License.** The Reown / WalletConnect packages are under the WalletConnect Community License Agreement (not open source): a copy is in `walletkit-1.6.0.LICENSE.md`, and pages that load the bundle show "Portions © 2025 Reown, Inc. All Rights Reserved" in the footer. The other packages in the bundle and their license files are listed in `walletkit-1.6.0.THIRD-PARTY.txt`, generated from esbuild's metafile (add `--metafile=meta.json` to the command above). When the version changes, regenerate both files and check the license again. See also `THIRD_PARTY_NOTICES.md`.
+**License.** The Reown / WalletConnect packages are under the WalletConnect Community License Agreement (not open source): a copy is in `walletkit-1.6.0.LICENSE.md` and, identical, in `walletkit-1.6.0.LICENSE.txt` (the one the footer links: the web server does not serve `.md` files), and pages that load the bundle show "Portions © 2025 Reown, Inc. All Rights Reserved" in the footer. The other packages in the bundle and their license files are listed in `walletkit-1.6.0.THIRD-PARTY.txt`, generated from esbuild's metafile (add `--metafile=meta.json` to the command above). When the version changes, regenerate both files and check the license again. See also `THIRD_PARTY_NOTICES.md`.
 
 ## `qrcode-generator-1.4.4.js`
 
