@@ -208,7 +208,7 @@
       <li><b>Yes, it is one more secret to keep:</b> the backup's seed phrase (MetaMask creates one). Keep it apart from the genesis key: not in the same place, not in the same wallet.</li>
       <li><b>If you lose the backup:</b> with the genesis key you add a new one, and remove the lost one (same page).</li>
       <li><b>If you lose the genesis key:</b> with the backup you keep signing, add a new backup and remove the lost key. The only thing you lose for good is deploying on new networks: there the profile is born with the genesis key only.</li>
-      <li><b>On every network, after every new deploy:</b> each network has its own controller list, and a new network starts without the backup. On LUKSO, add it with LUKSO's own tools.</li>
+      <li><b>On every network, after every new deploy:</b> each network has its own controller list, and a new network starts without the backup. LUKSO too: with the Backup controller page (MetaMask with the genesis key, connected to LUKSO), or with LUKSO's own tools.</li>
       <li>The Test and UP Wallet pages show a warning when the profile has no backup on the selected network; the Identity page lists the controllers and says whether the backup is there.</li>
       <li><b>If you use gas paid by the site:</b> each controller that should sign those operations needs the 4337 permission. A backup added after the setup gets it automatically (the backup page copies the signer's permissions); one added before needs the setup repeated with it active, on the <a href="up-gas-relay.html">Gas paid by the site</a> page.</li>
     </ul>
@@ -222,7 +222,7 @@
   <ul>
     <li><b>Your UP address</b> (the same on every chain) is your <i>account</i>. Send funds to it <b>only after</b> the deploy (step 5) and the test with the Test tool (step 6) have both succeeded, and preferably after adding the backup (step 7). If something goes wrong — the wrong controller key, a failed deploy — funds sent earlier would stay stuck at that address.</li>
     <li><b>The controller address</b> (the account you imported into MetaMask in step 6) is the <i>key</i> that signs. Every operation — test, transfer, anything — costs a small fee (gas), and <b>the controller pays it, not the UP</b>. The exception: transfers whose gas is paid by the site, for profiles with an active subscription or on the operator's list (see "Operating without gas on the controller" below). Changes to the profile's data or controllers are always paid by the controller.</li>
-    <li>👉 So on the new chain send some funds <b>to the controller too</b> (e.g. POL on Polygon, ETH on Base or Arbitrum): at least enough for a few transactions. Without them the controller cannot sign anything, even if the UP is full.</li>
+    <li>👉 So on the new chain send some funds <b>to the controller too</b> (e.g. POL on Polygon, ETH on Base or Arbitrum): at least enough for a few transactions. Without them the controller cannot sign anything, even if the UP is full. The same goes for the key of the UP Wallet app or extension, if you use one: it pays its own gas, unless the site pays it; its panel ("This phone", "This computer") shows its balance.</li>
   </ul>
   One is a smart contract account (the UP), the other a normal wallet (the controller, an EOA): different addresses, but both under your control.
 </div>
@@ -269,8 +269,9 @@
     <li>One key controls the profile at the same address on every network: if it is stolen, all of them are exposed at once.</li>
     <li><b>The genesis key can never be retired for new networks.</b> Every redeploy replays your profile's original creation, so on every new network the profile is born controlled by that key alone, whatever you changed elsewhere. Losing it means no more deploys on new networks, and, without a backup, losing the profile on every network (step 7). If it is stolen, the thief can deploy the profile first on any network where it does not exist yet.</li>
     <li><b>Two setups, your choice.</b> (A) The genesis key is your everyday controller, for example your main MetaMask account, and the backup stays aside. (B) The genesis key stays offline and a second controller, for example a hardware wallet, is used every day. Offline means really offline: the key also stays in the UP extension (it is the profile's controller there), so in setup (B) remove it from MetaMask and keep the extension only on a computer you trust. Either way, a backup exists only when a second controller has the same permissions: a daily controller with fewer permissions is not a backup.</li>
+    <li><b>Every day, a device key (optional, experimental).</b> The UP Wallet app and the browser extension each create a key of their own, which never leaves the device and is unlocked with your fingerprint, PIN, passkey or password at every signature. Authorized from the Backup page (or on LUKSO from <a href="up-authorize-lukso.html">Authorize a device on LUKSO</a>), it has <b>no admin permissions</b>: it cannot add or remove controllers. It can use all the profile's funds, though. With it, the genesis key and the backup are needed only to deploy, add controllers and recover, and can stay offline the rest of the time. A lost device is revoked alone, from the same page.</li>
     <li>Every extra controller is one more key that could be stolen: keep the backup offline and use it only to recover.</li>
-    <li>Gas paid by the site adds one specific risk: none of its contracts has had a professional audit, neither LUKSO's extension (<code>Extension4337</code>, which LUKSO describes as experimental) nor the site's paymasters. AI-assisted reviews found no serious issue; the details are in the project's AUDIT.md, sections 8 and 10. Keep small balances, on the profile and in the subscription.</li>
+    <li>Gas paid by the site adds one specific risk: none of its contracts has had a professional audit, neither LUKSO's extension (<code>Extension4337</code>, which LUKSO describes as experimental) nor the site's paymasters. AI-assisted reviews found no serious issue in the contracts; the details are in the project's AUDIT.md (sections 8 and 10, and the later reviews of the whole system). Keep small balances, on the profile and in the subscription.</li>
   </ul>
 </div>
 
@@ -322,12 +323,14 @@
   <li>Check whether the profile already exists on the target network: <a href="up-verify-only.html">Verify only</a>.</li>
   <li>Only if Verify or Deploy says an implementation is missing on the network: <a href="up-publish-implementation.html">Publish implementation</a>.</li>
   <li>Deploy the profile at the same address (the page fetches and checks the creation calldata): <a href="up-deploy-public.html">Deploy</a>.</li>
-  <li>Check the result: <a href="up-verify-only.html">Verify only</a> again.</li>
+  <li>Send a little gas to the controller on this network (the deploy may be paid by any wallet; the test, the backup and the steps below are paid by the controller), unless it is the wallet that paid the deploy and has some left.</li>
+  <li>Try an operation with your controller (the key from step 1 above): <a href="up-test-operazione.html">Test</a>. The Deploy tool has already checked the deployed code; <a href="up-verify-only.html">Verify only</a> can check it again at any time, with no wallet.</li>
   <li>Add a backup controller: <a href="up-backup.html">Backup controller</a>.</li>
-  <li>Try an operation with your controller (the key from step 1 above): <a href="up-test-operazione.html">Test</a>.</li>
+  <li>Only after the test and the backup: send funds to the profile.</li>
   <li>Align the profile (name, images, links) with LUKSO: <a href="up-identity.html">Identity</a>, section 6.</li>
   <li>Let the profile receive ERC-721 / ERC-1155 NFTs: <a href="up-nft-receiver.html">NFT receiving</a>.</li>
   <li>Gas paid by the site, if you want it: set up the profile with <a href="up-gas-relay.html">Gas paid by the site</a>, then subscribe on <a href="up-subscribe.html">Subscription</a>.</li>
+  <li>If you will use the Android app or the browser extension, authorize its key on this network: <a href="up-backup.html">Backup controller</a>, "Authorize a device" (on LUKSO: <a href="up-authorize-lukso.html">Authorize a device on LUKSO</a>).</li>
   <li>Use the profile: <a href="up-wallet.html">UP Wallet</a> (or the Android app, or the browser extension).</li>
 </ol>
 
@@ -469,7 +472,7 @@
       <li><b>Sì, è un segreto in più da custodire:</b> la seed del backup (MetaMask ne crea una). Tienila separata dalla chiave di genesi: non nello stesso posto, non nello stesso wallet.</li>
       <li><b>Se perdi il backup:</b> con la chiave di genesi ne aggiungi un altro e rimuovi quello perso (stessa pagina).</li>
       <li><b>Se perdi la chiave di genesi:</b> con il backup continui a firmare, aggiungi un nuovo backup e rimuovi la chiave persa. L'unica cosa che perdi per sempre è il deploy su reti nuove: lì il profilo nasce solo con la chiave di genesi.</li>
-      <li><b>Su ogni rete, dopo ogni nuovo deploy:</b> ogni rete ha la sua lista di controller, e una rete nuova parte senza backup. Su LUKSO aggiungilo con gli strumenti di LUKSO.</li>
+      <li><b>Su ogni rete, dopo ogni nuovo deploy:</b> ogni rete ha la sua lista di controller, e una rete nuova parte senza backup. Anche su LUKSO: con la pagina Controller di backup (MetaMask con la chiave di genesi, collegato a LUKSO), oppure con gli strumenti di LUKSO.</li>
       <li>Le pagine Test e UP Wallet mostrano un avviso quando il profilo non ha un backup sulla rete scelta; la pagina Identità elenca i controller e dice se il backup c'è.</li>
       <li><b>Se usi il gas pagato dal sito:</b> ogni controller che deve firmare quelle operazioni ha bisogno del permesso 4337. Un backup aggiunto dopo la configurazione lo riceve da solo (la pagina del backup copia i permessi di chi firma); uno aggiunto prima ha bisogno di ripetere la configurazione con lui attivo, nella pagina <a href="up-gas-relay.html">Gas pagato dal sito</a>.</li>
     </ul>
@@ -483,7 +486,7 @@
   <ul>
     <li><b>L'indirizzo della tua UP</b> (uguale su tutte le reti) è il tuo <i>conto</i>. Mandaci fondi <b>solo dopo</b> che il deploy (passo 5) e il test con la pagina di Test (passo 6) sono andati entrambi a buon fine, e meglio ancora dopo aver aggiunto il backup (passo 7). Se qualcosa va storto — chiave del controller sbagliata, deploy fallito — i fondi mandati prima resterebbero bloccati a quell'indirizzo.</li>
     <li><b>L'indirizzo del controller</b> (l'account che hai importato in MetaMask al passo 6) è la <i>chiave</i> che firma. Ogni operazione — test, invio, qualsiasi cosa — costa una piccola commissione (gas), e <b>la paga il controller, non la UP</b>. L'eccezione: i trasferimenti il cui gas lo paga il sito, per i profili con un'iscrizione attiva o nella lista del gestore (vedi "Operare senza gas sul controller" più sotto). Le modifiche ai dati o ai controller del profilo le paga sempre il controller.</li>
-    <li>👉 Quindi sulla nuova rete manda un po' di fondi <b>anche al controller</b> (es. POL su Polygon, ETH su Base o Arbitrum): almeno quanto basta per qualche transazione. Senza, il controller non può firmare nulla, anche se la UP è piena.</li>
+    <li>👉 Quindi sulla nuova rete manda un po' di fondi <b>anche al controller</b> (es. POL su Polygon, ETH su Base o Arbitrum): almeno quanto basta per qualche transazione. Senza, il controller non può firmare nulla, anche se la UP è piena. Lo stesso vale per la chiave dell'app o dell'estensione UP Wallet, se la usi: paga il proprio gas, salvo quando lo paga il sito; il suo pannello ("Questo telefono", "Questo computer") ne mostra il saldo.</li>
   </ul>
   Uno è un account smart contract (la UP), l'altro un normale wallet (il controller, un EOA): indirizzi diversi, ma tutti e due sotto il tuo controllo.
 </div>
@@ -530,8 +533,9 @@
     <li>Una sola chiave controlla il profilo allo stesso indirizzo su tutte le reti: se viene rubata, sono esposte tutte insieme.</li>
     <li><b>La chiave di genesi non si può mai dismettere per le reti nuove.</b> Ogni redeploy ripete la creazione originale del profilo, quindi su ogni nuova rete il profilo nasce controllato solo da quella chiave, qualunque cosa tu abbia cambiato altrove. Perderla vuol dire niente più deploy su reti nuove e, senza un backup, perdere il profilo su tutte le reti (passo 7). Se viene rubata, il ladro può deployare il profilo per primo su qualunque rete dove non esiste ancora.</li>
     <li><b>Due configurazioni, scegli tu.</b> (A) La chiave di genesi è il controller di tutti i giorni, per esempio il tuo account MetaMask principale, e il backup sta da parte. (B) La chiave di genesi resta offline e un secondo controller, per esempio un hardware wallet, si usa tutti i giorni. Offline vuol dire davvero offline: la chiave resta anche nell'estensione UP (lì è il controller del profilo), quindi nella configurazione (B) toglila da MetaMask e tieni l'estensione solo su un computer di cui ti fidi. In entrambi i casi il backup c'è solo se un secondo controller ha gli stessi permessi: un controller quotidiano con meno permessi non è un backup.</li>
+    <li><b>Tutti i giorni, la chiave di un dispositivo (facoltativo, sperimentale).</b> L'app e l'estensione UP Wallet creano ciascuna una propria chiave, che non lascia mai il dispositivo e si sblocca con impronta, PIN, passkey o password a ogni firma. Autorizzata dalla pagina Backup (o su LUKSO da <a href="up-authorize-lukso.html">Autorizza un dispositivo su LUKSO</a>), <b>non ha permessi di amministrazione</b>: non può aggiungere né togliere controller. Può però usare tutti i fondi del profilo. Con questa, la chiave di genesi e il backup servono solo per i deploy, per aggiungere controller e per recuperare, e possono restare offline per il resto del tempo. Un dispositivo perso si revoca da solo, dalla stessa pagina.</li>
     <li>Ogni controller in più è una chiave in più che può essere rubata: tieni il backup offline e usalo solo per recuperare.</li>
-    <li>Il gas pagato dal sito aggiunge un rischio specifico: nessuno dei suoi contratti ha un audit professionale, né l'estensione di LUKSO (<code>Extension4337</code>, che LUKSO definisce sperimentale) né i paymaster del sito. Le revisioni assistite da AI non hanno trovato problemi gravi; i dettagli sono nel file AUDIT.md del progetto, sezioni 8 e 10. Tieni saldi piccoli, sul profilo e nell'iscrizione.</li>
+    <li>Il gas pagato dal sito aggiunge un rischio specifico: nessuno dei suoi contratti ha un audit professionale, né l'estensione di LUKSO (<code>Extension4337</code>, che LUKSO definisce sperimentale) né i paymaster del sito. Le revisioni assistite da AI non hanno trovato problemi gravi nei contratti; i dettagli sono nel file AUDIT.md del progetto (sezioni 8 e 10, e le revisioni successive dell'intero sistema). Tieni saldi piccoli, sul profilo e nell'iscrizione.</li>
   </ul>
 </div>
 
@@ -583,12 +587,14 @@
   <li>Controlla se il profilo esiste già sulla rete di destinazione: <a href="up-verify-only.html">Sola verifica</a>.</li>
   <li>Solo se la Verifica o il Deploy dicono che manca un'implementazione sulla rete: <a href="up-publish-implementation.html">Pubblica implementazione</a>.</li>
   <li>Deploya il profilo allo stesso indirizzo (la pagina recupera e controlla la calldata di creazione): <a href="up-deploy-public.html">Deploy</a>.</li>
-  <li>Controlla il risultato: di nuovo <a href="up-verify-only.html">Sola verifica</a>.</li>
+  <li>Manda un po' di gas al controller su questa rete (il deploy lo può pagare qualsiasi wallet; il test, il backup e i passi seguenti li paga il controller), salvo che sia proprio il wallet che ha pagato il deploy e gliene sia rimasto.</li>
+  <li>Prova un'operazione con il tuo controller (la chiave del passo 1 sopra): <a href="up-test-operazione.html">Test</a>. Lo strumento di Deploy ha già controllato il codice pubblicato; <a href="up-verify-only.html">Sola verifica</a> lo ricontrolla quando vuoi, senza wallet.</li>
   <li>Aggiungi un controller di backup: <a href="up-backup.html">Controller di backup</a>.</li>
-  <li>Prova un'operazione con il tuo controller (la chiave del passo 1 sopra): <a href="up-test-operazione.html">Test</a>.</li>
+  <li>Solo dopo il test e il backup: manda i fondi al profilo.</li>
   <li>Allinea il profilo (nome, immagini, link) a quello di LUKSO: <a href="up-identity.html">Identità</a>, sezione 6.</li>
   <li>Fai ricevere al profilo NFT ERC-721 / ERC-1155: <a href="up-nft-receiver.html">Ricezione NFT</a>.</li>
   <li>Gas pagato dal sito, se lo vuoi: configura il profilo con <a href="up-gas-relay.html">Gas pagato dal sito</a>, poi iscriviti su <a href="up-subscribe.html">Iscrizione</a>.</li>
+  <li>Se userai l'app Android o l'estensione del browser, autorizzane la chiave su questa rete: <a href="up-backup.html">Controller di backup</a>, "Autorizza un dispositivo" (su LUKSO: <a href="up-authorize-lukso.html">Autorizza un dispositivo su LUKSO</a>).</li>
   <li>Usa il profilo: <a href="up-wallet.html">UP Wallet</a> (o l'app Android, o l'estensione del browser).</li>
 </ol>
 
