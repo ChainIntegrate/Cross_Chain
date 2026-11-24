@@ -22,6 +22,13 @@ item when its PR (or, for the app, its release) is done.
    - *App:* the license and notice files in the APK; explicit `dataExtractionRules` (checked by installing
      over the last release: same key, a signature works); the diagnostic log redacting addresses and amounts
      (`diag.js`; the notice already says an error line may contain them); the build tolerant to line endings.
+2b. **RPCs that stopped answering (checked on 2026-11-24 with a script from the maintainer's computer).**
+   Replaced in `chains.js`: XDC (`xdc.public-rpc.com`), Ethereum Classic (`etc.etcdesktop.com`), Moonriver
+   (`moonriver.drpc.org`), Ethereum Sepolia and Polygon Amoy (publicnode). No public RPC answered for
+   **Moonbeam** (the official one gave a TLS error, 1rpc answers `eth_chainId` but not `eth_blockNumber`),
+   **Blast** (publicnode, Ankr and dRPC refuse without a key) and **Degen Chain** (no host found): left as they
+   are, to decide (try again later, or take them out of the list). The app and the extension get the new
+   `chains.js` with their next build.
 3. **The review of the release of 2026-11-03 by two providers** (`AUDIT.md`, review policy: right after
    the release). Released: app 0.10.0 (the signing window, `SignerActivity`, its own WebView with only the
    signing code; the plugin signs only for it), extension 0.1.9 (`ext/sign-plan.js`, shared with the app),
