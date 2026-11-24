@@ -131,10 +131,16 @@
     return { rows: rows.filter(r => r && !r.zero && r.count !== "0"), total: len };
   }
 
+  // At most 20 s per request: a request that never answers (seen on Base, through the browser extension) would
+  // hold the whole network's reading until the overview gives up on it.
   async function getJson(url, init) {
-    const r = await fetch(url, { headers: { accept: "application/json" }, credentials: "omit", referrerPolicy: "no-referrer", ...(init || {}) });
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    return r.json();
+    let timer;
+    const late = new Promise((_, no) => { timer = setTimeout(() => no(new Error("timeout")), 20000); });
+    try {
+      const r = await Promise.race([fetch(url, { headers: { accept: "application/json" }, credentials: "omit", referrerPolicy: "no-referrer", ...(init || {}) }), late]);
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return await Promise.race([r.json(), late]);
+    } finally { clearTimeout(timer); }
   }
   const bsAddr = (tok) => (tok && (tok.address_hash || tok.address)) || null;
   // Spam only when Blockscout marks the token as a scam: a reputation that is merely not "ok" (not rated
@@ -175,17 +181,42 @@
     if (j.error) throw new Error(j.error.message || "RPC error");
     return j.result;
   }
+  // A token's name, symbol, decimals and logo do not change: kept for 30 days (memory, then localStorage), so a
+  // UP that received many tokens (airdrops, spam) is not read again token by token at every refresh.
+  const META = new Map(), META_STORE = "alchemy.meta.v1.", META_TTL = 30 * 24 * 3600 * 1000;
+  async function tokenMeta(net, key, address) {
+    const k = `${net}.${address.toLowerCase()}`;
+    if (META.has(k)) return META.get(k);
+    try {
+      const v = JSON.parse(localStorage.getItem(META_STORE + k) || "null");
+      if (v && Date.now() - v.at < META_TTL) { META.set(k, v.m); return v.m; }
+    } catch (e) { /* no storage */ }
+    const r = await alchemyRpc(net, key, "alchemy_getTokenMetadata", [address]);
+    const m = { name: r && r.name, symbol: r && r.symbol, decimals: r && r.decimals, logo: r && r.logo };
+    META.set(k, m);
+    try { localStorage.setItem(META_STORE + k, JSON.stringify({ m, at: Date.now() })); } catch (e) { /* storage full or off */ }
+    return m;
+  }
   async function fromAlchemy(net, key, up) {
     const rows = [];
     let pageKey = null;
     for (let page = 0; page < MAX_PAGES; page++) {
       const res = await alchemyRpc(net, key, "alchemy_getTokenBalances", pageKey ? [up, "erc20", { pageKey }] : [up, "erc20"]);
+      const held = [];
       for (const b of (res && res.tokenBalances) || []) {
         let amount; try { amount = BigInt(b.tokenBalance || "0x0"); } catch (e) { continue; }
         if (amount === 0n || !ethers.isAddress(b.contractAddress)) continue;
-        const meta = await alchemyRpc(net, key, "alchemy_getTokenMetadata", [b.contractAddress]).catch(() => ({}));
-        rows.push({ address: ethers.getAddress(b.contractAddress), type: "ERC-20", name: meta.name, symbol: meta.symbol, amount: fmt(amount, meta.decimals), spam: false, source: "alchemy", image: imageUrl(meta.logo) });
+        held.push({ address: ethers.getAddress(b.contractAddress), amount });
       }
+      // The metadata 6 at a time (one by one, a UP with hundreds of tokens took longer than the overview waits).
+      const metas = new Array(held.length);
+      let next = 0;
+      const worker = async () => { while (next < held.length) { const i = next++; metas[i] = await tokenMeta(net, key, held[i].address).catch(() => ({})); } };
+      await Promise.all(Array.from({ length: Math.min(6, held.length) }, worker));
+      held.forEach((h, i) => {
+        const meta = metas[i] || {};
+        rows.push({ address: h.address, type: "ERC-20", name: meta.name, symbol: meta.symbol, amount: fmt(h.amount, meta.decimals), spam: false, source: "alchemy", image: imageUrl(meta.logo) });
+      });
       pageKey = res && res.pageKey;
       if (!pageKey) break;
     }
@@ -274,7 +305,12 @@
         if (BLOCKSCOUT[netKey]) {
           try {
             const have = new Set(out.indexer.rows.map((r) => r.address));
-            const nftRows = (await fromBlockscout(BLOCKSCOUT[netKey], up)).filter((r) => Array.isArray(r.rawIds) && !have.has(r.address));
+            // At most 25 s: Base's Blockscout can be slow, and the tokens already read must not be lost with it
+            // (the browser extension's Alchemy key gets no NFTs, so it always comes here).
+            let timer;
+            const late = new Promise((_, no) => { timer = setTimeout(() => no(new Error("timeout 25 s")), 25000); });
+            const all = await Promise.race([fromBlockscout(BLOCKSCOUT[netKey], up), late]).finally(() => clearTimeout(timer));
+            const nftRows = all.filter((r) => Array.isArray(r.rawIds) && !have.has(r.address));
             out.indexer.rows = out.indexer.rows.concat(nftRows);
             out.indexer.nftSource = "blockscout";
           } catch (e) { out.indexer.nftErr += "; Blockscout: " + e.message; }

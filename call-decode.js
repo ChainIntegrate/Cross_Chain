@@ -144,7 +144,9 @@
   function text(key, vars) { const v = TEXT[lang()][key]; return typeof v === "function" ? v(vars || {}) : v; }
   // Names and symbols from the chain are untrusted: one line, no control characters, short.
   const clean = (s, max = 24) => { const x = String(s ?? "").replace(/[\p{Cc}\p{Cf}\u2028\u2029]/gu, " ").replace(/\s+/g, " ").trim(); return x.length > max ? x.slice(0, max - 1) + "…" : x; };
-  const sel = (sig) => ethers.id(sig).slice(0, 10);
+  // Every signature read here, also given to the signing window (up-wallet.html, signatureHints).
+  const SIGNATURES = [];
+  const sel = (sig) => { if (!SIGNATURES.includes(sig)) SIGNATURES.push(sig); return ethers.id(sig).slice(0, 10); };
   const NATIVE = ["0x0000000000000000000000000000000000000000", "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"];
   const isNative = (a) => NATIVE.includes(String(a).toLowerCase());
 
@@ -537,5 +539,5 @@ ${kind === "in" ? "" : `amount: ${v[1]}\n`}${pname}: ${who}`, notes };
     }
     return null;
   }
-  window.CallDecode = { describe, text, TEXT, aave4Spokes: SPOKES };
+  window.CallDecode = { describe, text, TEXT, aave4Spokes: SPOKES, signatures: () => SIGNATURES.slice() };
 })();

@@ -220,5 +220,12 @@
     return { label, op: text("op", { contract: info.name || `${to.slice(0, 6)}…${to.slice(-4)}`, fn: clean(p.name, 40) }), params: [clean(sig, 200), ...out].join("\n"), notes };
   }
 
-  window.AbiDecode = { describe, labelOf, EXPLORERS, text, TEXT };
+  // The verified ABI's functions of a contract (the explorer of its network, cached), or null.
+  async function functionsOf(chainId, addr) {
+    const explorer = EXPLORERS[CHAIN_KEYS[chainId]];
+    if (!explorer || !ethers.isAddress(addr)) return null;
+    const a = await abiOf(explorer, chainId, ethers.getAddress(addr));
+    return a ? a.abi : null;
+  }
+  window.AbiDecode = { describe, labelOf, functionsOf, EXPLORERS, text, TEXT };
 })();

@@ -169,8 +169,14 @@ stays, marked "Done.", until those mentions are updated.
     through the gas relay); Arcstock works too. 0.2.5 to 0.2.7: Alchemy reached through the host (the sandboxed
     page's "null" origin is refused), without a host permission (Chrome leaves the Origin header out of a GET
     to a permitted host), and page 0.14.2 keeps Alchemy's tokens when only its NFT API refuses (403 to the
-    extension's key). The signing window's EXT-02 and EXT-03 in 0.2.3; the "unknown function" warning kept
-    on top, by the maintainer's choice. Next: the
+    extension's key). The signing window's EXT-02 and EXT-03 in 0.2.3. Page 0.14.4, for extension 0.2.8 and app
+    0.10.3: the window no longer warns on every call it cannot decode by itself. The page gives it the
+    signatures it knows (its decoders, the explorer's verified ABI of the called contract), each one only if it
+    decodes the call; the window uses one only if its selector is the call's and it decodes the data exactly,
+    and shows the function by name and arguments. Warning (amber): a permission (approve, permit, operator,
+    delegate), an address argument such as "to" or "receiver" that is not the UP, bytes after the arguments,
+    a call neither side can decode. Red: a description that does not match the data, a DELEGATECALL of the
+    UP, a change of its owner or of its controllers' permissions. Next: the
     two-provider review right after the release (`AUDIT.md`, review policy). A structural change, in phases:
     - *first, the discovery test* (`up-wallet-extension/spike/eip6963-discovery/`, 2026-11-22): an unpacked
       extension with no key that announces "UP Wallet (test)" through EIP-6963 on https pages, answers a public

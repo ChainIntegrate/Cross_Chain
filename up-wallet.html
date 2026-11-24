@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-3X4yBgcYIWx8N9Xt3Jmisgv6brlli2jxtfGDn63ZkTo='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-MaEFwcKO1ilAb8qPhQN6XyGOAn695ydHt2FA1fY4BbU='">
 <script src="theme.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="website">
@@ -683,6 +683,73 @@ const KM_ERRORS = new ethers.Interface([
 const UP_IFACE = new ethers.Interface(["function execute(uint256 operationType, address target, uint256 value, bytes data) payable returns (bytes)"]);
 const KM_IFACE = new ethers.Interface(["function execute(bytes payload) payable returns (bytes)"]);
 
+// The signing window of the browser extension and of the app (sign-plan.js) decodes by itself only the token
+// calls; for the other calls of a request it asks this page which function each selector is: the page's own
+// decoders, then the verified ABI of the called contract (abi-decode.js). The window uses a signature only if
+// its selector is the call's and it decodes the call data exactly; it shows the function's name and arguments,
+// and warns from what they say. A signature is given here only when it decodes the call too.
+// req: the request for the window ({ kind: "tx", tx } or { kind: "userop", op, chainId }, with up). Returns
+// { selector: "function name(type name, ...)" }, at most 64.
+const BATCH_IFACE = new ethers.Interface(["function executeBatch(uint256[] operationsType, address[] targets, uint256[] values, bytes[] datas) payable returns (bytes[])"]);
+window.__upwalletSignatureHints = async function signatureHints(req) {
+  const calls = [];
+  const up = req && typeof req.up === "string" && ethers.isAddress(req.up) ? ethers.getAddress(req.up) : null;
+  const ofUp = (data, depth) => {
+    let d = null;
+    try { d = UP_IFACE.parseTransaction({ data }) || BATCH_IFACE.parseTransaction({ data }); } catch (e) { return false; }
+    if (!d) return false;
+    if (d.name === "execute") add(d.args[1], d.args[3], depth + 1);
+    else d.args[1].forEach((to, i) => add(to, d.args[3][i], depth + 1));
+    return true;
+  };
+  const add = (to, data, depth) => {
+    if (depth > 3 || calls.length >= 64 || !to || typeof data !== "string" || !ethers.isHexString(data) || ethers.dataLength(data) < 4) return;
+    if (up && ethers.getAddress(to) === up && ofUp(data, depth)) return;   // LSP20: the UP calling itself
+    calls.push({ to: ethers.getAddress(to), data });
+  };
+  if (req && req.kind === "tx" && req.tx) {
+    let done = false;
+    try { const k = KM_IFACE.parseTransaction({ data: req.tx.data }); if (k) done = ofUp(k.args[0], 0); } catch (e) { /* not the Key Manager */ }
+    if (!done && req.tx.to) add(req.tx.to, req.tx.data, 0);
+  } else if (req && req.kind === "userop" && req.op) ofUp(req.op.callData, 0);
+  const chainId = Number(req && (req.kind === "tx" ? req.tx && req.tx.chainId : req.chainId));
+  const known = {};
+  const learn = (frags) => {
+    for (const f of frags) {
+      try { const g = ethers.FunctionFragment.from(f); if (!(g.selector in known)) known[g.selector] = g; } catch (e) { /* not a function */ }
+    }
+  };
+  const fns = (i) => i.fragments.filter((f) => f.type === "function");
+  const hints = {};
+  // Only when the signature decodes this call: the selector, then the arguments encoded again are the data.
+  const fits = (g, data) => {
+    try {
+      const args = ethers.AbiCoder.defaultAbiCoder().decode(g.inputs, ethers.dataSlice(data, 4));
+      return data.toLowerCase().startsWith((g.selector + ethers.AbiCoder.defaultAbiCoder().encode(g.inputs, args).slice(2)).toLowerCase());
+    } catch (e) { return false; }
+  };
+  for (const { to, data } of calls) {
+    const s = ethers.dataSlice(data, 0, 4);
+    if (s in hints) continue;
+    // The called contract's verified ABI first (it is this contract's), then the page's decoders.
+    let g = null;
+    if (window.AbiDecode && AbiDecode.functionsOf && chainId) {
+      const abi = await Promise.race([AbiDecode.functionsOf(chainId, to).catch(() => null), new Promise((r) => setTimeout(() => r(null), 4000))]);
+      for (const f of abi || []) { try { const x = ethers.FunctionFragment.from(f); if (x.selector === s) { g = x; break; } } catch (e) { /* skip */ } }
+    }
+    if (!g) {
+      if (!Object.keys(known).length) {
+        for (const i of [KNOWN_IFACE, VAULT_IFACE, MORPHO_BUNDLES_IFACE, LSP26_IFACE, SUPPLIER_IFACE, TRACE_FACTORY_IFACE, TRACE_IFACE, HUP_IFACE, AVAX_DEFI_IFACE, SEND_IFACE, POS_IFACE]) learn(fns(i));
+        if (window.CallDecode && CallDecode.signatures) learn(CallDecode.signatures().map((x) => "function " + x));
+      }
+      g = known[s] || null;
+    }
+    if (g && fits(g, data)) hints[s] = g.format("full");
+    if (Object.keys(hints).length >= 64) break;
+  }
+  return hints;
+};
+
 // ==================== I18N ====================
 // Language: the one chosen before on this browser or app, else the browser's or phone's own (Italian for
 // Italian, English for anything else).
@@ -715,9 +782,10 @@ const I18N = {
     ovSpam: (v) => `${v.n} segnalati come spam, non contati`,
     ovIxFail: (v) => `Indice ${v.ix} non disponibile (${v.err}): mancano i token che solo lui elenca.`,
     ovIxSrc: (v) => `Altri token letti da ${v.ix}.`,
+    ovNftFail: (v) => `NFT non letti (${v.err}): riprova con Aggiorna.`,
     ixFallback: (v) => `Alchemy non ha risposto (${v.err}): gli altri token sono letti da Blockscout, che può elencarne meno.`,
     ovNothing: (v) => `Niente su: ${v.list}.`, ovAbsent: (v) => `La UP non esiste su: ${v.list}.`,
-    ovFailed: (v) => `Non lette (rete non raggiungibile): ${v.list}. Riprova con Aggiorna.`,
+    ovFailed: (v) => `Non lette: ${v.list}. Riprova con Aggiorna.`,
     ovUnpriced: "contiene anche token senza prezzo",
     ovAToken: (v) => `deposito Aave v3 di ${v.amount} ${v.sym}`, ovVault: (v) => `quote di un vault, valgono ≈ ${v.amount} ${v.sym}`,
     ovSpoke: "deposito Aave v4 (pro.aave.com), non è un token nella UP",
@@ -1242,9 +1310,10 @@ const I18N = {
     ovSpam: (v) => `${v.n} flagged as spam, not counted`,
     ovIxFail: (v) => `${v.ix} index not available (${v.err}): tokens only it lists are missing.`,
     ovIxSrc: (v) => `Other tokens read from ${v.ix}.`,
+    ovNftFail: (v) => `NFTs not read (${v.err}): try again with Refresh.`,
     ixFallback: (v) => `Alchemy did not answer (${v.err}): the other tokens are read from Blockscout, which may list fewer.`,
     ovNothing: (v) => `Nothing on: ${v.list}.`, ovAbsent: (v) => `The UP does not exist on: ${v.list}.`,
-    ovFailed: (v) => `Not read (network not reachable): ${v.list}. Try again with Refresh.`,
+    ovFailed: (v) => `Not read: ${v.list}. Try again with Refresh.`,
     ovUnpriced: "also holds tokens without a price",
     ovAToken: (v) => `Aave v3 deposit of ${v.amount} ${v.sym}`, ovVault: (v) => `vault shares, worth ≈ ${v.amount} ${v.sym}`,
     ovSpoke: "Aave v4 deposit (pro.aave.com), not a token in the UP",
@@ -1832,7 +1901,7 @@ function t(key, vars) {
 // WALLET-BACKLOG.md and the patch with a fix (0.x: experimental). The Android app's and the browser
 // extension's builds write the Cross_Chain commit in PAGE_COMMIT, and they give their own version
 // (window.__upwalletAppVersion, then the "upwallet:version" event).
-const PAGE_VERSION = "0.14.3";
+const PAGE_VERSION = "0.14.4";
 const PAGE_COMMIT = null;
 function renderVersion() {
   const el = $("pageVersion"), app = window.__upwalletAppVersion;
@@ -4530,12 +4599,13 @@ async function readOverview() {
   if (cur && cur.rpc && !nets.some((n) => n.key === cur.key)) nets.push(cur);
   ovState = { up, test: isTestnet(cur), total: nets.length, results: [], at: null };
   renderOverview();
-  const timeout = (p, ms) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error("timeout")), ms))]);
+  // Each step's timeout names the step, shown with the network that was not read (where it stopped).
+  const timeout = (p, ms, step = "") => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error(`${step ? step + ": " : ""}timeout ${ms / 1000} s`)), ms))]);
   const one = async (n) => {
     const pv = new ethers.JsonRpcProvider(n.rpc, n.chainId || undefined, { staticNetwork: !!n.chainId, batchMaxCount: 1 });
     try {
-      if ((await timeout(pv.getCode(up), 10000)) === "0x") return { n, absent: true };
-      const a = await timeout(AssetList.list(pv, up, n.key), 60000);
+      if ((await timeout(pv.getCode(up), 10000, "RPC")) === "0x") return { n, absent: true };
+      const a = await timeout(AssetList.list(pv, up, n.key), 60000, "assets");
       let price = null;
       if (window.UsdPrice && n.chainId) price = await timeout(UsdPrice.read(pv, n.chainId, ethers), 10000).catch(() => null);
       let eur = null;
@@ -4608,7 +4678,7 @@ function renderOverview() {
   const done = ovState.results;
   const held = [], empty = [], absent = [], failed = [];
   for (const r of done) {
-    if (r.err) failed.push(r.n.name);
+    if (r.err) failed.push(`${r.n.name} (${oneLine(r.err, 80)})`);
     else if (r.absent) absent.push(r.n.name);
     else { const l = ovLines(r); if (l.lines.length || l.spam) held.push({ r, ...l }); else empty.push(r.n.name); }
   }
@@ -4645,6 +4715,8 @@ function renderOverview() {
     if (ix && ix.err) add("div", "ov-sub line-warn", t("ovIxFail", { ix: ix.kind === "alchemy" ? "Alchemy" : "Blockscout", err: oneLine(ix.err, 120) }), card);
     else if (ix && ix.fallback) add("div", "ov-sub line-warn", t("ixFallback", { err: oneLine(ix.fallback, 120) }), card);
     else if (ix) add("div", "ov-sub", t("ovIxSrc", { ix: ix.kind === "alchemy" ? "Alchemy" : "Blockscout" }), card);
+    // Alchemy gave the tokens, and neither it nor Blockscout the NFTs (the extension's key gets none from Alchemy).
+    if (ix && !ix.err && ix.nftErr && !ix.nftSource) add("div", "ov-sub line-warn", t("ovNftFail", { err: oneLine(ix.nftErr, 120) }), card);
   }
   if (empty.length) add("div", "ov-sub", t("ovNothing", { list: empty.join(", ") }));
   if (absent.length) add("div", "ov-sub", t("ovAbsent", { list: absent.join(", ") }));
