@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-HuWnbgAHoxkM0CVsgd7Vxu76p8YJPX5w9zdn4+7xYKw='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ 'sha256-oHhASGuZGcn6eJ1fq9Kg0JsuneHLzDC1WYd4Msk8P0Q='">
 <script src="theme.js"></script>
 <script src="site-ui.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -146,7 +146,7 @@ const I18N = {
       <li>I link a Telegram, LinkedIn e GitHub portano a quei servizi solo se li apri.</li>
     </ul>`,
     s5t: "5 · Cosa riceve e conserva ChainIntegrate",
-    s5: `Il server è un VPS di <b>Aruba S.p.A.</b>, in Italia, che agisce come responsabile del trattamento.
+    s5: `Due servizi di <b>Aruba S.p.A.</b>, in Italia, che agisce come responsabile del trattamento: il server (un VPS), dove girano il sito, il relayer e il servizio del gas sponsorizzato, e la casella e-mail da cui il server invia le e-mail (notifiche e avvisi dell'abbonamento).
     <ul>
       <li><b>Registri del server web:</b> indirizzo IP, pagina richiesta, data e ora, browser. Servono al funzionamento e alla sicurezza del sito e sono conservati al massimo 30 giorni.</li>
       <li><b>Relayer del sito.</b> Quando una pagina o un wallet ha una UP su una rete dove c'è il gas sponsorizzato del sito, chiede da solo se quella UP ne ha diritto: invia l'indirizzo della UP e la rete (non serve spuntare niente). Quando paghi il gas con il relayer, riceve l'operazione firmata (indirizzo della UP, rete, chiamata) e la invia alla blockchain. Il registro del relayer (data e ora, rete, UP, transazione, esito; per le richieste rifiutate anche l'IP) è conservato al massimo 30 giorni.</li>
@@ -160,7 +160,7 @@ const I18N = {
     <ul>
       <li><b>Dati:</b> l'e-mail che inserisci, collegata all'indirizzo della tua UP; i pagamenti, le ricariche e gli addebiti delle operazioni (UP, rete, importi, transazioni). Saldo e stato dell'abbonamento di una UP sono leggibili da chiunque conosca l'indirizzo, come i pagamenti sulla blockchain.</li>
       <li><b>Finalità e base giuridica:</b> fornirti il servizio che hai chiesto (contratto, art. 6.1.b GDPR): l'attivazione, gli avvisi di saldo basso, le comunicazioni sul servizio; la contabilità (obbligo di legge, art. 6.1.c).</li>
-      <li><b>Responsabili:</b> Aruba S.p.A. (il server e l'invio delle e-mail).</li>
+      <li><b>Responsabili:</b> Aruba S.p.A., per il server (VPS) e per la casella e-mail da cui partono le e-mail.</li>
       <li><b>Conservazione:</b> l'e-mail fino a 12 mesi dopo l'ultimo movimento della UP (pagamento, ricarica, addebito), poi si cancella da sola; prima, se lo chiedi. Pagamenti, ricariche e addebiti 10 anni, come scritture contabili (art. 2220 del codice civile).</li>
       <li><b>Saldo:</b> gli USDC pagati arrivano alla UP di ChainIntegrate; il saldo prepagato è l'unica cosa che ChainIntegrate tiene per conto degli utenti.</li>
       <li>Per cancellare l'e-mail scrivi a <a href="mailto:info@chainintegrate.it">info@chainintegrate.it</a> indicando l'indirizzo della UP.</li>
@@ -213,7 +213,7 @@ const I18N = {
       <li>The links to Telegram, LinkedIn and GitHub lead to those services only if you open them.</li>
     </ul>`,
     s5t: "5 · What ChainIntegrate receives and keeps",
-    s5: `The server is a VPS of <b>Aruba S.p.A.</b>, in Italy, acting as processor.
+    s5: `Two services of <b>Aruba S.p.A.</b>, in Italy, acting as processor: the server (a VPS), which runs the website, the relayer and the sponsored gas service, and the mailbox the server sends e-mails from (the subscription's notifications and alerts).
     <ul>
       <li><b>Web server logs:</b> IP address, page requested, date and time, browser. They serve the site's operation and security and are kept for at most 30 days.</li>
       <li><b>The site's relayer.</b> When a page or a wallet has a UP on a network where the site's sponsored gas is available, it asks by itself whether that UP is entitled to it: it sends the UP's address and the network (nothing needs to be ticked). When you pay the gas with the relayer, it receives the signed operation (UP address, network, call) and sends it to the blockchain. The relayer's log (date and time, network, UP, transaction, outcome; for refused requests also the IP) is kept for at most 30 days.</li>
@@ -227,7 +227,7 @@ const I18N = {
     <ul>
       <li><b>Data:</b> the e-mail you enter, linked to your UP's address; the payments, top-ups and charges of operations (UP, network, amounts, transactions). A UP's balance and subscription status can be read by anyone who knows the address, as the payments on the blockchain can.</li>
       <li><b>Purposes and legal basis:</b> providing the service you asked for (contract, Art. 6(1)(b) GDPR): the activation, the low-balance alerts, the communications about the service; accounting (legal obligation, Art. 6(1)(c)).</li>
-      <li><b>Processors:</b> Aruba S.p.A. (the server and the sending of e-mails).</li>
+      <li><b>Processors:</b> Aruba S.p.A., for the server (VPS) and for the mailbox the e-mails are sent from.</li>
       <li><b>Retention:</b> the e-mail until 12 months after the UP's last movement (payment, top-up, charge), then it is erased by itself; earlier, if you ask. Payments, top-ups and charges 10 years, as accounting records (Art. 2220 of the Italian civil code).</li>
       <li><b>Balance:</b> the USDC paid go to ChainIntegrate's UP; the prepaid balance is the only thing ChainIntegrate holds for its users.</li>
       <li>To erase the e-mail, write to <a href="mailto:info@chainintegrate.it">info@chainintegrate.it</a> with the UP's address.</li>
