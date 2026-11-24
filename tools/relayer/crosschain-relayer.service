@@ -11,7 +11,10 @@ WorkingDirectory=/opt/crosschain-relayer/tools/relayer
 ExecStart=/usr/bin/env node relay.js serve --config /etc/crosschain-relayer/config.json
 Restart=on-failure
 RestartSec=5
-# Hardening: the service reads its code and its config, and writes nothing.
+# Hardening: the service reads its code and its config, and writes only its record of sent transactions
+# (relay-sends.json, audit 2026-11-24 R15) in /var/lib/crosschain-relayer, shared with the monitor's state.
+StateDirectory=crosschain-relayer
+StateDirectoryMode=0700
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true

@@ -24,11 +24,12 @@ Only operations that:
 The relay transaction uses the operation's own fee fields, so the relayer never pays a higher price than it gets back.
 
 Other limits:
-- one pending operation per UP at a time: a UP stays blocked until its transaction is mined, and, if it is not mined within 3 minutes, while the EntryPoint has not used the operation's nonce, for up to 15 minutes (AUDIT CC-10);
-- the relay transaction is signed and its hash recorded before it is broadcast: if the answer to the send is lost but the transaction reached the network, the page gets it, and the same operation sent again gets the same transaction, never a second one that would revert at the relayer's cost (AUDIT CC-10);
-- rate limits (`limits` in the configuration): per IP (`perIpPerMinute`, default 6), for all clients together (`globalPerMinute`, default 60, before any RPC call), and per UP (`perSenderPerMinute`, default 3). The per-UP limit is charged only to operations that passed both simulations, so the UP's own signature: anyone can forge a request naming a UP, and such requests never use up that UP's quota (AUDIT CC-01);
+- one pending operation per UP at a time, taken once the `handleOps` simulation has passed (so a forged operation never holds a UP's lock): a UP stays blocked until its transaction is mined, and, if it is not mined within 3 minutes, while the EntryPoint has not used the operation's nonce, for up to 15 minutes (AUDIT CC-10);
+- the relay transaction is signed and written to a **record of sent transactions** before it is broadcast (AUDIT CC-10, audit 2026-11-24 R15): `relay-sends.json` in the service's state directory, `/var/lib/crosschain-relayer` (mode 600; `sendLogFile` in the configuration to put it elsewhere). If the answer to the send is lost but the transaction reached the network, the page gets it. If it is not found right after the error, its outcome is "unknown": the page gets a 502 that says it may have been sent, the UP stays blocked, and the same operation sent again gets that same signed transaction broadcast again, never a second one that would revert at the relayer's cost. A transaction is settled (and removed from the record) when it is mined, when its operation's nonce is used, or when another transaction of the relayer has used its nonce while it was never seen on the network (then it can never be mined: the UP is unblocked and the operation can be sent again); meanwhile one not seen is broadcast again. After a restart the record is read again: its transactions block their UPs and are settled as usual (dropped after 30 minutes). An unreadable record is moved aside (`relay-sends.json.unreadable-<time>`), never overwritten; the log says so, and its transactions can be looked up by hand on the explorer;
+- rate limits (`limits` in the configuration): per IP (`perIpPerMinute`, default 6; an IPv6 address counts by its /64, audit 2026-11-24 R16), for all clients together (`globalPerMinute`, default 60, charged after the shape checks and the lookup of an operation already sent, before any RPC call), and per UP (`perSenderPerMinute`, default 3). The per-UP limit is charged only to operations that passed both simulations, so the UP's own signature: anyone can forge a request naming a UP, and such requests never use up that UP's quota (AUDIT CC-01);
 - `GET /relay/info` is read from the chains at most every 10 seconds, whoever asks;
-- nginx limits each IP to 10 requests a second (burst 40) on `/relay/` (step 6);
+- nginx limits each IP (IPv6: each /64) to 10 requests a second (burst 40) on `/relay/` (step 6);
+- the log keeps only the scheme and host of any URL (an RPC's path or query may hold a key; audit 2026-11-24 R17), the monitor's findings and emails too;
 - requests up to 64 KB;
 - the browser `Origin` must be the site's.
 
@@ -76,7 +77,7 @@ which node       # e.g. /usr/bin/node: not under /root or /home (the service can
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin up-relayer
 sudo git clone --filter=blob:none --no-checkout https://github.com/ChainIntegrate/Cross_Chain.git /opt/crosschain-relayer
 cd /opt/crosschain-relayer
-sudo git sparse-checkout set --no-cone '/tools/relayer/' '/usd-price.js' '/op-cost.js'
+sudo git sparse-checkout set --no-cone '/tools/relayer/' '/tools/nginx/' '/usd-price.js' '/op-cost.js'
 sudo git checkout main
 cd tools/relayer && sudo npm ci --omit=dev --ignore-scripts
 ```
@@ -106,10 +107,10 @@ journalctl -u crosschain-relayer -n 20     # "chain 8453: ready (OP stack) …" 
 
 **6. Web server: pass `/relay/` to the service.** Only this path. The service listens on `127.0.0.1` only.
 
-nginx: first the per-IP rate zone, once, in the http context (the content of `tools/nginx/relay-limit.conf`; the server's clone of the relayer holds only `tools/relayer`, so it is written directly):
+nginx: first the per-IP rate zone, once, in the http context: `tools/nginx/relay-limit.conf` (an IPv6 address counts by its /64), copied from the relayer's clone. A clone made before 2026-11-24 holds only `tools/relayer`: add the folder first with `cd /opt/crosschain-relayer && sudo git sparse-checkout add /tools/nginx/`.
 
 ```bash
-printf '%s\n' 'limit_req_zone $binary_remote_addr zone=crosschain_relay:10m rate=10r/s;' 'limit_req_status 429;' | sudo tee /etc/nginx/conf.d/crosschain-relay-limit.conf
+sudo cp /opt/crosschain-relayer/tools/nginx/relay-limit.conf /etc/nginx/conf.d/crosschain-relay-limit.conf && sudo nginx -t && sudo systemctl reload nginx
 ```
 
 then, inside the site's `server { … }` block:
@@ -196,7 +197,7 @@ sudo systemctl stop crosschain-relayer    # the page shows "not reachable" and B
 
 `--ignore-scripts`: no dependency of the relayer runs an install script, so none is run as root (AUDIT CC-08).
 
-**The units** (AUDIT CC-08, 2026-11-24): both run as `up-relayer` with systemd's sandboxing (no capabilities, a system-call filter, no namespaces, a private `/proc` view, `UMask=0077`). The relayer cannot read the SMTP password (`smtp.env`); the monitor cannot read the relayer's key. When a commit changes them, install them again and check:
+**The units** (AUDIT CC-08, 2026-11-24): both run as `up-relayer` with systemd's sandboxing (no capabilities, a system-call filter, no namespaces, a private `/proc` view, `UMask=0077`). The relayer cannot read the SMTP password (`smtp.env`); the monitor cannot read the relayer's key. Both write only in `/var/lib/crosschain-relayer` (mode 700): the monitor its state, the relayer its record of sent transactions (from 2026-11-24, R15). When a commit changes them, install them again and check:
 
 ```bash
 cd /opt/crosschain-relayer/tools/relayer && sudo cp crosschain-relayer.service crosschain-relayer-monitor.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl restart crosschain-relayer
@@ -224,6 +225,8 @@ Tested on a local chain with the real EntryPoint v0.6, the LUKSO `UniversalProfi
 - a sponsored operation is relayed, and the relayer ends with at least what it started with;
 - each refusal case above is rejected without any transaction;
 - the start-up checks: key file mode, wrong RPC chain, missing paymaster.
+
+`npm test` (`test/limits.js`, against a mocked chain, 32 of 32): the rate limits and their order (CC-01; an IPv6 /64 sharing one per-IP limit, refused shapes not using the global one, no lock for a forged operation: R16), a lost answer on sending and the UP kept blocked (CC-10), the record of sent transactions (R15: an unknown outcome kept and the same transaction broadcast again, the record read again after a restart, a transaction that never reached the network settled, an unreadable record moved aside), and URLs cut to their host in the log (R17).
 
 The page test (`up-gas-relay-admin.html` in Chromium, with this service behind `relay/`) passes 63 of 63 on each version.
 

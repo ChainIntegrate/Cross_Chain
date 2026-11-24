@@ -14,7 +14,7 @@
 const fs = require("fs");
 const path = require("path");
 const { ethers } = require("ethers");
-const { readConfig, ENTRY_POINT } = require("./relay.js");
+const { readConfig, ENTRY_POINT, redact } = require("./relay.js");
 // USD value of each chain's gas token (Chainlink feeds; the same file the operator's page uses, at the
 // repository's root). If it is missing (a sparse clone without /usd-price.js), the monitor keeps working
 // with the native-amount rule and reports the missing file instead of stopping.
@@ -325,6 +325,8 @@ async function main(argv) {
   const deposits = {}, balances = {};
   const findings = await runChecks(config, deposits, balances);
   findings.push(...drawdowns(state.deposits, deposits, config.monitor || {}));
+  // URLs in errors keep only scheme and host (an RPC URL may hold a key): in the log and in the email (R17).
+  for (const f of findings) f.msg = redact(f.msg);
   const { subject, text } = report(findings, balances);
   console.log(subject + "\n" + text);
   if (has("--dry-run")) return findings.some((f) => f.level === "error") ? 2 : 0;
@@ -346,7 +348,7 @@ async function main(argv) {
 }
 
 if (require.main === module) {
-  main(process.argv.slice(2)).then((code) => process.exit(code)).catch((e) => { console.error(e.message || e); process.exit(1); });
+  main(process.argv.slice(2)).then((code) => process.exit(code)).catch((e) => { console.error(redact(e.message || e)); process.exit(1); });
 }
 
 module.exports = { runChecks, report, main, drawdowns };
