@@ -113,11 +113,13 @@ nginx: first the per-IP rate zone, once, in the http context: `tools/nginx/relay
 sudo cp /opt/crosschain-relayer/tools/nginx/relay-limit.conf /etc/nginx/conf.d/crosschain-relay-limit.conf && sudo nginx -t && sudo systemctl reload nginx
 ```
 
+`nginx -t` checks the syntax only: some changes are refused later, when the reload is applied, and then only `/var/log/nginx/error.log` says so (an `[emerg]` line) while nginx keeps the old configuration, for every site of the server. After a reload, check that it was applied: `sudo tail -n 5 /var/log/nginx/error.log` has no new `[emerg]`, and `ps -o pid,lstart,cmd -C nginx` shows worker processes started just now. The zone's key cannot change under the same name (that refused every reload of the server from 2026-11-24 to 2026-11-25): it is `crosschain_relay64` since then; a clone's older `crosschain_relay` must be renamed in the file and in the site's `limit_req` lines.
+
 then, inside the site's `server { … }` block:
 
 ```nginx
 location /relay/ {
-    limit_req zone=crosschain_relay burst=40 nodelay;
+    limit_req zone=crosschain_relay64 burst=40 nodelay;
     proxy_pass http://127.0.0.1:8787;
     proxy_set_header X-Real-IP $remote_addr;
     client_max_body_size 64k;
