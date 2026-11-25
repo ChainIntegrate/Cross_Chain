@@ -253,6 +253,21 @@ stays, marked "Done.", until those mentions are updated.
     something. Fewer Alchemy calls per visit, a faster first view. The page only (the app and the extension
     take it with the page); the identity page could follow the same way.
 
+16. **An "Activity" list, and links to the explorer** (2026-11-25, from the maintainer; not urgent). Today
+    the page has no history: the box at the bottom is the session's log, kept in memory only, so it is
+    gone when the page closes or reloads (the extension's side panel or tab closed, the app stopped by
+    Android or restarted, the site reloaded). After a send it writes the transaction's explorer address as
+    plain text, not as a link. Proposed, in the page (the app and the extension take it with the page):
+    - an **Activity** section kept on the device only (the page's storage: the extension's host, the app's
+      WebView; never the server): for each operation the date, the network, the kind (a send, a dApp's
+      transaction, an operation with the gas paid by the site, a signature), the site that asked, a summary,
+      the outcome (done, failed, unknown) and an "Open in the explorer" button; the last 100 per UP, with
+      a button to clear them;
+    - per network, a "Whole history on the explorer" link to the UP's address page: the complete record,
+      whatever device or controller made the operation;
+    - the log's explorer addresses as links (small, can go first).
+    The privacy notices (the app's, the site's) say what the device keeps.
+
 ## Other pages
 
 1. **Done. The LUKSO authorization page: live tests, then the review** (2026-11-03). `up-authorize-lukso.html`
